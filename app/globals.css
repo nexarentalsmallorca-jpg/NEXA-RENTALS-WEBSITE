@@ -1,0 +1,270 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+/* =========================
+   NEXA DayPicker Colors (safe)
+   Works with default DayPicker layout
+========================= */
+
+.nexa-rdp .rdp {
+  --rdp-accent-color: #df6a11; /* orange */
+  --rdp-background-color: rgba(249, 115, 22, 0.18);
+  color: #fff;
+}
+
+/* Day button styling (keep it clean) */
+.nexa-rdp .rdp-day_button,
+.nexa-rdp .rdp-day-button {
+  border-radius: 9999px !important; /* circle */
+  font-weight: 600;
+}
+
+/* Start/End = deep orange circles */
+.nexa-rdp .rdp-day_range_start .rdp-day_button,
+.nexa-rdp .rdp-day_range_end .rdp-day_button,
+.nexa-rdp .rdp-day_selected .rdp-day_button,
+.nexa-rdp .rdp-day-range-start .rdp-day-button,
+.nexa-rdp .rdp-day-range-end .rdp-day-button,
+.nexa-rdp .rdp-day-selected .rdp-day-button {
+  background: #f97316 !important;
+  color: #0b0b0b !important;
+  font-weight: 800 !important;
+}
+
+/* Middle range = very light orange */
+.nexa-rdp .rdp-day_range_middle .rdp-day_button,
+.nexa-rdp .rdp-day-range-middle .rdp-day-button {
+  background: rgba(249, 115, 22, 0.18) !important;
+  color: #fff !important;
+}
+
+/* Hover */
+.nexa-rdp .rdp-day_button:hover,
+.nexa-rdp .rdp-day-button:hover {
+  background: rgba(249, 115, 22, 0.25) !important;
+}
+
+/* Make outside days subtle */
+.nexa-rdp .rdp-day_outside,
+.nexa-rdp .rdp-day-outside {
+  color: rgba(255, 255, 255, 0.25) !important;
+}
+html, body {
+  background: #000;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(18px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes slideInLeft {
+  from { opacity: 0; transform: translateX(-30px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+.fade-up {
+  animation: fadeUp 700ms ease-out forwards;
+}
+
+.slide-left {
+  animation: slideInLeft 900ms ease-out forwards;
+}
+
+.delay-1 { animation-delay: 150ms; opacity: 0; }
+.delay-2 { animation-delay: 350ms; opacity: 0; }
+.delay-3 { animation-delay: 550ms; opacity: 0; }
+/* === Navbar offset (prevents hero going under fixed navbar) === */
+:root {
+  --nav-offset: 110px; /* fallback until JS measures navbar */
+}
+
+
+.nav-link {
+  position: relative;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  color: rgba(255, 255, 255, 0.82);
+  transition: all 220ms ease;
+}
+
+.nav-link:hover {
+  color: #fff;
+}
+
+.nav-link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -10px;
+  width: 0%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, #f97316, #fbbf24);
+  transition: width 240ms ease;
+  opacity: 0.9;
+}
+
+.nav-link:hover::after {
+  width: 100%;
+}
+/* ===== HERO BACKGROUND IMAGE (single png) ===== */
+.hero-bg-image {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  background-image: url("/images/hero-bg.png");
+  background-size: cover;
+  background-repeat: no-repeat;
+  background-position: right 60%;
+}
+
+
+/* Light overlay (NOT too dark) */
+.hero-bg-image::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    90deg,
+    rgba(0,0,0,0.78) 0%,
+    rgba(0,0,0,0.65) 35%,
+    rgba(0,0,0,0.40) 60%,
+    rgba(0,0,0,0.15) 78%,
+    rgba(0,0,0,0.05) 100%
+  );
+}
+
+
+
+/* Typewriter caret */
+.type-caret {
+  display: inline-block;
+  width: 10px;
+  height: 1.05em;
+  margin-left: 6px;
+  background: rgba(255, 255, 255, 0.85);
+  border-radius: 2px;
+  transform: translateY(2px);
+  animation: caretBlink 900ms steps(1) infinite;
+}
+
+@keyframes caretBlink {
+  50% {
+    opacity: 0;
+  }
+}
+
+/* Trust section background + card glow */
+.trust-sparks {
+  background:
+    radial-gradient(700px 420px at 50% 35%, rgba(249,115,22,0.22), transparent 60%),
+    radial-gradient(900px 540px at 50% 80%, rgba(251,191,36,0.12), transparent 65%);
+  opacity: 0.9;
+  filter: blur(0px);
+}
+
+.trust-card {
+  transition: transform 280ms ease, box-shadow 280ms ease, border-color 280ms ease;
+}
+
+.trust-card:hover {
+  transform: translateY(-6px);
+  border-color: rgba(249,115,22,0.65);
+  box-shadow: 0 30px 90px rgba(0,0,0,0.6);
+}
+
+.trust-icon {
+  filter: drop-shadow(0 10px 28px rgba(249,115,22,0.25));
+}
+
+.shop-glow {
+  background:
+    radial-gradient(900px 520px at 70% 15%, rgba(249,115,22,0.18), transparent 60%),
+    radial-gradient(900px 520px at 30% 70%, rgba(251,191,36,0.08), transparent 65%),
+    linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,1) 100%);
+}
+.shop-settle {
+  animation: shopSettle 900ms cubic-bezier(.2,.9,.2,1) 1;
+}
+
+@keyframes shopSettle {
+  0%   { transform: translateY(0) rotate(0deg); }
+  55%  { transform: translateY(-2px) rotate(-0.4deg); }
+  70%  { transform: translateY(0px) rotate(0.35deg); }
+  85%  { transform: translateY(0px) rotate(-0.2deg); }
+  100% { transform: translateY(0px) rotate(0deg); }
+}
+.shop-float {
+  animation:
+    shopSettle 900ms cubic-bezier(.2,.9,.2,1) 1,
+    shopMicroShake 6s ease-in-out 1.2s infinite;
+}
+
+@keyframes shopMicroShake {
+  0%   { transform: translateY(0) rotate(0deg); }
+  45%  { transform: translateY(0) rotate(0deg); }
+  55%  { transform: translateY(-2px) rotate(-0.25deg); }
+  65%  { transform: translateY(0px) rotate(0.22deg); }
+  75%  { transform: translateY(0px) rotate(-0.14deg); }
+  100% { transform: translateY(0) rotate(0deg); }
+}
+/* Parallax container */
+.parallax-wrap {
+  position: relative;
+  overflow: hidden;
+  transform: translateZ(0);
+}
+
+/* Parallax image */
+.parallax-img {
+  width: 100%;
+  height: auto;
+  transform: translateY(0);
+  transition: transform 0.15s linear;
+  will-change: transform;
+}
+/* ===== Premium stagger reveal (Shop section) ===== */
+.reveal-off .reveal-item {
+  opacity: 0;
+  transform: translateY(14px);
+  filter: blur(2px);
+}
+
+.reveal-on .reveal-item {
+  opacity: 1;
+  transform: translateY(0);
+  filter: blur(0);
+  transition: opacity 700ms ease, transform 700ms ease, filter 700ms ease;
+}
+
+/* Stagger delays (auto applies by order) */
+.reveal-on .reveal-item:nth-child(1) { transition-delay: 0ms; }
+.reveal-on .reveal-item:nth-child(2) { transition-delay: 120ms; }
+.reveal-on .reveal-item:nth-child(3) { transition-delay: 240ms; }
+.reveal-on .reveal-item:nth-child(4) { transition-delay: 360ms; }
+.reveal-on .reveal-item:nth-child(5) { transition-delay: 480ms; }
+.reveal-on .reveal-item:nth-child(6) { transition-delay: 600ms; }
+.reveal-on .reveal-item:nth-child(7) { transition-delay: 720ms; }
