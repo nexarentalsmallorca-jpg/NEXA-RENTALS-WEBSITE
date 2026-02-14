@@ -404,14 +404,14 @@ export default function BookingBar() {
       {/* Calendar Modal */}
       {calendarOpen && (
         <div
-          className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/60 backdrop-blur-sm pt-0 pb-3 px-3"
+          className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/60 backdrop-blur-sm pb-3 px-3"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeCalendar();
           }}
         >
           <div
-  className="w-[min(840px,96vw)] max-h-[70vh] rounded-2xl shadow-2xl overflow-hidden animate-[pop_.12s_ease-out] -translate-y-10"
-  style={{ background: BAR_BG, transform: "translateY(-40px)" }}
+  className="w-[min(840px,96vw)] max-h-[50vh] rounded-2xl shadow-2xl overflow-hidden animate-[pop_.12s_ease-out] -translate-y-10"
+  style={{ background: BAR_BG, transform: "translateY(-10px)" }}
 >
 
             {/* Header */}
@@ -457,17 +457,14 @@ export default function BookingBar() {
               </button>
             </div>
 
-            {/* Two months */}
-            <div className="px-3 pb-4 overflow-auto">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <MiniMonth month={viewMonth} range={range} onPick={pickDate} />
-                <MiniMonth
-                  month={addMonths(viewMonth, 1)}
-                  range={range}
-                  onPick={pickDate}
-                />
-              </div>
-            </div>
+            {/* Two months (scrollable middle) */}
+<div className="px-3 pb-4 overflow-auto flex-1">
+  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+    <MiniMonth month={viewMonth} range={range} onPick={pickDate} />
+    <MiniMonth month={addMonths(viewMonth, 1)} range={range} onPick={pickDate} />
+  </div>
+</div>
+
 
             {/* Footer */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-black/10 bg-black/5">
