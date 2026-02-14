@@ -410,7 +410,7 @@ export default function BookingBar() {
           }}
         >
           <div
-  className="w-[min(500px,82vw)] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden animate-[pop_.12s_ease-out] -translate-y-10"
+  className="w-[min(600px,90vw)] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden animate-[pop_.12s_ease-out] -translate-y-10"
   style={{ background: BAR_BG, transform: "translateY(-300px)" }}
 >
 
