@@ -237,7 +237,7 @@ return (
       {/* CALENDAR MODAL (BOOKING.COM BEHAVIOR) */}
       {open && (
         <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-[min(920px,95vw)] rounded-2xl bg-white shadow-2xl overflow-hidden">
+          <div className="w-[min(760px,92vw)] max-h-[80vh] rounded-2xl bg-white shadow-2xl overflow-hidden">
             {/* Header */}
             <div className="flex items-center justify-between px-5 py-4 border-b">
               <div>
@@ -258,69 +258,76 @@ return (
               </button>
             </div>
 
-            {/* Month nav */}
-            <div className="flex items-center justify-between px-5 py-4">
-              <button
-                type="button"
-                onClick={() => setViewMonth((m) => addMonths(m, -1))}
-                className="h-10 w-10 rounded-xl border hover:bg-gray-50"
-              >
-                ‹
-              </button>
+           <div className="px-4 md:px-5 py-4 overflow-auto">
+  {/* Month nav */}
+  <div className="flex items-center justify-between mb-3">
+    <button
+      type="button"
+      onClick={() => setViewMonth((m) => addMonths(m, -1))}
+      className="h-9 w-9 rounded-xl border hover:bg-gray-50"
+    >
+      ‹
+    </button>
 
-              <div className="font-bold text-gray-900">
-                {viewMonth.toLocaleString(undefined, { month: "long", year: "numeric" })}
-              </div>
+    <div className="font-bold text-gray-900 text-sm md:text-base">
+      {viewMonth.toLocaleString(undefined, { month: "long", year: "numeric" })}
+    </div>
 
-              <button
-                type="button"
-                onClick={() => setViewMonth((m) => addMonths(m, 1))}
-                className="h-10 w-10 rounded-xl border hover:bg-gray-50"
-              >
-                ›
-              </button>
-            </div>
+    <button
+      type="button"
+      onClick={() => setViewMonth((m) => addMonths(m, 1))}
+      className="h-9 w-9 rounded-xl border hover:bg-gray-50"
+    >
+      ›
+    </button>
+  </div>
 
-            {/* Weekdays */}
-            <div className="grid grid-cols-7 px-5 text-xs text-gray-500">
-              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => (
-                <div key={w} className="py-2 text-center">
-                  {w}
-                </div>
-              ))}
-            </div>
+  {/* Weekdays */}
+  <div className="grid grid-cols-7 text-[11px] md:text-xs text-gray-500 mb-2">
+    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => (
+      <div key={w} className="py-1 text-center">
+        {w}
+      </div>
+    ))}
+  </div>
 
-            {/* Grid */}
-            <div className="grid grid-cols-7 gap-2 px-5 pb-5">
-              {cells.map((d, idx) => {
-                if (!d) return <div key={idx} className="h-11" />;
+  {/* Grid */}
+  <div className="grid grid-cols-7 gap-2">
+    {cells.map((d, idx) => {
+      if (!d) return <div key={idx} className="h-10 md:h-11" />;
 
-                const inRange =
-                  range.from &&
-                  range.to &&
-                  d >= startOfDay(range.from) &&
-                  d <= startOfDay(range.to);
+      const inRange =
+        range.from &&
+        range.to &&
+        d >= startOfDay(range.from) &&
+        d <= startOfDay(range.to);
 
-                const isStart = range.from && isSameDay(d, range.from);
-                const isEnd = range.to && isSameDay(d, range.to);
+      const isStart = range.from && isSameDay(d, range.from);
+      const isEnd = range.to && isSameDay(d, range.to);
 
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => pickDate(d)}
-                    className={[
-                      "h-11 rounded-xl font-bold transition",
-                      "hover:bg-gray-100",
-                      inRange ? "bg-orange-100" : "",
-                      isStart || isEnd ? "bg-[#FF6A00] text-black" : "text-gray-900",
-                    ].join(" ")}
-                  >
-                    {d.getDate()}
-                  </button>
-                );
-              })}
-            </div>
+      return (
+        <button
+          key={idx}
+          type="button"
+          onClick={() => pickDate(d)}
+          className={[
+            "h-10 md:h-11 rounded-xl font-bold transition",
+            "text-gray-900",
+            // HOVER = light orange (visible)
+             !inRange && !(isStart || isEnd) ? "hover:bg-orange-200" : "",
+            // Middle dates = medium orange shade
+            inRange ? "bg-orange-300/60" : "",
+            // Start/End dates = deep orange (same as button)
+            isStart || isEnd ? "bg-[#FF6A00] text-black" : "",
+          ].join(" ")}
+        >
+          {d.getDate()}
+        </button>
+      );
+    })}
+  </div>
+</div>
+
 
             {/* Footer */}
             <div className="flex items-center justify-between px-5 py-4 border-t bg-gray-50">
