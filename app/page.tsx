@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "./Navbar";
-import BookingPanel from "./components/DesktopBookingBar";
+import BookingDateRange from "./components/BookingDateRange";
+
 import TrustSection from "./components/TrustSection";
 import ShopSection from "./components/ShopSection";
 
@@ -105,7 +106,7 @@ export default function Page() {
                 introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
               ].join(" ")}
             >
-              <BookingPanel />
+              <BookingDateRange />
             </div>
           </div>
 
