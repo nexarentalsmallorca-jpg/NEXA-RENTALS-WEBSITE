@@ -1,9 +1,10 @@
 "use client";
 export const dynamic = "force-dynamic";
-import { useRouter, useSearchParams } from "next/navigation";
-import * as React from "react";
 
-export default function TimePage() {
+import React, { Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+
+function TimeInner() {
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -14,21 +15,13 @@ export default function TimePage() {
   const [dropoffTime, setDropoffTime] = React.useState("10:00");
 
   if (!from || !to) {
-    return (
-      <div className="p-8 text-white">
-        Missing dates. Go back and select dates first.
-      </div>
-    );
+    return <div className="p-8 text-white">Missing dates. Go back.</div>;
   }
 
   return (
     <div className="min-h-screen bg-black p-6 text-white">
       <div className="mx-auto max-w-xl rounded-2xl border border-orange-500/30 bg-black/40 p-6">
         <h1 className="text-2xl font-bold">Select times</h1>
-        <p className="mt-1 text-sm opacity-70">
-          Dates: <span className="text-orange-400">{from}</span> →{" "}
-          <span className="text-orange-400">{to}</span>
-        </p>
 
         <div className="mt-6 grid gap-4">
           <div>
@@ -39,9 +32,7 @@ export default function TimePage() {
               className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3"
             >
               {["09:00", "10:00", "11:00", "12:00", "15:00", "18:00"].map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
+                <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
@@ -54,9 +45,7 @@ export default function TimePage() {
               className="mt-2 w-full rounded-xl border border-zinc-700 bg-zinc-950 px-4 py-3"
             >
               {["09:00", "10:00", "11:00", "12:00", "15:00", "18:00"].map((t) => (
-                <option key={t} value={t}>
-                  {t}
-                </option>
+                <option key={t} value={t}>{t}</option>
               ))}
             </select>
           </div>
@@ -76,5 +65,13 @@ export default function TimePage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function TimePage() {
+  return (
+    <Suspense fallback={<div className="p-8 text-white">Loading…</div>}>
+      <TimeInner />
+    </Suspense>
   );
 }
