@@ -26,7 +26,7 @@ export default function Navbar() {
     // hide if scrollY > 120, show if <= 120
     const onScroll = () => {
       const y = window.scrollY;
-      setHidden(y > 120);
+      setHidden(y > 1);
       // Debug (uncomment once to test)
       // console.log("scrollY:", y, "hidden:", y > 1);
     };
