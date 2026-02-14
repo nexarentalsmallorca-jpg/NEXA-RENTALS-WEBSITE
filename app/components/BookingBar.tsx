@@ -404,7 +404,7 @@ export default function BookingBar() {
       {/* Calendar Modal */}
       {calendarOpen && (
         <div
-          className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/60 backdrop-blur-sm pt-6 pb-3 px-3"
+          className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/60 backdrop-blur-sm pt-0 pb-3 px-3"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeCalendar();
           }}
