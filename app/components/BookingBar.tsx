@@ -410,9 +410,10 @@ export default function BookingBar() {
           }}
         >
           <div
-            className="w-[min(840px,96vw)] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden animate-[pop_.12s_ease-out]"
-            style={{ background: BAR_BG }}
-          >
+  className="w-[min(840px,96vw)] max-h-[70vh] rounded-2xl shadow-2xl overflow-hidden animate-[pop_.12s_ease-out] -translate-y-10"
+  style={{ background: BAR_BG, transform: "translateY(-40px)" }}
+>
+
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
               <div>
