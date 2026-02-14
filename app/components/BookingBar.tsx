@@ -124,7 +124,8 @@ export default function BookingBar() {
   const canSearch = Boolean(range.from && range.to);
 
   return (
-    <div className="w-full">
+    <div className="w-full relative z-50">
+
       <div className="mx-auto w-full max-w-5xl">
         {/* Booking.com style: white container + yellow border bar */}
         <div className="rounded-xl bg-white p-2 shadow-lg">
@@ -155,7 +156,7 @@ export default function BookingBar() {
 
               {/* Popover calendar */}
               {open && (
-                <div ref={popRef} className="absolute left-0 top-full z-50 mt-3 w-[min(92vw,720px)]">
+                <div ref={popRef} className="absolute left-0 top-full z-[999] mt-3">
                   <div className="rounded-2xl border border-gray-200 bg-white shadow-2xl p-4">
                     {/* Header */}
                     <div className="mb-3 flex items-center justify-between">
