@@ -28,7 +28,7 @@ export default function Navbar() {
       const y = window.scrollY;
       setHidden(y > 120);
       // Debug (uncomment once to test)
-      // console.log("scrollY:", y, "hidden:", y > 120);
+      // console.log("scrollY:", y, "hidden:", y > 1);
     };
 
     window.addEventListener("scroll", onScroll, { passive: true });
