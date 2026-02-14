@@ -148,14 +148,18 @@ export default function BookingBar() {
   const initialTo = urlTo ? startOfDay(urlTo) : tomorrow;
 
   const [pickupLocation] = useState(initialPickupLocation);
-  const [range, setRange] = useState<DateRange>(() => clampRange(initialFrom, initialTo));
+  const [range, setRange] = useState<DateRange>(() =>
+    clampRange(initialFrom, initialTo)
+  );
 
   const [pickupTime, setPickupTime] = useState(() => {
-    if (urlPickupTime && isValidTimeOption(urlPickupTime, TIME_OPTIONS)) return urlPickupTime;
+    if (urlPickupTime && isValidTimeOption(urlPickupTime, TIME_OPTIONS))
+      return urlPickupTime;
     return "10:00";
   });
   const [dropoffTime, setDropoffTime] = useState(() => {
-    if (urlDropoffTime && isValidTimeOption(urlDropoffTime, TIME_OPTIONS)) return urlDropoffTime;
+    if (urlDropoffTime && isValidTimeOption(urlDropoffTime, TIME_OPTIONS))
+      return urlDropoffTime;
     return "10:00";
   });
 
@@ -177,8 +181,10 @@ export default function BookingBar() {
       const t = e.target as Node;
 
       if (timePopRef.current && timePopRef.current.contains(t)) return;
-      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(t)) return;
-      if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(t)) return;
+      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(t))
+        return;
+      if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(t))
+        return;
 
       setPickupTimeOpen(false);
       setDropoffTimeOpen(false);
@@ -210,7 +216,9 @@ export default function BookingBar() {
     if (activeField === "pickup") {
       const nextFrom = day;
       const nextTo =
-        range.to && startOfDay(range.to) < startOfDay(nextFrom) ? undefined : range.to;
+        range.to && startOfDay(range.to) < startOfDay(nextFrom)
+          ? undefined
+          : range.to;
 
       setRange({ from: nextFrom, to: nextTo });
       setActiveField("dropoff");
@@ -275,32 +283,23 @@ export default function BookingBar() {
 
       {/* Canva style bar */}
       <div
-        className="
-          inline-flex items-stretch
-          rounded-2xl
-          overflow-hidden
-          border border-black/10
-          shadow-[0_20px_60px_rgba(0,0,0,0.35)]
-        "
+        className="inline-flex items-stretch rounded-2xl overflow-hidden border border-black/10 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
         style={{ background: BAR_BG }}
       >
         {/* Pickup Date */}
         <button
           type="button"
           onClick={() => openCalendar("pickup")}
-          className="
-            flex items-center gap-3
-            px-4 py-3 min-w-[170px]
-            border-r border-black/15
-            text-left
-            hover:bg-black/5
-            transition
-          "
+          className="flex items-center gap-3 px-4 py-3 min-w-[170px] border-r border-black/15 text-left hover:bg-black/5 transition"
         >
           <CalendarMini />
           <div className="leading-tight">
-            <div className="text-[11px] font-semibold text-black/65">Pick-up Date</div>
-            <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.from)}</div>
+            <div className="text-[11px] font-semibold text-black/65">
+              Pick-up Date
+            </div>
+            <div className="text-[13px] font-extrabold text-black">
+              {fmtLabel(range.from)}
+            </div>
           </div>
         </button>
 
@@ -314,7 +313,9 @@ export default function BookingBar() {
           >
             <ClockMini />
             <div className="leading-tight">
-              <div className="text-[11px] font-semibold text-black/65">Time</div>
+              <div className="text-[11px] font-semibold text-black/65">
+                Time
+              </div>
               <div className="text-[13px] font-extrabold text-black">
                 {formatTimeLabel(pickupTime)}
               </div>
@@ -341,19 +342,16 @@ export default function BookingBar() {
         <button
           type="button"
           onClick={() => openCalendar("dropoff")}
-          className="
-            flex items-center gap-3
-            px-4 py-3 min-w-[170px]
-            border-r border-black/15
-            text-left
-            hover:bg-black/5
-            transition
-          "
+          className="flex items-center gap-3 px-4 py-3 min-w-[170px] border-r border-black/15 text-left hover:bg-black/5 transition"
         >
           <CalendarMini />
           <div className="leading-tight">
-            <div className="text-[11px] font-semibold text-black/65">Drop-off Date</div>
-            <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.to)}</div>
+            <div className="text-[11px] font-semibold text-black/65">
+              Drop-off Date
+            </div>
+            <div className="text-[13px] font-extrabold text-black">
+              {fmtLabel(range.to)}
+            </div>
           </div>
         </button>
 
@@ -367,7 +365,9 @@ export default function BookingBar() {
           >
             <ClockMini />
             <div className="leading-tight">
-              <div className="text-[11px] font-semibold text-black/65">Time</div>
+              <div className="text-[11px] font-semibold text-black/65">
+                Time
+              </div>
               <div className="text-[13px] font-extrabold text-black">
                 {formatTimeLabel(dropoffTime)}
               </div>
@@ -394,13 +394,7 @@ export default function BookingBar() {
         <button
           type="button"
           onClick={onSearch}
-          className="
-            px-7 min-w-[120px]
-            font-extrabold text-black text-[15px]
-            hover:brightness-95 active:scale-[0.99]
-            transition
-            rounded-r-2xl
-          "
+          className="px-7 min-w-[120px] font-extrabold text-black text-[15px] hover:brightness-95 active:scale-[0.99] transition rounded-r-2xl"
           style={{ background: DEEP_ORANGE }}
         >
           Search
@@ -410,32 +404,22 @@ export default function BookingBar() {
       {/* Calendar Modal */}
       {calendarOpen && (
         <div
-          className="
-            fixed inset-0 z-[9999]
-            flex items-start justify-center
-            bg-black/60 backdrop-blur-sm
-            pt-6 pb-3 px-3
-          "
+          className="fixed inset-0 z-[9999] flex items-start justify-center bg-black/60 backdrop-blur-sm pt-6 pb-3 px-3"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeCalendar();
           }}
         >
           <div
-            className="
-              w-[min(840px,96vw)]
-              max-h-[80vh]
-              rounded-2xl
-              shadow-2xl
-              overflow-hidden
-              animate-[pop_.12s_ease-out]
-            "
+            className="w-[min(840px,96vw)] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden animate-[pop_.12s_ease-out]"
             style={{ background: BAR_BG }}
           >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
               <div>
                 <div className="text-sm text-black/55 font-semibold">
-                  {activeField === "pickup" ? "Select pick-up date" : "Select drop-off date"}
+                  {activeField === "pickup"
+                    ? "Select pick-up date"
+                    : "Select drop-off date"}
                 </div>
                 <div className="text-base font-extrabold text-black">
                   {fmtLabel(range.from)} → {fmtLabel(range.to)}
@@ -476,7 +460,11 @@ export default function BookingBar() {
             <div className="px-3 pb-4 overflow-auto">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <MiniMonth month={viewMonth} range={range} onPick={pickDate} />
-                <MiniMonth month={addMonths(viewMonth, 1)} range={range} onPick={pickDate} />
+                <MiniMonth
+                  month={addMonths(viewMonth, 1)}
+                  range={range}
+                  onPick={pickDate}
+                />
               </div>
             </div>
 
@@ -648,11 +636,7 @@ function MiniMonth({
                 inRange && !disabled ? "bg-orange-300/60" : "",
                 (isStart || isEnd) && !disabled ? "text-black" : "",
               ].join(" ")}
-              style={
-                (isStart || isEnd) && !disabled
-                  ? { background: DEEP_ORANGE }
-                  : undefined
-              }
+              style={(isStart || isEnd) && !disabled ? { background: DEEP_ORANGE } : undefined}
             >
               {d.getDate()}
             </button>
