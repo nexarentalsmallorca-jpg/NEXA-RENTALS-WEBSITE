@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "./Navbar";
-import BookingDateRange from "./components/BookingDateRange";
+
 
 import TrustSection from "./components/TrustSection";
 import ShopSection from "./components/ShopSection";
+import BookingBar from "./components/BookingBar";
 
 function renderStyledHeading(text: string) {
   const ORANGE = ["Scooter", "e-Bike", "Mallorca"];
@@ -93,7 +94,7 @@ export default function Page() {
               <div className="mt-6 flex items-center gap-4">
                 <span className="h-[2px] w-14 rounded-full bg-gradient-to-r from-orange-500 to-yellow-300 opacity-90" />
                 <p className="text-[14px] font-medium tracking-[0.20em] uppercase text-white/75">
-                  Rent online in 30 seconds
+                  Rent online in 60 seconds
                 </p>
               </div>
             </div>
@@ -106,7 +107,7 @@ export default function Page() {
                 introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
               ].join(" ")}
             >
-              <BookingDateRange />
+              <BookingBar />
             </div>
           </div>
 
