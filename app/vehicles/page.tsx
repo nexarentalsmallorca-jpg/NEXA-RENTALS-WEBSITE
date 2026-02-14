@@ -1,9 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const VehiclesClient = dynamic(() => import("./VehiclesClient"), { ssr: false });
-
 export default function VehiclesPage() {
-  return <VehiclesClient />;
+  return (
+    <div style={{ padding: 40, background: "black", color: "white" }}>
+      Vehicles page works ✅
+    </div>
+  );
 }
