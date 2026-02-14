@@ -1,9 +1,9 @@
 "use client";
 
-import dynamic from "next/dynamic";
-
-const TimeClient = dynamic(() => import("./TimeClient"), { ssr: false });
-
 export default function TimePage() {
-  return <TimeClient />;
+  return (
+    <div style={{ padding: 40, background: "black", color: "white" }}>
+      Time page works ✅
+    </div>
+  );
 }
