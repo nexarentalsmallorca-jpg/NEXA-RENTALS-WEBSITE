@@ -5,6 +5,10 @@ import React, { useMemo, useState } from "react";
 type DateRange = { from?: Date; to?: Date };
 type ActiveField = "pickup" | "dropoff";
 
+/* ----------------- Date helpers ----------------- */
+function startOfDay(d: Date) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+}
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
 }
@@ -21,17 +25,25 @@ function isSameDay(a: Date, b: Date) {
     a.getDate() === b.getDate()
   );
 }
-function startOfDay(d: Date) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate());
+function isPastDay(d: Date) {
+  return startOfDay(d) < startOfDay(new Date());
 }
 function fmt(d?: Date) {
   if (!d) return "--/--/----";
-  return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString(undefined, {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
+
+/* Monday-start calendar grid */
 function buildMonthGrid(viewMonth: Date) {
   const first = startOfMonth(viewMonth);
   const last = endOfMonth(viewMonth);
-  const startDow = (first.getDay() + 6) % 7; // Monday start
+
+  // Monday start
+  const startDow = (first.getDay() + 6) % 7;
 
   const cells: (Date | null)[] = [];
   for (let i = 0; i < startDow; i++) cells.push(null);
@@ -39,20 +51,23 @@ function buildMonthGrid(viewMonth: Date) {
     cells.push(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), d));
   }
   while (cells.length % 7 !== 0) cells.push(null);
+
   return cells;
 }
 
+/* ----------------- Component ----------------- */
 export default function BookingBar() {
-  // fixed pickup location (not shown in bar, but used in URL)
   const pickupLocation = "Magaluf (Carrer Galeón 13)";
 
-  const today = useMemo(() => new Date(), []);
+  const today = useMemo(() => startOfDay(new Date()), []);
   const tomorrow = useMemo(
     () => new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
     [today]
   );
 
+  // Default dates
   const [range, setRange] = useState<DateRange>({ from: today, to: tomorrow });
+
   const [pickupTime, setPickupTime] = useState("10:00");
   const [dropoffTime, setDropoffTime] = useState("10:00");
 
@@ -60,39 +75,42 @@ export default function BookingBar() {
   const [activeField, setActiveField] = useState<ActiveField>("pickup");
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(today));
 
-  const cells = useMemo(() => buildMonthGrid(viewMonth), [viewMonth]);
-
-  const canSearch = Boolean(range.from && range.to);
-
   function openCalendar(which: ActiveField) {
     setActiveField(which);
     setOpen(true);
   }
 
+  // Date picking logic (single calendar used for both pickup & dropoff)
   function pickDate(day: Date) {
-    // If editing pickup: set from, and if to exists and is before new from -> clear to
+    if (isPastDay(day)) return;
+
+    // Selecting pickup date
     if (activeField === "pickup") {
       const newFrom = day;
-      const newTo = range.to && startOfDay(range.to) < startOfDay(newFrom) ? undefined : range.to;
+      const newTo =
+        range.to && startOfDay(range.to) < startOfDay(newFrom) ? undefined : range.to;
+
       setRange({ from: newFrom, to: newTo });
-      // After selecting pickup, automatically switch to dropoff for smoother flow
+
+      // After choosing pickup, automatically switch to dropoff
       setActiveField("dropoff");
       return;
     }
 
-    // editing dropoff: require from first
+    // Selecting dropoff date
     if (!range.from) {
       setRange({ from: day, to: undefined });
-      setActiveField("dropoff");
       return;
     }
 
-    const from = range.from;
-    const to = day < from ? from : day;
-    const finalFrom = day < from ? day : from;
+    // If user clicks a day before pickup, swap
+    if (day < range.from) {
+      setRange({ from: day, to: range.from });
+      setOpen(false);
+      return;
+    }
 
-    setRange({ from: finalFrom, to });
-    // auto close when both are selected
+    setRange({ from: range.from, to: day });
     setOpen(false);
   }
 
@@ -114,255 +132,194 @@ export default function BookingBar() {
     window.location.href = `/time?${params.toString()}`;
   }
 
-return (
-  <div className="relative z-50 w-full">
-    {/* Pickup text (Option B) */}
-    <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
-      <span className="inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur">
-        <PinIcon />
-        Pick-up: <span className="text-white">{pickupLocation}</span>
-      </span>
-    </div>
+  return (
+    <div className="relative z-50 w-full">
+      {/* Pickup text (Option B) */}
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
+        <span className="inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur">
+          <PinIcon />
+          Pick-up: <span className="text-white">{pickupLocation}</span>
+        </span>
+      </div>
 
-    {/* CANVA STYLE BAR */}
-    <div
-      className="
-        inline-flex items-stretch
-        rounded-2xl
-        bg-[#F6D7C6]
-        shadow-[0_20px_60px_rgba(0,0,0,0.35)]
-        overflow-hidden
-        border border-black/10
-      "
-    >
-      {/* PICKUP DATE */}
-      <button
-        type="button"
-        onClick={() => openCalendar("pickup")}
-        className="
-          flex items-center gap-3
-          px-4 py-3
-          min-w-[170px]
-          border-r border-black/15
-          text-left
-          hover:bg-black/5
-          transition
-        "
-      >
-        <CalendarMini />
-        <div className="leading-tight">
-          <div className="text-[11px] font-semibold text-black/65">Pick-up Date</div>
-          <div className="text-[13px] font-extrabold text-black">{fmt(range.from)}</div>
-        </div>
-      </button>
-
-      {/* PICKUP TIME */}
+      {/* CANVA STYLE BAR */}
       <div
         className="
-          flex items-center gap-3
-          px-4 py-3
-          min-w-[140px]
-          border-r border-black/15
+          inline-flex items-stretch
+          rounded-2xl
+          bg-[#F6D7C6]
+          shadow-[0_20px_60px_rgba(0,0,0,0.35)]
+          overflow-hidden
+          border border-black/10
         "
       >
-        <ClockMini />
-        <div className="leading-tight">
-          <div className="text-[11px] font-semibold text-black/65">Time</div>
-          <input
-            type="time"
-            value={pickupTime}
-            onChange={(e) => setPickupTime(e.target.value)}
-            className="bg-transparent text-[13px] font-extrabold text-black outline-none"
-          />
+        {/* PICKUP DATE */}
+        <button
+          type="button"
+          onClick={() => openCalendar("pickup")}
+          className="
+            flex items-center gap-3
+            px-4 py-3
+            min-w-[170px]
+            border-r border-black/15
+            text-left
+            hover:bg-black/5
+            transition
+          "
+        >
+          <CalendarMini />
+          <div className="leading-tight">
+            <div className="text-[11px] font-semibold text-black/65">Pick-up Date</div>
+            <div className="text-[13px] font-extrabold text-black">{fmt(range.from)}</div>
+          </div>
+        </button>
+
+        {/* PICKUP TIME */}
+        <div className="flex items-center gap-3 px-4 py-3 min-w-[140px] border-r border-black/15">
+          <ClockMini />
+          <div className="leading-tight">
+            <div className="text-[11px] font-semibold text-black/65">Time</div>
+            <input
+              type="time"
+              value={pickupTime}
+              onChange={(e) => setPickupTime(e.target.value)}
+              className="bg-transparent text-[13px] font-extrabold text-black outline-none"
+            />
+          </div>
         </div>
+
+        {/* DROPOFF DATE */}
+        <button
+          type="button"
+          onClick={() => openCalendar("dropoff")}
+          className="
+            flex items-center gap-3
+            px-4 py-3
+            min-w-[170px]
+            border-r border-black/15
+            text-left
+            hover:bg-black/5
+            transition
+          "
+        >
+          <CalendarMini />
+          <div className="leading-tight">
+            <div className="text-[11px] font-semibold text-black/65">Drop-off Date</div>
+            <div className="text-[13px] font-extrabold text-black">{fmt(range.to)}</div>
+          </div>
+        </button>
+
+        {/* DROPOFF TIME */}
+        <div className="flex items-center gap-3 px-4 py-3 min-w-[140px]">
+          <ClockMini />
+          <div className="leading-tight">
+            <div className="text-[11px] font-semibold text-black/65">Time</div>
+            <input
+              type="time"
+              value={dropoffTime}
+              onChange={(e) => setDropoffTime(e.target.value)}
+              className="bg-transparent text-[13px] font-extrabold text-black outline-none"
+            />
+          </div>
+        </div>
+
+        {/* SEARCH BUTTON */}
+        <button
+          type="button"
+          onClick={onSearch}
+          className="
+            bg-[#FF6A00]
+            px-7
+            font-extrabold
+            text-black
+            text-[15px]
+            hover:brightness-95
+            active:scale-[0.99]
+            transition
+            rounded-r-2xl
+            min-w-[120px]
+          "
+        >
+          Search
+        </button>
       </div>
 
-      {/* DROPOFF DATE */}
-      <button
-        type="button"
-        onClick={() => openCalendar("dropoff")}
-        className="
-          flex items-center gap-3
-          px-4 py-3
-          min-w-[170px]
-          border-r border-black/15
-          text-left
-          hover:bg-black/5
-          transition
-        "
-      >
-        <CalendarMini />
-        <div className="leading-tight">
-          <div className="text-[11px] font-semibold text-black/65">Drop-off Date</div>
-          <div className="text-[13px] font-extrabold text-black">{fmt(range.to)}</div>
-        </div>
-      </button>
-
-      {/* DROPOFF TIME */}
-      <div className="flex items-center gap-3 px-4 py-3 min-w-[140px]">
-        <ClockMini />
-        <div className="leading-tight">
-          <div className="text-[11px] font-semibold text-black/65">Time</div>
-          <input
-            type="time"
-            value={dropoffTime}
-            onChange={(e) => setDropoffTime(e.target.value)}
-            className="bg-transparent text-[13px] font-extrabold text-black outline-none"
-          />
-        </div>
-      </div>
-
-      {/* SEARCH BUTTON */}
-      <button
-        type="button"
-        onClick={onSearch}
-        className="
-          bg-[#FF6A00]
-          px-7
-          font-extrabold
-          text-black
-          text-[15px]
-          hover:brightness-95
-          active:scale-[0.99]
-          transition
-          rounded-l-none
-          rounded-r-2xl
-          min-w-[120px]
-        "
-      >
-        Search
-      </button>
-    </div>
-
-      {/* CALENDAR MODAL (BOOKING.COM BEHAVIOR) */}
+      {/* MODAL CALENDAR (compact, 2 months, disabled past, orange hover/range) */}
       {open && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-          <div className="w-[min(760px,92vw)] max-h-[80vh] rounded-2xl bg-white shadow-2xl overflow-hidden">
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3">
+          <div className="w-[min(780px,96vw)] max-h-[80vh] rounded-2xl bg-white shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="flex items-center justify-between px-5 py-4 border-b">
+            <div className="flex items-center justify-between px-4 py-3 border-b">
               <div>
                 <div className="text-sm text-gray-500">
                   {activeField === "pickup" ? "Select pick-up date" : "Select drop-off date"}
                 </div>
-                <div className="text-lg font-bold text-gray-900">
+                <div className="text-base font-extrabold text-gray-900">
                   {fmt(range.from)} → {fmt(range.to)}
                 </div>
               </div>
-
               <button
                 onClick={() => setOpen(false)}
-                className="h-10 w-10 rounded-xl hover:bg-gray-100 text-gray-700"
+                className="h-9 w-9 rounded-xl hover:bg-gray-100 text-gray-700 transition"
                 aria-label="Close"
               >
                 ✕
               </button>
             </div>
 
-           <div className="px-4 md:px-5 py-4 overflow-auto">
-  {/* Month nav */}
-  <div className="flex items-center justify-between mb-3">
-    <button
-      type="button"
-      onClick={() => setViewMonth((m) => addMonths(m, -1))}
-      className="h-9 w-9 rounded-xl border hover:bg-gray-50"
-    >
-      ‹
-    </button>
+            {/* Month navigation */}
+            <div className="flex items-center justify-between px-4 py-3">
+              <button
+                type="button"
+                onClick={() => setViewMonth((m) => addMonths(m, -1))}
+                className="h-9 w-9 rounded-xl border hover:bg-gray-50 transition"
+              >
+                ‹
+              </button>
 
-    <div className="font-bold text-gray-900 text-sm md:text-base">
-      {viewMonth.toLocaleString(undefined, { month: "long", year: "numeric" })}
-    </div>
+              <div className="font-bold text-gray-900 text-sm md:text-base">
+                {viewMonth.toLocaleString(undefined, { month: "long", year: "numeric" })}{" "}
+                <span className="text-gray-400">→</span>{" "}
+                {addMonths(viewMonth, 1).toLocaleString(undefined, {
+                  month: "long",
+                  year: "numeric",
+                })}
+              </div>
 
-    <button
-      type="button"
-      onClick={() => setViewMonth((m) => addMonths(m, 1))}
-      className="h-9 w-9 rounded-xl border hover:bg-gray-50"
-    >
-      ›
-    </button>
-  </div>
+              <button
+                type="button"
+                onClick={() => setViewMonth((m) => addMonths(m, 1))}
+                className="h-9 w-9 rounded-xl border hover:bg-gray-50 transition"
+              >
+                ›
+              </button>
+            </div>
 
-  {/* Weekdays */}
-  <div className="grid grid-cols-7 text-[11px] md:text-xs text-gray-500 mb-2">
-    {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => (
-      <div key={w} className="py-1 text-center">
-        {w}
-      </div>
-    ))}
-  </div>
-
-  {/* Grid */}
-  <div className="grid grid-cols-7 gap-2">
-    {cells.map((d, idx) => {
-      if (!d) return <div key={idx} className="h-10 md:h-11" />;
-
-      const inRange =
-        range.from &&
-        range.to &&
-        d >= startOfDay(range.from) &&
-        d <= startOfDay(range.to);
-
-      const isStart = range.from && isSameDay(d, range.from);
-      const isEnd = range.to && isSameDay(d, range.to);
-
-      return (
-        <button
-          key={idx}
-          type="button"
-          onClick={() => pickDate(d)}
-          className={[
-            "h-10 md:h-11 rounded-xl font-bold transition",
-            "text-gray-900",
-            // HOVER = light orange (visible)
-             !inRange && !(isStart || isEnd) ? "hover:bg-orange-200" : "",
-            // Middle dates = medium orange shade
-            inRange ? "bg-orange-300/60" : "",
-            // Start/End dates = deep orange (same as button)
-            isStart || isEnd ? "bg-[#FF6A00] text-black" : "",
-          ].join(" ")}
-        >
-          {d.getDate()}
-        </button>
-      );
-    })}
-  </div>
-</div>
-
+            {/* Two months */}
+            <div className="px-3 pb-4 overflow-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <MiniMonth month={viewMonth} range={range} onPick={pickDate} />
+                <MiniMonth month={addMonths(viewMonth, 1)} range={range} onPick={pickDate} />
+              </div>
+            </div>
 
             {/* Footer */}
-            <div className="flex items-center justify-between px-5 py-4 border-t bg-gray-50">
+            <div className="flex items-center justify-between px-4 py-3 border-t bg-gray-50">
               <button
                 type="button"
                 onClick={() => setRange({})}
-                className="text-sm font-semibold text-gray-600 hover:text-gray-900"
+                className="text-sm font-semibold text-gray-600 hover:text-gray-900 transition"
               >
                 Clear
               </button>
 
-              <div className="flex items-center gap-2">
-                <button
-                  type="button"
-                  onClick={() => setOpen(false)}
-                  className="rounded-xl px-4 py-2 font-bold text-gray-700 hover:bg-gray-100"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    if (!range.from || !range.to) return;
-                    setOpen(false);
-                  }}
-                  className={[
-                    "rounded-xl px-5 py-2 font-extrabold",
-                    range.from && range.to
-                      ? "bg-[#FF6A00] text-black hover:brightness-95"
-                      : "bg-gray-200 text-gray-500 cursor-not-allowed",
-                  ].join(" ")}
-                >
-                  Done
-                </button>
-              </div>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="rounded-xl bg-[#FF6A00] px-5 py-2 font-extrabold text-black hover:brightness-95 transition"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
@@ -371,7 +328,75 @@ return (
   );
 }
 
-/* --- tiny icons --- */
+/* ----------------- MiniMonth ----------------- */
+function MiniMonth({
+  month,
+  range,
+  onPick,
+}: {
+  month: Date;
+  range: DateRange;
+  onPick: (d: Date) => void;
+}) {
+  const cells = useMemo(() => buildMonthGrid(month), [month]);
+
+  return (
+    <div className="rounded-xl border border-gray-200 bg-white p-3">
+      <div className="mb-2 text-sm font-bold text-gray-900">
+        {month.toLocaleString(undefined, { month: "long", year: "numeric" })}
+      </div>
+
+      {/* Weekdays */}
+      <div className="grid grid-cols-7 text-[11px] text-gray-500 mb-2">
+        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => (
+          <div key={w} className="py-1 text-center">
+            {w}
+          </div>
+        ))}
+      </div>
+
+      {/* Days */}
+      <div className="grid grid-cols-7 gap-2">
+        {cells.map((d, idx) => {
+          if (!d) return <div key={idx} className="h-9" />;
+
+          const disabled = isPastDay(d);
+
+          const inRange =
+            range.from &&
+            range.to &&
+            startOfDay(d) >= startOfDay(range.from) &&
+            startOfDay(d) <= startOfDay(range.to);
+
+          const isStart = range.from && isSameDay(d, range.from);
+          const isEnd = range.to && isSameDay(d, range.to);
+
+          return (
+            <button
+              key={idx}
+              type="button"
+              disabled={disabled}
+              onClick={() => onPick(d)}
+              className={[
+                "h-9 rounded-lg font-extrabold text-[13px]",
+                "transition-colors duration-150 ease-out",
+                disabled
+                  ? "text-gray-300 cursor-not-allowed"
+                  : "text-gray-900 hover:bg-orange-200",
+                inRange && !disabled ? "bg-orange-300/60" : "",
+                (isStart || isEnd) && !disabled ? "bg-[#FF6A00] text-black" : "",
+              ].join(" ")}
+            >
+              {d.getDate()}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
+/* ----------------- Icons ----------------- */
 function CalendarMini() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" className="text-black/70" fill="none">
@@ -383,6 +408,7 @@ function CalendarMini() {
     </svg>
   );
 }
+
 function ClockMini() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" className="text-black/70" fill="none">
@@ -395,6 +421,7 @@ function ClockMini() {
     </svg>
   );
 }
+
 function PinIcon() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" className="text-white" fill="none">
