@@ -1,15 +1,7 @@
-"use client";
+import dynamic from "next/dynamic";
 
-export const dynamic = "force-dynamic";
-import Navbar from "../Navbar";
-import VehiclesGrid from "./VehiclesGrid";
-
+const VehiclesClient = dynamic(() => import("./VehiclesClient"), { ssr: false });
 
 export default function VehiclesPage() {
-  return (
-    <main>
-      <Navbar />
-      <VehiclesGrid />
-    </main>
-  );
+  return <VehiclesClient />;
 }
