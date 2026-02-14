@@ -93,7 +93,7 @@ export default function Page() {
               <div className="mt-6 flex items-center gap-4">
                 <span className="h-[2px] w-14 rounded-full bg-gradient-to-r from-orange-500 to-yellow-300 opacity-90" />
                 <p className="text-[14px] font-medium tracking-[0.20em] uppercase text-white/75">
-                  Rent online in 60 seconds
+                  Rent online in 30 seconds
                 </p>
               </div>
             </div>
