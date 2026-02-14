@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from "react";
 
 type DateRange = { from?: Date; to?: Date };
+type ActiveField = "pickup" | "dropoff";
 
 function startOfMonth(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), 1);
@@ -23,11 +24,14 @@ function isSameDay(a: Date, b: Date) {
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
-
+function fmt(d?: Date) {
+  if (!d) return "--/--/----";
+  return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+}
 function buildMonthGrid(viewMonth: Date) {
   const first = startOfMonth(viewMonth);
   const last = endOfMonth(viewMonth);
-  const startDow = (first.getDay() + 6) % 7;
+  const startDow = (first.getDay() + 6) % 7; // Monday start
 
   const cells: (Date | null)[] = [];
   for (let i = 0; i < startDow; i++) cells.push(null);
@@ -39,131 +43,249 @@ function buildMonthGrid(viewMonth: Date) {
 }
 
 export default function BookingBar() {
+  // fixed pickup location (not shown in bar, but used in URL)
   const pickupLocation = "Magaluf (Carrer Galeón 13)";
-  const today = new Date();
 
-  const [range, setRange] = useState<DateRange>({
-    from: today,
-    to: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-  });
+  const today = useMemo(() => new Date(), []);
+  const tomorrow = useMemo(
+    () => new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
+    [today]
+  );
 
-  const [open, setOpen] = useState(false);
-  const [viewMonth, setViewMonth] = useState(startOfMonth(today));
+  const [range, setRange] = useState<DateRange>({ from: today, to: tomorrow });
   const [pickupTime, setPickupTime] = useState("10:00");
   const [dropoffTime, setDropoffTime] = useState("10:00");
 
+  const [open, setOpen] = useState(false);
+  const [activeField, setActiveField] = useState<ActiveField>("pickup");
+  const [viewMonth, setViewMonth] = useState(() => startOfMonth(today));
+
   const cells = useMemo(() => buildMonthGrid(viewMonth), [viewMonth]);
 
-  function onPick(day: Date) {
-    if (!range.from) {
-      setRange({ from: day });
-      return;
-    }
-    if (range.from && !range.to) {
-      const [a, b] = day < range.from ? [day, range.from] : [range.from, day];
-      setRange({ from: a, to: b });
-      return;
-    }
-    setRange({ from: day, to: undefined });
+  const canSearch = Boolean(range.from && range.to);
+
+  function openCalendar(which: ActiveField) {
+    setActiveField(which);
+    setOpen(true);
   }
 
-  const label =
-    range.from && range.to
-      ? `${range.from.toLocaleDateString()} → ${range.to.toLocaleDateString()}`
-      : "Select dates";
+  function pickDate(day: Date) {
+    // If editing pickup: set from, and if to exists and is before new from -> clear to
+    if (activeField === "pickup") {
+      const newFrom = day;
+      const newTo = range.to && startOfDay(range.to) < startOfDay(newFrom) ? undefined : range.to;
+      setRange({ from: newFrom, to: newTo });
+      // After selecting pickup, automatically switch to dropoff for smoother flow
+      setActiveField("dropoff");
+      return;
+    }
 
-  const canSearch = range.from && range.to;
+    // editing dropoff: require from first
+    if (!range.from) {
+      setRange({ from: day, to: undefined });
+      setActiveField("dropoff");
+      return;
+    }
+
+    const from = range.from;
+    const to = day < from ? from : day;
+    const finalFrom = day < from ? day : from;
+
+    setRange({ from: finalFrom, to });
+    // auto close when both are selected
+    setOpen(false);
+  }
+
+  function onSearch() {
+    if (!range.from || !range.to) {
+      setActiveField(range.from ? "dropoff" : "pickup");
+      setOpen(true);
+      return;
+    }
+
+    const params = new URLSearchParams({
+      pickupLocation,
+      from: range.from.toISOString(),
+      to: range.to.toISOString(),
+      pickupTime,
+      dropoffTime,
+    });
+
+    window.location.href = `/time?${params.toString()}`;
+  }
 
   return (
-    <div className="w-full relative z-50">
-      <div className="mx-auto max-w-5xl">
-        {/* BAR */}
-        <div className="rounded-xl bg-white p-2 shadow-xl">
-          <div className="flex flex-col md:flex-row overflow-hidden rounded-lg border-4 border-yellow-400">
+    <div className="relative z-50 w-full">
+      {/* CANVA STYLE BAR */}
+      <div
+        className="
+          inline-flex items-stretch
+          rounded-2xl
+          bg-[#F6D7C6]
+          shadow-[0_20px_60px_rgba(0,0,0,0.35)]
+          overflow-hidden
+          border border-black/10
+        "
+      >
+        {/* PICKUP DATE */}
+        <button
+          type="button"
+          onClick={() => openCalendar("pickup")}
+          className="
+            flex items-center gap-3
+            px-4 py-3
+            min-w-[170px]
+            border-r border-black/15
+            text-left
+            hover:bg-black/5
+            transition
+          "
+        >
+          <CalendarMini />
+          <div className="leading-tight">
+            <div className="text-[11px] font-semibold text-black/65">Pick-up Date</div>
+            <div className="text-[13px] font-extrabold text-black">{fmt(range.from)}</div>
+          </div>
+        </button>
 
-            {/* LOCATION */}
-            <div className="px-4 py-3 border-b md:border-b-0 md:border-r">
-              <div className="text-xs text-gray-500">Pick-up location</div>
-              <div className="font-semibold">{pickupLocation}</div>
-            </div>
-
-            {/* DATES */}
-            <button
-              onClick={() => setOpen(true)}
-              className="px-4 py-3 text-left border-b md:border-b-0 md:border-r flex-1"
-            >
-              <div className="text-xs text-gray-500">Dates</div>
-              <div className="font-semibold">{label}</div>
-            </button>
-
-            {/* TIME */}
-            <div className="px-4 py-3 border-b md:border-b-0 md:border-r">
-              <div className="text-xs text-gray-500">Pick-up time</div>
-              <input
-                type="time"
-                value={pickupTime}
-                onChange={(e) => setPickupTime(e.target.value)}
-                className="font-semibold outline-none"
-              />
-            </div>
-
-            <div className="px-4 py-3 border-b md:border-b-0 md:border-r">
-              <div className="text-xs text-gray-500">Drop-off time</div>
-              <input
-                type="time"
-                value={dropoffTime}
-                onChange={(e) => setDropoffTime(e.target.value)}
-                className="font-semibold outline-none"
-              />
-            </div>
-
-            {/* SEARCH */}
-            <button
-              disabled={!canSearch}
-              className="bg-blue-700 text-white font-bold px-8 py-4 disabled:opacity-50"
-              onClick={() => {
-                if (!range.from || !range.to) return;
-
-                const params = new URLSearchParams({
-                  from: range.from.toISOString(),
-                  to: range.to.toISOString(),
-                  pickupTime,
-                  dropoffTime,
-                });
-
-                window.location.href = `/time?${params}`;
-              }}
-            >
-              Search
-            </button>
+        {/* PICKUP TIME */}
+        <div
+          className="
+            flex items-center gap-3
+            px-4 py-3
+            min-w-[140px]
+            border-r border-black/15
+          "
+        >
+          <ClockMini />
+          <div className="leading-tight">
+            <div className="text-[11px] font-semibold text-black/65">Time</div>
+            <input
+              type="time"
+              value={pickupTime}
+              onChange={(e) => setPickupTime(e.target.value)}
+              className="bg-transparent text-[13px] font-extrabold text-black outline-none"
+            />
           </div>
         </div>
+
+        {/* DROPOFF DATE */}
+        <button
+          type="button"
+          onClick={() => openCalendar("dropoff")}
+          className="
+            flex items-center gap-3
+            px-4 py-3
+            min-w-[170px]
+            border-r border-black/15
+            text-left
+            hover:bg-black/5
+            transition
+          "
+        >
+          <CalendarMini />
+          <div className="leading-tight">
+            <div className="text-[11px] font-semibold text-black/65">Drop-off Date</div>
+            <div className="text-[13px] font-extrabold text-black">{fmt(range.to)}</div>
+          </div>
+        </button>
+
+        {/* DROPOFF TIME */}
+        <div className="flex items-center gap-3 px-4 py-3 min-w-[140px]">
+          <ClockMini />
+          <div className="leading-tight">
+            <div className="text-[11px] font-semibold text-black/65">Time</div>
+            <input
+              type="time"
+              value={dropoffTime}
+              onChange={(e) => setDropoffTime(e.target.value)}
+              className="bg-transparent text-[13px] font-extrabold text-black outline-none"
+            />
+          </div>
+        </div>
+
+        {/* SEARCH BUTTON (CANVA ORANGE PILL) */}
+        <button
+          type="button"
+          onClick={onSearch}
+          className="
+            bg-[#FF6A00]
+            px-7
+            font-extrabold
+            text-black
+            text-[15px]
+            hover:brightness-95
+            active:scale-[0.99]
+            transition
+            rounded-l-none
+            rounded-r-2xl
+            min-w-[120px]
+          "
+        >
+          Search
+        </button>
       </div>
 
-      {/* MODAL CALENDAR */}
+      {/* CALENDAR MODAL (BOOKING.COM BEHAVIOR) */}
       {open && (
-        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="bg-white rounded-2xl p-6 w-[90vw] max-w-3xl shadow-2xl">
-            
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="w-[min(920px,95vw)] rounded-2xl bg-white shadow-2xl overflow-hidden">
             {/* Header */}
-            <div className="flex justify-between mb-4">
-              <h2 className="font-semibold text-lg">Select your dates</h2>
-              <button onClick={() => setOpen(false)}>✕</button>
+            <div className="flex items-center justify-between px-5 py-4 border-b">
+              <div>
+                <div className="text-sm text-gray-500">
+                  {activeField === "pickup" ? "Select pick-up date" : "Select drop-off date"}
+                </div>
+                <div className="text-lg font-bold text-gray-900">
+                  {fmt(range.from)} → {fmt(range.to)}
+                </div>
+              </div>
+
+              <button
+                onClick={() => setOpen(false)}
+                className="h-10 w-10 rounded-xl hover:bg-gray-100 text-gray-700"
+                aria-label="Close"
+              >
+                ✕
+              </button>
             </div>
 
             {/* Month nav */}
-            <div className="flex justify-between mb-4">
-              <button onClick={() => setViewMonth(addMonths(viewMonth, -1))}>‹</button>
-              <div className="font-semibold">
+            <div className="flex items-center justify-between px-5 py-4">
+              <button
+                type="button"
+                onClick={() => setViewMonth((m) => addMonths(m, -1))}
+                className="h-10 w-10 rounded-xl border hover:bg-gray-50"
+              >
+                ‹
+              </button>
+
+              <div className="font-bold text-gray-900">
                 {viewMonth.toLocaleString(undefined, { month: "long", year: "numeric" })}
               </div>
-              <button onClick={() => setViewMonth(addMonths(viewMonth, 1))}>›</button>
+
+              <button
+                type="button"
+                onClick={() => setViewMonth((m) => addMonths(m, 1))}
+                className="h-10 w-10 rounded-xl border hover:bg-gray-50"
+              >
+                ›
+              </button>
+            </div>
+
+            {/* Weekdays */}
+            <div className="grid grid-cols-7 px-5 text-xs text-gray-500">
+              {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => (
+                <div key={w} className="py-2 text-center">
+                  {w}
+                </div>
+              ))}
             </div>
 
             {/* Grid */}
-            <div className="grid grid-cols-7 gap-2">
-              {cells.map((d, i) => {
-                if (!d) return <div key={i} className="h-12" />;
+            <div className="grid grid-cols-7 gap-2 px-5 pb-5">
+              {cells.map((d, idx) => {
+                if (!d) return <div key={idx} className="h-11" />;
 
                 const inRange =
                   range.from &&
@@ -176,12 +298,14 @@ export default function BookingBar() {
 
                 return (
                   <button
-                    key={i}
-                    onClick={() => onPick(d)}
+                    key={idx}
+                    type="button"
+                    onClick={() => pickDate(d)}
                     className={[
-                      "h-12 rounded-lg font-semibold",
-                      inRange ? "bg-blue-100" : "hover:bg-gray-100",
-                      isStart || isEnd ? "bg-blue-600 text-white" : "",
+                      "h-11 rounded-xl font-bold transition",
+                      "hover:bg-gray-100",
+                      inRange ? "bg-orange-100" : "",
+                      isStart || isEnd ? "bg-[#FF6A00] text-black" : "text-gray-900",
                     ].join(" ")}
                   >
                     {d.getDate()}
@@ -191,18 +315,68 @@ export default function BookingBar() {
             </div>
 
             {/* Footer */}
-            <div className="flex justify-between mt-6">
-              <button onClick={() => setRange({})}>Clear</button>
+            <div className="flex items-center justify-between px-5 py-4 border-t bg-gray-50">
               <button
-                onClick={() => setOpen(false)}
-                className="bg-blue-600 text-white px-5 py-2 rounded-lg"
+                type="button"
+                onClick={() => setRange({})}
+                className="text-sm font-semibold text-gray-600 hover:text-gray-900"
               >
-                Done
+                Clear
               </button>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setOpen(false)}
+                  className="rounded-xl px-4 py-2 font-bold text-gray-700 hover:bg-gray-100"
+                >
+                  Close
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (!range.from || !range.to) return;
+                    setOpen(false);
+                  }}
+                  className={[
+                    "rounded-xl px-5 py-2 font-extrabold",
+                    range.from && range.to
+                      ? "bg-[#FF6A00] text-black hover:brightness-95"
+                      : "bg-gray-200 text-gray-500 cursor-not-allowed",
+                  ].join(" ")}
+                >
+                  Done
+                </button>
+              </div>
             </div>
           </div>
         </div>
       )}
     </div>
+  );
+}
+
+/* --- tiny icons --- */
+function CalendarMini() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" className="text-black/70" fill="none">
+      <path
+        d="M8 2v3M16 2v3M3 9h18M5 6h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+    </svg>
+  );
+}
+function ClockMini() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" className="text-black/70" fill="none">
+      <path
+        d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" />
+    </svg>
   );
 }
