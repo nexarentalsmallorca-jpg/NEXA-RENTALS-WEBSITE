@@ -114,117 +114,125 @@ export default function BookingBar() {
     window.location.href = `/time?${params.toString()}`;
   }
 
-  return (
-    <div className="relative z-50 w-full">
-      {/* CANVA STYLE BAR */}
-      <div
+return (
+  <div className="relative z-50 w-full">
+    {/* Pickup text (Option B) */}
+    <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
+      <span className="inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur">
+        <PinIcon />
+        Pick-up: <span className="text-white">{pickupLocation}</span>
+      </span>
+    </div>
+
+    {/* CANVA STYLE BAR */}
+    <div
+      className="
+        inline-flex items-stretch
+        rounded-2xl
+        bg-[#F6D7C6]
+        shadow-[0_20px_60px_rgba(0,0,0,0.35)]
+        overflow-hidden
+        border border-black/10
+      "
+    >
+      {/* PICKUP DATE */}
+      <button
+        type="button"
+        onClick={() => openCalendar("pickup")}
         className="
-          inline-flex items-stretch
-          rounded-2xl
-          bg-[#F6D7C6]
-          shadow-[0_20px_60px_rgba(0,0,0,0.35)]
-          overflow-hidden
-          border border-black/10
+          flex items-center gap-3
+          px-4 py-3
+          min-w-[170px]
+          border-r border-black/15
+          text-left
+          hover:bg-black/5
+          transition
         "
       >
-        {/* PICKUP DATE */}
-        <button
-          type="button"
-          onClick={() => openCalendar("pickup")}
-          className="
-            flex items-center gap-3
-            px-4 py-3
-            min-w-[170px]
-            border-r border-black/15
-            text-left
-            hover:bg-black/5
-            transition
-          "
-        >
-          <CalendarMini />
-          <div className="leading-tight">
-            <div className="text-[11px] font-semibold text-black/65">Pick-up Date</div>
-            <div className="text-[13px] font-extrabold text-black">{fmt(range.from)}</div>
-          </div>
-        </button>
-
-        {/* PICKUP TIME */}
-        <div
-          className="
-            flex items-center gap-3
-            px-4 py-3
-            min-w-[140px]
-            border-r border-black/15
-          "
-        >
-          <ClockMini />
-          <div className="leading-tight">
-            <div className="text-[11px] font-semibold text-black/65">Time</div>
-            <input
-              type="time"
-              value={pickupTime}
-              onChange={(e) => setPickupTime(e.target.value)}
-              className="bg-transparent text-[13px] font-extrabold text-black outline-none"
-            />
-          </div>
+        <CalendarMini />
+        <div className="leading-tight">
+          <div className="text-[11px] font-semibold text-black/65">Pick-up Date</div>
+          <div className="text-[13px] font-extrabold text-black">{fmt(range.from)}</div>
         </div>
+      </button>
 
-        {/* DROPOFF DATE */}
-        <button
-          type="button"
-          onClick={() => openCalendar("dropoff")}
-          className="
-            flex items-center gap-3
-            px-4 py-3
-            min-w-[170px]
-            border-r border-black/15
-            text-left
-            hover:bg-black/5
-            transition
-          "
-        >
-          <CalendarMini />
-          <div className="leading-tight">
-            <div className="text-[11px] font-semibold text-black/65">Drop-off Date</div>
-            <div className="text-[13px] font-extrabold text-black">{fmt(range.to)}</div>
-          </div>
-        </button>
-
-        {/* DROPOFF TIME */}
-        <div className="flex items-center gap-3 px-4 py-3 min-w-[140px]">
-          <ClockMini />
-          <div className="leading-tight">
-            <div className="text-[11px] font-semibold text-black/65">Time</div>
-            <input
-              type="time"
-              value={dropoffTime}
-              onChange={(e) => setDropoffTime(e.target.value)}
-              className="bg-transparent text-[13px] font-extrabold text-black outline-none"
-            />
-          </div>
+      {/* PICKUP TIME */}
+      <div
+        className="
+          flex items-center gap-3
+          px-4 py-3
+          min-w-[140px]
+          border-r border-black/15
+        "
+      >
+        <ClockMini />
+        <div className="leading-tight">
+          <div className="text-[11px] font-semibold text-black/65">Time</div>
+          <input
+            type="time"
+            value={pickupTime}
+            onChange={(e) => setPickupTime(e.target.value)}
+            className="bg-transparent text-[13px] font-extrabold text-black outline-none"
+          />
         </div>
-
-        {/* SEARCH BUTTON (CANVA ORANGE PILL) */}
-        <button
-          type="button"
-          onClick={onSearch}
-          className="
-            bg-[#FF6A00]
-            px-7
-            font-extrabold
-            text-black
-            text-[15px]
-            hover:brightness-95
-            active:scale-[0.99]
-            transition
-            rounded-l-none
-            rounded-r-2xl
-            min-w-[120px]
-          "
-        >
-          Search
-        </button>
       </div>
+
+      {/* DROPOFF DATE */}
+      <button
+        type="button"
+        onClick={() => openCalendar("dropoff")}
+        className="
+          flex items-center gap-3
+          px-4 py-3
+          min-w-[170px]
+          border-r border-black/15
+          text-left
+          hover:bg-black/5
+          transition
+        "
+      >
+        <CalendarMini />
+        <div className="leading-tight">
+          <div className="text-[11px] font-semibold text-black/65">Drop-off Date</div>
+          <div className="text-[13px] font-extrabold text-black">{fmt(range.to)}</div>
+        </div>
+      </button>
+
+      {/* DROPOFF TIME */}
+      <div className="flex items-center gap-3 px-4 py-3 min-w-[140px]">
+        <ClockMini />
+        <div className="leading-tight">
+          <div className="text-[11px] font-semibold text-black/65">Time</div>
+          <input
+            type="time"
+            value={dropoffTime}
+            onChange={(e) => setDropoffTime(e.target.value)}
+            className="bg-transparent text-[13px] font-extrabold text-black outline-none"
+          />
+        </div>
+      </div>
+
+      {/* SEARCH BUTTON */}
+      <button
+        type="button"
+        onClick={onSearch}
+        className="
+          bg-[#FF6A00]
+          px-7
+          font-extrabold
+          text-black
+          text-[15px]
+          hover:brightness-95
+          active:scale-[0.99]
+          transition
+          rounded-l-none
+          rounded-r-2xl
+          min-w-[120px]
+        "
+      >
+        Search
+      </button>
+    </div>
 
       {/* CALENDAR MODAL (BOOKING.COM BEHAVIOR) */}
       {open && (
@@ -377,6 +385,22 @@ function ClockMini() {
         strokeWidth="2"
       />
       <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+function PinIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" className="text-white" fill="none">
+      <path
+        d="M12 22s7-5.2 7-12A7 7 0 1 0 5 10c0 6.8 7 12 7 12Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
+      <path
+        d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
+        stroke="currentColor"
+        strokeWidth="2"
+      />
     </svg>
   );
 }
