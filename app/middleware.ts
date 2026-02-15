@@ -7,35 +7,34 @@ export function middleware(req: NextRequest) {
   const { nextUrl } = req;
   const pathname = nextUrl.pathname;
 
-  // Always allow Next internal files + static assets
+  // allow next internals + static files
   if (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
-    pathname.startsWith("/favicon") ||
+    pathname === "/favicon.ico" ||
     pathname.startsWith("/images") ||
     pathname.match(/\.(png|jpg|jpeg|gif|webp|svg|ico|css|js|map)$/)
   ) {
     return NextResponse.next();
   }
 
-  // Allow coming soon page
+  // allow coming soon page
   if (pathname.startsWith("/coming-soon")) {
     return NextResponse.next();
   }
 
-  // Allow you with secret
+  // allow you with secret
   if (nextUrl.searchParams.get("dev") === SECRET) {
     return NextResponse.next();
   }
 
-  // Redirect everyone else
+  // redirect everyone else
   const url = nextUrl.clone();
   url.pathname = "/coming-soon";
-  url.search = ""; // optional: remove query params
+  url.search = "";
   return NextResponse.redirect(url);
 }
 
-// Run on all routes except static/internal
 export const config = {
   matcher: ["/((?!_next|api|favicon.ico).*)"],
 };
