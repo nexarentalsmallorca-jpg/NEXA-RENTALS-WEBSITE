@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const SECRET = "nexa123";
+const SECRET = "sahil2005";
 const COOKIE_NAME = "nexa_admin";
 
 export function middleware(req: NextRequest) {
