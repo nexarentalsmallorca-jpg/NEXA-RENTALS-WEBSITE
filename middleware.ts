@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const SECRET = "mynexasecret2026";
+const SECRET = "nexa123";
+const COOKIE_NAME = "nexa_admin";
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
@@ -17,13 +18,24 @@ export function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // allow coming-soon page
-  if (pathname.startsWith("/coming-soon")) {
-    return NextResponse.next();
+  // already unlocked (cookie)
+  const hasCookie = req.cookies.get(COOKIE_NAME)?.value === "1";
+  if (hasCookie) return NextResponse.next();
+
+  // unlock link: set cookie once
+  if (url.searchParams.get("dev") === SECRET) {
+    const res = NextResponse.next();
+    res.cookies.set(COOKIE_NAME, "1", {
+      httpOnly: true,
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30, // 30 days
+    });
+    return res;
   }
 
-  // allow you with secret
-  if (url.searchParams.get("dev") === SECRET) {
+  // allow coming soon page itself
+  if (pathname.startsWith("/coming-soon")) {
     return NextResponse.next();
   }
 
