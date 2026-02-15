@@ -5,11 +5,6 @@ import { useState } from "react";
 export default function ComingSoon() {
   const [pw, setPw] = useState("");
 
-  function unlock() {
-    // redirects to middleware unlock
-    window.location.href = `/?dev=${encodeURIComponent(pw)}`;
-  }
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white px-4">
       <div className="w-full max-w-lg text-center">
@@ -24,7 +19,7 @@ export default function ComingSoon() {
             className="w-[260px] rounded-xl px-4 py-3 text-black font-semibold outline-none"
           />
           <button
-            onClick={unlock}
+            onClick={() => (window.location.href = `/?dev=${encodeURIComponent(pw)}`)}
             className="rounded-xl px-8 py-3 font-extrabold bg-orange-500 text-black hover:brightness-95 transition"
           >
             Unlock
