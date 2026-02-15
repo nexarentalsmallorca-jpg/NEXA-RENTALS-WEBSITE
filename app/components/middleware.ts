@@ -1,32 +1,22 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
+const SECRET = "nexa123"; // 🔐 change this
+
 export function middleware(req: NextRequest) {
-  const isEnabled = process.env.LOCK_SITE === "true";
-  if (!isEnabled) return NextResponse.next();
+  const url = req.nextUrl.clone();
 
-  const url = req.nextUrl;
-
-  // allow next assets + api + lock page
-  const path = url.pathname;
-  if (
-    path.startsWith("/_next") ||
-    path.startsWith("/api") ||
-    path.startsWith("/images") ||
-    path === "/coming-soon"
-  ) {
+  // Allow coming-soon page
+  if (url.pathname.startsWith("/coming-soon")) {
     return NextResponse.next();
   }
 
-  // if user already unlocked, allow
-  const unlocked = req.cookies.get("nexa_unlocked")?.value === "1";
-  if (unlocked) return NextResponse.next();
+  // Allow if secret query exists
+  if (req.nextUrl.searchParams.get("dev") === SECRET) {
+    return NextResponse.next();
+  }
 
-  // otherwise redirect to coming soon
+  // Otherwise redirect users
   url.pathname = "/coming-soon";
   return NextResponse.redirect(url);
 }
-
-export const config = {
-  matcher: ["/((?!favicon.ico).*)"],
-};
