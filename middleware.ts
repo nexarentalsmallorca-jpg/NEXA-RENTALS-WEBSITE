@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-const SECRET = "nexa123";
+const SECRET = "mynexasecret2026";
 
 export function middleware(req: NextRequest) {
   const url = req.nextUrl;
