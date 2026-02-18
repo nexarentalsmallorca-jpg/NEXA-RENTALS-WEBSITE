@@ -1,25 +1,14 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 
 export default function ComingSoon() {
   const [pw, setPw] = useState("");
 
-  const PASSWORD = "@@ss4448";
-
-  // If already unlocked, go home
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    const unlocked = localStorage.getItem("nexa_unlocked") === "1";
-    if (unlocked) window.location.href = "/";
-  }, []);
-
   const unlock = () => {
-    // trim removes accidental spaces
-    const input = pw.trim();
-
-    if (input === PASSWORD) {
-      localStorage.setItem("nexa_unlocked", "1");
+    if (pw.trim() === "@@ss4448") {
+      // ✅ set cookie so middleware can allow
+      document.cookie = "nexa_unlock=1; path=/; max-age=2592000"; // 30 days
       window.location.href = "/";
     } else {
       alert("Wrong password");
@@ -33,7 +22,6 @@ export default function ComingSoon() {
         <h1 className="text-5xl font-extrabold mb-2">🚀 Coming Soon</h1>
         <p className="text-white/70 mb-8">NEXA Rentals is launching soon.</p>
 
-        {/* ✅ PASSWORD FIELD */}
         <div className="flex items-center justify-center gap-3">
           <input
             value={pw}
@@ -41,9 +29,7 @@ export default function ComingSoon() {
             placeholder="Admin password"
             className="w-[260px] rounded-xl px-4 py-3 text-white font-semibold outline-none bg-white/10"
             type="password"
-            onKeyDown={(e) => {
-              if (e.key === "Enter") unlock();
-            }}
+            onKeyDown={(e) => e.key === "Enter" && unlock()}
           />
           <button
             onClick={unlock}
