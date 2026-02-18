@@ -1,19 +1,31 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 
 export default function ComingSoon() {
   const [pw, setPw] = useState("");
 
   const PASSWORD = "@@ss4448";
 
-const unlock = () => {
-  if (pw === PASSWORD) {
-    window.location.href = "/";
-  } else {
-    alert("Wrong password");
-  }
-};
+  // If already unlocked, go home
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const unlocked = localStorage.getItem("nexa_unlocked") === "1";
+    if (unlocked) window.location.href = "/";
+  }, []);
+
+  const unlock = () => {
+    // trim removes accidental spaces
+    const input = pw.trim();
+
+    if (input === PASSWORD) {
+      localStorage.setItem("nexa_unlocked", "1");
+      window.location.href = "/";
+    } else {
+      alert("Wrong password");
+      setPw("");
+    }
+  };
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white px-4">
@@ -27,7 +39,11 @@ const unlock = () => {
             value={pw}
             onChange={(e) => setPw(e.target.value)}
             placeholder="Admin password"
-            className="w-[260px] rounded-xl px-4 py-3 text-white font-semibold outline-none"
+            className="w-[260px] rounded-xl px-4 py-3 text-white font-semibold outline-none bg-white/10"
+            type="password"
+            onKeyDown={(e) => {
+              if (e.key === "Enter") unlock();
+            }}
           />
           <button
             onClick={unlock}
