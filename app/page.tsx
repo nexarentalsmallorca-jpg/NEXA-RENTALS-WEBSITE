@@ -2,9 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Navbar from "./Navbar";
-
-
-import TrustSection from "./components/TrustSection";
+import FeaturedFleet from "./FeaturedFleet";
 import ShopSection from "./components/ShopSection";
 import BookingBar from "./components/BookingBar";
 
@@ -26,6 +24,16 @@ export default function Page() {
   const fullText = "Rent A Scooter & e-Bike\nin Mallorca";
   const [typed, setTyped] = useState("");
   const [typingDone, setTypingDone] = useState(false);
+
+  // ✅ Footer-identical theme
+  const THEME = {
+    bg: "#0f1115",
+    bg2: "#0c0e12",
+    surface: "rgba(255,255,255,0.035)",
+    borderSoft: "rgba(255,255,255,0.08)",
+    textSoft: "rgba(255,255,255,0.65)",
+    textDim: "rgba(255,255,255,0.50)",
+  };
 
   useEffect(() => {
     let i = 0;
@@ -54,74 +62,134 @@ export default function Page() {
   }, []);
 
   return (
-    <>
-    <main className="relative min-h-[100svh] bg-black text-white overflow-hidden">
-      <Navbar />
+    <div
+      className="relative min-h-screen overflow-hidden text-white"
+      style={{ background: THEME.bg }}
+    >
+      {/* ✅ EXACT SAME color + lighting + glow as Footer */}
+      <div className="pointer-events-none absolute inset-0">
+        {/* graphite wash (footer) */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(900px 520px at 50% 0%, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 62%), linear-gradient(180deg, #0f1115 0%, #0f1115 45%, #0c0e12 100%)",
+          }}
+        />
 
-      {/* One single PNG background image */}
-      <div className="hero-bg-image" />
+        {/* warm halos (footer) */}
+        <div
+          className="absolute -top-44 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full blur-[110px] opacity-30"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(255,122,0,0.18) 0%, rgba(255,122,0,0) 70%)",
+          }}
+        />
+        <div
+          className="absolute -bottom-44 right-[-140px] h-[520px] w-[520px] rounded-full blur-[120px] opacity-16"
+          style={{
+            background:
+              "radial-gradient(circle, rgba(255,180,116,0.14) 0%, rgba(255,180,116,0) 72%)",
+          }}
+        />
 
-      {/* IMPORTANT:
-          - Hero starts at top of viewport
-          - Only content is pushed down using --nav-offset
-      */}
-      <div className="relative z-10 mx-auto max-w-[1400px] px-8 pt-[calc(var(--nav-offset)-18px)] pb-14">
-        <section className="grid min-h-[calc(100svh-var(--nav-offset))] items-center gap-12 lg:grid-cols-12">
-          {/* LEFT */}
-          <div className="lg:col-span-6">
-            <div
-              className={[
-                "transition-all duration-700 ease-out",
-                introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
-              ].join(" ")}
-            >
-              <h1 className="font-serif text-[56px] leading-[1.05] md:text-[60px]">
-                <div className="whitespace-pre-wrap">
-                  {typedLines[0] ? renderStyledHeading(typedLines[0]) : null}
-                  {!typingDone && typedLines.length === 1 ? (
-                    <span className="type-caret" />
-                  ) : null}
+        {/* vignette (footer) */}
+        <div
+          className="absolute inset-0"
+          style={{
+            background:
+              "radial-gradient(ellipse at center, rgba(0,0,0,0.00), rgba(0,0,0,0.38) 70%, rgba(0,0,0,0.55) 100%)",
+          }}
+        />
+
+        {/* subtle grain (footer) */}
+        <div
+          className="absolute inset-0 opacity-[0.11] mix-blend-overlay"
+          style={{
+            backgroundImage:
+              "url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22 viewBox=%220 0 120 120%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22120%22 height=%22120%22 filter=%22url(%23n)%22 opacity=%220.35%22/%3E%3C/svg%3E')",
+          }}
+        />
+      </div>
+
+      {/* HERO */}
+      <main className="relative min-h-[100svh] overflow-hidden">
+        <Navbar />
+
+        {/* Your PNG background image (kept) */}
+        <div
+          className="hero-bg-image"
+          style={{
+            filter: "brightness(1.25) contrast(1.0)",
+          }}
+        />
+
+        {/* ✅ Mobile padding improved, desktop stays same */}
+        <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 pt-[calc(var(--nav-offset)-18px)] pb-10 sm:pb-12 lg:pb-14">
+          {/* ✅ gap smaller on mobile, same on desktop */}
+          <section className="grid min-h-[calc(100svh-var(--nav-offset))] items-center gap-8 sm:gap-10 lg:gap-12 lg:grid-cols-12">
+            {/* LEFT */}
+            <div className="lg:col-span-6">
+              <div
+                className={[
+                  "transition-all duration-700 ease-out",
+                  introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+                ].join(" ")}
+              >
+                {/* ✅ Mobile H1 smaller, desktop EXACT SAME as before */}
+                <h1 className="font-serif text-[38px] leading-[1.08] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">
+                  <div className="whitespace-pre-wrap">
+                    {typedLines[0] ? renderStyledHeading(typedLines[0]) : null}
+                    {!typingDone && typedLines.length === 1 ? (
+                      <span className="type-caret" />
+                    ) : null}
+                  </div>
+
+                  <div className="whitespace-pre-wrap">
+                    {typedLines[1] ? renderStyledHeading(typedLines[1]) : null}
+                    {!typingDone && typedLines.length >= 2 ? (
+                      <span className="type-caret" />
+                    ) : null}
+                  </div>
+                </h1>
+
+                {/* ✅ Better on mobile (wrap + spacing) */}
+                <div className="mt-5 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
+                  <span className="h-[2px] w-12 sm:w-14 rounded-full bg-gradient-to-r from-orange-500 to-yellow-300 opacity-90" />
+                  <p className="text-[12px] sm:text-[14px] font-medium tracking-[0.20em] uppercase text-white/75">
+                    Rent online in Few seconds
+                  </p>
                 </div>
+              </div>
 
-                <div className="whitespace-pre-wrap">
-                  {typedLines[1] ? renderStyledHeading(typedLines[1]) : null}
-                  {!typingDone && typedLines.length >= 2 ? (
-                    <span className="type-caret" />
-                  ) : null}
-                </div>
-              </h1>
-
-              <div className="mt-6 flex items-center gap-4">
-                <span className="h-[2px] w-14 rounded-full bg-gradient-to-r from-orange-500 to-yellow-300 opacity-90" />
-                <p className="text-[14px] font-medium tracking-[0.20em] uppercase text-white/75">
-                  Rent online in 60 seconds
-                </p>
+              {/* Booking panel */}
+              <div
+                className={[
+                  // ✅ full width on mobile, same max width on desktop
+                  "mt-7 sm:mt-9 lg:mt-10 w-full max-w-[560px]",
+                  "transition-all duration-700 ease-out delay-150",
+                  introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
+                ].join(" ")}
+              >
+                <BookingBar />
               </div>
             </div>
 
-            {/* Booking panel */}
-            <div
-              className={[
-                "mt-10 max-w-[560px]",
-                "transition-all duration-700 ease-out delay-150",
-                introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
-              ].join(" ")}
-            >
-              <BookingBar />
-            </div>
-          </div>
+            {/* RIGHT EMPTY */}
+            <div className="lg:col-span-6" />
+          </section>
+        </div>
+      </main>
 
-          {/* RIGHT EMPTY (bikes are in background image) */}
-          <div className="lg:col-span-6" />
-        </section>
-      </div>
-    </main>
-    <ShopSection />
+      {/* FEATURED FLEET */}
+      <section className="relative pt-8 sm:pt-10 pb-12 sm:pb-14">
+        <div className="mx-auto max-w-7xl px-4">
+          <FeaturedFleet />
+        </div>
+      </section>
 
-</>
+      {/* SHOP SECTION */}
+      <ShopSection />
+    </div>
   );
 }
-
-
-
-

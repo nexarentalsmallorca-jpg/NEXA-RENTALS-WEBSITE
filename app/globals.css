@@ -1,8 +1,26 @@
 @import "tailwindcss";
 
+/* =========================
+   ROOT VARIABLES
+========================= */
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  --font-body: var(--font-inter);
+  --font-heading: var(--font-playfair);
+
+  --text-soft: rgba(255, 255, 255, 0.72);
+  --text-muted: rgba(255, 255, 255, 0.58);
+  --border-soft: rgba(255, 255, 255, 0.10);
+
+  --nav-offset: 110px;
+
+  /* NEW: Unified background colors */
+  --bg-base: #000;
+  --bg-warm: rgba(249, 115, 22, 0.18);
+  --bg-gold: rgba(251, 191, 36, 0.10);
+  --bg-cool: rgba(120, 180, 255, 0.08);
 }
 
 @theme inline {
@@ -19,118 +37,53 @@
   }
 }
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
-}
 /* =========================
-   NEXA DayPicker Colors (safe)
-   Works with default DayPicker layout
+   GLOBAL BACKGROUND (FIXED)
+   This creates ONE background for entire site
 ========================= */
-
-.nexa-rdp .rdp {
-  --rdp-accent-color: #df6a11; /* orange */
-  --rdp-background-color: rgba(249, 115, 22, 0.18);
-  color: #fff;
+html,
+body {
+  height: 100%;
+  background: var(--bg-base);
 }
 
-/* Day button styling (keep it clean) */
-.nexa-rdp .rdp-day_button,
-.nexa-rdp .rdp-day-button {
-  border-radius: 9999px !important; /* circle */
-  font-weight: 600;
+body {
+  color: var(--foreground);
+  font-family: var(--font-body), system-ui, -apple-system, "Segoe UI", Roboto,
+    Arial, sans-serif;
+
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+
+  /* One seamless luxury background */
+  background:
+    radial-gradient(900px 520px at 50% -10%, var(--bg-warm), transparent 60%),
+    radial-gradient(900px 520px at 82% 18%, var(--bg-gold), transparent 62%),
+    radial-gradient(900px 520px at 18% 60%, var(--bg-cool), transparent 65%),
+    linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,1) 100%);
+  background-attachment: fixed;
 }
 
-/* Start/End = deep orange circles */
-.nexa-rdp .rdp-day_range_start .rdp-day_button,
-.nexa-rdp .rdp-day_range_end .rdp-day_button,
-.nexa-rdp .rdp-day_selected .rdp-day_button,
-.nexa-rdp .rdp-day-range-start .rdp-day-button,
-.nexa-rdp .rdp-day-range-end .rdp-day-button,
-.nexa-rdp .rdp-day-selected .rdp-day-button {
-  background: #f97316 !important;
-  color: #0b0b0b !important;
-  font-weight: 800 !important;
+/* =========================
+   TYPOGRAPHY
+========================= */
+h1, h2, h3, .font-heading {
+  font-family: var(--font-heading), Georgia, serif;
+  letter-spacing: -0.02em;
 }
 
-/* Middle range = very light orange */
-.nexa-rdp .rdp-day_range_middle .rdp-day_button,
-.nexa-rdp .rdp-day-range-middle .rdp-day-button {
-  background: rgba(249, 115, 22, 0.18) !important;
-  color: #fff !important;
+.brand-kicker {
+  font-family: var(--font-body), sans-serif;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
 }
 
-/* Hover */
-.nexa-rdp .rdp-day_button:hover,
-.nexa-rdp .rdp-day-button:hover {
-  background: rgba(249, 115, 22, 0.25) !important;
-}
-
-/* Make outside days subtle */
-.nexa-rdp .rdp-day_outside,
-.nexa-rdp .rdp-day-outside {
-  color: rgba(255, 255, 255, 0.25) !important;
-}
-html, body {
-  background: #000;
-}
-@keyframes fadeUp {
-  from { opacity: 0; transform: translateY(18px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-@keyframes slideInLeft {
-  from { opacity: 0; transform: translateX(-30px); }
-  to { opacity: 1; transform: translateX(0); }
-}
-
-.fade-up {
-  animation: fadeUp 700ms ease-out forwards;
-}
-
-.slide-left {
-  animation: slideInLeft 900ms ease-out forwards;
-}
-
-.delay-1 { animation-delay: 150ms; opacity: 0; }
-.delay-2 { animation-delay: 350ms; opacity: 0; }
-.delay-3 { animation-delay: 550ms; opacity: 0; }
-/* === Navbar offset (prevents hero going under fixed navbar) === */
-:root {
-  --nav-offset: 110px; /* fallback until JS measures navbar */
-}
-
-
-.nav-link {
-  position: relative;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  color: rgba(255, 255, 255, 0.82);
-  transition: all 220ms ease;
-}
-
-.nav-link:hover {
-  color: #fff;
-}
-
-.nav-link::after {
-  content: "";
-  position: absolute;
-  left: 0;
-  bottom: -10px;
-  width: 0%;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, #f97316, #fbbf24);
-  transition: width 240ms ease;
-  opacity: 0.9;
-}
-
-.nav-link:hover::after {
-  width: 100%;
-}
-/* ===== HERO BACKGROUND IMAGE (single png) ===== */
+/* =========================
+   HERO BACKGROUND IMAGE
+========================= */
 .hero-bg-image {
   position: absolute;
   inset: 0;
@@ -141,8 +94,6 @@ html, body {
   background-position: right 60%;
 }
 
-
-/* Light overlay (NOT too dark) */
 .hero-bg-image::after {
   content: "";
   position: absolute;
@@ -157,9 +108,9 @@ html, body {
   );
 }
 
-
-
-/* Typewriter caret */
+/* =========================
+   TYPEWRITER CARET
+========================= */
 .type-caret {
   display: inline-block;
   width: 10px;
@@ -172,22 +123,16 @@ html, body {
 }
 
 @keyframes caretBlink {
-  50% {
-    opacity: 0;
-  }
+  50% { opacity: 0; }
 }
 
-/* Trust section background + card glow */
+/* =========================
+   TRUST SECTION
+========================= */
 .trust-sparks {
   background:
     radial-gradient(700px 420px at 50% 35%, rgba(249,115,22,0.22), transparent 60%),
     radial-gradient(900px 540px at 50% 80%, rgba(251,191,36,0.12), transparent 65%);
-  opacity: 0.9;
-  filter: blur(0px);
-}
-
-.trust-card {
-  transition: transform 280ms ease, box-shadow 280ms ease, border-color 280ms ease;
 }
 
 .trust-card:hover {
@@ -196,57 +141,20 @@ html, body {
   box-shadow: 0 30px 90px rgba(0,0,0,0.6);
 }
 
-.trust-icon {
-  filter: drop-shadow(0 10px 28px rgba(249,115,22,0.25));
-}
-
+/* =========================
+   🔥 FIXED SHOP GLOW (IMPORTANT)
+   This was causing the brown background band.
+   Now it's ONLY lighting, no background panel.
+========================= */
 .shop-glow {
   background:
-    radial-gradient(900px 520px at 70% 15%, rgba(249,115,22,0.18), transparent 60%),
-    radial-gradient(900px 520px at 30% 70%, rgba(251,191,36,0.08), transparent 65%),
-    linear-gradient(180deg, rgba(0,0,0,0.75) 0%, rgba(0,0,0,1) 100%);
-}
-.shop-settle {
-  animation: shopSettle 900ms cubic-bezier(.2,.9,.2,1) 1;
+    radial-gradient(900px 520px at 70% 15%, rgba(249,115,22,0.16), transparent 60%),
+    radial-gradient(900px 520px at 30% 70%, rgba(251,191,36,0.08), transparent 65%);
 }
 
-@keyframes shopSettle {
-  0%   { transform: translateY(0) rotate(0deg); }
-  55%  { transform: translateY(-2px) rotate(-0.4deg); }
-  70%  { transform: translateY(0px) rotate(0.35deg); }
-  85%  { transform: translateY(0px) rotate(-0.2deg); }
-  100% { transform: translateY(0px) rotate(0deg); }
-}
-.shop-float {
-  animation:
-    shopSettle 900ms cubic-bezier(.2,.9,.2,1) 1,
-    shopMicroShake 6s ease-in-out 1.2s infinite;
-}
-
-@keyframes shopMicroShake {
-  0%   { transform: translateY(0) rotate(0deg); }
-  45%  { transform: translateY(0) rotate(0deg); }
-  55%  { transform: translateY(-2px) rotate(-0.25deg); }
-  65%  { transform: translateY(0px) rotate(0.22deg); }
-  75%  { transform: translateY(0px) rotate(-0.14deg); }
-  100% { transform: translateY(0) rotate(0deg); }
-}
-/* Parallax container */
-.parallax-wrap {
-  position: relative;
-  overflow: hidden;
-  transform: translateZ(0);
-}
-
-/* Parallax image */
-.parallax-img {
-  width: 100%;
-  height: auto;
-  transform: translateY(0);
-  transition: transform 0.15s linear;
-  will-change: transform;
-}
-/* ===== Premium stagger reveal (Shop section) ===== */
+/* =========================
+   REVEAL ANIMATIONS
+========================= */
 .reveal-off .reveal-item {
   opacity: 0;
   transform: translateY(14px);
@@ -260,11 +168,78 @@ html, body {
   transition: opacity 700ms ease, transform 700ms ease, filter 700ms ease;
 }
 
-/* Stagger delays (auto applies by order) */
-.reveal-on .reveal-item:nth-child(1) { transition-delay: 0ms; }
-.reveal-on .reveal-item:nth-child(2) { transition-delay: 120ms; }
-.reveal-on .reveal-item:nth-child(3) { transition-delay: 240ms; }
-.reveal-on .reveal-item:nth-child(4) { transition-delay: 360ms; }
-.reveal-on .reveal-item:nth-child(5) { transition-delay: 480ms; }
-.reveal-on .reveal-item:nth-child(6) { transition-delay: 600ms; }
-.reveal-on .reveal-item:nth-child(7) { transition-delay: 720ms; }
+/* =========================
+   FEATURED FLOAT (kept)
+========================= */
+.featured-float-inner {
+  will-change: transform;
+}
+
+@keyframes cardFloat {
+  0% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0px); }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .featured-card[data-float="0"] .featured-float-inner { animation: cardFloat 9s ease-in-out infinite; }
+  .featured-card[data-float="1"] .featured-float-inner { animation: cardFloat 9.6s ease-in-out infinite; animation-delay: 0.25s; }
+  .featured-card[data-float="2"] .featured-float-inner { animation: cardFloat 9.2s ease-in-out infinite; animation-delay: 0.15s; }
+  .featured-card[data-float="3"] .featured-float-inner { animation: cardFloat 10s ease-in-out infinite; animation-delay: 0.35s; }
+}
+/* =========================
+   NEXA Cinematic Global Background (ADD)
+   - One continuous vibe across the entire site
+   - Subtle moving orange ambience + grain
+   - Does NOT require changing components
+========================= */
+
+body {
+  background:
+    radial-gradient(1200px 700px at 50% -12%, rgba(255,122,0,0.22), transparent 60%),
+    radial-gradient(900px 520px at 85% 25%, rgba(251,191,36,0.10), transparent 62%),
+    radial-gradient(900px 520px at 15% 62%, rgba(120,180,255,0.07), transparent 65%),
+    linear-gradient(180deg, rgba(0,0,0,0.88) 0%, rgba(0,0,0,1) 100%);
+  background-attachment: fixed;
+}
+
+/* moving ambient light layer (very subtle) */
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.55;
+  background:
+    radial-gradient(700px 420px at 20% 25%, rgba(255,122,0,0.20), transparent 60%),
+    radial-gradient(900px 520px at 80% 70%, rgba(255,122,0,0.14), transparent 62%);
+  filter: blur(0px);
+  transform: translateZ(0);
+  animation: nexaAmbient 14s ease-in-out infinite;
+}
+
+/* grain layer to avoid “flat black” */
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.06;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.8' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='.55'/%3E%3C/svg%3E");
+  mix-blend-mode: overlay;
+  transform: translateZ(0);
+}
+
+@keyframes nexaAmbient {
+  0%   { transform: translate3d(0,0,0); }
+  50%  { transform: translate3d(0,-18px,0); }
+  100% { transform: translate3d(0,0,0); }
+}
+
+/* Make sure your app content stays above the fixed background layers */
+#__next, body > * {
+  position: relative;
+  z-index: 1;
+}

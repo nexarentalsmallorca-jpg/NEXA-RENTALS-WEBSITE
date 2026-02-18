@@ -2,25 +2,6 @@
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
 
-/**
- * NEXA BookingBar (single file, no props needed)
- * ------------------------------------------------------------------
- * ✅ Same Canva bar look
- * ✅ Pickup location shown above bar (Option B)
- * ✅ Calendar modal background matches bar (#F6D7C6)
- * ✅ Modal opens higher (won't go out of screen)
- * ✅ Two months side-by-side
- * ✅ Month + Year dropdown jump
- * ✅ Disable past dates
- * ✅ Hover = light orange
- * ✅ Middle range = medium orange
- * ✅ Start & End = deep orange (#FF6A00)
- * ✅ Time dropdown (click anywhere on time box)
- * ✅ Time options ONLY 09:00 to 21:00 (30-min steps)
- * ✅ Search redirects to /vehicles with query params
- * ✅ On /vehicles, it auto-loads from URL and shows same selection
- */
-
 type DateRange = { from?: Date; to?: Date };
 type ActiveField = "pickup" | "dropoff";
 
@@ -115,6 +96,10 @@ function formatTimeLabel(t: string) {
 function isValidTimeOption(t: string, options: string[]) {
   return options.includes(t);
 }
+function timeToMinutes(t: string) {
+  const [hh, mm] = t.split(":").map(Number);
+  return hh * 60 + mm;
+}
 
 /* -------------------------- URL helpers -------------------------- */
 function getQueryParam(name: string) {
@@ -122,6 +107,20 @@ function getQueryParam(name: string) {
   const sp = new URLSearchParams(window.location.search);
   const v = sp.get(name);
   return v || undefined;
+}
+
+/* ---------------------- 24h / 1-day helpers ---------------------- */
+function addDays(d: Date, days: number) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
+}
+function minDropoffDate(from: Date) {
+  return startOfDay(addDays(from, 1));
+}
+function isBeforeDay(a: Date, b: Date) {
+  return startOfDay(a) < startOfDay(b);
+}
+function isExactMinDay(from: Date, to: Date) {
+  return isSameDay(to, addDays(from, 1));
 }
 
 /* ========================== MAIN COMPONENT ========================== */
@@ -133,9 +132,6 @@ export default function BookingBar() {
     [today]
   );
 
-  // ------------------ Load from URL (Vehicles page) ------------------
-  // If you open /vehicles?from=...&to=...&pickupTime=... etc,
-  // it will automatically use those values.
   const urlFrom = parseISO(getQueryParam("from"));
   const urlTo = parseISO(getQueryParam("to"));
   const urlPickupTime = getQueryParam("pickupTime");
@@ -143,7 +139,6 @@ export default function BookingBar() {
   const urlPickupLocation = getQueryParam("pickupLocation");
 
   const initialPickupLocation = urlPickupLocation || DEFAULT_LOCATION;
-
   const initialFrom = urlFrom ? startOfDay(urlFrom) : today;
   const initialTo = urlTo ? startOfDay(urlTo) : tomorrow;
 
@@ -163,7 +158,6 @@ export default function BookingBar() {
     return "10:00";
   });
 
-  // ----------------- UI state -----------------
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeField, setActiveField] = useState<ActiveField>("pickup");
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(initialFrom));
@@ -173,14 +167,19 @@ export default function BookingBar() {
 
   const pickupTimeBtnRef = useRef<HTMLButtonElement | null>(null);
   const dropoffTimeBtnRef = useRef<HTMLButtonElement | null>(null);
-  const timePopRef = useRef<HTMLDivElement | null>(null);
 
-  // Close time dropdown on outside click
+  const pickupTimePopRef = useRef<HTMLDivElement | null>(null);
+  const dropoffTimePopRef = useRef<HTMLDivElement | null>(null);
+
   useEffect(() => {
     function onDown(e: MouseEvent) {
       const t = e.target as Node;
 
-      if (timePopRef.current && timePopRef.current.contains(t)) return;
+      if (pickupTimePopRef.current && pickupTimePopRef.current.contains(t))
+        return;
+      if (dropoffTimePopRef.current && dropoffTimePopRef.current.contains(t))
+        return;
+
       if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(t))
         return;
       if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(t))
@@ -193,18 +192,27 @@ export default function BookingBar() {
     return () => window.removeEventListener("mousedown", onDown);
   }, []);
 
-  // ----------------- Actions -----------------
+  // ✅ dropoff time options (apply 24h rule when dropoff is next day)
+  const DROP_TIME_OPTIONS = useMemo(() => {
+    if (!range.from || !range.to) return TIME_OPTIONS;
+
+    if (isExactMinDay(range.from, range.to)) {
+      const minMins = timeToMinutes(pickupTime);
+      return TIME_OPTIONS.filter((t) => timeToMinutes(t) >= minMins);
+    }
+
+    return TIME_OPTIONS;
+  }, [TIME_OPTIONS, range.from, range.to, pickupTime]);
+
   function openCalendar(which: ActiveField) {
     setPickupTimeOpen(false);
     setDropoffTimeOpen(false);
     setActiveField(which);
     setCalendarOpen(true);
   }
-
   function closeCalendar() {
     setCalendarOpen(false);
   }
-
   function clearDates() {
     setRange({});
     setActiveField("pickup");
@@ -213,15 +221,26 @@ export default function BookingBar() {
   function pickDate(day: Date) {
     if (isPastDay(day)) return;
 
+    if (activeField === "dropoff" && range.from) {
+      const minDay = minDropoffDate(range.from);
+      if (isBeforeDay(day, minDay)) return;
+    }
+
     if (activeField === "pickup") {
       const nextFrom = day;
+
+      const minDay = minDropoffDate(nextFrom);
       const nextTo =
-        range.to && startOfDay(range.to) < startOfDay(nextFrom)
-          ? undefined
-          : range.to;
+        range.to && !isBeforeDay(range.to, minDay) ? range.to : minDay;
 
       setRange({ from: nextFrom, to: nextTo });
       setActiveField("dropoff");
+
+      if (nextTo && isExactMinDay(nextFrom, nextTo)) {
+        if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
+          setDropoffTime(pickupTime);
+        }
+      }
       return;
     }
 
@@ -231,7 +250,23 @@ export default function BookingBar() {
     }
 
     const next = clampRange(range.from, day);
-    setRange(next);
+
+    if (next.from && next.to) {
+      const minDay = minDropoffDate(next.from);
+      if (isBeforeDay(next.to, minDay)) {
+        setRange({ from: next.from, to: minDay });
+      } else {
+        setRange(next);
+      }
+    } else {
+      setRange(next);
+    }
+
+    if (next.from && next.to && isExactMinDay(next.from, next.to)) {
+      if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
+        setDropoffTime(pickupTime);
+      }
+    }
 
     if (next.from && next.to) closeCalendar();
   }
@@ -259,6 +294,20 @@ export default function BookingBar() {
       return;
     }
 
+    const minDay = minDropoffDate(range.from);
+
+    if (isBeforeDay(range.to, minDay)) {
+      setRange({ from: range.from, to: minDay });
+      return;
+    }
+
+    if (isExactMinDay(range.from, range.to)) {
+      if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
+        setDropoffTime(pickupTime);
+        return;
+      }
+    }
+
     const params = new URLSearchParams({
       pickupLocation,
       from: toISO(range.from),
@@ -267,153 +316,196 @@ export default function BookingBar() {
       dropoffTime,
     });
 
-    // ALWAYS go to vehicles page
     window.location.href = `/vehicles?${params.toString()}`;
   }
 
   return (
     <div className="relative z-50 w-full">
-      {/* Pickup pill (Option B) */}
+      {/* Pickup pill */}
       <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
         <span className="inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur">
           <PinIcon />
-          Pick-up: <span className="text-white">{pickupLocation}</span>
+          <span className="whitespace-nowrap">Pick-up:</span>{" "}
+          <span className="text-white truncate max-w-[220px] sm:max-w-[360px]">
+            {pickupLocation}
+          </span>
         </span>
       </div>
 
-      {/* Canva style bar */}
+      {/* ✅ Mobile: Pickup row + Dropoff row | ✅ Desktop unchanged */}
       <div
-        className="inline-flex items-stretch rounded-2xl overflow-hidden border border-black/10 shadow-[0_20px_60px_rgba(0,0,0,0.35)]"
+        className={[
+          "grid grid-cols-1 gap-2",
+          "lg:inline-flex lg:items-stretch lg:gap-0",
+          "rounded-2xl overflow-visible border border-black/10 shadow-[0_20px_60px_rgba(0,0,0,0.35)]",
+        ].join(" ")}
         style={{ background: BAR_BG }}
       >
-        {/* Pickup Date */}
-        <button
-          type="button"
-          onClick={() => openCalendar("pickup")}
-          className="flex items-center gap-3 px-4 py-3 min-w-[170px] border-r border-black/15 text-left hover:bg-black/5 transition"
-        >
-          <CalendarMini />
-          <div className="leading-tight">
-            <div className="text-[11px] font-semibold text-black/65">
-              Pick-up Date
-            </div>
-            <div className="text-[13px] font-extrabold text-black">
-              {fmtLabel(range.from)}
-            </div>
-          </div>
-        </button>
-
-        {/* Pickup Time */}
-        <div className="relative min-w-[160px] border-r border-black/15">
+        {/* Row 1: Pickup Date + Pickup Time */}
+        <div className="flex gap-2 lg:contents">
           <button
-            ref={pickupTimeBtnRef}
             type="button"
-            onClick={togglePickupTime}
-            className="w-full h-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition"
+            onClick={() => openCalendar("pickup")}
+            className={[
+              "flex-1 flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition",
+              "rounded-2xl border border-black/15",
+              "lg:flex-none lg:rounded-none lg:border-0 lg:min-w-[170px] lg:border-r lg:border-black/15",
+            ].join(" ")}
           >
-            <ClockMini />
+            <CalendarMini />
             <div className="leading-tight">
               <div className="text-[11px] font-semibold text-black/65">
-                Time
+                Pick-up Date
               </div>
               <div className="text-[13px] font-extrabold text-black">
-                {formatTimeLabel(pickupTime)}
+                {fmtLabel(range.from)}
               </div>
             </div>
           </button>
 
-          {pickupTimeOpen && (
-            <div ref={timePopRef}>
-              <TimeDropdown
-                title="Pick-up time"
-                value={pickupTime}
-                options={TIME_OPTIONS}
-                onSelect={(t) => {
-                  setPickupTime(t);
-                  setPickupTimeOpen(false);
-                }}
-                onClose={() => setPickupTimeOpen(false)}
-              />
-            </div>
-          )}
+          <div
+            className={[
+              "relative flex-1 rounded-2xl border border-black/15",
+              "lg:flex-none lg:rounded-none lg:border-0 lg:min-w-[160px] lg:border-r lg:border-black/15",
+            ].join(" ")}
+          >
+            <button
+              ref={pickupTimeBtnRef}
+              type="button"
+              onClick={togglePickupTime}
+              className="w-full h-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition rounded-2xl lg:rounded-none"
+            >
+              <ClockMini />
+              <div className="leading-tight">
+                <div className="text-[11px] font-semibold text-black/65">
+                  Time
+                </div>
+                <div className="text-[13px] font-extrabold text-black">
+                  {formatTimeLabel(pickupTime)}
+                </div>
+              </div>
+            </button>
+
+            {pickupTimeOpen && (
+              <div ref={pickupTimePopRef}>
+                <TimeDropdown
+                  title="Pick-up time"
+                  value={pickupTime}
+                  options={TIME_OPTIONS}
+                  onSelect={(t) => {
+                    setPickupTime(t);
+                    if (
+                      range.from &&
+                      range.to &&
+                      isExactMinDay(range.from, range.to)
+                    ) {
+                      if (timeToMinutes(dropoffTime) < timeToMinutes(t)) {
+                        setDropoffTime(t);
+                      }
+                    }
+                    setPickupTimeOpen(false);
+                  }}
+                  onClose={() => setPickupTimeOpen(false)}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
-        {/* Dropoff Date */}
-        <button
-          type="button"
-          onClick={() => openCalendar("dropoff")}
-          className="flex items-center gap-3 px-4 py-3 min-w-[170px] border-r border-black/15 text-left hover:bg-black/5 transition"
-        >
-          <CalendarMini />
-          <div className="leading-tight">
-            <div className="text-[11px] font-semibold text-black/65">
-              Drop-off Date
-            </div>
-            <div className="text-[13px] font-extrabold text-black">
-              {fmtLabel(range.to)}
-            </div>
-          </div>
-        </button>
-
-        {/* Dropoff Time */}
-        <div className="relative min-w-[160px]">
+        {/* Row 2: Dropoff Date + Dropoff Time */}
+        <div className="flex gap-2 lg:contents">
           <button
-            ref={dropoffTimeBtnRef}
             type="button"
-            onClick={toggleDropoffTime}
-            className="w-full h-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition"
+            onClick={() => openCalendar("dropoff")}
+            className={[
+              "flex-1 flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition",
+              "rounded-2xl border border-black/15",
+              "lg:flex-none lg:rounded-none lg:border-0 lg:min-w-[170px] lg:border-r lg:border-black/15",
+            ].join(" ")}
           >
-            <ClockMini />
+            <CalendarMini />
             <div className="leading-tight">
               <div className="text-[11px] font-semibold text-black/65">
-                Time
+                Drop-off Date
               </div>
               <div className="text-[13px] font-extrabold text-black">
-                {formatTimeLabel(dropoffTime)}
+                {fmtLabel(range.to)}
               </div>
             </div>
           </button>
 
-          {dropoffTimeOpen && (
-            <div ref={timePopRef}>
-              <TimeDropdown
-                title="Drop-off time"
-                value={dropoffTime}
-                options={TIME_OPTIONS}
-                onSelect={(t) => {
-                  setDropoffTime(t);
-                  setDropoffTimeOpen(false);
-                }}
-                onClose={() => setDropoffTimeOpen(false)}
-              />
-            </div>
-          )}
+          <div
+            className={[
+              "relative flex-1 rounded-2xl border border-black/15",
+              "lg:flex-none lg:rounded-none lg:border-0 lg:min-w-[160px]",
+            ].join(" ")}
+          >
+            <button
+              ref={dropoffTimeBtnRef}
+              type="button"
+              onClick={toggleDropoffTime}
+              className="w-full h-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition rounded-2xl lg:rounded-none"
+            >
+              <ClockMini />
+              <div className="leading-tight">
+                <div className="text-[11px] font-semibold text-black/65">
+                  Time
+                </div>
+                <div className="text-[13px] font-extrabold text-black">
+                  {formatTimeLabel(dropoffTime)}
+                </div>
+              </div>
+            </button>
+
+            {dropoffTimeOpen && (
+              <div ref={dropoffTimePopRef}>
+                <TimeDropdown
+                  title="Drop-off time"
+                  value={dropoffTime}
+                  options={DROP_TIME_OPTIONS}
+                  onSelect={(t) => {
+                    setDropoffTime(t);
+                    setDropoffTimeOpen(false);
+                  }}
+                  onClose={() => setDropoffTimeOpen(false)}
+                />
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Search */}
         <button
           type="button"
           onClick={onSearch}
-          className="px-7 min-w-[120px] font-extrabold text-black text-[15px] hover:brightness-95 active:scale-[0.99] transition rounded-r-2xl"
+          className={[
+            "w-full rounded-2xl py-3 font-extrabold text-black text-[15px] hover:brightness-95 active:scale-[0.99] transition",
+            "lg:w-auto lg:rounded-r-2xl lg:rounded-l-none lg:px-7 lg:min-w-[120px] lg:py-0",
+          ].join(" ")}
           style={{ background: DEEP_ORANGE }}
         >
           Search
         </button>
       </div>
 
-      {/* Calendar Modal */}
+      {/* ✅ Calendar Modal (fixed for mobile view) */}
       {calendarOpen && (
         <div
-          className="fixed inset-0 z-[2147483647] flex items-start justify-center bg-black/60 backdrop-blur-sm pb-3 px-3"
+          className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeCalendar();
           }}
         >
           <div
-  className="w-[min(600px,90vw)] max-h-[80vh] rounded-2xl shadow-2xl overflow-hidden animate-[pop_.12s_ease-out] -translate-y-10"
-  style={{ background: BAR_BG, transform: "translateY(-300px)" }}
->
-
+            className={[
+              // ✅ mobile safe size
+              "w-full max-w-[560px]",
+              "max-h-[85svh]",
+              "rounded-2xl shadow-2xl overflow-hidden",
+              "animate-[pop_.12s_ease-out]",
+            ].join(" ")}
+            style={{ background: BAR_BG }}
+          >
             {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
               <div>
@@ -457,14 +549,23 @@ export default function BookingBar() {
               </button>
             </div>
 
-            {/* Two months (scrollable middle) */}
-<div className="px-3 pb-4 overflow-auto flex-1">
-  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-    <MiniMonth month={viewMonth} range={range} onPick={pickDate} />
-    <MiniMonth month={addMonths(viewMonth, 1)} range={range} onPick={pickDate} />
-  </div>
-</div>
-
+            {/* Months (scroll inside) */}
+            <div className="px-3 pb-4 overflow-auto">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <MiniMonth
+                  month={viewMonth}
+                  range={range}
+                  onPick={pickDate}
+                  activeField={activeField}
+                />
+                <MiniMonth
+                  month={addMonths(viewMonth, 1)}
+                  range={range}
+                  onPick={pickDate}
+                  activeField={activeField}
+                />
+              </div>
+            </div>
 
             {/* Footer */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-black/10 bg-black/5">
@@ -533,7 +634,7 @@ function MonthYearPicker({
 
   const years = useMemo(() => {
     const now = new Date().getFullYear();
-    return Array.from({ length: 5 }, (_, i) => now + i); // next 5 years
+    return Array.from({ length: 5 }, (_, i) => now + i);
   }, []);
 
   const monthIndex = viewMonth.getMonth();
@@ -581,15 +682,23 @@ function MiniMonth({
   month,
   range,
   onPick,
+  activeField,
 }: {
   month: Date;
   range: DateRange;
   onPick: (d: Date) => void;
+  activeField: ActiveField;
 }) {
   const cells = useMemo(() => buildMonthGrid(month), [month]);
 
+  const minDropDay =
+    activeField === "dropoff" && range.from ? minDropoffDate(range.from) : null;
+
   return (
-    <div className="rounded-xl border border-black/10 p-3" style={{ background: BAR_BG }}>
+    <div
+      className="rounded-xl border border-black/10 p-3"
+      style={{ background: BAR_BG }}
+    >
       <div className="mb-2 text-sm font-extrabold text-black">
         {month.toLocaleString(undefined, { month: "long", year: "numeric" })}
       </div>
@@ -606,7 +715,11 @@ function MiniMonth({
         {cells.map((d, idx) => {
           if (!d) return <div key={idx} className="h-9" />;
 
-          const disabled = isPastDay(d);
+          const disabledByPast = isPastDay(d);
+          const disabledByMinDrop =
+            !!minDropDay && startOfDay(d) < startOfDay(minDropDay);
+
+          const disabled = disabledByPast || disabledByMinDrop;
 
           const inRange =
             range.from &&
@@ -634,7 +747,11 @@ function MiniMonth({
                 inRange && !disabled ? "bg-orange-300/60" : "",
                 (isStart || isEnd) && !disabled ? "text-black" : "",
               ].join(" ")}
-              style={(isStart || isEnd) && !disabled ? { background: DEEP_ORANGE } : undefined}
+              style={
+                (isStart || isEnd) && !disabled
+                  ? { background: DEEP_ORANGE }
+                  : undefined
+              }
             >
               {d.getDate()}
             </button>
@@ -661,7 +778,7 @@ function TimeDropdown({
 }) {
   return (
     <div
-      className="absolute left-0 top-full mt-2 z-[999] w-[240px] rounded-2xl border border-black/10 shadow-2xl overflow-hidden"
+      className="absolute left-0 bottom-full mb-2 z-[999] w-[240px] rounded-2xl border border-black/10 shadow-2xl overflow-hidden"
       style={{ background: BAR_BG }}
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-black/10">
@@ -700,7 +817,13 @@ function TimeDropdown({
 /* ================================ Icons ================================ */
 function CalendarMini() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" className="text-black/70" fill="none">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      className="text-black/70"
+      fill="none"
+    >
       <path
         d="M8 2v3M16 2v3M3 9h18M5 6h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"
         stroke="currentColor"
@@ -712,7 +835,13 @@ function CalendarMini() {
 
 function ClockMini() {
   return (
-    <svg width="18" height="18" viewBox="0 0 24 24" className="text-black/70" fill="none">
+    <svg
+      width="18"
+      height="18"
+      viewBox="0 0 24 24"
+      className="text-black/70"
+      fill="none"
+    >
       <path
         d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"
         stroke="currentColor"
