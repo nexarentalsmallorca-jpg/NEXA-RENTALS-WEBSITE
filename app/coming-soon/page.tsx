@@ -5,9 +5,15 @@ import { useState } from "react";
 export default function ComingSoon() {
   const [pw, setPw] = useState("");
 
-  const unlock = () => {
-    window.location.href = `/?dev=${encodeURIComponent(pw)}`;
-  };
+  const PASSWORD = "@@ss4448";
+
+const unlock = () => {
+  if (pw === PASSWORD) {
+    window.location.href = "/";
+  } else {
+    alert("Wrong password");
+  }
+};
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-black text-white px-4">
