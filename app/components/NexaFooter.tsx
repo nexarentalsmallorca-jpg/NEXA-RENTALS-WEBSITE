@@ -1,13 +1,10 @@
 "use client";
 
 import React from "react";
-// If you're using Next.js Image, uncomment next line and use <Image />
-// import Image from "next/image";
 
 export default function NexaFooter() {
   const year = new Date().getFullYear();
 
-  // ✅ Luxury graphite theme
   const THEME = {
     bg: "#0f1115",
     bg2: "#0c0e12",
@@ -23,7 +20,6 @@ export default function NexaFooter() {
     <footer className="relative overflow-hidden text-white" style={{ background: THEME.bg }}>
       {/* Background effects */}
       <div className="pointer-events-none absolute inset-0">
-        {/* graphite wash */}
         <div
           className="absolute inset-0"
           style={{
@@ -32,7 +28,6 @@ export default function NexaFooter() {
           }}
         />
 
-        {/* warm halos */}
         <div
           className="absolute -top-44 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full blur-[110px] opacity-30"
           style={{
@@ -46,7 +41,6 @@ export default function NexaFooter() {
           }}
         />
 
-        {/* vignette */}
         <div
           className="absolute inset-0"
           style={{
@@ -55,7 +49,6 @@ export default function NexaFooter() {
           }}
         />
 
-        {/* subtle grain */}
         <div
           className="absolute inset-0 opacity-[0.11] mix-blend-overlay"
           style={{
@@ -68,10 +61,9 @@ export default function NexaFooter() {
       <div className="relative mx-auto max-w-7xl px-6">
         {/* MAIN ROW */}
         <div className="grid gap-8 py-10 md:grid-cols-3 md:items-center">
-          {/* LEFT: Logo + Contact */}
+          {/* LEFT */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              {/* Replace with your logo image path */}
               <img src="./images/logo.png" alt="NEXA Rentals" className="h-10 w-auto" />
             </div>
 
@@ -91,11 +83,11 @@ export default function NexaFooter() {
             </div>
           </div>
 
-          {/* MIDDLE: Subscribe */}
+          {/* MIDDLE */}
           <div className="md:text-center">
             <p className="text-sm font-semibold tracking-wide">Get Updates</p>
             <p className="mt-1 text-sm" style={{ color: THEME.textSoft }}>
-              Deals, discounts &amp; seasonal offers.
+              Deals, discounts & seasonal offers.
             </p>
 
             <form className="mt-4 flex w-full max-w-md gap-2 md:mx-auto" onSubmit={(e) => e.preventDefault()}>
@@ -125,13 +117,12 @@ export default function NexaFooter() {
             </p>
           </div>
 
-          {/* RIGHT: Social Icons */}
+          {/* RIGHT: UPDATED ICONS */}
           <div className="md:justify-self-end">
             <p className="text-sm font-semibold tracking-wide md:text-right">Follow</p>
 
             <div className="mt-4 flex gap-3 md:justify-end">
               <SocialIcon label="Instagram" href="#" icon="instagram" />
-              <SocialIcon label="WhatsApp" href="#" icon="whatsapp" />
               <SocialIcon label="Pinterest" href="#" icon="pinterest" />
               <SocialIcon label="TikTok" href="#" icon="tiktok" />
               <SocialIcon label="Facebook" href="#" icon="facebook" />
@@ -149,21 +140,11 @@ export default function NexaFooter() {
           </p>
 
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs md:justify-end" style={{ color: THEME.textDim }}>
-            <a href="/terms" className="transition hover:text-white">
-              Terms &amp; Conditions
-            </a>
-            <a href="/privacy" className="transition hover:text-white">
-              Privacy Policy
-            </a>
-            <a href="/deposit-policy" className="transition hover:text-white">
-              Deposit Policy
-            </a>
-            <a href="/refunds" className="transition hover:text-white">
-              Refund Policy
-            </a>
-            <a href="/cookies" className="transition hover:text-white">
-              Cookies
-            </a>
+            <a href="/terms" className="transition hover:text-white">Terms & Conditions</a>
+            <a href="/privacy" className="transition hover:text-white">Privacy Policy</a>
+            <a href="/deposit-policy" className="transition hover:text-white">Deposit Policy</a>
+            <a href="/refunds" className="transition hover:text-white">Refund Policy</a>
+            <a href="/cookies" className="transition hover:text-white">Cookies</a>
           </div>
         </div>
       </div>
@@ -174,7 +155,7 @@ export default function NexaFooter() {
 type SocialIconProps = {
   label: string;
   href: string;
-  icon: "instagram" | "whatsapp" | "pinterest" | "tiktok" | "facebook";
+  icon: "instagram" | "pinterest" | "tiktok" | "facebook";
 };
 
 function SocialIcon({ label, href, icon }: SocialIconProps) {
@@ -185,9 +166,7 @@ function SocialIcon({ label, href, icon }: SocialIconProps) {
       className="group grid h-10 w-10 place-items-center rounded-2xl ring-1 ring-white/10 transition
                  bg-white/[0.035] hover:bg-white/[0.05] hover:shadow-[0_16px_40px_rgba(255,122,0,0.10)]
                  focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-      style={{
-        boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
-      }}
+      style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
     >
       <span className="transition group-hover:brightness-110" style={{ color: "rgba(255,180,116,0.95)" }}>
         {getIcon(icon)}
@@ -199,41 +178,41 @@ function SocialIcon({ label, href, icon }: SocialIconProps) {
 
 function getIcon(name: SocialIconProps["icon"]) {
   const common = "h-5 w-5";
+  const base = {
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 1.8,
+    strokeLinecap: "round" as const,
+    strokeLinejoin: "round" as const,
+  };
+
   switch (name) {
     case "instagram":
       return (
-        <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <rect x="3" y="3" width="18" height="18" rx="5" />
-          <circle cx="12" cy="12" r="3.5" />
-          <circle cx="17.5" cy="6.5" r="0.8" fill="currentColor" stroke="none" />
-        </svg>
-      );
-    case "whatsapp":
-      return (
-        <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M20 11.5a8.5 8.5 0 0 1-12.7 7.4L4 20l1.2-3.1A8.5 8.5 0 1 1 20 11.5Z" />
-          <path d="M9.5 9.5c1.5 3 3 4 5 5" />
+        <svg className={common} viewBox="0 0 24 24" {...base}>
+          <rect x="6" y="6" width="12" height="12" rx="3.25" />
+          <circle cx="12" cy="12" r="3.2" />
+          <circle cx="16.2" cy="7.8" r="0.7" fill="currentColor" stroke="none" />
         </svg>
       );
     case "pinterest":
       return (
-        <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9c0 3.6 2.12 6.7 5.18 8.1" />
-          <path d="M9.6 19.6l1.2-5.1" />
-          <path d="M10.5 10.8c.3-1.4 1.6-2.4 3.1-2.4 1.9 0 3.2 1.3 3.2 3.1 0 2.1-1.2 3.8-3.5 3.8-.7 0-1.4-.3-1.8-.8" />
+        <svg className={common} viewBox="0 0 24 24" {...base}>
+          <path d="M12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9c0 3.95 2.55 7.31 6.1 8.5" />
+          <path d="M10.6 19.6l1.25-5.25" />
         </svg>
       );
     case "tiktok":
       return (
-        <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14 8c1.2 1.8 2.9 2.8 5 3v3c-2 0-3.7-.6-5-1.6V16a5 5 0 1 1-5-5" />
-          <path d="M14 3v10" />
+        <svg className={common} viewBox="0 0 24 24" {...base}>
+          <path d="M14 4v10.1a3.9 3.9 0 1 1-3.4-3.87" />
+          <path d="M14 7.2c1.1 1.7 2.9 2.8 5 3V7.1c-1.9-.1-3.6-1-5-2.6" />
         </svg>
       );
     case "facebook":
       return (
-        <svg className={common} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="M14 9h3V6h-3c-2 0-4 1-4 4v3H7v3h3v5h3v-5h3l1-3h-4v-3c0-1 .3-1 1-1Z" />
+        <svg className={common} viewBox="0 0 24 24" {...base}>
+          <path d="M14 9h3V6h-3c-2.2 0-4 1.3-4 4v3H7v3h3v6h3v-6h3l1-3h-4v-3c0-.85.25-1 1-1Z" />
         </svg>
       );
     default:
