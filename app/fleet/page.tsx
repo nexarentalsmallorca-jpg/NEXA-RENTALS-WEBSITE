@@ -1,14 +1,8 @@
 "use client";
 
-import React, { Suspense, useMemo, useRef, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BookingBar from "../components/BookingBar";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 0;
-
-// ✅ IMPORTANT: If you have ANY other "revalidate" import/export, delete it.
-// ✅ Also do NOT import "dynamic" from next/dynamic in this file.
 
 const ORANGE = "#FF7A00";
 
@@ -83,16 +77,7 @@ function daysBetween(from?: Date, to?: Date) {
   return Math.max(0, diff);
 }
 
-export default function FleetPage() {
-  // ✅ This Suspense wrapper avoids build issues with useSearchParams on Vercel
-  return (
-    <Suspense fallback={null}>
-      <FleetPageInner />
-    </Suspense>
-  );
-}
-
-function FleetPageInner() {
+export default function FleetClient() {
   const router = useRouter();
   const sp = useSearchParams();
   const bookingRef = useRef<HTMLDivElement | null>(null);
@@ -180,11 +165,8 @@ function FleetPageInner() {
           Our Fleet
         </div>
 
-        <h1
-          className="mt-3 text-3xl md:text-4xl font-black tracking-tight"
-          style={{ fontFamily: "var(--font-heading)" }}
-        >
-          Choose your ride — premium scooters & e-bikes
+        <h1 className="mt-3 text-3xl font-black tracking-tight md:text-4xl" style={{ fontFamily: "var(--font-heading)" }}>
+          Choose your ride — premium scooters &amp; e-bikes
         </h1>
 
         <p className="mt-3 max-w-2xl text-white/65">
@@ -193,7 +175,7 @@ function FleetPageInner() {
 
         <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start">
           <div ref={bookingRef} className="lg:flex-1 lg:min-w-0" style={{ maxWidth: 860 }}>
-            <div className="md:scale-100 md:translate-y-0 md:origin-center scale-[0.90] origin-top translate-y-[-10px]">
+            <div className="origin-top translate-y-[-10px] scale-[0.90] md:origin-center md:translate-y-0 md:scale-100">
               <BookingBar />
             </div>
 
@@ -212,7 +194,7 @@ function FleetPageInner() {
           </div>
 
           <div
-            className="w-full lg:w-[320px] shrink-0 rounded-3xl border p-4"
+            className="w-full shrink-0 rounded-3xl border p-4 lg:w-[320px]"
             style={{
               borderColor: "rgba(255,255,255,0.10)",
               background: "rgba(255,255,255,0.03)",
@@ -283,7 +265,7 @@ function FleetPageInner() {
                     </div>
 
                     <div className="relative mt-4 h-[240px] w-full">
-                      <div className="pointer-events-none absolute left-1/2 bottom-7 h-10 w-[78%] -translate-x-1/2 rounded-full bg-black/60 blur-xl opacity-70 transition-all duration-500 group-hover:bottom-6 group-hover:opacity-90" />
+                      <div className="pointer-events-none absolute bottom-7 left-1/2 h-10 w-[78%] -translate-x-1/2 rounded-full bg-black/60 blur-xl opacity-70 transition-all duration-500 group-hover:bottom-6 group-hover:opacity-90" />
                       <img
                         src={v.imageUrl}
                         alt={v.name}
@@ -338,9 +320,7 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-white/55">{k}</span>
-      <span className="truncate text-right text-white/85">
-        {v}
-      </span>
+      <span className="truncate text-right text-white/85">{v}</span>
     </div>
   );
 }
