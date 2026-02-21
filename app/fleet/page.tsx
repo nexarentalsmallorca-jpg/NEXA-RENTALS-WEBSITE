@@ -7,6 +7,9 @@ import BookingBar from "../components/BookingBar";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
+// ✅ IMPORTANT: If you have ANY other "revalidate" import/export, delete it.
+// ✅ Also do NOT import "dynamic" from next/dynamic in this file.
+
 const ORANGE = "#FF7A00";
 
 type VehicleType = "Scooter" | "E-Bike";
@@ -80,11 +83,8 @@ function daysBetween(from?: Date, to?: Date) {
   return Math.max(0, diff);
 }
 
-/**
- * ✅ Wrapper to satisfy Next.js build/prerender rules around useSearchParams().
- * This prevents Vercel "prerender-error" on /fleet.
- */
 export default function FleetPage() {
+  // ✅ This Suspense wrapper avoids build issues with useSearchParams on Vercel
   return (
     <Suspense fallback={null}>
       <FleetPageInner />
@@ -97,7 +97,6 @@ function FleetPageInner() {
   const sp = useSearchParams();
   const bookingRef = useRef<HTMLDivElement | null>(null);
 
-  // Booking params (set by BookingBar)
   const pickupLocation = sp.get("pickupLocation") || "Magaluf (Carrer Galeón 13)";
   const from = parseISO(sp.get("from"));
   const to = parseISO(sp.get("to"));
@@ -192,9 +191,7 @@ function FleetPageInner() {
           Select dates, pick your vehicle, and checkout instantly. Luxury experience, zero confusion.
         </p>
 
-        {/* BAR + SUMMARY */}
         <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start">
-          {/* LEFT */}
           <div ref={bookingRef} className="lg:flex-1 lg:min-w-0" style={{ maxWidth: 860 }}>
             <div className="md:scale-100 md:translate-y-0 md:origin-center scale-[0.90] origin-top translate-y-[-10px]">
               <BookingBar />
@@ -214,7 +211,6 @@ function FleetPageInner() {
             )}
           </div>
 
-          {/* RIGHT */}
           <div
             className="w-full lg:w-[320px] shrink-0 rounded-3xl border p-4"
             style={{
@@ -237,7 +233,6 @@ function FleetPageInner() {
           </div>
         </div>
 
-        {/* Cards */}
         <section className="mt-4">
           <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((v) => {
@@ -254,7 +249,6 @@ function FleetPageInner() {
                     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
                   }}
                 >
-                  {/* glow */}
                   <div className="pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-100">
                     <div
                       className="absolute -top-24 left-1/2 h-[420px] w-[420px] -translate-x-1/2 rounded-full blur-[90px]"
@@ -265,7 +259,6 @@ function FleetPageInner() {
                   </div>
 
                   <div className="p-5">
-                    {/* tags */}
                     <div className="flex flex-wrap gap-2">
                       {v.tags.slice(0, 2).map((t) => (
                         <span
@@ -289,10 +282,8 @@ function FleetPageInner() {
                       ))}
                     </div>
 
-                    {/* image */}
                     <div className="relative mt-4 h-[240px] w-full">
                       <div className="pointer-events-none absolute left-1/2 bottom-7 h-10 w-[78%] -translate-x-1/2 rounded-full bg-black/60 blur-xl opacity-70 transition-all duration-500 group-hover:bottom-6 group-hover:opacity-90" />
-
                       <img
                         src={v.imageUrl}
                         alt={v.name}
@@ -300,12 +291,10 @@ function FleetPageInner() {
                       />
                     </div>
 
-                    {/* title */}
                     <div className="mt-4 flex items-start justify-between gap-3">
                       <div className="min-w-0">
                         <div className="text-[11px] font-bold tracking-wide text-white/55">{v.type}</div>
                         <div className="truncate text-[15px] font-black text-white">{v.name}</div>
-
                         <div className="mt-2 text-xs text-white/55">
                           {v.cc ? `${v.cc}` : ""}
                           {v.transmission ? ` • ${v.transmission}` : ""}
@@ -320,7 +309,6 @@ function FleetPageInner() {
                       </div>
                     </div>
 
-                    {/* CTA */}
                     <div className="mt-5 flex items-center justify-between">
                       <div className="text-xs text-white/55">Instant confirmation • Local support</div>
 
@@ -350,7 +338,9 @@ function Row({ k, v }: { k: string; v: string }) {
   return (
     <div className="flex items-center justify-between gap-4">
       <span className="text-white/55">{k}</span>
-      <span className="truncate text-right text-white/85">{v}</span>
+      <span className="truncate text-right text-white/85">
+        {v}
+      </span>
     </div>
   );
 }
