@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useMemo, useRef, useState } from "react";
+import React, { Suspense, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import BookingBar from "../components/BookingBar";
+
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const ORANGE = "#FF7A00";
 
@@ -77,7 +80,19 @@ function daysBetween(from?: Date, to?: Date) {
   return Math.max(0, diff);
 }
 
+/**
+ * ✅ Wrapper to satisfy Next.js build/prerender rules around useSearchParams().
+ * This prevents Vercel "prerender-error" on /fleet.
+ */
 export default function FleetPage() {
+  return (
+    <Suspense fallback={null}>
+      <FleetPageInner />
+    </Suspense>
+  );
+}
+
+function FleetPageInner() {
   const router = useRouter();
   const sp = useSearchParams();
   const bookingRef = useRef<HTMLDivElement | null>(null);
@@ -93,7 +108,6 @@ export default function FleetPage() {
   const hasDates = !!from && !!to && days > 0;
 
   const [showNeedDates, setShowNeedDates] = useState(false);
-
   const items = useMemo(() => FLEET, []);
 
   function requireDatesOrFocus() {
@@ -167,7 +181,10 @@ export default function FleetPage() {
           Our Fleet
         </div>
 
-        <h1 className="mt-3 text-3xl md:text-4xl font-black tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
+        <h1
+          className="mt-3 text-3xl md:text-4xl font-black tracking-tight"
+          style={{ fontFamily: "var(--font-heading)" }}
+        >
           Choose your ride — premium scooters & e-bikes
         </h1>
 
@@ -175,11 +192,10 @@ export default function FleetPage() {
           Select dates, pick your vehicle, and checkout instantly. Luxury experience, zero confusion.
         </p>
 
-        {/* ✅ BAR (LEFT) + SUMMARY (RIGHT) — ALWAYS SIDE BY SIDE ON DESKTOP */}
+        {/* BAR + SUMMARY */}
         <div className="mt-6 flex flex-col gap-4 lg:flex-row lg:items-start">
-          {/* LEFT: BAR (constrained width so it doesn't push summary down) */}
+          {/* LEFT */}
           <div ref={bookingRef} className="lg:flex-1 lg:min-w-0" style={{ maxWidth: 860 }}>
-            {/* ✅ ONLY CHANGE: make BookingBar smaller on mobile so bg shows more */}
             <div className="md:scale-100 md:translate-y-0 md:origin-center scale-[0.90] origin-top translate-y-[-10px]">
               <BookingBar />
             </div>
@@ -198,7 +214,7 @@ export default function FleetPage() {
             )}
           </div>
 
-          {/* RIGHT: SUMMARY (fixed width) */}
+          {/* RIGHT */}
           <div
             className="w-full lg:w-[320px] shrink-0 rounded-3xl border p-4"
             style={{
@@ -221,7 +237,7 @@ export default function FleetPage() {
           </div>
         </div>
 
-        {/* ✅ Cards start immediately under the BAR row */}
+        {/* Cards */}
         <section className="mt-4">
           <div className="grid gap-7 sm:grid-cols-2 lg:grid-cols-3">
             {items.map((v) => {
@@ -277,15 +293,11 @@ export default function FleetPage() {
                     <div className="relative mt-4 h-[240px] w-full">
                       <div className="pointer-events-none absolute left-1/2 bottom-7 h-10 w-[78%] -translate-x-1/2 rounded-full bg-black/60 blur-xl opacity-70 transition-all duration-500 group-hover:bottom-6 group-hover:opacity-90" />
 
-                      {/* ✅ ONLY CHANGE: mobile image uses /images/heromobile-bg.png */}
-                      <picture>
-                        <source media="(max-width: 767px)" srcSet="/images/heromobile-bg.png" />
-                        <img
-                          src={v.imageUrl}
-                          alt={v.name}
-                          className="absolute inset-0 mx-auto h-full w-full object-contain drop-shadow-[0_35px_45px_rgba(0,0,0,0.55)] transition-transform duration-500 group-hover:-translate-y-1"
-                        />
-                      </picture>
+                      <img
+                        src={v.imageUrl}
+                        alt={v.name}
+                        className="absolute inset-0 mx-auto h-full w-full object-contain drop-shadow-[0_35px_45px_rgba(0,0,0,0.55)] transition-transform duration-500 group-hover:-translate-y-1"
+                      />
                     </div>
 
                     {/* title */}
