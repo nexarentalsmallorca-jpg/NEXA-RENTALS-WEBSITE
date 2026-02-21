@@ -7,13 +7,13 @@ import { usePathname } from "next/navigation";
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
 const LANGUAGES: { code: Locale; label: string; flagSrc: string; short: string }[] = [
-  { code: "en", label: "English", flagSrc: "/images/flags/en.png", short: "EN" },
-  { code: "es", label: "Español", flagSrc: "/images/flags/es.png", short: "ES" },
-  { code: "de", label: "Deutsch", flagSrc: "/images/flags/de.png", short: "DE" },
-  { code: "fr", label: "Français", flagSrc: "/images/flags/fr.png", short: "FR" },
-  { code: "sv", label: "Svenska", flagSrc: "/images/flags/sv.png", short: "SV" },
-  { code: "it", label: "Italiano", flagSrc: "/images/flags/it.png", short: "IT" },
-  { code: "pt", label: "Português", flagSrc: "/images/flags/pt.png", short: "PT" },
+  { code: "en", label: "English", flagSrc: "/images/en.png", short: "EN" },
+  { code: "es", label: "Español", flagSrc: "/images/es.png", short: "ES" },
+  { code: "de", label: "Deutsch", flagSrc: "/images/de.png", short: "DE" },
+  { code: "fr", label: "Français", flagSrc: "/images/fr.png", short: "FR" },
+  { code: "sv", label: "Svenska", flagSrc: "/images/sv.png", short: "SV" },
+  { code: "it", label: "Italiano", flagSrc: "/images/it.png", short: "IT" },
+  { code: "pt", label: "Português", flagSrc: "/images/pt.png", short: "PT" },
 ];
 
 function getLocaleFromPath(pathname: string): Locale {
@@ -165,13 +165,7 @@ export default function Navbar() {
                       ].join(" ")}
                     >
                       <span className="flex items-center gap-3">
-                        <Image
-                          src={l.flagSrc}
-                          alt={l.label}
-                          width={22}
-                          height={22}
-                          className="rounded-full"
-                        />
+                        <Image src={l.flagSrc} alt={l.label} width={22} height={22} className="rounded-full" />
                         <span className="text-sm">{l.label}</span>
                       </span>
 
@@ -192,14 +186,7 @@ export default function Navbar() {
                 transform: "translateX(-50%)",
               }}
             >
-              <Image
-                src="/images/logo.png"
-                alt="NEXA Rentals"
-                width={210}
-                height={70}
-                priority
-                className="h-14 w-auto md:h-26"
-              />
+              <Image src="/images/logo.png" alt="NEXA Rentals" width={210} height={70} priority className="h-14 w-auto md:h-26" />
             </a>
 
             {/* ✅ Desktop nav (UNCHANGED) */}
