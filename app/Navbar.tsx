@@ -6,14 +6,14 @@ import { usePathname } from "next/navigation";
 
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
-const LANGUAGES: { code: Locale; label: string; flag: string; short: string }[] = [
-  { code: "en", label: "English", flag: "EN", short: "EN" },
-  { code: "es", label: "Español", flag: "ES", short: "ES" },
-  { code: "de", label: "Deutsch", flag: "DE", short: "DE" },
-  { code: "fr", label: "Français", flag: "FR", short: "FR" },
-  { code: "sv", label: "Svenska", flag: "SV", short: "SV" },
-  { code: "it", label: "Italiano", flag: "IT", short: "IT" },
-  { code: "pt", label: "Português", flag: "PT", short: "PT" },
+const LANGUAGES: { code: Locale; label: string; flagSrc: string; short: string }[] = [
+  { code: "en", label: "English", flagSrc: "/images/flags/en.png", short: "EN" },
+  { code: "es", label: "Español", flagSrc: "/images/flags/es.png", short: "ES" },
+  { code: "de", label: "Deutsch", flagSrc: "/images/flags/de.png", short: "DE" },
+  { code: "fr", label: "Français", flagSrc: "/images/flags/fr.png", short: "FR" },
+  { code: "sv", label: "Svenska", flagSrc: "/images/flags/sv.png", short: "SV" },
+  { code: "it", label: "Italiano", flagSrc: "/images/flags/it.png", short: "IT" },
+  { code: "pt", label: "Português", flagSrc: "/images/flags/pt.png", short: "PT" },
 ];
 
 function getLocaleFromPath(pathname: string): Locale {
@@ -133,7 +133,7 @@ export default function Navbar() {
                 aria-label="Select language"
               >
                 <Image
-                  src={`/images/${currentLang.flag}.png`}
+                  src={currentLang.flagSrc}
                   alt={currentLang.label}
                   width={18}
                   height={18}
@@ -166,7 +166,7 @@ export default function Navbar() {
                     >
                       <span className="flex items-center gap-3">
                         <Image
-                          src={`/images/${l.flag}.png`}
+                          src={l.flagSrc}
                           alt={l.label}
                           width={22}
                           height={22}
