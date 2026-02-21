@@ -149,13 +149,20 @@ function timeToMinutes(t: string) {
 export default function FeaturedFleet() {
   const router = useRouter();
   const sp = useSearchParams();
+
+  // Desktop keeps all 4
   const items = useMemo(() => FEATURED, []);
+
+  // Mobile shows ONLY Piaggio then E-Bike (stacked)
+  const mobileItems = useMemo(
+    () => FEATURED.filter((v) => v.id === "s2" || v.id === "e2").sort((a, b) => (a.id === "s2" ? -1 : b.id === "s2" ? 1 : 0)),
+    []
+  );
 
   const sectionRef = useRef<HTMLElement | null>(null);
   const [inView, setInView] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
 
-  // ✅ only one popup (the picker)
   const [open, setOpen] = useState(false);
   const [selected, setSelected] = useState<Vehicle | null>(null);
 
@@ -202,6 +209,7 @@ export default function FeaturedFleet() {
       setActiveIndex(-1);
 
       startTimer = setTimeout(() => {
+        // keep original animation driver (items)
         items.forEach((_, i) => {
           timers.push(
             setTimeout(() => {
@@ -220,7 +228,6 @@ export default function FeaturedFleet() {
     };
   }, [inView, items]);
 
-  // close time popovers on outside click
   useEffect(() => {
     function onDown(e: MouseEvent) {
       const t = e.target as Node;
@@ -318,7 +325,6 @@ export default function FeaturedFleet() {
     setDropoffTimeOpen((v) => !v);
   }
 
-  // ✅ click card -> directly open picker popup
   function openPickerForVehicle(v: Vehicle) {
     setSelected(v);
     setOpen(true);
@@ -419,100 +425,209 @@ export default function FeaturedFleet() {
       </div>
 
       {/* Grid */}
-      <div className="mt-10 grid grid-cols-2 gap-8 lg:grid-cols-4">
-        {items.map((v, idx) => {
-          const show = idx <= activeIndex;
+      <div className="mt-10">
+        {/* ✅ MOBILE: stacked, Piaggio highlighted + Best Seller orange tag */}
+        <div className="grid grid-cols-1 gap-6 lg:hidden">
+          {mobileItems.map((v, idx) => {
+            const show = idx <= activeIndex;
+            const isPiaggio = v.id === "s2";
 
-          return (
-            <button
-              key={v.id}
-              type="button"
-              onClick={() => openPickerForVehicle(v)} // ✅ open picker directly
-              className={[
-                "group relative w-full text-left",
-                "transition-all duration-700 ease-out",
-                show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16",
-              ].join(" ")}
-            >
-              <div className="pointer-events-none absolute inset-0 -z-10">
-                <div
-                  className="absolute left-1/2 top-[52%] h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[70px] opacity-40 transition-opacity duration-500 group-hover:opacity-55"
-                  style={{
-                    background: "radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.00) 70%)",
-                  }}
-                />
-              </div>
+            const badgeText = isPiaggio ? "Best Seller" : v.badge;
 
-              <div
-                className="rounded-3xl border p-4 md:p-5 transition-all duration-500 group-hover:-translate-y-[2px]
-                           group-hover:shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
-                style={{
-                  borderColor: "rgba(255,255,255,0.12)",
-                  background:
-                    "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.028) 55%, rgba(255,255,255,0.03) 100%)",
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
-                }}
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => openPickerForVehicle(v)}
+                className={[
+                  "group relative w-full text-left",
+                  "transition-all duration-700 ease-out",
+                  show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16",
+                ].join(" ")}
               >
+                {/* extra highlight glow for Piaggio */}
+                {isPiaggio && (
+                  <div className="pointer-events-none absolute inset-0 -z-10">
+                    <div
+                      className="absolute left-1/2 top-[50%] h-[520px] w-[520px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[90px] opacity-55"
+                      style={{
+                        background: `radial-gradient(circle, rgba(255,122,0,0.28) 0%, rgba(255,122,0,0) 65%)`,
+                      }}
+                    />
+                  </div>
+                )}
+
                 <div
-                  className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black"
+                  className="rounded-3xl border p-4 md:p-5 transition-all duration-500 group-hover:-translate-y-[2px]
+                           group-hover:shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
                   style={{
-                    borderColor: "rgba(255,255,255,0.14)",
-                    background: "rgba(0,0,0,0.18)",
-                    color: "rgba(255,255,255,0.80)",
+                    borderColor: isPiaggio ? "rgba(255,122,0,0.55)" : "rgba(255,255,255,0.12)",
+                    background: isPiaggio
+                      ? "linear-gradient(180deg, rgba(255,122,0,0.10) 0%, rgba(255,255,255,0.028) 55%, rgba(255,255,255,0.03) 100%)"
+                      : "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.028) 55%, rgba(255,255,255,0.03) 100%)",
+                    boxShadow: isPiaggio
+                      ? "0 22px 70px rgba(255,122,0,0.14), inset 0 1px 0 rgba(255,255,255,0.06)"
+                      : "inset 0 1px 0 rgba(255,255,255,0.06)",
                   }}
                 >
-                  <span
-                    className="inline-block h-1.5 w-1.5 rounded-full"
+                  <div
+                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black"
                     style={{
-                      background: "rgba(255,180,116,0.95)",
-                      boxShadow: "0 0 18px rgba(255,122,0,0.35)",
+                      borderColor: isPiaggio ? "rgba(255,122,0,0.55)" : "rgba(255,255,255,0.14)",
+                      background: isPiaggio ? "rgba(255,122,0,0.18)" : "rgba(0,0,0,0.18)",
+                      color: isPiaggio ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.80)",
                     }}
-                  />
-                  {v.badge}
-                </div>
-
-                <div className="relative mx-auto mt-3 h-[220px] w-full">
-                  <div className="pointer-events-none absolute left-1/2 bottom-7 h-10 w-[78%] -translate-x-1/2 rounded-full bg-black/60 blur-xl opacity-70 transition-all duration-500 ease-out group-hover:bottom-6 group-hover:opacity-90" />
-                  <img
-                    src={v.imageUrl}
-                    alt={v.name}
-                    className="absolute inset-0 mx-auto h-full w-full object-contain drop-shadow-[0_35px_45px_rgba(0,0,0,0.55)]
-                               transition-transform duration-500 ease-out group-hover:-translate-y-1"
-                  />
-                </div>
-
-                <div className="mt-4 flex items-start justify-between gap-3">
-                  <div className="min-w-0">
-                    <div className="text-[11px] font-bold tracking-wide text-white/55">{v.type}</div>
-                    <div className="truncate text-sm md:text-[15px] font-black text-white">{v.name}</div>
+                  >
+                    <span
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{
+                        background: isPiaggio ? ORANGE : "rgba(255,180,116,0.95)",
+                        boxShadow: isPiaggio ? "0 0 22px rgba(255,122,0,0.55)" : "0 0 18px rgba(255,122,0,0.35)",
+                      }}
+                    />
+                    {badgeText}
                   </div>
 
-                  <div className="shrink-0 text-right">
-                    <div className="text-[11px] font-bold text-white/55">from</div>
-                    <div className="text-sm font-black" style={{ color: ORANGE }}>
-                      €{v.pricePerDay}
-                      <span className="text-xs text-white/45">/day</span>
+                  <div className="relative mx-auto mt-3 h-[220px] w-full">
+                    <div className="pointer-events-none absolute left-1/2 bottom-7 h-10 w-[78%] -translate-x-1/2 rounded-full bg-black/60 blur-xl opacity-70 transition-all duration-500 ease-out group-hover:bottom-6 group-hover:opacity-90" />
+                    <img
+                      src={v.imageUrl}
+                      alt={v.name}
+                      className="absolute inset-0 mx-auto h-full w-full object-contain drop-shadow-[0_35px_45px_rgba(0,0,0,0.55)]
+                               transition-transform duration-500 ease-out group-hover:-translate-y-1"
+                    />
+                  </div>
+
+                  <div className="mt-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-bold tracking-wide text-white/55">{v.type}</div>
+                      <div className="truncate text-sm md:text-[15px] font-black text-white">{v.name}</div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <div className="text-[11px] font-bold text-white/55">from</div>
+                      <div className="text-sm font-black" style={{ color: ORANGE }}>
+                        €{v.pricePerDay}
+                        <span className="text-xs text-white/45">/day</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="text-xs text-white/55">Tap to rent</div>
+                    <div
+                      className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black text-black transition group-hover:brightness-110"
+                      style={{
+                        background: `linear-gradient(180deg, ${ORANGE} 0%, rgba(255,122,0,0.85) 100%)`,
+                        boxShadow: isPiaggio ? "0 18px 46px rgba(255,122,0,0.26)" : "0 16px 40px rgba(255,122,0,0.16)",
+                      }}
+                    >
+                      Rent it
+                      <ArrowIcon />
                     </div>
                   </div>
                 </div>
+              </button>
+            );
+          })}
+        </div>
 
-                <div className="mt-4 flex items-center justify-between">
-                  <div className="text-xs text-white/55">Tap to rent</div>
+        {/* ✅ DESKTOP (lg+): keep all 4 EXACTLY as before */}
+        <div className="hidden lg:grid grid-cols-4 gap-8">
+          {items.map((v, idx) => {
+            const show = idx <= activeIndex;
+
+            return (
+              <button
+                key={v.id}
+                type="button"
+                onClick={() => openPickerForVehicle(v)}
+                className={[
+                  "group relative w-full text-left",
+                  "transition-all duration-700 ease-out",
+                  show ? "opacity-100 translate-y-0" : "opacity-0 translate-y-16",
+                ].join(" ")}
+              >
+                <div className="pointer-events-none absolute inset-0 -z-10">
                   <div
-                    className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black text-black transition group-hover:brightness-110"
+                    className="absolute left-1/2 top-[52%] h-[340px] w-[340px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[70px] opacity-40 transition-opacity duration-500 group-hover:opacity-55"
                     style={{
-                      background: `linear-gradient(180deg, ${ORANGE} 0%, rgba(255,122,0,0.85) 100%)`,
-                      boxShadow: "0 16px 40px rgba(255,122,0,0.16)",
+                      background: "radial-gradient(circle, rgba(255,255,255,0.16) 0%, rgba(255,255,255,0.00) 70%)",
+                    }}
+                  />
+                </div>
+
+                <div
+                  className="rounded-3xl border p-4 md:p-5 transition-all duration-500 group-hover:-translate-y-[2px]
+                           group-hover:shadow-[0_24px_70px_rgba(0,0,0,0.55)]"
+                  style={{
+                    borderColor: "rgba(255,255,255,0.12)",
+                    background:
+                      "linear-gradient(180deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.028) 55%, rgba(255,255,255,0.03) 100%)",
+                    boxShadow: "inset 0 1px 0 rgba(255,255,255,0.06)",
+                  }}
+                >
+                  <div
+                    className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black"
+                    style={{
+                      borderColor: "rgba(255,255,255,0.14)",
+                      background: "rgba(0,0,0,0.18)",
+                      color: "rgba(255,255,255,0.80)",
                     }}
                   >
-                    Rent it
-                    <ArrowIcon />
+                    <span
+                      className="inline-block h-1.5 w-1.5 rounded-full"
+                      style={{
+                        background: "rgba(255,180,116,0.95)",
+                        boxShadow: "0 0 18px rgba(255,122,0,0.35)",
+                      }}
+                    />
+                    {v.badge}
+                  </div>
+
+                  <div className="relative mx-auto mt-3 h-[220px] w-full">
+                    <div className="pointer-events-none absolute left-1/2 bottom-7 h-10 w-[78%] -translate-x-1/2 rounded-full bg-black/60 blur-xl opacity-70 transition-all duration-500 ease-out group-hover:bottom-6 group-hover:opacity-90" />
+                    <img
+                      src={v.imageUrl}
+                      alt={v.name}
+                      className="absolute inset-0 mx-auto h-full w-full object-contain drop-shadow-[0_35px_45px_rgba(0,0,0,0.55)]
+                               transition-transform duration-500 ease-out group-hover:-translate-y-1"
+                    />
+                  </div>
+
+                  <div className="mt-4 flex items-start justify-between gap-3">
+                    <div className="min-w-0">
+                      <div className="text-[11px] font-bold tracking-wide text-white/55">{v.type}</div>
+                      <div className="truncate text-sm md:text-[15px] font-black text-white">{v.name}</div>
+                    </div>
+
+                    <div className="shrink-0 text-right">
+                      <div className="text-[11px] font-bold text-white/55">from</div>
+                      <div className="text-sm font-black" style={{ color: ORANGE }}>
+                        €{v.pricePerDay}
+                        <span className="text-xs text-white/45">/day</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 flex items-center justify-between">
+                    <div className="text-xs text-white/55">Tap to rent</div>
+                    <div
+                      className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black text-black transition group-hover:brightness-110"
+                      style={{
+                        background: `linear-gradient(180deg, ${ORANGE} 0%, rgba(255,122,0,0.85) 100%)`,
+                        boxShadow: "0 16px 40px rgba(255,122,0,0.16)",
+                      }}
+                    >
+                      Rent it
+                      <ArrowIcon />
+                    </div>
                   </div>
                 </div>
-              </div>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })}
+        </div>
       </div>
 
       {/* ✅ ONLY ONE POPUP: Date + Time picker */}
@@ -533,8 +648,7 @@ export default function FeaturedFleet() {
             className="relative w-full max-w-2xl overflow-hidden rounded-[28px] border"
             style={{
               borderColor: "rgba(255,255,255,0.12)",
-              background:
-                "linear-gradient(180deg, rgba(15,17,21,0.96) 0%, rgba(12,14,18,0.96) 100%)",
+              background: "linear-gradient(180deg, rgba(15,17,21,0.96) 0%, rgba(12,14,18,0.96) 100%)",
               boxShadow: "0 36px 110px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06)",
             }}
           >
@@ -748,11 +862,7 @@ export default function FeaturedFleet() {
                     </div>
                   </div>
 
-                  <button
-                    onClick={closeCalendar}
-                    className="h-9 w-9 rounded-xl hover:bg-black/5 text-black/70 transition"
-                    aria-label="Close"
-                  >
+                  <button onClick={closeCalendar} className="h-9 w-9 rounded-xl hover:bg-black/5 text-black/70 transition" aria-label="Close">
                     ✕
                   </button>
                 </div>
@@ -829,7 +939,7 @@ function MonthYearPicker({
   setViewMonth: React.Dispatch<React.SetStateAction<Date>>;
 }) {
   const months = useMemo(
-    () => ["January","February","March","April","May","June","July","August","September","October","November","December"],
+    () => ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
     []
   );
 
@@ -853,7 +963,9 @@ function MonthYearPicker({
         style={{ background: BAR_BG }}
       >
         {months.map((m, idx) => (
-          <option key={m} value={idx}>{m}</option>
+          <option key={m} value={idx}>
+            {m}
+          </option>
         ))}
       </select>
 
@@ -867,7 +979,9 @@ function MonthYearPicker({
         style={{ background: BAR_BG }}
       >
         {years.map((y) => (
-          <option key={y} value={y}>{y}</option>
+          <option key={y} value={y}>
+            {y}
+          </option>
         ))}
       </select>
     </div>
@@ -892,13 +1006,13 @@ function MiniMonth({
 
   return (
     <div className="rounded-xl border border-black/10 p-3" style={{ background: BAR_BG }}>
-      <div className="mb-2 text-sm font-extrabold text-black">
-        {month.toLocaleString(undefined, { month: "long", year: "numeric" })}
-      </div>
+      <div className="mb-2 text-sm font-extrabold text-black">{month.toLocaleString(undefined, { month: "long", year: "numeric" })}</div>
 
       <div className="grid grid-cols-7 text-[11px] text-black/55 mb-2 font-semibold">
         {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => (
-          <div key={w} className="py-1 text-center">{w}</div>
+          <div key={w} className="py-1 text-center">
+            {w}
+          </div>
         ))}
       </div>
 
@@ -961,10 +1075,7 @@ function TimeDropdown({
   onClose: () => void;
 }) {
   return (
-    <div
-      className="absolute left-0 top-full mt-2 z-[999] w-[240px] rounded-2xl border border-black/10 shadow-2xl overflow-hidden"
-      style={{ background: BAR_BG }}
-    >
+    <div className="absolute left-0 top-full mt-2 z-[999] w-[240px] rounded-2xl border border-black/10 shadow-2xl overflow-hidden" style={{ background: BAR_BG }}>
       <div className="flex items-center justify-between px-3 py-2 border-b border-black/10">
         <div className="text-sm font-extrabold text-black">{title}</div>
         <button onClick={onClose} className="h-8 w-8 rounded-xl hover:bg-black/5 text-black/70 transition">
@@ -980,10 +1091,7 @@ function TimeDropdown({
               key={t}
               type="button"
               onClick={() => onSelect(t)}
-              className={[
-                "w-full text-left px-3 py-2 rounded-xl font-extrabold transition",
-                active ? "text-black" : "text-black hover:bg-orange-200",
-              ].join(" ")}
+              className={["w-full text-left px-3 py-2 rounded-xl font-extrabold transition", active ? "text-black" : "text-black hover:bg-orange-200"].join(" ")}
               style={active ? { background: DEEP_ORANGE } : undefined}
             >
               {formatTimeLabel(t)}
@@ -1018,11 +1126,7 @@ function CalendarMini() {
 function ClockMini() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" className="text-black/70" fill="none">
-      <path
-        d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
+      <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" strokeWidth="2" />
       <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" />
     </svg>
   );

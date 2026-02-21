@@ -62,10 +62,7 @@ export default function Page() {
   }, []);
 
   return (
-    <div
-      className="relative min-h-screen overflow-hidden text-white"
-      style={{ background: THEME.bg }}
-    >
+    <div className="relative min-h-screen overflow-hidden text-white" style={{ background: THEME.bg }}>
       {/* ✅ EXACT SAME color + lighting + glow as Footer */}
       <div className="pointer-events-none absolute inset-0">
         {/* graphite wash (footer) */}
@@ -81,15 +78,13 @@ export default function Page() {
         <div
           className="absolute -top-44 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full blur-[110px] opacity-30"
           style={{
-            background:
-              "radial-gradient(circle, rgba(255,122,0,0.18) 0%, rgba(255,122,0,0) 70%)",
+            background: "radial-gradient(circle, rgba(255,122,0,0.18) 0%, rgba(255,122,0,0) 70%)",
           }}
         />
         <div
           className="absolute -bottom-44 right-[-140px] h-[520px] w-[520px] rounded-full blur-[120px] opacity-16"
           style={{
-            background:
-              "radial-gradient(circle, rgba(255,180,116,0.14) 0%, rgba(255,180,116,0) 72%)",
+            background: "radial-gradient(circle, rgba(255,180,116,0.14) 0%, rgba(255,180,116,0) 72%)",
           }}
         />
 
@@ -116,7 +111,8 @@ export default function Page() {
       <main className="relative min-h-[100svh] overflow-hidden">
         <Navbar />
 
-        {/* Your PNG background image (kept) */}
+        {/* ✅ Background: Desktop stays as-is (from your existing CSS),
+            Mobile ONLY uses /images/heromobile-bg.png */}
         <div
           className="hero-bg-image"
           style={{
@@ -126,52 +122,51 @@ export default function Page() {
 
         {/* ✅ Mobile padding improved, desktop stays same */}
         <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 pt-[calc(var(--nav-offset)-18px)] pb-10 sm:pb-12 lg:pb-14">
-          {/* ✅ gap smaller on mobile, same on desktop */}
           <section className="grid min-h-[calc(100svh-var(--nav-offset))] items-center gap-8 sm:gap-10 lg:gap-12 lg:grid-cols-12">
             {/* LEFT */}
-            <div className="lg:col-span-6">
+            <div className="lg:col-span-6 flex flex-col min-h-[calc(100svh-var(--nav-offset))]">
+              {/* ✅ Push heading/subheading DOWN on mobile ONLY */}
               <div
                 className={[
                   "transition-all duration-700 ease-out",
+                  "mt-10 sm:mt-0", // ✅ mobile down, desktop unchanged
                   introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
                 ].join(" ")}
               >
-                {/* ✅ Mobile H1 smaller, desktop EXACT SAME as before */}
-                <h1 className="font-serif text-[38px] leading-[1.08] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">
+                {/* ✅ Mobile H1 smaller, desktop untouched */}
+                <h1 className="font-serif text-[32px] leading-[1.10] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">
                   <div className="whitespace-pre-wrap">
                     {typedLines[0] ? renderStyledHeading(typedLines[0]) : null}
-                    {!typingDone && typedLines.length === 1 ? (
-                      <span className="type-caret" />
-                    ) : null}
+                    {!typingDone && typedLines.length === 1 ? <span className="type-caret" /> : null}
                   </div>
 
                   <div className="whitespace-pre-wrap">
                     {typedLines[1] ? renderStyledHeading(typedLines[1]) : null}
-                    {!typingDone && typedLines.length >= 2 ? (
-                      <span className="type-caret" />
-                    ) : null}
+                    {!typingDone && typedLines.length >= 2 ? <span className="type-caret" /> : null}
                   </div>
                 </h1>
 
-                {/* ✅ Better on mobile (wrap + spacing) */}
-                <div className="mt-5 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
-                  <span className="h-[2px] w-12 sm:w-14 rounded-full bg-gradient-to-r from-orange-500 to-yellow-300 opacity-90" />
-                  <p className="text-[12px] sm:text-[14px] font-medium tracking-[0.20em] uppercase text-white/75">
+                {/* ✅ Mobile subtext slightly smaller, desktop untouched */}
+                <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
+                  <span className="h-[2px] w-10 sm:w-14 rounded-full bg-gradient-to-r from-orange-500 to-yellow-300 opacity-90" />
+                  <p className="text-[11px] sm:text-[14px] font-medium tracking-[0.20em] uppercase text-white/75">
                     Rent online in Few seconds
                   </p>
                 </div>
               </div>
 
-              {/* Booking panel */}
+              {/* ✅ BOOKING BAR AT BOTTOM */}
               <div
                 className={[
-                  // ✅ full width on mobile, same max width on desktop
-                  "mt-7 sm:mt-9 lg:mt-10 w-full max-w-[560px]",
+                  "mt-auto w-full max-w-[560px]",
                   "transition-all duration-700 ease-out delay-150",
                   introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
                 ].join(" ")}
               >
-                <BookingBar />
+                {/* ✅ Only mobile: smaller + slightly down. Desktop normal. */}
+                <div className="scale-[0.88] origin-top translate-y-[10px] md:scale-100 md:translate-y-0 md:origin-center">
+                  <BookingBar />
+                </div>
               </div>
             </div>
 
@@ -190,6 +185,26 @@ export default function Page() {
 
       {/* SHOP SECTION */}
       <ShopSection />
+
+      {/* ✅ ONLY MOBILE BG IMAGE OVERRIDE (desktop unchanged) */}
+      <style jsx global>{`
+        .hero-bg-image {
+          position: absolute;
+          inset: 0;
+          z-index: 1;
+          background-repeat: no-repeat;
+          background-size: cover;
+          background-position: right bottom;
+          /* Desktop background image remains whatever you already set in your CSS */
+        }
+
+        @media (max-width: 640px) {
+          .hero-bg-image {
+            background-image: url("/images/heromobile-bg.png");
+            background-position: center bottom;
+          }
+        }
+      `}</style>
     </div>
   );
 }

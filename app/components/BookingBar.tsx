@@ -24,11 +24,7 @@ function addMonths(d: Date, delta: number) {
   return new Date(d.getFullYear(), d.getMonth() + delta, 1);
 }
 function isSameDay(a: Date, b: Date) {
-  return (
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate()
-  );
+  return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
 function isPastDay(d: Date) {
   return startOfDay(d) < startOfDay(new Date());
@@ -42,11 +38,7 @@ function clampRange(from?: Date, to?: Date): DateRange {
 }
 function fmtLabel(d?: Date) {
   if (!d) return "--/--/----";
-  return d.toLocaleDateString(undefined, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
+  return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
 }
 function buildMonthGrid(viewMonth: Date) {
   const first = startOfMonth(viewMonth);
@@ -127,10 +119,7 @@ function isExactMinDay(from: Date, to: Date) {
 export default function BookingBar() {
   const TIME_OPTIONS = useMemo(() => buildTimeOptions(), []);
   const today = useMemo(() => startOfDay(new Date()), []);
-  const tomorrow = useMemo(
-    () => new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1),
-    [today]
-  );
+  const tomorrow = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1), [today]);
 
   const urlFrom = parseISO(getQueryParam("from"));
   const urlTo = parseISO(getQueryParam("to"));
@@ -143,24 +132,26 @@ export default function BookingBar() {
   const initialTo = urlTo ? startOfDay(urlTo) : tomorrow;
 
   const [pickupLocation] = useState(initialPickupLocation);
-  const [range, setRange] = useState<DateRange>(() =>
-    clampRange(initialFrom, initialTo)
-  );
+  const [range, setRange] = useState<DateRange>(() => clampRange(initialFrom, initialTo));
 
   const [pickupTime, setPickupTime] = useState(() => {
-    if (urlPickupTime && isValidTimeOption(urlPickupTime, TIME_OPTIONS))
-      return urlPickupTime;
+    if (urlPickupTime && isValidTimeOption(urlPickupTime, TIME_OPTIONS)) return urlPickupTime;
     return "10:00";
   });
   const [dropoffTime, setDropoffTime] = useState(() => {
-    if (urlDropoffTime && isValidTimeOption(urlDropoffTime, TIME_OPTIONS))
-      return urlDropoffTime;
+    if (urlDropoffTime && isValidTimeOption(urlDropoffTime, TIME_OPTIONS)) return urlDropoffTime;
     return "10:00";
   });
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeField, setActiveField] = useState<ActiveField>("pickup");
+
+  // ✅ For scroll calendar:
+  // - scrollStartMonth: first month rendered in the scroll list
+  // - viewMonth: month shown in the top heading (auto-updates while scrolling)
+  const [scrollStartMonth, setScrollStartMonth] = useState(() => startOfMonth(initialFrom));
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(initialFrom));
+  const [monthsAhead, setMonthsAhead] = useState(10); // initial months to render (keeps loading more while scrolling)
 
   const [pickupTimeOpen, setPickupTimeOpen] = useState(false);
   const [dropoffTimeOpen, setDropoffTimeOpen] = useState(false);
@@ -171,19 +162,19 @@ export default function BookingBar() {
   const pickupTimePopRef = useRef<HTMLDivElement | null>(null);
   const dropoffTimePopRef = useRef<HTMLDivElement | null>(null);
 
+  // ✅ Calendar scroll refs
+  const monthsScrollRef = useRef<HTMLDivElement | null>(null);
+  const monthWrapRefs = useRef<Array<HTMLDivElement | null>>([]);
+
   useEffect(() => {
     function onDown(e: MouseEvent) {
       const t = e.target as Node;
 
-      if (pickupTimePopRef.current && pickupTimePopRef.current.contains(t))
-        return;
-      if (dropoffTimePopRef.current && dropoffTimePopRef.current.contains(t))
-        return;
+      if (pickupTimePopRef.current && pickupTimePopRef.current.contains(t)) return;
+      if (dropoffTimePopRef.current && dropoffTimePopRef.current.contains(t)) return;
 
-      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(t))
-        return;
-      if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(t))
-        return;
+      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(t)) return;
+      if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(t)) return;
 
       setPickupTimeOpen(false);
       setDropoffTimeOpen(false);
@@ -204,10 +195,22 @@ export default function BookingBar() {
     return TIME_OPTIONS;
   }, [TIME_OPTIONS, range.from, range.to, pickupTime]);
 
+  const monthsList = useMemo(() => {
+    // Render months continuously from scrollStartMonth forward
+    return Array.from({ length: monthsAhead + 1 }, (_, i) => addMonths(scrollStartMonth, i));
+  }, [scrollStartMonth, monthsAhead]);
+
   function openCalendar(which: ActiveField) {
     setPickupTimeOpen(false);
     setDropoffTimeOpen(false);
     setActiveField(which);
+
+    // ✅ When opening, anchor the scroll list around the relevant month
+    const anchor = startOfMonth((which === "pickup" ? range.from : range.to) || range.from || today);
+    setScrollStartMonth(anchor);
+    setViewMonth(anchor);
+    setMonthsAhead(10);
+
     setCalendarOpen(true);
   }
   function closeCalendar() {
@@ -230,8 +233,7 @@ export default function BookingBar() {
       const nextFrom = day;
 
       const minDay = minDropoffDate(nextFrom);
-      const nextTo =
-        range.to && !isBeforeDay(range.to, minDay) ? range.to : minDay;
+      const nextTo = range.to && !isBeforeDay(range.to, minDay) ? range.to : minDay;
 
       setRange({ from: nextFrom, to: nextTo });
       setActiveField("dropoff");
@@ -319,6 +321,66 @@ export default function BookingBar() {
     window.location.href = `/vehicles?${params.toString()}`;
   }
 
+  // ✅ Scroll behavior:
+  // - keeps loading next months when near bottom
+  // - updates the top heading month/year automatically based on scroll position
+  function onMonthsScroll() {
+    const el = monthsScrollRef.current;
+    if (!el) return;
+
+    const { scrollTop, scrollHeight, clientHeight } = el;
+
+    // load more months when near bottom
+    if (scrollTop + clientHeight >= scrollHeight - 220) {
+      setMonthsAhead((n) => n + 6);
+    }
+
+    // update viewMonth (top heading) based on the month section closest to the top
+    const targetY = scrollTop + 12;
+    let bestIdx = 0;
+
+    for (let i = 0; i < monthWrapRefs.current.length; i++) {
+      const node = monthWrapRefs.current[i];
+      if (!node) continue;
+      const y = node.offsetTop;
+      if (y <= targetY) bestIdx = i;
+      else break;
+    }
+
+    const m = monthsList[bestIdx];
+    if (m) setViewMonth(m);
+  }
+
+  // when calendar opens, ensure scroll starts at top
+  useEffect(() => {
+    if (!calendarOpen) return;
+
+    // next frame so DOM is ready
+    const t = window.setTimeout(() => {
+      monthsScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
+      // set initial heading correctly
+      setViewMonth(scrollStartMonth);
+    }, 0);
+
+    return () => window.clearTimeout(t);
+  }, [calendarOpen, scrollStartMonth]);
+
+  // keep original arrow buttons, but now they scroll the list (instead of changing month state)
+  function scrollToMonth(index: number) {
+    const el = monthsScrollRef.current;
+    const node = monthWrapRefs.current[index];
+    if (!el || !node) return;
+    el.scrollTo({ top: node.offsetTop - 8, behavior: "smooth" });
+  }
+
+  // figure out current index inside the rendered list
+  const currentIndex = useMemo(() => {
+    const a = startOfMonth(scrollStartMonth).getTime();
+    const b = startOfMonth(viewMonth).getTime();
+    const diffMonths = (new Date(b).getFullYear() - new Date(a).getFullYear()) * 12 + (new Date(b).getMonth() - new Date(a).getMonth());
+    return Math.max(0, Math.min(monthsList.length - 1, diffMonths));
+  }, [scrollStartMonth, viewMonth, monthsList.length]);
+
   return (
     <div className="relative z-50 w-full">
       {/* Pickup pill */}
@@ -326,9 +388,7 @@ export default function BookingBar() {
         <span className="inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur">
           <PinIcon />
           <span className="whitespace-nowrap">Pick-up:</span>{" "}
-          <span className="text-white truncate max-w-[220px] sm:max-w-[360px]">
-            {pickupLocation}
-          </span>
+          <span className="text-white truncate max-w-[220px] sm:max-w-[360px]">{pickupLocation}</span>
         </span>
       </div>
 
@@ -354,12 +414,8 @@ export default function BookingBar() {
           >
             <CalendarMini />
             <div className="leading-tight">
-              <div className="text-[11px] font-semibold text-black/65">
-                Pick-up Date
-              </div>
-              <div className="text-[13px] font-extrabold text-black">
-                {fmtLabel(range.from)}
-              </div>
+              <div className="text-[11px] font-semibold text-black/65">Pick-up Date</div>
+              <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.from)}</div>
             </div>
           </button>
 
@@ -377,12 +433,8 @@ export default function BookingBar() {
             >
               <ClockMini />
               <div className="leading-tight">
-                <div className="text-[11px] font-semibold text-black/65">
-                  Time
-                </div>
-                <div className="text-[13px] font-extrabold text-black">
-                  {formatTimeLabel(pickupTime)}
-                </div>
+                <div className="text-[11px] font-semibold text-black/65">Time</div>
+                <div className="text-[13px] font-extrabold text-black">{formatTimeLabel(pickupTime)}</div>
               </div>
             </button>
 
@@ -394,11 +446,7 @@ export default function BookingBar() {
                   options={TIME_OPTIONS}
                   onSelect={(t) => {
                     setPickupTime(t);
-                    if (
-                      range.from &&
-                      range.to &&
-                      isExactMinDay(range.from, range.to)
-                    ) {
+                    if (range.from && range.to && isExactMinDay(range.from, range.to)) {
                       if (timeToMinutes(dropoffTime) < timeToMinutes(t)) {
                         setDropoffTime(t);
                       }
@@ -425,12 +473,8 @@ export default function BookingBar() {
           >
             <CalendarMini />
             <div className="leading-tight">
-              <div className="text-[11px] font-semibold text-black/65">
-                Drop-off Date
-              </div>
-              <div className="text-[13px] font-extrabold text-black">
-                {fmtLabel(range.to)}
-              </div>
+              <div className="text-[11px] font-semibold text-black/65">Drop-off Date</div>
+              <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.to)}</div>
             </div>
           </button>
 
@@ -448,12 +492,8 @@ export default function BookingBar() {
             >
               <ClockMini />
               <div className="leading-tight">
-                <div className="text-[11px] font-semibold text-black/65">
-                  Time
-                </div>
-                <div className="text-[13px] font-extrabold text-black">
-                  {formatTimeLabel(dropoffTime)}
-                </div>
+                <div className="text-[11px] font-semibold text-black/65">Time</div>
+                <div className="text-[13px] font-extrabold text-black">{formatTimeLabel(dropoffTime)}</div>
               </div>
             </button>
 
@@ -498,7 +538,6 @@ export default function BookingBar() {
         >
           <div
             className={[
-              // ✅ mobile safe size
               "w-full max-w-[560px]",
               "max-h-[85svh]",
               "rounded-2xl shadow-2xl overflow-hidden",
@@ -510,9 +549,7 @@ export default function BookingBar() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
               <div>
                 <div className="text-sm text-black/55 font-semibold">
-                  {activeField === "pickup"
-                    ? "Select pick-up date"
-                    : "Select drop-off date"}
+                  {activeField === "pickup" ? "Select pick-up date" : "Select drop-off date"}
                 </div>
                 <div className="text-base font-extrabold text-black">
                   {fmtLabel(range.from)} → {fmtLabel(range.to)}
@@ -528,42 +565,48 @@ export default function BookingBar() {
               </button>
             </div>
 
-            {/* Controls */}
+            {/* ✅ Controls (kept same look) — month/year auto updates as you scroll */}
             <div className="flex items-center justify-between px-4 py-3">
               <button
                 type="button"
-                onClick={() => setViewMonth((m) => addMonths(m, -1))}
+                onClick={() => scrollToMonth(Math.max(0, currentIndex - 1))}
                 className="h-9 w-9 rounded-xl border border-black/15 hover:bg-black/5 transition"
               >
                 ‹
               </button>
 
-              <MonthYearPicker viewMonth={viewMonth} setViewMonth={setViewMonth} />
+              {/* ✅ AUTO month/year heading */}
+              <div className="rounded-xl border border-black/15 px-4 py-2 font-extrabold text-black" style={{ background: BAR_BG }}>
+                {viewMonth.toLocaleString(undefined, { month: "long", year: "numeric" })}
+              </div>
 
               <button
                 type="button"
-                onClick={() => setViewMonth((m) => addMonths(m, 1))}
+                onClick={() => scrollToMonth(Math.min(monthsList.length - 1, currentIndex + 1))}
                 className="h-9 w-9 rounded-xl border border-black/15 hover:bg-black/5 transition"
               >
                 ›
               </button>
             </div>
 
-            {/* Months (scroll inside) */}
-            <div className="px-3 pb-4 overflow-auto">
+            {/* ✅ Months SCROLLER: keep scrolling to see next months (loads more automatically) */}
+            <div
+              ref={monthsScrollRef}
+              onScroll={onMonthsScroll}
+              className="px-3 pb-4 overflow-y-auto"
+              style={{ maxHeight: "55svh" }}
+            >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <MiniMonth
-                  month={viewMonth}
-                  range={range}
-                  onPick={pickDate}
-                  activeField={activeField}
-                />
-                <MiniMonth
-                  month={addMonths(viewMonth, 1)}
-                  range={range}
-                  onPick={pickDate}
-                  activeField={activeField}
-                />
+                {monthsList.map((m, i) => (
+                  <div
+                    key={`${m.getFullYear()}-${m.getMonth()}`}
+                    ref={(el) => {
+                      monthWrapRefs.current[i] = el;
+                    }}
+                  >
+                    <MiniMonth month={m} range={range} onPick={pickDate} activeField={activeField} />
+                  </div>
+                ))}
               </div>
             </div>
 
@@ -606,77 +649,6 @@ export default function BookingBar() {
   );
 }
 
-/* ====================== Month / Year Picker ====================== */
-function MonthYearPicker({
-  viewMonth,
-  setViewMonth,
-}: {
-  viewMonth: Date;
-  setViewMonth: React.Dispatch<React.SetStateAction<Date>>;
-}) {
-  const months = useMemo(
-    () => [
-      "January",
-      "February",
-      "March",
-      "April",
-      "May",
-      "June",
-      "July",
-      "August",
-      "September",
-      "October",
-      "November",
-      "December",
-    ],
-    []
-  );
-
-  const years = useMemo(() => {
-    const now = new Date().getFullYear();
-    return Array.from({ length: 5 }, (_, i) => now + i);
-  }, []);
-
-  const monthIndex = viewMonth.getMonth();
-  const year = viewMonth.getFullYear();
-
-  return (
-    <div className="flex items-center gap-2">
-      <select
-        value={monthIndex}
-        onChange={(e) => {
-          const m = Number(e.target.value);
-          setViewMonth((old) => new Date(old.getFullYear(), m, 1));
-        }}
-        className="rounded-xl border border-black/15 px-3 py-2 font-extrabold text-black hover:bg-black/5 transition outline-none"
-        style={{ background: BAR_BG }}
-      >
-        {months.map((m, idx) => (
-          <option key={m} value={idx}>
-            {m}
-          </option>
-        ))}
-      </select>
-
-      <select
-        value={year}
-        onChange={(e) => {
-          const y = Number(e.target.value);
-          setViewMonth((old) => new Date(y, old.getMonth(), 1));
-        }}
-        className="rounded-xl border border-black/15 px-3 py-2 font-extrabold text-black hover:bg-black/5 transition outline-none"
-        style={{ background: BAR_BG }}
-      >
-        {years.map((y) => (
-          <option key={y} value={y}>
-            {y}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
 /* ============================ Mini Month ============================ */
 function MiniMonth({
   month,
@@ -691,14 +663,10 @@ function MiniMonth({
 }) {
   const cells = useMemo(() => buildMonthGrid(month), [month]);
 
-  const minDropDay =
-    activeField === "dropoff" && range.from ? minDropoffDate(range.from) : null;
+  const minDropDay = activeField === "dropoff" && range.from ? minDropoffDate(range.from) : null;
 
   return (
-    <div
-      className="rounded-xl border border-black/10 p-3"
-      style={{ background: BAR_BG }}
-    >
+    <div className="rounded-xl border border-black/10 p-3" style={{ background: BAR_BG }}>
       <div className="mb-2 text-sm font-extrabold text-black">
         {month.toLocaleString(undefined, { month: "long", year: "numeric" })}
       </div>
@@ -716,8 +684,7 @@ function MiniMonth({
           if (!d) return <div key={idx} className="h-9" />;
 
           const disabledByPast = isPastDay(d);
-          const disabledByMinDrop =
-            !!minDropDay && startOfDay(d) < startOfDay(minDropDay);
+          const disabledByMinDrop = !!minDropDay && startOfDay(d) < startOfDay(minDropDay);
 
           const disabled = disabledByPast || disabledByMinDrop;
 
@@ -730,8 +697,7 @@ function MiniMonth({
           const isStart = range.from && isSameDay(d, range.from);
           const isEnd = range.to && isSameDay(d, range.to);
 
-          const hoverClass =
-            !disabled && !(isStart || isEnd) ? "hover:bg-orange-200" : "";
+          const hoverClass = !disabled && !(isStart || isEnd) ? "hover:bg-orange-200" : "";
 
           return (
             <button
@@ -747,11 +713,7 @@ function MiniMonth({
                 inRange && !disabled ? "bg-orange-300/60" : "",
                 (isStart || isEnd) && !disabled ? "text-black" : "",
               ].join(" ")}
-              style={
-                (isStart || isEnd) && !disabled
-                  ? { background: DEEP_ORANGE }
-                  : undefined
-              }
+              style={(isStart || isEnd) && !disabled ? { background: DEEP_ORANGE } : undefined}
             >
               {d.getDate()}
             </button>
@@ -783,10 +745,7 @@ function TimeDropdown({
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-black/10">
         <div className="text-sm font-extrabold text-black">{title}</div>
-        <button
-          onClick={onClose}
-          className="h-8 w-8 rounded-xl hover:bg-black/5 text-black/70 transition"
-        >
+        <button onClick={onClose} className="h-8 w-8 rounded-xl hover:bg-black/5 text-black/70 transition">
           ✕
         </button>
       </div>
@@ -817,13 +776,7 @@ function TimeDropdown({
 /* ================================ Icons ================================ */
 function CalendarMini() {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      className="text-black/70"
-      fill="none"
-    >
+    <svg width="18" height="18" viewBox="0 0 24 24" className="text-black/70" fill="none">
       <path
         d="M8 2v3M16 2v3M3 9h18M5 6h14a2 2 0 0 1 2 2v13a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2Z"
         stroke="currentColor"
@@ -835,18 +788,8 @@ function CalendarMini() {
 
 function ClockMini() {
   return (
-    <svg
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      className="text-black/70"
-      fill="none"
-    >
-      <path
-        d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
+    <svg width="18" height="18" viewBox="0 0 24 24" className="text-black/70" fill="none">
+      <path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20Z" stroke="currentColor" strokeWidth="2" />
       <path d="M12 6v6l4 2" stroke="currentColor" strokeWidth="2" />
     </svg>
   );
@@ -860,11 +803,7 @@ function PinIcon() {
         stroke="currentColor"
         strokeWidth="2"
       />
-      <path
-        d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"
-        stroke="currentColor"
-        strokeWidth="2"
-      />
+      <path d="M12 13a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" stroke="currentColor" strokeWidth="2" />
     </svg>
   );
 }
