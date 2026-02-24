@@ -1,27 +1,84 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useLocale } from "next-intl";
 import Navbar from "./Navbar";
 import FeaturedFleet from "./FeaturedFleet";
 import ShopSection from "./components/ShopSection";
 import BookingBar from "./components/BookingBar";
 
-function renderStyledHeading(text: string) {
-  const ORANGE = ["Scooter", "e-Bike", "Mallorca"];
+type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
+
+type HomeClientProps = {
+  heroTitle: string;
+  heroSubtitle: string;
+  pickupLabel: string;
+  dropoffDateLabel: string;
+  timeLabel: string;
+  searchLabel: string;
+};
+
+function getOrangeWords(locale: Locale) {
+  const map: Record<Locale, string[]> = {
+    en: ["Scooter", "e-Bike", "Mallorca"],
+    es: ["Scooter", "e-Bike", "Mallorca"],
+    de: ["Scooter", "e-Bike", "Mallorca"],
+    fr: ["Scooter", "e-Bike", "Majorque"],
+    sv: ["Scooter", "e-Bike", "Mallorca"],
+    it: ["Scooter", "e-Bike", "Maiorca"],
+    pt: ["Scooter", "e-Bike", "Maiorca"],
+  };
+  return map[locale] ?? map.en;
+}
+
+function renderStyledHeading(text: string, orangeWords: string[]) {
   const parts = text.split(/(\s+)/);
 
   return parts.map((p, i) => {
-    const clean = p.replace(/[^\w-]/g, "");
+    const clean = p.replace(/[^\w-À-ÿ]/g, "");
     return (
-      <span key={i} className={ORANGE.includes(clean) ? "text-orange-500" : ""}>
+      <span key={i} className={orangeWords.includes(clean) ? "text-orange-500" : ""}>
         {p}
       </span>
     );
   });
 }
 
-export default function Page() {
-  const fullText = "Rent A Scooter & e-Bike\nin Mallorca";
+function normalizeHeroTitle(raw: string, locale: Locale) {
+  if (!raw) return "";
+
+  let s = raw;
+
+  // Convert "\\n" to "\n" (common JSON escaping mistake)
+  s = s.replace(/\\n/g, "\n");
+
+  // Normalize Windows newlines to "\n"
+  s = s.replace(/\r\n/g, "\n");
+
+  // If translations used <br> tags
+  s = s.replace(/<br\s*\/?>/gi, "\n");
+
+  // Collapse accidental extra blank lines into a single newline
+  s = s.replace(/\n\s*\n+/g, "\n");
+
+  // Optional safety for EN if newline missing
+  if (!s.includes("\n") && locale === "en") {
+    s = s.replace(/\s+in\s+Mallorca$/i, "\nin Mallorca");
+  }
+
+  return s.trimEnd();
+}
+
+export default function HomeClient({
+  heroTitle,
+  heroSubtitle,
+  pickupLabel,
+  dropoffDateLabel,
+  timeLabel,
+  searchLabel,
+}: HomeClientProps) {
+  const locale = (useLocale() as Locale) || "en";
+
   const [typed, setTyped] = useState("");
   const [typingDone, setTypingDone] = useState(false);
 
@@ -34,6 +91,22 @@ export default function Page() {
     textSoft: "rgba(255,255,255,0.65)",
     textDim: "rgba(255,255,255,0.50)",
   };
+
+  // ✅ Use server-provided translated hero title, normalized for line breaks
+  const fullText = useMemo(() => normalizeHeroTitle(heroTitle, locale), [heroTitle, locale]);
+
+  // ✅ DEBUG ONLY (NO UI CHANGE): tells us if newline exists
+  useEffect(() => {
+    // This prints quotes + escaped characters so we can SEE \n vs \\n vs nothing
+    // Check the Browser Console (F12) after refresh.
+    console.log("----- HERO DEBUG START -----");
+    console.log("locale:", locale);
+    console.log("heroTitle raw:", JSON.stringify(heroTitle));
+    console.log("fullText normalized:", JSON.stringify(fullText));
+    console.log("fullText contains real newline:", fullText.includes("\n"));
+    console.log("fullText length:", fullText.length);
+    console.log("----- HERO DEBUG END -----");
+  }, [locale, heroTitle, fullText]);
 
   useEffect(() => {
     let i = 0;
@@ -51,15 +124,17 @@ export default function Page() {
     }, 26);
 
     return () => window.clearInterval(id);
-  }, []);
+  }, [fullText]);
 
-  const typedLines = useMemo(() => typed.split("\n"), [typed]);
+  const typedLines = useMemo(() => typed.split(/\r?\n/), [typed]);
 
   const [introOn, setIntroOn] = useState(false);
   useEffect(() => {
     const t = window.setTimeout(() => setIntroOn(true), 80);
     return () => window.clearTimeout(t);
   }, []);
+
+  const orangeWords = useMemo(() => getOrangeWords(locale), [locale]);
 
   return (
     <div className="relative min-h-screen overflow-hidden text-white" style={{ background: THEME.bg }}>
@@ -129,28 +204,28 @@ export default function Page() {
               <div
                 className={[
                   "transition-all duration-700 ease-out",
-                  "mt-10 sm:mt-0", // ✅ mobile down, desktop unchanged
-                  introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+                  "mt-0 sm:mt-0",
+                  introOn ? "opacity-100 translate-y-[-70px] " : "opacity-0 translate-y-4",
                 ].join(" ")}
               >
                 {/* ✅ Mobile H1 smaller, desktop untouched */}
                 <h1 className="font-serif text-[32px] leading-[1.10] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">
-                  <div className="whitespace-pre-wrap">
-                    {typedLines[0] ? renderStyledHeading(typedLines[0]) : null}
-                    {!typingDone && typedLines.length === 1 ? <span className="type-caret" /> : null}
-                  </div>
-
-                  <div className="whitespace-pre-wrap">
-                    {typedLines[1] ? renderStyledHeading(typedLines[1]) : null}
-                    {!typingDone && typedLines.length >= 2 ? <span className="type-caret" /> : null}
-                  </div>
-                </h1>
+                  {typedLines
+                    .filter((l) => l.trim().length > 0)
+                    .map((line, idx, arr) => (
+                      <div key={idx} className="whitespace-pre-wrap">
+                        {renderStyledHeading(line, orangeWords)}
+                        {!typingDone && idx === arr.length - 1 ? <span className="type-caret" /> : null}
+                      </div>
+                    ))}
+              
+             </h1>
 
                 {/* ✅ Mobile subtext slightly smaller, desktop untouched */}
                 <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
                   <span className="h-[2px] w-10 sm:w-14 rounded-full bg-gradient-to-r from-orange-500 to-yellow-300 opacity-90" />
                   <p className="text-[11px] sm:text-[14px] font-medium tracking-[0.20em] uppercase text-white/75">
-                    Rent online in Few seconds
+                    {heroSubtitle}
                   </p>
                 </div>
               </div>
@@ -164,7 +239,7 @@ export default function Page() {
                 ].join(" ")}
               >
                 {/* ✅ Only mobile: smaller + slightly down. Desktop normal. */}
-                <div className="scale-[0.88] origin-top translate-y-[10px] md:scale-100 md:translate-y-0 md:origin-center">
+                <div className="scale-[0.88] origin-top translate-y-[-100px] md:scale-100 md:translate-y-[-250px] md:origin-center">
                   <BookingBar />
                 </div>
               </div>
@@ -195,7 +270,6 @@ export default function Page() {
           background-repeat: no-repeat;
           background-size: cover;
           background-position: right bottom;
-          /* Desktop background image remains whatever you already set in your CSS */
         }
 
         @media (max-width: 640px) {

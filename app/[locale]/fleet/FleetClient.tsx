@@ -2,7 +2,7 @@
 
 import React, { useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import BookingBar from "../components/BookingBar";
+import BookingBar from "../../components/BookingBar";
 
 const ORANGE = "#FF7A00";
 

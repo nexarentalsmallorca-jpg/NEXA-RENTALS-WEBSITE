@@ -1,0 +1,220 @@
+{
+  "nav": {
+    "home": "Hem",
+    "fleet": "Vår flotta",
+    "blogs": "Bloggar",
+    "contact": "Kontakt",
+    "about": "Om NEXA"
+  },
+  "hero": {
+    "title": "Hyr en scooter & en e-bike\npå Mallorca",
+    "subtitle": "Boka online på några sekunder"
+  },
+  "booking": {
+    "pickup": "Uthämtning:",
+    "pickupDate": "Uthämtningsdatum",
+    "dropoffDate": "Återlämningsdatum",
+    "time": "Tid",
+    "pickupTime": "Uthämtningstid",
+    "dropoffTime": "Återlämningstid",
+    "search": "Sök",
+    "selectPickupDate": "Välj uthämtningsdatum",
+    "selectDropoffDate": "Välj återlämningsdatum",
+    "clear": "Rensa",
+    "done": "Klar"
+  },
+  "vehicles": {
+    "liveAvailability": "Live-tillgänglighet",
+    "available": "Tillgängliga",
+    "vehiclesWord": "fordon",
+    "daysSingular": "dag",
+    "daysPlural": "dagar",
+    "discountPerDay": "rabatt /dag",
+    "chooseThenTap": "Välj ett fordon — tryck sedan",
+    "reserve": "Boka",
+    "changeDates": "Ändra datum",
+    "freeHelmet": "Gratis hjälm ingår",
+    "assistance247": "Support 24/7",
+    "fullInsurance": "Full försäkring",
+    "perDay": "/dag",
+    "total": "Totalt",
+    "instantConfirmation": "Omedelbar bekräftelse",
+    "localSupport": "Lokal support"
+  },
+
+  "checkout": {
+    "defaultPickupLocation": "Magaluf (Carrer Galeón 13)",
+
+    "step2of2": "Steg 2 av 2",
+    "confirmAndPay": "Bekräfta & betala",
+    "in60Seconds": "på 60 sekunder",
+
+    "backToVehicles": "← Tillbaka till fordon",
+
+    "daysSingular": "dag",
+    "daysPlural": "dagar",
+
+    "savePct": "Spara {pct}%",
+    "save": "Spara",
+
+    "perDayShort": "/dag",
+    "perDay": "/dag",
+
+    "total": "Totalt",
+    "totalLabel": "Totalt",
+
+    "included": "Ingår",
+    "includedBadge": "Ingår",
+    "noExtraFees": "Inga extra avgifter",
+    "helmet": "Hjälm",
+    "lock": "Lås",
+    "cargoBox": "Toppbox",
+    "free": "Gratis",
+
+    "contractReadyTitle": "Uthämtning med färdigt kontrakt (under 5 minuter)",
+    "contractReadyDesc": "Ladda upp dina dokument nu (valfritt) så är kontraktet klart när du kommer — skriv på och åk.",
+
+    "yourDetails": "Dina uppgifter",
+    "detailsHint": "Krävs för bokning + kontrakt. Ladda upp dokument för snabbare uthämtning.",
+    "required": "Krävs",
+
+    "nameLabel": "Förnamn *",
+    "surnameLabel": "Efternamn *",
+    "phoneLabel": "Telefon (WhatsApp) *",
+    "emailLabel": "Email *",
+    "notesLabel": "Anteckningar (valfritt)",
+
+    "namePlaceholder": "Johan",
+    "surnamePlaceholder": "Svensson",
+    "phonePlaceholder": "+34 600 000 000",
+    "emailPlaceholder": "du@email.com",
+    "notesPlaceholder": "Önskemål vid uthämtning, osv.",
+
+    "documentsOptional": "Dokument (valfritt)",
+    "fasterPickup": "Snabbare uthämtning",
+    "documentsDesc": "Ladda upp nu så är kontraktet klart vid ankomst — skriv på och hämta fordonet på under 5 minuter.",
+    "chooseFilesHint": "Välj filer för snabb uthämtning (valfritt).",
+    "remove": "Ta bort",
+
+    "dlFront": "Körkort (framsida) — valfritt",
+    "dlBack": "Körkort (baksida) — valfritt",
+    "idFront": "ID / Pass (framsida) — valfritt",
+    "idBack": "ID / Pass (baksida) — valfritt",
+
+    "payment": "Betalning",
+    "pay": "Betala",
+    "now": "nu",
+    "payRemaining": "betala resten",
+    "atPickupOffice": "vid uthämtning (kontor)",
+    "percent50": "50%",
+    "onlineToday": "Online idag",
+    "payNow50": "Betala nu (50%)",
+    "payPickup50": "Betala vid uthämtning (50%)",
+    "rentalTotal": "Hyresbelopp totalt",
+
+    "checkContractReady": "Mina uppgifter är korrekta och kan användas för att förbereda hyresavtalet.",
+    "checkAgreeTerms": "Jag godkänner hyresvillkoren och bekräftar att bokningsuppgifterna är korrekta.",
+    "checkMarketing": "Skicka mig uppdateringar, erbjudanden och nyheter från NEXA Rentals (valfritt).",
+
+    "pay50NowAndBook": "Betala 50% nu & boka",
+
+    "depositImportantTitle": "VIKTIGT — Deposition vid uthämtning",
+    "depositTextBefore": "Vi tar en deposition på",
+    "depositTextAfter": "vid uthämtning (Kontant / Kort). Återbetalas efter retur (enligt villkor).",
+
+    "toContinue": "För att fortsätta: fyll i Förnamn + Efternamn + Telefon + Email, bekräfta kontrakt och acceptera villkor.",
+
+    "secureCheckout": "Säker betalning",
+    "localSupport": "Lokal support",
+    "noHiddenFees": "Inga dolda avgifter",
+
+    "stripeReady": "Redo för Stripe.",
+    "payAtPickup": "Betala vid uthämtning",
+    "depositAtPickup": "Deposition vid uthämtning",
+    "cashCard": "Kontant/Kort",
+    "contractReadySaved": "Uppgifter sparade för kontrakt.",
+
+    "step": "Steg 2 av 2",
+    "title": "Bekräfta & betala",
+    "titleAccent": "på 60 sekunder",
+
+    "includedGroup": {
+      "title": "Ingår",
+      "noExtraFees": "Inga extra avgifter",
+      "helmet": "Hjälm",
+      "lock": "Lås",
+      "cargoBox": "Toppbox",
+      "free": "Gratis",
+      "badge": "Ingår"
+    },
+    "contractReady": {
+      "title": "Uthämtning med färdigt kontrakt (under 5 minuter)",
+      "desc": "Ladda upp dina dokument nu (valfritt) så är kontraktet klart när du kommer — skriv på och åk."
+    },
+    "details": {
+      "title": "Dina uppgifter",
+      "subtitle": "Krävs för bokning + kontrakt. Ladda upp dokument för snabbare uthämtning.",
+      "required": "Krävs",
+      "name": "Förnamn *",
+      "surname": "Efternamn *",
+      "phone": "Telefon (WhatsApp) *",
+      "email": "Email *",
+      "notes": "Anteckningar (valfritt)"
+    },
+    "placeholders": {
+      "firstName": "Johan",
+      "surname": "Svensson",
+      "phone": "+34 600 000 000",
+      "email": "du@email.com",
+      "notes": "Önskemål vid uthämtning, osv."
+    },
+    "docs": {
+      "title": "Dokument (valfritt)",
+      "fasterPickup": "Snabbare uthämtning",
+      "subtitle": "Ladda upp nu så är kontraktet klart vid ankomst — skriv på och hämta fordonet på under 5 minuter.",
+      "dlFront": "Körkort (framsida) — valfritt",
+      "dlBack": "Körkort (baksida) — valfritt",
+      "idFront": "ID / Pass (framsida) — valfritt",
+      "idBack": "ID / Pass (baksida) — valfritt",
+      "remove": "Ta bort",
+      "chooseFiles": "Välj filer för snabb uthämtning (valfritt)."
+    },
+    "paymentGroup": {
+      "title": "Betalning",
+      "subtitleA": "Betala",
+      "subtitleB": "nu • betala resten",
+      "subtitleC": "vid uthämtning (kontor)",
+      "fifty": "50%",
+      "onlineToday": "Online idag",
+      "payNow50": "Betala nu (50%)",
+      "payPickup50": "Betala vid uthämtning (50%)",
+      "rentalTotal": "Hyresbelopp totalt"
+    },
+    "checks": {
+      "contractReady": "Mina uppgifter är korrekta och kan användas för att förbereda hyresavtalet.",
+      "agreeTerms": "Jag godkänner hyresvillkoren och bekräftar att bokningsuppgifterna är korrekta.",
+      "marketing": "Skicka mig uppdateringar, erbjudanden och nyheter från NEXA Rentals (valfritt)."
+    },
+    "cta": "Betala 50% nu & boka",
+    "deposit": {
+      "title": "VIKTIGT — Deposition vid uthämtning",
+      "textA": "Vi tar en deposition på",
+      "textB": "vid uthämtning (Kontant / Kort). Återbetalas efter retur (enligt villkor)."
+    },
+    "formHint": "För att fortsätta: fyll i Förnamn + Efternamn + Telefon + Email, bekräfta kontrakt och acceptera villkor.",
+    "trust": {
+      "secureCheckout": "Säker betalning",
+      "localSupport": "Lokal support",
+      "noHiddenFees": "Inga dolda avgifter"
+    },
+    "alert": {
+      "readyForStripe": "Redo för Stripe.",
+      "onlineToday": "Online idag",
+      "payAtPickup": "Betala vid uthämtning",
+      "depositAtPickup": "Deposition vid uthämtning",
+      "cashCard": "Kontant/Kort",
+      "fiftyPercent": "50%",
+      "contractReadySaved": "Uppgifter sparade för kontrakt."
+    }
+  }
+}

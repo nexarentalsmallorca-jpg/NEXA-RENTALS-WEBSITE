@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 
 type DateRange = { from?: Date; to?: Date };
 type ActiveField = "pickup" | "dropoff";
@@ -9,6 +10,12 @@ type ActiveField = "pickup" | "dropoff";
 const BAR_BG = "#F6D7C6";
 const DEEP_ORANGE = "#FF6A00";
 const DEFAULT_LOCATION = "Magaluf (Carrer Galeón 13)";
+
+/* -------------------------- Locale helper -------------------------- */
+function getDocLocale() {
+  if (typeof document === "undefined") return "en";
+  return document.documentElement.lang || "en";
+}
 
 /* -------------------------- Date helpers -------------------------- */
 function startOfDay(d: Date) {
@@ -38,7 +45,8 @@ function clampRange(from?: Date, to?: Date): DateRange {
 }
 function fmtLabel(d?: Date) {
   if (!d) return "--/--/----";
-  return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+  const locale = getDocLocale();
+  return d.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
 }
 function buildMonthGrid(viewMonth: Date) {
   const first = startOfMonth(viewMonth);
@@ -79,11 +87,15 @@ function buildTimeOptions() {
   return out;
 }
 function formatTimeLabel(t: string) {
-  const [hhStr, mmStr] = t.split(":");
-  const hh = Number(hhStr);
-  const ampm = hh >= 12 ? "PM" : "AM";
-  const hour12 = ((hh + 11) % 12) + 1;
-  return `${String(hour12).padStart(2, "0")}:${mmStr} ${ampm}`;
+  const locale = getDocLocale();
+  const [hh, mm] = t.split(":").map(Number);
+  const date = new Date();
+  date.setHours(hh, mm, 0, 0);
+
+  return new Intl.DateTimeFormat(locale, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 function isValidTimeOption(t: string, options: string[]) {
   return options.includes(t);
@@ -117,6 +129,8 @@ function isExactMinDay(from: Date, to: Date) {
 
 /* ========================== MAIN COMPONENT ========================== */
 export default function BookingBar() {
+  const t = useTranslations("booking");
+
   const TIME_OPTIONS = useMemo(() => buildTimeOptions(), []);
   const today = useMemo(() => startOfDay(new Date()), []);
   const tomorrow = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1), [today]);
@@ -168,13 +182,13 @@ export default function BookingBar() {
 
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      const t = e.target as Node;
+      const tNode = e.target as Node;
 
-      if (pickupTimePopRef.current && pickupTimePopRef.current.contains(t)) return;
-      if (dropoffTimePopRef.current && dropoffTimePopRef.current.contains(t)) return;
+      if (pickupTimePopRef.current && pickupTimePopRef.current.contains(tNode)) return;
+      if (dropoffTimePopRef.current && dropoffTimePopRef.current.contains(tNode)) return;
 
-      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(t)) return;
-      if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(t)) return;
+      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(tNode)) return;
+      if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(tNode)) return;
 
       setPickupTimeOpen(false);
       setDropoffTimeOpen(false);
@@ -356,13 +370,13 @@ export default function BookingBar() {
     if (!calendarOpen) return;
 
     // next frame so DOM is ready
-    const t = window.setTimeout(() => {
+    const t2 = window.setTimeout(() => {
       monthsScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
       // set initial heading correctly
       setViewMonth(scrollStartMonth);
     }, 0);
 
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(t2);
   }, [calendarOpen, scrollStartMonth]);
 
   // keep original arrow buttons, but now they scroll the list (instead of changing month state)
@@ -377,7 +391,8 @@ export default function BookingBar() {
   const currentIndex = useMemo(() => {
     const a = startOfMonth(scrollStartMonth).getTime();
     const b = startOfMonth(viewMonth).getTime();
-    const diffMonths = (new Date(b).getFullYear() - new Date(a).getFullYear()) * 12 + (new Date(b).getMonth() - new Date(a).getMonth());
+    const diffMonths =
+      (new Date(b).getFullYear() - new Date(a).getFullYear()) * 12 + (new Date(b).getMonth() - new Date(a).getMonth());
     return Math.max(0, Math.min(monthsList.length - 1, diffMonths));
   }, [scrollStartMonth, viewMonth, monthsList.length]);
 
@@ -387,7 +402,7 @@ export default function BookingBar() {
       <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
         <span className="inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur">
           <PinIcon />
-          <span className="whitespace-nowrap">Pick-up:</span>{" "}
+          <span className="whitespace-nowrap">{t("pickup")}</span>{" "}
           <span className="text-white truncate max-w-[220px] sm:max-w-[360px]">{pickupLocation}</span>
         </span>
       </div>
@@ -414,7 +429,7 @@ export default function BookingBar() {
           >
             <CalendarMini />
             <div className="leading-tight">
-              <div className="text-[11px] font-semibold text-black/65">Pick-up Date</div>
+              <div className="text-[11px] font-semibold text-black/65">{t("pickupDate")}</div>
               <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.from)}</div>
             </div>
           </button>
@@ -433,7 +448,7 @@ export default function BookingBar() {
             >
               <ClockMini />
               <div className="leading-tight">
-                <div className="text-[11px] font-semibold text-black/65">Time</div>
+                <div className="text-[11px] font-semibold text-black/65">{t("time")}</div>
                 <div className="text-[13px] font-extrabold text-black">{formatTimeLabel(pickupTime)}</div>
               </div>
             </button>
@@ -441,14 +456,14 @@ export default function BookingBar() {
             {pickupTimeOpen && (
               <div ref={pickupTimePopRef}>
                 <TimeDropdown
-                  title="Pick-up time"
+                  title={t("pickupTime")}
                   value={pickupTime}
                   options={TIME_OPTIONS}
-                  onSelect={(t) => {
-                    setPickupTime(t);
+                  onSelect={(tSel) => {
+                    setPickupTime(tSel);
                     if (range.from && range.to && isExactMinDay(range.from, range.to)) {
-                      if (timeToMinutes(dropoffTime) < timeToMinutes(t)) {
-                        setDropoffTime(t);
+                      if (timeToMinutes(dropoffTime) < timeToMinutes(tSel)) {
+                        setDropoffTime(tSel);
                       }
                     }
                     setPickupTimeOpen(false);
@@ -473,7 +488,7 @@ export default function BookingBar() {
           >
             <CalendarMini />
             <div className="leading-tight">
-              <div className="text-[11px] font-semibold text-black/65">Drop-off Date</div>
+              <div className="text-[11px] font-semibold text-black/65">{t("dropoffDate")}</div>
               <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.to)}</div>
             </div>
           </button>
@@ -492,7 +507,7 @@ export default function BookingBar() {
             >
               <ClockMini />
               <div className="leading-tight">
-                <div className="text-[11px] font-semibold text-black/65">Time</div>
+                <div className="text-[11px] font-semibold text-black/65">{t("time")}</div>
                 <div className="text-[13px] font-extrabold text-black">{formatTimeLabel(dropoffTime)}</div>
               </div>
             </button>
@@ -500,11 +515,11 @@ export default function BookingBar() {
             {dropoffTimeOpen && (
               <div ref={dropoffTimePopRef}>
                 <TimeDropdown
-                  title="Drop-off time"
+                  title={t("dropoffTime")}
                   value={dropoffTime}
                   options={DROP_TIME_OPTIONS}
-                  onSelect={(t) => {
-                    setDropoffTime(t);
+                  onSelect={(tSel) => {
+                    setDropoffTime(tSel);
                     setDropoffTimeOpen(false);
                   }}
                   onClose={() => setDropoffTimeOpen(false)}
@@ -524,7 +539,7 @@ export default function BookingBar() {
           ].join(" ")}
           style={{ background: DEEP_ORANGE }}
         >
-          Search
+          {t("search")}
         </button>
       </div>
 
@@ -549,7 +564,7 @@ export default function BookingBar() {
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
               <div>
                 <div className="text-sm text-black/55 font-semibold">
-                  {activeField === "pickup" ? "Select pick-up date" : "Select drop-off date"}
+                  {activeField === "pickup" ? t("selectPickupDate") : t("selectDropoffDate")}
                 </div>
                 <div className="text-base font-extrabold text-black">
                   {fmtLabel(range.from)} → {fmtLabel(range.to)}
@@ -577,7 +592,7 @@ export default function BookingBar() {
 
               {/* ✅ AUTO month/year heading */}
               <div className="rounded-xl border border-black/15 px-4 py-2 font-extrabold text-black" style={{ background: BAR_BG }}>
-                {viewMonth.toLocaleString(undefined, { month: "long", year: "numeric" })}
+                {viewMonth.toLocaleString(getDocLocale(), { month: "long", year: "numeric" })}
               </div>
 
               <button
@@ -617,7 +632,7 @@ export default function BookingBar() {
                 onClick={clearDates}
                 className="text-sm font-extrabold text-black/70 hover:text-black transition"
               >
-                Clear
+                {t("clear")}
               </button>
 
               <button
@@ -626,7 +641,7 @@ export default function BookingBar() {
                 className="rounded-xl px-5 py-2 font-extrabold text-black hover:brightness-95 transition"
                 style={{ background: DEEP_ORANGE }}
               >
-                Done
+                {t("done")}
               </button>
             </div>
           </div>
@@ -665,15 +680,24 @@ function MiniMonth({
 
   const minDropDay = activeField === "dropoff" && range.from ? minDropoffDate(range.from) : null;
 
+  const weekdays = useMemo(() => {
+    const locale = getDocLocale();
+    // Jan 1, 2024 is a Monday — perfect base for Mon→Sun in all locales
+    const baseMonday = new Date(2024, 0, 1);
+    return Array.from({ length: 7 }).map((_, i) =>
+      new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(baseMonday.getFullYear(), baseMonday.getMonth(), baseMonday.getDate() + i))
+    );
+  }, []);
+
   return (
     <div className="rounded-xl border border-black/10 p-3" style={{ background: BAR_BG }}>
       <div className="mb-2 text-sm font-extrabold text-black">
-        {month.toLocaleString(undefined, { month: "long", year: "numeric" })}
+        {month.toLocaleString(getDocLocale(), { month: "long", year: "numeric" })}
       </div>
 
       <div className="grid grid-cols-7 text-[11px] text-black/55 mb-2 font-semibold">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => (
-          <div key={w} className="py-1 text-center">
+        {weekdays.map((w, idx) => (
+          <div key={`${w}-${idx}`} className="py-1 text-center">
             {w}
           </div>
         ))}

@@ -3,7 +3,8 @@ export const dynamic = "force-dynamic";
 
 import React, { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import Navbar from "../Navbar";
+import Navbar from "../../Navbar";
+import { useLocale, useTranslations } from "next-intl";
 
 /* ---------------- types ---------------- */
 type VehicleType = "Scooter" | "E-Bike";
@@ -96,9 +97,9 @@ function parseISO(v?: string | null) {
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
-function fmtDate(d?: Date) {
+function fmtDate(d?: Date, locale?: string) {
   if (!d) return "--/--/----";
-  return d.toLocaleDateString(undefined, {
+  return d.toLocaleDateString(locale || undefined, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -108,14 +109,19 @@ function safeParam(sp: URLSearchParams, key: string) {
   const v = sp.get(key);
   return v && v.trim().length ? v : undefined;
 }
-function formatTimeLabel(t?: string) {
+function formatTimeLabel(t?: string, locale?: string) {
   if (!t) return "--:--";
   const [hhStr, mmStr] = t.split(":");
   const hh = Number(hhStr);
   if (Number.isNaN(hh)) return t;
-  const ampm = hh >= 12 ? "PM" : "AM";
-  const hour12 = ((hh + 11) % 12) + 1;
-  return `${String(hour12).padStart(2, "0")}:${mmStr} ${ampm}`;
+
+  const date = new Date();
+  date.setHours(hh, Number(mmStr), 0, 0);
+
+  return new Intl.DateTimeFormat(locale || undefined, {
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(date);
 }
 function daysBetween(from?: Date, to?: Date) {
   if (!from || !to) return 1;
@@ -149,9 +155,12 @@ export default function CheckoutPage() {
   const sp = useSearchParams();
   const router = useRouter();
 
+  const t = useTranslations("checkout");
+  const locale = useLocale();
+
   // booking params
   const pickupLocation =
-    safeParam(sp, "pickupLocation") ?? "Magaluf (Carrer Galeón 13)";
+    safeParam(sp, "pickupLocation") ?? t("defaultPickupLocation");
   const from = parseISO(safeParam(sp, "from"));
   const to = parseISO(safeParam(sp, "to"));
   const pickupTime = safeParam(sp, "pickupTime") ?? "10:00";
@@ -209,9 +218,13 @@ export default function CheckoutPage() {
 
   const payNowAction = () => {
     alert(
-      `Ready for Stripe.\n\nOnline today: €${money(payNow)} (50%)\nPay at pickup: €${money(
-        payPickup
-      )} (50%)\nDeposit at pickup: €${deposit} (Cash/Card)\n\nContract-ready details saved.`
+      `${t("stripeReady")}\n\n${t("onlineToday")}: €${money(payNow)} (${t(
+        "percent50"
+      )})\n${t("payAtPickup")}: €${money(payPickup)} (${t(
+        "percent50"
+      )})\n${t("depositAtPickup")}: €${deposit} (${t(
+        "cashCard"
+      )})\n\n${t("contractReadySaved")}`
     );
   };
 
@@ -230,23 +243,31 @@ export default function CheckoutPage() {
       <header className="mx-auto max-w-6xl px-4 pt-5 pb-3">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
-            <div className="text-[12px] font-black text-white/65">Step 2 of 2</div>
+            <div className="text-[12px] font-black text-white/65">
+              {t("step2of2")}
+            </div>
             <h1 className="mt-1 text-2xl md:text-[28px] font-black tracking-tight">
-              Confirm & Pay <span style={{ color: ORANGE }}>in 60 seconds</span>
+              {t("confirmAndPay")}{" "}
+              <span style={{ color: ORANGE }}>{t("in60Seconds")}</span>
             </h1>
 
             <div className="mt-2 flex flex-wrap gap-2">
               <Chip>{pickupLocation}</Chip>
               <Chip>
-                {fmtDate(from)} • {formatTimeLabel(pickupTime)}
+                {fmtDate(from, locale)} • {formatTimeLabel(pickupTime, locale)}
               </Chip>
               <Chip>
-                {fmtDate(to)} • {formatTimeLabel(dropoffTime)}
+                {fmtDate(to, locale)} • {formatTimeLabel(dropoffTime, locale)}
               </Chip>
               <Chip>
-                {rentalDays} day{rentalDays > 1 ? "s" : ""}
+                {rentalDays}{" "}
+                {t(rentalDays > 1 ? "daysPlural" : "daysSingular")}
               </Chip>
-              {discountPct > 0 && <Chip accent>Save {discountPct}%</Chip>}
+              {discountPct > 0 && (
+                <Chip accent>
+                  {t("savePct", { pct: discountPct })}
+                </Chip>
+              )}
             </div>
           </div>
 
@@ -255,7 +276,7 @@ export default function CheckoutPage() {
             className="rounded-2xl px-5 py-3 text-[13px] font-black border hover:bg-white/5 transition"
             style={{ borderColor: "rgba(255,255,255,0.12)" }}
           >
-            ← Back to vehicles
+            {t("backToVehicles")}
           </button>
         </div>
       </header>
@@ -301,7 +322,7 @@ export default function CheckoutPage() {
                     <span className="line-through">
                       €{money(vehicle.pricePerDay)}
                     </span>{" "}
-                    /day
+                    {t("perDayShort")}
                   </div>
                 )}
                 <div
@@ -309,10 +330,12 @@ export default function CheckoutPage() {
                   style={{ color: ORANGE }}
                 >
                   €{money(discountedPerDay)}
-                  <span className="text-[11px] text-white/60">/day</span>
+                  <span className="text-[11px] text-white/60">
+                    {t("perDayShort")}
+                  </span>
                 </div>
                 <div className="mt-1 text-[11px] text-white/60">
-                  Total:{" "}
+                  {t("total")}:{" "}
                   <span className="font-black text-white/85">
                     €{money(total)}
                   </span>
@@ -332,24 +355,50 @@ export default function CheckoutPage() {
 
             <div className="mt-4">
               <div className="flex items-end justify-between">
-                <div className="text-[15px] font-black">Included</div>
-                <div className="text-[11px] text-white/55">No extra fees</div>
+                <div className="text-[15px] font-black">{t("included")}</div>
+                <div className="text-[11px] text-white/55">
+                  {t("noExtraFees")}
+                </div>
               </div>
 
               {/* ✅ MOBILE: tiny horizontal row | ✅ DESKTOP: keep exactly as before */}
               <div className="mt-3">
                 {/* mobile / tablet */}
                 <div className="flex gap-2 overflow-x-auto md:overflow-visible lg:hidden">
-                  <IncludedMini title="Helmet" sub="Free" />
-                  <IncludedMini title="Lock" sub="Free" />
-                  <IncludedMini title="Cargo box" sub="Free" />
+                  <IncludedMini
+                    title={t("helmet")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
+                  <IncludedMini
+                    title={t("lock")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
+                  <IncludedMini
+                    title={t("cargoBox")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
                 </div>
 
                 {/* desktop (unchanged) */}
                 <div className="hidden lg:grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Included title="Helmet" sub="Free" />
-                  <Included title="Lock" sub="Free" />
-                  <Included title="Cargo box" sub="Free" />
+                  <Included
+                    title={t("helmet")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
+                  <Included
+                    title={t("lock")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
+                  <Included
+                    title={t("cargoBox")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
                 </div>
               </div>
 
@@ -361,11 +410,10 @@ export default function CheckoutPage() {
                 }}
               >
                 <div className="font-black" style={{ color: ORANGE }}>
-                  Contract-ready pickup (under 5 minutes)
+                  {t("contractReadyTitle")}
                 </div>
                 <div className="mt-1 text-white/70">
-                  Upload your documents now (optional) so the contract is ready
-                  when you arrive — you just sign & go.
+                  {t("contractReadyDesc")}
                 </div>
               </div>
             </div>
@@ -384,20 +432,20 @@ export default function CheckoutPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-[15px] font-black">Your details</div>
+                  <div className="text-[15px] font-black">{t("yourDetails")}</div>
                   <div className="mt-1 text-[12px] text-white/65">
-                    Required for booking + contract. Upload documents for faster
-                    pickup.
+                    {t("detailsHint")}
                   </div>
                 </div>
                 <div className="text-[11px] text-white/55">
-                  Required <span className="text-white/80 font-black">*</span>
+                  {t("required")}{" "}
+                  <span className="text-white/80 font-black">*</span>
                 </div>
               </div>
 
               <div className="mt-4 space-y-3.5">
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                  <Field label="Name *">
+                  <Field label={t("nameLabel")}>
                     <input
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
@@ -406,12 +454,12 @@ export default function CheckoutPage() {
                         borderColor: "rgba(255,255,255,0.12)",
                         background: "rgba(0,0,0,0.35)",
                       }}
-                      placeholder="John"
+                      placeholder={t("namePlaceholder")}
                       autoComplete="given-name"
                     />
                   </Field>
 
-                  <Field label="Surname *">
+                  <Field label={t("surnameLabel")}>
                     <input
                       value={surname}
                       onChange={(e) => setSurname(e.target.value)}
@@ -420,13 +468,13 @@ export default function CheckoutPage() {
                         borderColor: "rgba(255,255,255,0.12)",
                         background: "rgba(0,0,0,0.35)",
                       }}
-                      placeholder="Smith"
+                      placeholder={t("surnamePlaceholder")}
                       autoComplete="family-name"
                     />
                   </Field>
                 </div>
 
-                <Field label="Phone (WhatsApp) *">
+                <Field label={t("phoneLabel")}>
                   <input
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
@@ -435,13 +483,13 @@ export default function CheckoutPage() {
                       borderColor: "rgba(255,255,255,0.12)",
                       background: "rgba(0,0,0,0.35)",
                     }}
-                    placeholder="+34 600 000 000"
+                    placeholder={t("phonePlaceholder")}
                     autoComplete="tel"
                     inputMode="tel"
                   />
                 </Field>
 
-                <Field label="Email *">
+                <Field label={t("emailLabel")}>
                   <input
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
@@ -450,7 +498,7 @@ export default function CheckoutPage() {
                       borderColor: "rgba(255,255,255,0.12)",
                       background: "rgba(0,0,0,0.35)",
                     }}
-                    placeholder="you@email.com"
+                    placeholder={t("emailPlaceholder")}
                     autoComplete="email"
                     inputMode="email"
                   />
@@ -466,44 +514,53 @@ export default function CheckoutPage() {
                 >
                   <div className="flex items-center justify-between gap-3">
                     <div className="text-[13px] font-black">
-                      Documents (optional)
+                      {t("documentsOptional")}
                     </div>
-                    <div className="text-[11px] text-white/55">Faster pickup</div>
+                    <div className="text-[11px] text-white/55">
+                      {t("fasterPickup")}
+                    </div>
                   </div>
                   <div className="mt-1 text-[12px] text-white/65">
-                    Upload now to make the contract ready on arrival — sign &
-                    take the vehicle in under 5 minutes.
+                    {t("documentsDesc")}
                   </div>
 
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <UploadField
-                      label="Driving License (Front) — optional"
+                      label={t("dlFront")}
                       file={dlFront}
                       onFile={(f) => setDlFront(f)}
                       brandColor={ORANGE}
+                      chooseHint={t("chooseFilesHint")}
+                      removeText={t("remove")}
                     />
                     <UploadField
-                      label="Driving License (Back) — optional"
+                      label={t("dlBack")}
                       file={dlBack}
                       onFile={(f) => setDlBack(f)}
                       brandColor={ORANGE}
+                      chooseHint={t("chooseFilesHint")}
+                      removeText={t("remove")}
                     />
                     <UploadField
-                      label="ID / Passport (Front) — optional"
+                      label={t("idFront")}
                       file={idFront}
                       onFile={(f) => setIdFront(f)}
                       brandColor={ORANGE}
+                      chooseHint={t("chooseFilesHint")}
+                      removeText={t("remove")}
                     />
                     <UploadField
-                      label="ID / Passport (Back) — optional"
+                      label={t("idBack")}
                       file={idBack}
                       onFile={(f) => setIdBack(f)}
                       brandColor={ORANGE}
+                      chooseHint={t("chooseFilesHint")}
+                      removeText={t("remove")}
                     />
                   </div>
                 </div>
 
-                <Field label="Notes (optional)">
+                <Field label={t("notesLabel")}>
                   <textarea
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
@@ -512,7 +569,7 @@ export default function CheckoutPage() {
                       borderColor: "rgba(255,255,255,0.12)",
                       background: "rgba(0,0,0,0.35)",
                     }}
-                    placeholder="Pickup preference, requests, etc."
+                    placeholder={t("notesPlaceholder")}
                   />
                 </Field>
               </div>
@@ -529,18 +586,24 @@ export default function CheckoutPage() {
             >
               <div className="flex items-start justify-between gap-3">
                 <div>
-                  <div className="text-[15px] font-black">Payment</div>
+                  <div className="text-[15px] font-black">{t("payment")}</div>
                   <div className="mt-1 text-[12px] text-white/65">
-                    Pay{" "}
-                    <span style={{ color: ORANGE, fontWeight: 900 }}>50%</span>{" "}
-                    now • Pay remaining{" "}
-                    <span style={{ color: ORANGE, fontWeight: 900 }}>50%</span>{" "}
-                    at pickup (office)
+                    {t("pay")}{" "}
+                    <span style={{ color: ORANGE, fontWeight: 900 }}>
+                      {t("percent50")}
+                    </span>{" "}
+                    {t("now")} • {t("payRemaining")}{" "}
+                    <span style={{ color: ORANGE, fontWeight: 900 }}>
+                      {t("percent50")}
+                    </span>{" "}
+                    {t("atPickupOffice")}
                   </div>
                 </div>
 
                 <div className="text-right">
-                  <div className="text-[11px] text-white/55">Online today</div>
+                  <div className="text-[11px] text-white/55">
+                    {t("onlineToday")}
+                  </div>
                   <div className="text-xl font-black" style={{ color: ORANGE }}>
                     €{money(payNow)}
                   </div>
@@ -556,14 +619,18 @@ export default function CheckoutPage() {
                 }}
               >
                 <Row
-                  left={<span className="text-white/70">Pay now (50%)</span>}
+                  left={<span className="text-white/70">{t("payNow50")}</span>}
                   right={
-                    <span className="font-black text-white/90">€{money(payNow)}</span>
+                    <span className="font-black text-white/90">
+                      €{money(payNow)}
+                    </span>
                   }
                 />
                 <div className="mt-2">
                   <Row
-                    left={<span className="text-white/70">Pay at pickup (50%)</span>}
+                    left={
+                      <span className="text-white/70">{t("payPickup50")}</span>
+                    }
                     right={
                       <span className="font-black text-white/90">
                         €{money(payPickup)}
@@ -577,9 +644,13 @@ export default function CheckoutPage() {
                   style={{ borderColor: "rgba(255,255,255,0.10)" }}
                 >
                   <Row
-                    left={<span className="text-white/55">Rental total</span>}
+                    left={
+                      <span className="text-white/55">{t("rentalTotal")}</span>
+                    }
                     right={
-                      <span className="font-black text-white/80">€{money(total)}</span>
+                      <span className="font-black text-white/80">
+                        €{money(total)}
+                      </span>
                     }
                   />
                 </div>
@@ -596,17 +667,17 @@ export default function CheckoutPage() {
                 <CheckLine
                   checked={contractReadyOk}
                   onChange={setContractReadyOk}
-                  text="My details are correct and can be used to prepare the rental contract."
+                  text={t("checkContractReady")}
                 />
                 <CheckLine
                   checked={agreeTerms}
                   onChange={setAgreeTerms}
-                  text="I agree to the rental terms and confirm the booking details are correct."
+                  text={t("checkAgreeTerms")}
                 />
                 <CheckLine
                   checked={marketingOptIn}
                   onChange={setMarketingOptIn}
-                  text="Send me the latest updates, offers, and news from NEXA Rentals (optional)."
+                  text={t("checkMarketing")}
                   optional
                 />
               </div>
@@ -625,7 +696,7 @@ export default function CheckoutPage() {
                   cursor: canPay ? "pointer" : "not-allowed",
                 }}
               >
-                Pay 50% Now &amp; Book
+                {t("pay50NowAndBook")}
               </button>
 
               {/* IMPORTANT deposit reminder (highlighted & near button) */}
@@ -637,31 +708,29 @@ export default function CheckoutPage() {
                 }}
               >
                 <div className="font-black" style={{ color: ORANGE }}>
-                  IMPORTANT — Deposit at pickup
+                  {t("depositImportantTitle")}
                 </div>
                 <div className="mt-1 text-white/75">
-                  We take a{" "}
+                  {t("depositTextBefore")}{" "}
                   <span className="font-black" style={{ color: "#FFB074" }}>
                     €{deposit}
                   </span>{" "}
-                  deposit at pickup (Cash / Card). Refundable after return (subject
-                  to terms).
+                  {t("depositTextAfter")}
                 </div>
               </div>
 
               {!canPay && (
                 <div className="mt-3 text-[11px] text-white/45">
-                  To continue: enter Name + Surname + Phone + Email, then confirm
-                  contract + accept terms.
+                  {t("toContinue")}
                 </div>
               )}
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/55">
-                <span>Secure checkout</span>
+                <span>{t("secureCheckout")}</span>
                 <span className="text-white/35">•</span>
-                <span>Local support</span>
+                <span>{t("localSupport")}</span>
                 <span className="text-white/35">•</span>
-                <span>No hidden fees</span>
+                <span>{t("noHiddenFees")}</span>
               </div>
             </div>
           </section>
@@ -711,7 +780,15 @@ function Tag({ children }: { children: React.ReactNode }) {
   );
 }
 
-function Included({ title, sub }: { title: string; sub: string }) {
+function Included({
+  title,
+  sub,
+  badge,
+}: {
+  title: string;
+  sub: string;
+  badge: string;
+}) {
   return (
     <div
       className="rounded-2xl border p-3"
@@ -726,14 +803,22 @@ function Included({ title, sub }: { title: string; sub: string }) {
         className="mt-3 inline-flex rounded-full px-2.5 py-1 text-[10px] font-black"
         style={{ background: "rgba(255,122,0,0.12)", color: "#FFB074" }}
       >
-        Included
+        {badge}
       </div>
     </div>
   );
 }
 
 /* ✅ NEW: tiny included (mobile/tablet only) */
-function IncludedMini({ title, sub }: { title: string; sub: string }) {
+function IncludedMini({
+  title,
+  sub,
+  badge,
+}: {
+  title: string;
+  sub: string;
+  badge: string;
+}) {
   return (
     <div
       className="flex-shrink-0 rounded-2xl border px-3 py-2"
@@ -748,13 +833,19 @@ function IncludedMini({ title, sub }: { title: string; sub: string }) {
         className="mt-2 inline-flex rounded-full px-2 py-[3px] text-[9px] font-black"
         style={{ background: "rgba(255,122,0,0.12)", color: "#FFB074" }}
       >
-        Included
+        {badge}
       </div>
     </div>
   );
 }
 
-function Field({ label, children }: { label: string; children: React.ReactNode }) {
+function Field({
+  label,
+  children,
+}: {
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
     <div>
       <div className="text-[12px] font-black text-white/80">{label}</div>
@@ -792,7 +883,9 @@ function CheckLine({
         className="mt-1 h-4 w-4"
         style={{ accentColor: ORANGE }}
       />
-      <span className={`text-[12px] ${optional ? "text-white/65" : "text-white/70"}`}>
+      <span
+        className={`text-[12px] ${optional ? "text-white/65" : "text-white/70"}`}
+      >
         {text}
       </span>
     </label>
@@ -804,11 +897,15 @@ function UploadField({
   file,
   onFile,
   brandColor,
+  chooseHint,
+  removeText,
 }: {
   label: string;
   file: File | null;
   onFile: (f: File | null) => void;
   brandColor: string;
+  chooseHint: string;
+  removeText: string;
 }) {
   return (
     <div
@@ -841,12 +938,12 @@ function UploadField({
             className="rounded-full px-3 py-1 font-black border hover:bg-white/5 transition"
             style={{ borderColor: "rgba(255,255,255,0.12)", color: "#FFB074" }}
           >
-            Remove
+            {removeText}
           </button>
         </div>
       ) : (
         <div className="mt-2 text-[11px]" style={{ color: brandColor }}>
-          Choose files for fast pickup (optional).
+          {chooseHint}
         </div>
       )}
     </div>

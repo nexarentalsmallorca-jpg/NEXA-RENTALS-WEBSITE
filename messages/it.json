@@ -1,0 +1,220 @@
+{
+  "nav": {
+    "home": "Home",
+    "fleet": "La nostra flotta",
+    "blogs": "Blog",
+    "contact": "Contatto",
+    "about": "Su NEXA"
+  },
+  "hero": {
+    "title": "Noleggia uno scooter e una e-bike\na Maiorca",
+    "subtitle": "Noleggia online in pochi secondi"
+  },
+  "booking": {
+    "pickup": "Ritiro:",
+    "pickupDate": "Data ritiro",
+    "dropoffDate": "Data riconsegna",
+    "time": "Orario",
+    "pickupTime": "Orario ritiro",
+    "dropoffTime": "Orario riconsegna",
+    "search": "Cerca",
+    "selectPickupDate": "Seleziona data ritiro",
+    "selectDropoffDate": "Seleziona data riconsegna",
+    "clear": "Cancella",
+    "done": "Fatto"
+  },
+  "vehicles": {
+    "liveAvailability": "Disponibilità in tempo reale",
+    "available": "Veicoli",
+    "vehiclesWord": "disponibili",
+    "daysSingular": "giorno",
+    "daysPlural": "giorni",
+    "discountPerDay": "sconto /giorno",
+    "chooseThenTap": "Scegli un veicolo — poi premi",
+    "reserve": "Prenota",
+    "changeDates": "Cambia date",
+    "freeHelmet": "Casco gratuito incluso",
+    "assistance247": "Assistenza 24/7",
+    "fullInsurance": "Assicurazione completa",
+    "perDay": "/giorno",
+    "total": "Totale",
+    "instantConfirmation": "Conferma immediata",
+    "localSupport": "Supporto locale"
+  },
+
+  "checkout": {
+    "defaultPickupLocation": "Magaluf (Carrer Galeón 13)",
+
+    "step2of2": "Passo 2 di 2",
+    "confirmAndPay": "Conferma e paga",
+    "in60Seconds": "in 60 secondi",
+
+    "backToVehicles": "← Torna ai veicoli",
+
+    "daysSingular": "giorno",
+    "daysPlural": "giorni",
+
+    "savePct": "Risparmia {pct}%",
+    "save": "Risparmia",
+
+    "perDayShort": "/giorno",
+    "perDay": "/giorno",
+
+    "total": "Totale",
+    "totalLabel": "Totale",
+
+    "included": "Incluso",
+    "includedBadge": "Incluso",
+    "noExtraFees": "Nessun costo extra",
+    "helmet": "Casco",
+    "lock": "Lucchetto",
+    "cargoBox": "Baule",
+    "free": "Gratis",
+
+    "contractReadyTitle": "Ritiro con contratto pronto (meno di 5 minuti)",
+    "contractReadyDesc": "Carica i documenti ora (opzionale) così il contratto è pronto all’arrivo — firmi e parti.",
+
+    "yourDetails": "I tuoi dati",
+    "detailsHint": "Obbligatorio per prenotazione + contratto. Carica i documenti per un ritiro più veloce.",
+    "required": "Obbligatorio",
+
+    "nameLabel": "Nome *",
+    "surnameLabel": "Cognome *",
+    "phoneLabel": "Telefono (WhatsApp) *",
+    "emailLabel": "Email *",
+    "notesLabel": "Note (opzionale)",
+
+    "namePlaceholder": "Marco",
+    "surnamePlaceholder": "Rossi",
+    "phonePlaceholder": "+34 600 000 000",
+    "emailPlaceholder": "tu@email.com",
+    "notesPlaceholder": "Preferenze di ritiro, richieste, ecc.",
+
+    "documentsOptional": "Documenti (opzionale)",
+    "fasterPickup": "Ritiro più veloce",
+    "documentsDesc": "Carica ora per avere il contratto pronto all’arrivo — firma e ritira il veicolo in meno di 5 minuti.",
+    "chooseFilesHint": "Scegli file per ritiro rapido (opzionale).",
+    "remove": "Rimuovi",
+
+    "dlFront": "Patente (fronte) — opzionale",
+    "dlBack": "Patente (retro) — opzionale",
+    "idFront": "ID / Passaporto (fronte) — opzionale",
+    "idBack": "ID / Passaporto (retro) — opzionale",
+
+    "payment": "Pagamento",
+    "pay": "Paga",
+    "now": "ora",
+    "payRemaining": "paga il restante",
+    "atPickupOffice": "al ritiro (ufficio)",
+    "percent50": "50%",
+    "onlineToday": "Online oggi",
+    "payNow50": "Paga ora (50%)",
+    "payPickup50": "Paga al ritiro (50%)",
+    "rentalTotal": "Totale noleggio",
+
+    "checkContractReady": "I miei dati sono corretti e possono essere usati per preparare il contratto di noleggio.",
+    "checkAgreeTerms": "Accetto i termini di noleggio e confermo che i dettagli della prenotazione sono corretti.",
+    "checkMarketing": "Inviami aggiornamenti, offerte e notizie da NEXA Rentals (opzionale).",
+
+    "pay50NowAndBook": "Paga 50% ora e prenota",
+
+    "depositImportantTitle": "IMPORTANTE — Deposito al ritiro",
+    "depositTextBefore": "Richiediamo un deposito di",
+    "depositTextAfter": "al ritiro (Contanti / Carta). Rimborsabile dopo la restituzione (secondo termini).",
+
+    "toContinue": "Per continuare: inserisci Nome + Cognome + Telefono + Email, poi conferma contratto e accetta i termini.",
+
+    "secureCheckout": "Pagamento sicuro",
+    "localSupport": "Supporto locale",
+    "noHiddenFees": "Nessun costo nascosto",
+
+    "stripeReady": "Pronto per Stripe.",
+    "payAtPickup": "Paga al ritiro",
+    "depositAtPickup": "Deposito al ritiro",
+    "cashCard": "Contanti/Carta",
+    "contractReadySaved": "Dati salvati per il contratto.",
+
+    "step": "Passo 2 di 2",
+    "title": "Conferma e paga",
+    "titleAccent": "in 60 secondi",
+
+    "includedGroup": {
+      "title": "Incluso",
+      "noExtraFees": "Nessun costo extra",
+      "helmet": "Casco",
+      "lock": "Lucchetto",
+      "cargoBox": "Baule",
+      "free": "Gratis",
+      "badge": "Incluso"
+    },
+    "contractReady": {
+      "title": "Ritiro con contratto pronto (meno di 5 minuti)",
+      "desc": "Carica i documenti ora (opzionale) così il contratto è pronto all’arrivo — firmi e parti."
+    },
+    "details": {
+      "title": "I tuoi dati",
+      "subtitle": "Obbligatorio per prenotazione + contratto. Carica i documenti per un ritiro più veloce.",
+      "required": "Obbligatorio",
+      "name": "Nome *",
+      "surname": "Cognome *",
+      "phone": "Telefono (WhatsApp) *",
+      "email": "Email *",
+      "notes": "Note (opzionale)"
+    },
+    "placeholders": {
+      "firstName": "Marco",
+      "surname": "Rossi",
+      "phone": "+34 600 000 000",
+      "email": "tu@email.com",
+      "notes": "Preferenze di ritiro, richieste, ecc."
+    },
+    "docs": {
+      "title": "Documenti (opzionale)",
+      "fasterPickup": "Ritiro più veloce",
+      "subtitle": "Carica ora per avere il contratto pronto all’arrivo — firma e ritira il veicolo in meno di 5 minuti.",
+      "dlFront": "Patente (fronte) — opzionale",
+      "dlBack": "Patente (retro) — opzionale",
+      "idFront": "ID / Passaporto (fronte) — opzionale",
+      "idBack": "ID / Passaporto (retro) — opzionale",
+      "remove": "Rimuovi",
+      "chooseFiles": "Scegli file per ritiro rapido (opzionale)."
+    },
+    "paymentGroup": {
+      "title": "Pagamento",
+      "subtitleA": "Paga",
+      "subtitleB": "ora • paga il restante",
+      "subtitleC": "al ritiro (ufficio)",
+      "fifty": "50%",
+      "onlineToday": "Online oggi",
+      "payNow50": "Paga ora (50%)",
+      "payPickup50": "Paga al ritiro (50%)",
+      "rentalTotal": "Totale noleggio"
+    },
+    "checks": {
+      "contractReady": "I miei dati sono corretti e possono essere usati per preparare il contratto di noleggio.",
+      "agreeTerms": "Accetto i termini di noleggio e confermo che i dettagli della prenotazione sono corretti.",
+      "marketing": "Inviami aggiornamenti, offerte e notizie da NEXA Rentals (opzionale)."
+    },
+    "cta": "Paga 50% ora e prenota",
+    "deposit": {
+      "title": "IMPORTANTE — Deposito al ritiro",
+      "textA": "Richiediamo un deposito di",
+      "textB": "al ritiro (Contanti / Carta). Rimborsabile dopo la restituzione (secondo termini)."
+    },
+    "formHint": "Per continuare: inserisci Nome + Cognome + Telefono + Email, poi conferma contratto e accetta i termini.",
+    "trust": {
+      "secureCheckout": "Pagamento sicuro",
+      "localSupport": "Supporto locale",
+      "noHiddenFees": "Nessun costo nascosto"
+    },
+    "alert": {
+      "readyForStripe": "Pronto per Stripe.",
+      "onlineToday": "Online oggi",
+      "payAtPickup": "Paga al ritiro",
+      "depositAtPickup": "Deposito al ritiro",
+      "cashCard": "Contanti/Carta",
+      "fiftyPercent": "50%",
+      "contractReadySaved": "Dati salvati per il contratto."
+    }
+  }
+}

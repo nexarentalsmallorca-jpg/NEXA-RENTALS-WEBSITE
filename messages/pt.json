@@ -1,0 +1,220 @@
+{
+  "nav": {
+    "home": "Início",
+    "fleet": "A nossa frota",
+    "blogs": "Blogs",
+    "contact": "Contacto",
+    "about": "Sobre a NEXA"
+  },
+  "hero": {
+    "title": "Alugue uma scooter e uma e-bike\nem Maiorca",
+    "subtitle": "Alugue online em poucos segundos"
+  },
+  "booking": {
+    "pickup": "Levantamento:",
+    "pickupDate": "Data de levantamento",
+    "dropoffDate": "Data de devolução",
+    "time": "Hora",
+    "pickupTime": "Hora de levantamento",
+    "dropoffTime": "Hora de devolução",
+    "search": "Pesquisar",
+    "selectPickupDate": "Selecionar data de levantamento",
+    "selectDropoffDate": "Selecionar data de devolução",
+    "clear": "Limpar",
+    "done": "Concluído"
+  },
+  "vehicles": {
+    "liveAvailability": "Disponibilidade em tempo real",
+    "available": "Veículos",
+    "vehiclesWord": "disponíveis",
+    "daysSingular": "dia",
+    "daysPlural": "dias",
+    "discountPerDay": "desconto /dia",
+    "chooseThenTap": "Escolha um veículo — depois toque em",
+    "reserve": "Reservar",
+    "changeDates": "Alterar datas",
+    "freeHelmet": "Capacete grátis incluído",
+    "assistance247": "Assistência 24/7",
+    "fullInsurance": "Seguro completo",
+    "perDay": "/dia",
+    "total": "Total",
+    "instantConfirmation": "Confirmação imediata",
+    "localSupport": "Suporte local"
+  },
+
+  "checkout": {
+    "defaultPickupLocation": "Magaluf (Carrer Galeón 13)",
+
+    "step2of2": "Passo 2 de 2",
+    "confirmAndPay": "Confirmar e pagar",
+    "in60Seconds": "em 60 segundos",
+
+    "backToVehicles": "← Voltar aos veículos",
+
+    "daysSingular": "dia",
+    "daysPlural": "dias",
+
+    "savePct": "Poupe {pct}%",
+    "save": "Poupe",
+
+    "perDayShort": "/dia",
+    "perDay": "/dia",
+
+    "total": "Total",
+    "totalLabel": "Total",
+
+    "included": "Incluído",
+    "includedBadge": "Incluído",
+    "noExtraFees": "Sem taxas extra",
+    "helmet": "Capacete",
+    "lock": "Cadeado",
+    "cargoBox": "Baú",
+    "free": "Grátis",
+
+    "contractReadyTitle": "Levantamento com contrato pronto (menos de 5 minutos)",
+    "contractReadyDesc": "Envie os seus documentos agora (opcional) para o contrato estar pronto na chegada — só assina e segue.",
+
+    "yourDetails": "Os seus dados",
+    "detailsHint": "Obrigatório para reserva + contrato. Envie documentos para um levantamento mais rápido.",
+    "required": "Obrigatório",
+
+    "nameLabel": "Nome *",
+    "surnameLabel": "Apelido *",
+    "phoneLabel": "Telefone (WhatsApp) *",
+    "emailLabel": "Email *",
+    "notesLabel": "Notas (opcional)",
+
+    "namePlaceholder": "João",
+    "surnamePlaceholder": "Silva",
+    "phonePlaceholder": "+34 600 000 000",
+    "emailPlaceholder": "voce@email.com",
+    "notesPlaceholder": "Preferência de levantamento, pedidos, etc.",
+
+    "documentsOptional": "Documentos (opcional)",
+    "fasterPickup": "Levantamento mais rápido",
+    "documentsDesc": "Envie agora para deixar o contrato pronto na chegada — assine e leve o veículo em menos de 5 minutos.",
+    "chooseFilesHint": "Escolha ficheiros para levantamento rápido (opcional).",
+    "remove": "Remover",
+
+    "dlFront": "Carta de condução (frente) — opcional",
+    "dlBack": "Carta de condução (verso) — opcional",
+    "idFront": "ID / Passaporte (frente) — opcional",
+    "idBack": "ID / Passaporte (verso) — opcional",
+
+    "payment": "Pagamento",
+    "pay": "Pague",
+    "now": "agora",
+    "payRemaining": "pague o restante",
+    "atPickupOffice": "no levantamento (escritório)",
+    "percent50": "50%",
+    "onlineToday": "Online hoje",
+    "payNow50": "Pagar agora (50%)",
+    "payPickup50": "Pagar no levantamento (50%)",
+    "rentalTotal": "Total do aluguer",
+
+    "checkContractReady": "Os meus dados estão corretos e podem ser usados para preparar o contrato de aluguer.",
+    "checkAgreeTerms": "Concordo com os termos de aluguer e confirmo que os dados da reserva estão corretos.",
+    "checkMarketing": "Envie-me novidades, ofertas e notícias da NEXA Rentals (opcional).",
+
+    "pay50NowAndBook": "Pagar 50% agora e reservar",
+
+    "depositImportantTitle": "IMPORTANTE — Depósito no levantamento",
+    "depositTextBefore": "Cobramos um depósito de",
+    "depositTextAfter": "no levantamento (Dinheiro / Cartão). Reembolsável após devolução (conforme termos).",
+
+    "toContinue": "Para continuar: introduza Nome + Apelido + Telefone + Email, depois confirme o contrato e aceite os termos.",
+
+    "secureCheckout": "Pagamento seguro",
+    "localSupport": "Suporte local",
+    "noHiddenFees": "Sem taxas escondidas",
+
+    "stripeReady": "Pronto para Stripe.",
+    "payAtPickup": "Pagar no levantamento",
+    "depositAtPickup": "Depósito no levantamento",
+    "cashCard": "Dinheiro/Cartão",
+    "contractReadySaved": "Dados guardados para o contrato.",
+
+    "step": "Passo 2 de 2",
+    "title": "Confirmar e pagar",
+    "titleAccent": "em 60 segundos",
+
+    "includedGroup": {
+      "title": "Incluído",
+      "noExtraFees": "Sem taxas extra",
+      "helmet": "Capacete",
+      "lock": "Cadeado",
+      "cargoBox": "Baú",
+      "free": "Grátis",
+      "badge": "Incluído"
+    },
+    "contractReady": {
+      "title": "Levantamento com contrato pronto (menos de 5 minutos)",
+      "desc": "Envie os seus documentos agora (opcional) para o contrato estar pronto na chegada — só assina e segue."
+    },
+    "details": {
+      "title": "Os seus dados",
+      "subtitle": "Obrigatório para reserva + contrato. Envie documentos para um levantamento mais rápido.",
+      "required": "Obrigatório",
+      "name": "Nome *",
+      "surname": "Apelido *",
+      "phone": "Telefone (WhatsApp) *",
+      "email": "Email *",
+      "notes": "Notas (opcional)"
+    },
+    "placeholders": {
+      "firstName": "João",
+      "surname": "Silva",
+      "phone": "+34 600 000 000",
+      "email": "voce@email.com",
+      "notes": "Preferência de levantamento, pedidos, etc."
+    },
+    "docs": {
+      "title": "Documentos (opcional)",
+      "fasterPickup": "Levantamento mais rápido",
+      "subtitle": "Envie agora para deixar o contrato pronto na chegada — assine e leve o veículo em menos de 5 minutos.",
+      "dlFront": "Carta de condução (frente) — opcional",
+      "dlBack": "Carta de condução (verso) — opcional",
+      "idFront": "ID / Passaporte (frente) — opcional",
+      "idBack": "ID / Passaporte (verso) — opcional",
+      "remove": "Remover",
+      "chooseFiles": "Escolha ficheiros para levantamento rápido (opcional)."
+    },
+    "paymentGroup": {
+      "title": "Pagamento",
+      "subtitleA": "Pague",
+      "subtitleB": "agora • pague o restante",
+      "subtitleC": "no levantamento (escritório)",
+      "fifty": "50%",
+      "onlineToday": "Online hoje",
+      "payNow50": "Pagar agora (50%)",
+      "payPickup50": "Pagar no levantamento (50%)",
+      "rentalTotal": "Total do aluguer"
+    },
+    "checks": {
+      "contractReady": "Os meus dados estão corretos e podem ser usados para preparar o contrato de aluguer.",
+      "agreeTerms": "Concordo com os termos de aluguer e confirmo que os dados da reserva estão corretos.",
+      "marketing": "Envie-me novidades, ofertas e notícias da NEXA Rentals (opcional)."
+    },
+    "cta": "Pagar 50% agora e reservar",
+    "deposit": {
+      "title": "IMPORTANTE — Depósito no levantamento",
+      "textA": "Cobramos um depósito de",
+      "textB": "no levantamento (Dinheiro / Cartão). Reembolsável após devolução (conforme termos)."
+    },
+    "formHint": "Para continuar: introduza Nome + Apelido + Telefone + Email, depois confirme o contrato e aceite os termos.",
+    "trust": {
+      "secureCheckout": "Pagamento seguro",
+      "localSupport": "Suporte local",
+      "noHiddenFees": "Sem taxas escondidas"
+    },
+    "alert": {
+      "readyForStripe": "Pronto para Stripe.",
+      "onlineToday": "Online hoje",
+      "payAtPickup": "Pagar no levantamento",
+      "depositAtPickup": "Depósito no levantamento",
+      "cashCard": "Dinheiro/Cartão",
+      "fiftyPercent": "50%",
+      "contractReadySaved": "Dados guardados para o contrato."
+    }
+  }
+}

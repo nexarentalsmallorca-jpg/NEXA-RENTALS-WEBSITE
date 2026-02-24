@@ -1,0 +1,220 @@
+{
+  "nav": {
+    "home": "Startseite",
+    "fleet": "Unsere Flotte",
+    "blogs": "Blogs",
+    "contact": "Kontakt",
+    "about": "Über NEXA"
+  },
+  "hero": {
+    "title": "Miete einen Scooter & ein e-Bike auf Mallorca",
+    "subtitle": "Miete in wenigen Sekunden"
+  },
+  "booking": {
+    "pickup": "Abholung:",
+    "pickupDate": "Abholdatum",
+    "dropoffDate": "Rückgabedatum",
+    "time": "Uhrzeit",
+    "pickupTime": "Abholzeit",
+    "dropoffTime": "Rückgabezeit",
+    "search": "Suchen",
+    "selectPickupDate": "Abholdatum auswählen",
+    "selectDropoffDate": "Rückgabedatum auswählen",
+    "clear": "Löschen",
+    "done": "Fertig"
+  },
+  "vehicles": {
+    "liveAvailability": "Live-Verfügbarkeit",
+    "available": "Verfügbare",
+    "vehiclesWord": "Fahrzeuge",
+    "daysSingular": "Tag",
+    "daysPlural": "Tage",
+    "discountPerDay": "Rabatt /Tag",
+    "chooseThenTap": "Wähle ein Fahrzeug — dann tippe auf",
+    "reserve": "Reservieren",
+    "changeDates": "Daten ändern",
+    "freeHelmet": "Kostenloser Helm inklusive",
+    "assistance247": "24/7 Unterstützung",
+    "fullInsurance": "Vollkasko",
+    "perDay": "/Tag",
+    "total": "Gesamt",
+    "instantConfirmation": "Sofortige Bestätigung",
+    "localSupport": "Lokaler Support"
+  },
+
+  "checkout": {
+    "defaultPickupLocation": "Magaluf (Carrer Galeón 13)",
+
+    "step2of2": "Schritt 2 von 2",
+    "confirmAndPay": "Bestätigen & bezahlen",
+    "in60Seconds": "in 60 Sekunden",
+
+    "backToVehicles": "← Zurück zu Fahrzeugen",
+
+    "daysSingular": "Tag",
+    "daysPlural": "Tage",
+
+    "savePct": "Spare {pct}%",
+    "save": "Spare",
+
+    "perDayShort": "/Tag",
+    "perDay": "/Tag",
+
+    "total": "Gesamt",
+    "totalLabel": "Gesamt",
+
+    "included": "Inklusive",
+    "includedBadge": "Inklusive",
+    "noExtraFees": "Keine Zusatzkosten",
+    "helmet": "Helm",
+    "lock": "Schloss",
+    "cargoBox": "Topcase",
+    "free": "Gratis",
+
+    "contractReadyTitle": "Abholung mit vorbereitetem Vertrag (unter 5 Minuten)",
+    "contractReadyDesc": "Lade deine Dokumente jetzt hoch (optional), damit der Vertrag bei Ankunft bereit ist — einfach unterschreiben & losfahren.",
+
+    "yourDetails": "Deine Angaben",
+    "detailsHint": "Erforderlich für Buchung + Vertrag. Dokumente hochladen für schnellere Abholung.",
+    "required": "Erforderlich",
+
+    "nameLabel": "Vorname *",
+    "surnameLabel": "Nachname *",
+    "phoneLabel": "Telefon (WhatsApp) *",
+    "emailLabel": "E-Mail *",
+    "notesLabel": "Notizen (optional)",
+
+    "namePlaceholder": "Max",
+    "surnamePlaceholder": "Mustermann",
+    "phonePlaceholder": "+34 600 000 000",
+    "emailPlaceholder": "du@email.com",
+    "notesPlaceholder": "Abholwunsch, Hinweise, etc.",
+
+    "documentsOptional": "Dokumente (optional)",
+    "fasterPickup": "Schnellere Abholung",
+    "documentsDesc": "Jetzt hochladen, damit der Vertrag bei Ankunft bereit ist — unterschreiben & Fahrzeug in unter 5 Minuten mitnehmen.",
+    "chooseFilesHint": "Dateien für schnelle Abholung wählen (optional).",
+    "remove": "Entfernen",
+
+    "dlFront": "Führerschein (Vorderseite) — optional",
+    "dlBack": "Führerschein (Rückseite) — optional",
+    "idFront": "Ausweis / Reisepass (Vorderseite) — optional",
+    "idBack": "Ausweis / Reisepass (Rückseite) — optional",
+
+    "payment": "Zahlung",
+    "pay": "Zahle",
+    "now": "jetzt",
+    "payRemaining": "Restzahlung",
+    "atPickupOffice": "bei Abholung (Büro)",
+    "percent50": "50%",
+    "onlineToday": "Heute online",
+    "payNow50": "Jetzt bezahlen (50%)",
+    "payPickup50": "Bei Abholung bezahlen (50%)",
+    "rentalTotal": "Mietgesamtbetrag",
+
+    "checkContractReady": "Meine Angaben sind korrekt und können zur Vorbereitung des Mietvertrags verwendet werden.",
+    "checkAgreeTerms": "Ich stimme den Mietbedingungen zu und bestätige, dass die Buchungsdetails korrekt sind.",
+    "checkMarketing": "Sende mir Updates, Angebote und Neuigkeiten von NEXA Rentals (optional).",
+
+    "pay50NowAndBook": "50% jetzt zahlen & buchen",
+
+    "depositImportantTitle": "WICHTIG — Kaution bei Abholung",
+    "depositTextBefore": "Wir nehmen eine Kaution von",
+    "depositTextAfter": "bei Abholung (Bar / Karte). Rückerstattung nach Rückgabe (gemäß Bedingungen).",
+
+    "toContinue": "Um fortzufahren: Vorname + Nachname + Telefon + E-Mail eingeben, dann Vertrag bestätigen & Bedingungen akzeptieren.",
+
+    "secureCheckout": "Sicherer Checkout",
+    "localSupport": "Lokaler Support",
+    "noHiddenFees": "Keine versteckten Gebühren",
+
+    "stripeReady": "Bereit für Stripe.",
+    "payAtPickup": "Bei Abholung zahlen",
+    "depositAtPickup": "Kaution bei Abholung",
+    "cashCard": "Bar/Karte",
+    "contractReadySaved": "Angaben für Vertrag gespeichert.",
+
+    "step": "Schritt 2 von 2",
+    "title": "Bestätigen & bezahlen",
+    "titleAccent": "in 60 Sekunden",
+
+    "includedGroup": {
+      "title": "Inklusive",
+      "noExtraFees": "Keine Zusatzkosten",
+      "helmet": "Helm",
+      "lock": "Schloss",
+      "cargoBox": "Topcase",
+      "free": "Gratis",
+      "badge": "Inklusive"
+    },
+    "contractReady": {
+      "title": "Abholung mit vorbereitetem Vertrag (unter 5 Minuten)",
+      "desc": "Lade deine Dokumente jetzt hoch (optional), damit der Vertrag bei Ankunft bereit ist — einfach unterschreiben & losfahren."
+    },
+    "details": {
+      "title": "Deine Angaben",
+      "subtitle": "Erforderlich für Buchung + Vertrag. Dokumente hochladen für schnellere Abholung.",
+      "required": "Erforderlich",
+      "name": "Vorname *",
+      "surname": "Nachname *",
+      "phone": "Telefon (WhatsApp) *",
+      "email": "E-Mail *",
+      "notes": "Notizen (optional)"
+    },
+    "placeholders": {
+      "firstName": "Max",
+      "surname": "Mustermann",
+      "phone": "+34 600 000 000",
+      "email": "du@email.com",
+      "notes": "Abholwunsch, Hinweise, etc."
+    },
+    "docs": {
+      "title": "Dokumente (optional)",
+      "fasterPickup": "Schnellere Abholung",
+      "subtitle": "Jetzt hochladen, damit der Vertrag bei Ankunft bereit ist — unterschreiben & Fahrzeug in unter 5 Minuten mitnehmen.",
+      "dlFront": "Führerschein (Vorderseite) — optional",
+      "dlBack": "Führerschein (Rückseite) — optional",
+      "idFront": "Ausweis / Reisepass (Vorderseite) — optional",
+      "idBack": "Ausweis / Reisepass (Rückseite) — optional",
+      "remove": "Entfernen",
+      "chooseFiles": "Dateien für schnelle Abholung wählen (optional)."
+    },
+    "paymentGroup": {
+      "title": "Zahlung",
+      "subtitleA": "Zahle",
+      "subtitleB": "jetzt • Restzahlung",
+      "subtitleC": "bei Abholung (Büro)",
+      "fifty": "50%",
+      "onlineToday": "Heute online",
+      "payNow50": "Jetzt bezahlen (50%)",
+      "payPickup50": "Bei Abholung bezahlen (50%)",
+      "rentalTotal": "Mietgesamtbetrag"
+    },
+    "checks": {
+      "contractReady": "Meine Angaben sind korrekt und können zur Vorbereitung des Mietvertrags verwendet werden.",
+      "agreeTerms": "Ich stimme den Mietbedingungen zu und bestätige, dass die Buchungsdetails korrekt sind.",
+      "marketing": "Sende mir Updates, Angebote und Neuigkeiten von NEXA Rentals (optional)."
+    },
+    "cta": "50% jetzt zahlen & buchen",
+    "deposit": {
+      "title": "WICHTIG — Kaution bei Abholung",
+      "textA": "Wir nehmen eine Kaution von",
+      "textB": "bei Abholung (Bar / Karte). Rückerstattung nach Rückgabe (gemäß Bedingungen)."
+    },
+    "formHint": "Um fortzufahren: Vorname + Nachname + Telefon + E-Mail eingeben, dann Vertrag bestätigen & Bedingungen akzeptieren.",
+    "trust": {
+      "secureCheckout": "Sicherer Checkout",
+      "localSupport": "Lokaler Support",
+      "noHiddenFees": "Keine versteckten Gebühren"
+    },
+    "alert": {
+      "readyForStripe": "Bereit für Stripe.",
+      "onlineToday": "Heute online",
+      "payAtPickup": "Bei Abholung zahlen",
+      "depositAtPickup": "Kaution bei Abholung",
+      "cashCard": "Bar/Karte",
+      "fiftyPercent": "50%",
+      "contractReadySaved": "Angaben für Vertrag gespeichert."
+    }
+  }
+}

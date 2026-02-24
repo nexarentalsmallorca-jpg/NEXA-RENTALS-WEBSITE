@@ -1,9 +1,10 @@
-"use client";
+"use client"; 
 
 import React, { useMemo } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
-import Navbar from "../Navbar";
+import Navbar from "../../Navbar";
+import { useTranslations, useLocale } from "next-intl";
 
 type VehicleType = "Scooter" | "E-Bike";
 
@@ -33,22 +34,24 @@ function parseISO(v?: string | null) {
   const d = new Date(v);
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
-function fmtDate(d?: Date) {
+function fmtDate(d?: Date, locale?: string) {
   if (!d) return "--/--/----";
-  return d.toLocaleDateString(undefined, { day: "2-digit", month: "short", year: "numeric" });
+  return d.toLocaleDateString(locale || undefined, { day: "2-digit", month: "short", year: "numeric" });
 }
 function safeParam(sp: URLSearchParams, key: string) {
   const v = sp.get(key);
   return v && v.trim().length ? v : undefined;
 }
-function formatTimeLabel(t?: string) {
+function formatTimeLabel(t?: string, locale?: string) {
   if (!t) return "--:--";
   const [hhStr, mmStr] = t.split(":");
   const hh = Number(hhStr);
   if (Number.isNaN(hh)) return t;
-  const ampm = hh >= 12 ? "PM" : "AM";
-  const hour12 = ((hh + 11) % 12) + 1;
-  return `${String(hour12).padStart(2, "0")}:${mmStr} ${ampm}`;
+
+  const date = new Date();
+  date.setHours(hh, Number(mmStr), 0, 0);
+
+  return new Intl.DateTimeFormat(locale || undefined, { hour: "2-digit", minute: "2-digit" }).format(date);
 }
 function daysBetween(from?: Date, to?: Date) {
   if (!from || !to) return 0;
@@ -182,6 +185,9 @@ function money(n: number) {
 /* ---------------- page ---------------- */
 
 export default function VehiclesClient() {
+  const t = useTranslations("vehicles");
+  const locale = useLocale();
+
   const sp = useSearchParams();
   const router = useRouter();
 
@@ -269,30 +275,30 @@ export default function VehiclesClient() {
                 style={{ borderColor: THEME.borderSoft, background: THEME.surface }}
               >
                 <span className="h-2 w-2 rounded-full" style={{ background: ORANGE }} />
-                Live availability
+                {t("liveAvailability")}
               </div>
 
               <h1 className="mt-4 text-4xl md:text-5xl font-black tracking-tight leading-[1.05]">
-                Available <span style={{ color: ORANGE }}>vehicles</span>
+                {t("available")} <span style={{ color: ORANGE }}>{t("vehiclesWord")}</span>
               </h1>
 
               {/* booking chips */}
               <div className="mt-4 flex flex-wrap gap-2">
                 <BigChip>{pickupLocation}</BigChip>
                 <BigChip>
-                  {fmtDate(from)} • {formatTimeLabel(pickupTime)}
+                  {fmtDate(from, locale)} • {formatTimeLabel(pickupTime, locale)}
                 </BigChip>
                 <BigChip>
-                  {fmtDate(to)} • {formatTimeLabel(dropoffTime)}
+                  {fmtDate(to, locale)} • {formatTimeLabel(dropoffTime, locale)}
                 </BigChip>
                 <BigChip>
-                  {rentalDays} day{rentalDays > 1 ? "s" : ""}
+                  {rentalDays} {t(rentalDays > 1 ? "daysPlural" : "daysSingular")}
                 </BigChip>
-                {discountPct > 0 && <BigChip accent>{discountPct}% discount /day</BigChip>}
+                {discountPct > 0 && <BigChip accent>{discountPct}% {t("discountPerDay")}</BigChip>}
               </div>
 
               <div className="mt-3 text-sm" style={{ color: THEME.textSoft }}>
-                Choose a vehicle — then tap <span className="text-white/85 font-bold">Reserve</span>.
+                {t("chooseThenTap")} <span className="text-white/85 font-bold">{t("reserve")}</span>.
               </div>
             </div>
 
@@ -301,15 +307,15 @@ export default function VehiclesClient() {
               className="rounded-2xl px-6 py-4 text-base md:text-sm font-black border hover:bg-white/5 transition"
               style={{ borderColor: THEME.border }}
             >
-              Change dates
+              {t("changeDates")}
             </button>
           </div>
 
           {/* trust row */}
           <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <TrustPill icon="helmet" title="Free Helmet Included" />
-            <TrustPill icon="support" title="24/7 Assistance" />
-            <TrustPill icon="shield" title="Full Insurance" />
+            <TrustPill icon="helmet" title={t("freeHelmet")} />
+            <TrustPill icon="support" title={t("assistance247")} />
+            <TrustPill icon="shield" title={t("fullInsurance")} />
           </div>
 
           {/* soft divider */}
@@ -419,21 +425,21 @@ export default function VehiclesClient() {
                           <span className="line-through" style={{ color: "rgba(255,255,255,0.42)" }}>
                             €{money(v.pricePerDay)}
                           </span>
-                          <span style={{ color: "rgba(255,255,255,0.40)" }}> /day</span>
+                          <span style={{ color: "rgba(255,255,255,0.40)" }}> {t("perDay")}</span>
                         </div>
                       )}
 
                       <div className={`${priceSize} font-black leading-none`} style={{ color: ORANGE }}>
                         €{money(discountedPerDay)}
                         <span className="text-sm" style={{ color: THEME.textSoft }}>
-                          /day
+                          {t("perDay")}
                         </span>
                       </div>
 
                       <div className="mt-1 text-sm" style={{ color: THEME.textSoft }}>
-                        Total: <span className="font-black text-white/85">€{money(total)}</span>{" "}
+                        {t("total")}: <span className="font-black text-white/85">€{money(total)}</span>{" "}
                         <span style={{ color: THEME.textDim }}>
-                          ({rentalDays} day{rentalDays > 1 ? "s" : ""})
+                          ({rentalDays} {t(rentalDays > 1 ? "daysPlural" : "daysSingular")})
                         </span>
                       </div>
                     </div>
@@ -447,9 +453,9 @@ export default function VehiclesClient() {
                           "linear-gradient(180deg, rgba(255,122,0,1), rgba(255,122,0,0.85))",
                         boxShadow: "0 18px 38px rgba(255,122,0,0.18)",
                       }}
-                      aria-label={`Reserve ${v.name}`}
+                      aria-label={`${t("reserve")} ${v.name}`}
                     >
-                      Reserve
+                      {t("reserve")}
                     </button>
                   </div>
 
@@ -464,7 +470,7 @@ export default function VehiclesClient() {
                       className="inline-block h-1.5 w-1.5 rounded-full"
                       style={{ background: "rgba(255,122,0,0.55)" }}
                     />
-                    Instant confirmation • Local support
+                    {t("instantConfirmation")} • {t("localSupport")}
                   </div>
                 </div>
               </motion.div>
