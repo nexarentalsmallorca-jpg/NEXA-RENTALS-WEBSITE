@@ -30,13 +30,12 @@ export const metadata: Metadata = {
 
 type Props = {
   children: React.ReactNode;
-  params: {locale: string};
+  params: {locale: string}; // ✅ FIX: params is not a Promise on Vercel build
 };
 
 export default async function RootLayout({children, params}: Props) {
-  const {locale} = await params; // ✅ FIX
+  const {locale} = params; // ✅ FIX: no await
 
-  // Safety: block unknown locales
   if (!locales.includes(locale as any)) notFound();
 
   const messages = await getMessages();
