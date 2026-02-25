@@ -2,15 +2,14 @@
   "name": "nexa-site",
   "version": "0.1.0",
   "private": true,
-
   "scripts": {
     "dev": "next dev",
-    "dev:safe": "set NEXT_TURBO=0 && next dev",
+    "dev:turbo": "next dev --turbo",
+    "dev:safe": "cmd /c \"set NEXT_TURBO=0&& next dev\"",
     "build": "next build",
     "start": "next start",
     "lint": "next lint"
   },
-
   "dependencies": {
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.0",
@@ -20,7 +19,6 @@
     "react-day-picker": "^9.13.2",
     "react-dom": "19.2.3"
   },
-
   "devDependencies": {
     "@parcel/watcher": "^2.5.6",
     "@swc/wasm": "^1.15.13",

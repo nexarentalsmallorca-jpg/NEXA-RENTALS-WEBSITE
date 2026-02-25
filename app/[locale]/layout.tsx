@@ -5,9 +5,7 @@ import {Inter, Playfair_Display} from "next/font/google";
 import NexaFooter from "../components/NexaFooter";
 import WhatsAppSupport from "../components/WhatsAppSupport";
 import {NextIntlClientProvider} from "next-intl";
-import {getMessages} from "next-intl/server";
-import {notFound} from "next/navigation";
-import {locales} from "../../next-intl.config";
+import {locales, defaultLocale} from "../../i18n/next-intl.config";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -34,20 +32,21 @@ type Props = {
 };
 
 export default async function RootLayout({children, params}: Props) {
-  const {locale} = params;// ✅ FIX: no await
+  const locale = params?.locale;
 
-  if (!locales.includes(locale as any)) notFound();
+  // Keep your behavior: fallback instead of 404
+  const safeLocale = locales.includes(locale as any) ? locale : defaultLocale;
 
-  const messages = await getMessages();
+const messages = (await import(`../i18n/messages/${safeLocale}.json`)).default;
 
   return (
     <html
-      lang={locale}
+      lang={safeLocale}
       className={`${inter.variable} ${playfair.variable}`}
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>
-        <NextIntlClientProvider locale={locale} messages={messages}>
+        <NextIntlClientProvider locale={safeLocale} messages={messages}>
           {children}
         </NextIntlClientProvider>
 

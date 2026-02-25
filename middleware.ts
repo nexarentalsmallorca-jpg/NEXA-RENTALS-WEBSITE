@@ -1,6 +1,9 @@
 // middleware.ts
 import createMiddleware from "next-intl/middleware";
-import {locales, defaultLocale} from "./next-intl.config";
+
+// ✅ Keep this list in sync with /messages/*.json
+const locales = ["de", "en", "es", "fr", "it", "pt", "sv"] as const;
+const defaultLocale = "en";
 
 export default createMiddleware({
   locales: [...locales],

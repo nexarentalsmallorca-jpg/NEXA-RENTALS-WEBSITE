@@ -151,7 +151,7 @@ function phoneOk(v: string) {
 
 /* ---------------- page ---------------- */
 
-export default function CheckoutPage() {
+export default function CheckoutClient() {
   const sp = useSearchParams();
   const router = useRouter();
 
@@ -212,8 +212,9 @@ export default function CheckoutPage() {
     contractReadyOk &&
     agreeTerms;
 
+  // ✅ FIX: include locale in the route
   const backToVehicles = () => {
-    router.push(`/vehicles?${sp.toString()}`);
+    router.push(`/${locale}/vehicles?${sp.toString()}`);
   };
 
   const payNowAction = () => {

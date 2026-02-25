@@ -1,12 +1,8 @@
-import React, { Suspense } from "react";
-import CheckoutClient from "./CheckoutClient";
-
+// app/[locale]/checkout/page.tsx
 export const dynamic = "force-dynamic";
 
+import CheckoutClient from "./CheckoutClient";
+
 export default function Page() {
-  return (
-    <Suspense fallback={<div className="min-h-screen bg-black text-white" />}>
-      <CheckoutClient />
-    </Suspense>
-  );
+  return <CheckoutClient />;
 }

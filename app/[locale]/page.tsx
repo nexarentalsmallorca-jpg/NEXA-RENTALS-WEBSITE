@@ -5,11 +5,9 @@ import {getTranslations} from "next-intl/server";
 type Props = {
   params: {locale: string};
 };
-
+export const locales = ["en", "es", "de", "fr", "it", "pt", "sv"] as const;
 export default async function LocaleHomePage({params}: Props) {
-  // You don't strictly need locale here because next-intl reads it from route,
-  // but keeping it doesn't hurt.
-  const t = await getTranslations();
+  const t = await getTranslations({locale: params.locale});
 
   return (
     <HomeClient
