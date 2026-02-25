@@ -1,3 +1,4 @@
+import {Suspense} from "react";
 import HomeClient from "../HomeClient";
 
 type PageProps = {
@@ -7,5 +8,9 @@ type PageProps = {
 export default async function Page({params}: PageProps) {
   const {locale} = await params;
 
-  return <HomeClient key={locale} />;
+  return (
+    <Suspense fallback={null}>
+      <HomeClient key={locale} />
+    </Suspense>
+  );
 }
