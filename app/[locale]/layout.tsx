@@ -5,46 +5,50 @@ import {Inter, Playfair_Display} from "next/font/google";
 import NexaFooter from "../components/NexaFooter";
 import WhatsAppSupport from "../components/WhatsAppSupport";
 import {NextIntlClientProvider} from "next-intl";
-import {locales, defaultLocale} from "../../i18n/next-intl.config";
+import {getMessages, setRequestLocale} from "next-intl/server";
+import {locales} from "../../i18n/routing";
 
 const inter = Inter({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700"],
   variable: "--font-inter",
-  display: "swap"
+  display: "swap",
 });
 
 const playfair = Playfair_Display({
   subsets: ["latin"],
   weight: ["600", "700", "800"],
   variable: "--font-playfair",
-  display: "swap"
+  display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "NEXA Rentals",
-  description: "Premium scooter & e-bike rentals in Mallorca"
+  description: "Premium scooter & e-bike rentals in Mallorca",
 };
+
+export function generateStaticParams() {
+  return locales.map((locale) => ({locale}));
+}
 
 type Props = {
   children: React.ReactNode;
-  params: {locale: string};
+  params: Promise<{locale: string}>;
 };
 
 export default async function RootLayout({children, params}: Props) {
-  const locale = params?.locale;
+  const {locale} = await params;
 
-  // Keep your behavior: fallback instead of 404
-  const safeLocale = locales.includes(locale as any) ? locale : defaultLocale;
+  const safeLocale = locales.includes(locale as any) ? locale : "en";
 
-const messages = (await import(`../i18n/messages/${safeLocale}.json`)).default;
+  // ✅ IMPORTANT: tells next-intl which locale this request is
+  setRequestLocale(safeLocale);
+
+  // ✅ pulls messages using i18n/request.ts (so ES loads ES)
+  const messages = await getMessages();
 
   return (
-    <html
-      lang={safeLocale}
-      className={`${inter.variable} ${playfair.variable}`}
-      suppressHydrationWarning
-    >
+    <html lang={safeLocale} className={`${inter.variable} ${playfair.variable}`} suppressHydrationWarning>
       <body suppressHydrationWarning>
         <NextIntlClientProvider locale={safeLocale} messages={messages}>
           {children}
@@ -56,7 +60,7 @@ const messages = (await import(`../i18n/messages/${safeLocale}.json`)).default;
             "Hey! Need any help?",
             "Want the best scooter for your trip?",
             "Booking takes only Few seconds ⚡",
-            "Message us, we reply fast 🙂"
+            "Message us, we reply fast 🙂",
           ]}
         />
 

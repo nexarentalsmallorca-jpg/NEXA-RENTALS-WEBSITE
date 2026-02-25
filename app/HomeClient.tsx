@@ -1,22 +1,13 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import Navbar from "./Navbar";
 import FeaturedFleet from "./FeaturedFleet";
 import ShopSection from "./components/ShopSection";
 import BookingBar from "./components/BookingBar";
 
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
-
-type HomeClientProps = {
-  heroTitle: string;
-  heroSubtitle: string;
-  pickupLabel: string;
-  dropoffDateLabel: string;
-  timeLabel: string;
-  searchLabel: string;
-};
 
 function getOrangeWords(locale: Locale) {
   const map: Record<Locale, string[]> = {
@@ -49,19 +40,11 @@ function normalizeHeroTitle(raw: string, locale: Locale) {
 
   let s = raw;
 
-  // Convert "\\n" to "\n" (common JSON escaping mistake)
   s = s.replace(/\\n/g, "\n");
-
-  // Normalize Windows newlines to "\n"
   s = s.replace(/\r\n/g, "\n");
-
-  // If translations used <br> tags
   s = s.replace(/<br\s*\/?>/gi, "\n");
-
-  // Collapse accidental extra blank lines into a single newline
   s = s.replace(/\n\s*\n+/g, "\n");
 
-  // Optional safety for EN if newline missing
   if (!s.includes("\n") && locale === "en") {
     s = s.replace(/\s+in\s+Mallorca$/i, "\nin Mallorca");
   }
@@ -69,20 +52,18 @@ function normalizeHeroTitle(raw: string, locale: Locale) {
   return s.trimEnd();
 }
 
-export default function HomeClient({
-  heroTitle,
-  heroSubtitle,
-  pickupLabel,
-  dropoffDateLabel,
-  timeLabel,
-  searchLabel,
-}: HomeClientProps) {
+export default function HomeClient() {
   const locale = (useLocale() as Locale) || "en";
+
+  // ✅ pull translations directly from messages
+  const tHero = useTranslations("hero");
+
+  const heroTitle = tHero("title");
+  const heroSubtitle = tHero("subtitle");
 
   const [typed, setTyped] = useState("");
   const [typingDone, setTypingDone] = useState(false);
 
-  // ✅ Footer-identical theme
   const THEME = {
     bg: "#0f1115",
     bg2: "#0c0e12",
@@ -92,21 +73,7 @@ export default function HomeClient({
     textDim: "rgba(255,255,255,0.50)",
   };
 
-  // ✅ Use server-provided translated hero title, normalized for line breaks
   const fullText = useMemo(() => normalizeHeroTitle(heroTitle, locale), [heroTitle, locale]);
-
-  // ✅ DEBUG ONLY (NO UI CHANGE): tells us if newline exists
-  useEffect(() => {
-    // This prints quotes + escaped characters so we can SEE \n vs \\n vs nothing
-    // Check the Browser Console (F12) after refresh.
-    console.log("----- HERO DEBUG START -----");
-    console.log("locale:", locale);
-    console.log("heroTitle raw:", JSON.stringify(heroTitle));
-    console.log("fullText normalized:", JSON.stringify(fullText));
-    console.log("fullText contains real newline:", fullText.includes("\n"));
-    console.log("fullText length:", fullText.length);
-    console.log("----- HERO DEBUG END -----");
-  }, [locale, heroTitle, fullText]);
 
   useEffect(() => {
     let i = 0;
@@ -138,9 +105,7 @@ export default function HomeClient({
 
   return (
     <div className="relative min-h-screen overflow-hidden text-white" style={{ background: THEME.bg }}>
-      {/* ✅ EXACT SAME color + lighting + glow as Footer */}
       <div className="pointer-events-none absolute inset-0">
-        {/* graphite wash (footer) */}
         <div
           className="absolute inset-0"
           style={{
@@ -149,7 +114,6 @@ export default function HomeClient({
           }}
         />
 
-        {/* warm halos (footer) */}
         <div
           className="absolute -top-44 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full blur-[110px] opacity-30"
           style={{
@@ -163,7 +127,6 @@ export default function HomeClient({
           }}
         />
 
-        {/* vignette (footer) */}
         <div
           className="absolute inset-0"
           style={{
@@ -172,7 +135,6 @@ export default function HomeClient({
           }}
         />
 
-        {/* subtle grain (footer) */}
         <div
           className="absolute inset-0 opacity-[0.11] mix-blend-overlay"
           style={{
@@ -182,12 +144,9 @@ export default function HomeClient({
         />
       </div>
 
-      {/* HERO */}
       <main className="relative min-h-[100svh] overflow-hidden">
         <Navbar />
 
-        {/* ✅ Background: Desktop stays as-is (from your existing CSS),
-            Mobile ONLY uses /images/heromobile-bg.png */}
         <div
           className="hero-bg-image"
           style={{
@@ -195,12 +154,9 @@ export default function HomeClient({
           }}
         />
 
-        {/* ✅ Mobile padding improved, desktop stays same */}
         <div className="relative z-10 mx-auto max-w-[1400px] px-4 sm:px-6 lg:px-8 pt-[calc(var(--nav-offset)-18px)] pb-10 sm:pb-12 lg:pb-14">
           <section className="grid min-h-[calc(100svh-var(--nav-offset))] items-center gap-8 sm:gap-10 lg:gap-12 lg:grid-cols-12">
-            {/* LEFT */}
             <div className="lg:col-span-6 flex flex-col min-h-[calc(100svh-var(--nav-offset))]">
-              {/* ✅ Push heading/subheading DOWN on mobile ONLY */}
               <div
                 className={[
                   "transition-all duration-700 ease-out",
@@ -208,7 +164,6 @@ export default function HomeClient({
                   introOn ? "opacity-100 translate-y-[-70px] " : "opacity-0 translate-y-4",
                 ].join(" ")}
               >
-                {/* ✅ Mobile H1 smaller, desktop untouched */}
                 <h1 className="font-serif text-[32px] leading-[1.10] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">
                   {typedLines
                     .filter((l) => l.trim().length > 0)
@@ -218,10 +173,8 @@ export default function HomeClient({
                         {!typingDone && idx === arr.length - 1 ? <span className="type-caret" /> : null}
                       </div>
                     ))}
-              
-             </h1>
+                </h1>
 
-                {/* ✅ Mobile subtext slightly smaller, desktop untouched */}
                 <div className="mt-4 sm:mt-6 flex flex-wrap items-center gap-3 sm:gap-4">
                   <span className="h-[2px] w-10 sm:w-14 rounded-full bg-gradient-to-r from-orange-500 to-yellow-300 opacity-90" />
                   <p className="text-[11px] sm:text-[14px] font-medium tracking-[0.20em] uppercase text-white/75">
@@ -230,7 +183,6 @@ export default function HomeClient({
                 </div>
               </div>
 
-              {/* ✅ BOOKING BAR AT BOTTOM */}
               <div
                 className={[
                   "mt-auto w-full max-w-[560px]",
@@ -238,30 +190,25 @@ export default function HomeClient({
                   introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
                 ].join(" ")}
               >
-                {/* ✅ Only mobile: smaller + slightly down. Desktop normal. */}
                 <div className="scale-[0.88] origin-top translate-y-[-100px] md:scale-100 md:translate-y-[-250px] md:origin-center">
                   <BookingBar />
                 </div>
               </div>
             </div>
 
-            {/* RIGHT EMPTY */}
             <div className="lg:col-span-6" />
           </section>
         </div>
       </main>
 
-      {/* FEATURED FLEET */}
       <section className="relative pt-8 sm:pt-10 pb-12 sm:pb-14">
         <div className="mx-auto max-w-7xl px-4">
           <FeaturedFleet />
         </div>
       </section>
 
-      {/* SHOP SECTION */}
       <ShopSection />
 
-      {/* ✅ ONLY MOBILE BG IMAGE OVERRIDE (desktop unchanged) */}
       <style jsx global>{`
         .hero-bg-image {
           position: absolute;

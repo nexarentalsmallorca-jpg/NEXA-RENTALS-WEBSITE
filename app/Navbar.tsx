@@ -3,7 +3,7 @@
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
+import { useTranslations } from "next-intl";
 
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
@@ -56,9 +56,7 @@ export default function Navbar() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const intlLocale = useLocale() as Locale;
-  const fallbackLocale = safeGetLocaleFromPath(pathname);
-  const currentLocale: Locale = intlLocale ?? fallbackLocale;
+  const currentLocale: Locale = safeGetLocaleFromPath(pathname);
 
   const currentLang = LANGUAGES.find((l) => l.code === currentLocale) ?? LANGUAGES[0];
 
@@ -118,12 +116,20 @@ export default function Navbar() {
   }, [mobileOpen]);
 
   const onSelectLocale = (nextLocale: Locale) => {
-    setLangOpen(false);
-    setMobileOpen(false);
-    const nextPath = replaceLocaleInPath(pathname, currentLocale, nextLocale);
-    const qs = searchParams?.toString() || "";
-    router.push(qs ? `${nextPath}?${qs}` : nextPath);
-  };
+  setLangOpen(false);
+  setMobileOpen(false);
+
+  const nextPath = replaceLocaleInPath(pathname, currentLocale, nextLocale);
+  const qs = searchParams?.toString() || "";
+  const finalPath = qs ? `${nextPath}?${qs}` : nextPath;
+
+  router.push(finalPath);
+
+  // ✅ Force Next.js to re-render translations
+  setTimeout(() => {
+    router.refresh();
+  }, 50);
+};
 
   return (
     <>

@@ -2,19 +2,27 @@
 
 import React, { useMemo, useState, useEffect, useRef } from "react";
 import { useTranslations } from "next-intl";
+import { usePathname, useRouter } from "next/navigation";
 
 type DateRange = { from?: Date; to?: Date };
 type ActiveField = "pickup" | "dropoff";
+type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
 /* ----------------------------- Config ----------------------------- */
 const BAR_BG = "#F6D7C6";
 const DEEP_ORANGE = "#FF6A00";
 const DEFAULT_LOCATION = "Magaluf (Carrer Galeón 13)";
 
-/* -------------------------- Locale helper -------------------------- */
+/* -------------------------- Locale helpers -------------------------- */
 function getDocLocale() {
   if (typeof document === "undefined") return "en";
   return document.documentElement.lang || "en";
+}
+
+function getLocaleFromPath(pathname: string): Locale {
+  const first = pathname.split("/").filter(Boolean)[0] as Locale | undefined;
+  const supported: Locale[] = ["en", "es", "de", "fr", "sv", "it", "pt"];
+  return first && supported.includes(first) ? first : "en";
 }
 
 /* -------------------------- Date helpers -------------------------- */
@@ -131,6 +139,10 @@ function isExactMinDay(from: Date, to: Date) {
 export default function BookingBar() {
   const t = useTranslations("booking");
 
+  const router = useRouter();
+  const pathname = usePathname() || "/";
+  const currentLocale = useMemo(() => getLocaleFromPath(pathname), [pathname]);
+
   const TIME_OPTIONS = useMemo(() => buildTimeOptions(), []);
   const today = useMemo(() => startOfDay(new Date()), []);
   const tomorrow = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1), [today]);
@@ -160,12 +172,9 @@ export default function BookingBar() {
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeField, setActiveField] = useState<ActiveField>("pickup");
 
-  // ✅ For scroll calendar:
-  // - scrollStartMonth: first month rendered in the scroll list
-  // - viewMonth: month shown in the top heading (auto-updates while scrolling)
   const [scrollStartMonth, setScrollStartMonth] = useState(() => startOfMonth(initialFrom));
   const [viewMonth, setViewMonth] = useState(() => startOfMonth(initialFrom));
-  const [monthsAhead, setMonthsAhead] = useState(10); // initial months to render (keeps loading more while scrolling)
+  const [monthsAhead, setMonthsAhead] = useState(10);
 
   const [pickupTimeOpen, setPickupTimeOpen] = useState(false);
   const [dropoffTimeOpen, setDropoffTimeOpen] = useState(false);
@@ -176,7 +185,6 @@ export default function BookingBar() {
   const pickupTimePopRef = useRef<HTMLDivElement | null>(null);
   const dropoffTimePopRef = useRef<HTMLDivElement | null>(null);
 
-  // ✅ Calendar scroll refs
   const monthsScrollRef = useRef<HTMLDivElement | null>(null);
   const monthWrapRefs = useRef<Array<HTMLDivElement | null>>([]);
 
@@ -197,7 +205,6 @@ export default function BookingBar() {
     return () => window.removeEventListener("mousedown", onDown);
   }, []);
 
-  // ✅ dropoff time options (apply 24h rule when dropoff is next day)
   const DROP_TIME_OPTIONS = useMemo(() => {
     if (!range.from || !range.to) return TIME_OPTIONS;
 
@@ -210,7 +217,6 @@ export default function BookingBar() {
   }, [TIME_OPTIONS, range.from, range.to, pickupTime]);
 
   const monthsList = useMemo(() => {
-    // Render months continuously from scrollStartMonth forward
     return Array.from({ length: monthsAhead + 1 }, (_, i) => addMonths(scrollStartMonth, i));
   }, [scrollStartMonth, monthsAhead]);
 
@@ -219,7 +225,6 @@ export default function BookingBar() {
     setDropoffTimeOpen(false);
     setActiveField(which);
 
-    // ✅ When opening, anchor the scroll list around the relevant month
     const anchor = startOfMonth((which === "pickup" ? range.from : range.to) || range.from || today);
     setScrollStartMonth(anchor);
     setViewMonth(anchor);
@@ -332,24 +337,20 @@ export default function BookingBar() {
       dropoffTime,
     });
 
-    window.location.href = `/vehicles?${params.toString()}`;
+    // ✅ IMPORTANT FIX: keep locale in the URL
+    router.push(`/${currentLocale}/vehicles?${params.toString()}`);
   }
 
-  // ✅ Scroll behavior:
-  // - keeps loading next months when near bottom
-  // - updates the top heading month/year automatically based on scroll position
   function onMonthsScroll() {
     const el = monthsScrollRef.current;
     if (!el) return;
 
     const { scrollTop, scrollHeight, clientHeight } = el;
 
-    // load more months when near bottom
     if (scrollTop + clientHeight >= scrollHeight - 220) {
       setMonthsAhead((n) => n + 6);
     }
 
-    // update viewMonth (top heading) based on the month section closest to the top
     const targetY = scrollTop + 12;
     let bestIdx = 0;
 
@@ -365,21 +366,17 @@ export default function BookingBar() {
     if (m) setViewMonth(m);
   }
 
-  // when calendar opens, ensure scroll starts at top
   useEffect(() => {
     if (!calendarOpen) return;
 
-    // next frame so DOM is ready
     const t2 = window.setTimeout(() => {
       monthsScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
-      // set initial heading correctly
       setViewMonth(scrollStartMonth);
     }, 0);
 
     return () => window.clearTimeout(t2);
   }, [calendarOpen, scrollStartMonth]);
 
-  // keep original arrow buttons, but now they scroll the list (instead of changing month state)
   function scrollToMonth(index: number) {
     const el = monthsScrollRef.current;
     const node = monthWrapRefs.current[index];
@@ -387,7 +384,6 @@ export default function BookingBar() {
     el.scrollTo({ top: node.offsetTop - 8, behavior: "smooth" });
   }
 
-  // figure out current index inside the rendered list
   const currentIndex = useMemo(() => {
     const a = startOfMonth(scrollStartMonth).getTime();
     const b = startOfMonth(viewMonth).getTime();
@@ -398,7 +394,6 @@ export default function BookingBar() {
 
   return (
     <div className="relative z-50 w-full">
-      {/* Pickup pill */}
       <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
         <span className="inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur">
           <PinIcon />
@@ -407,7 +402,6 @@ export default function BookingBar() {
         </span>
       </div>
 
-      {/* ✅ Mobile: Pickup row + Dropoff row | ✅ Desktop unchanged */}
       <div
         className={[
           "grid grid-cols-1 gap-2",
@@ -416,7 +410,6 @@ export default function BookingBar() {
         ].join(" ")}
         style={{ background: BAR_BG }}
       >
-        {/* Row 1: Pickup Date + Pickup Time */}
         <div className="flex gap-2 lg:contents">
           <button
             type="button"
@@ -475,7 +468,6 @@ export default function BookingBar() {
           </div>
         </div>
 
-        {/* Row 2: Dropoff Date + Dropoff Time */}
         <div className="flex gap-2 lg:contents">
           <button
             type="button"
@@ -529,7 +521,6 @@ export default function BookingBar() {
           </div>
         </div>
 
-        {/* Search */}
         <button
           type="button"
           onClick={onSearch}
@@ -543,7 +534,6 @@ export default function BookingBar() {
         </button>
       </div>
 
-      {/* ✅ Calendar Modal (fixed for mobile view) */}
       {calendarOpen && (
         <div
           className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3"
@@ -560,7 +550,6 @@ export default function BookingBar() {
             ].join(" ")}
             style={{ background: BAR_BG }}
           >
-            {/* Header */}
             <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
               <div>
                 <div className="text-sm text-black/55 font-semibold">
@@ -580,7 +569,6 @@ export default function BookingBar() {
               </button>
             </div>
 
-            {/* ✅ Controls (kept same look) — month/year auto updates as you scroll */}
             <div className="flex items-center justify-between px-4 py-3">
               <button
                 type="button"
@@ -590,7 +578,6 @@ export default function BookingBar() {
                 ‹
               </button>
 
-              {/* ✅ AUTO month/year heading */}
               <div className="rounded-xl border border-black/15 px-4 py-2 font-extrabold text-black" style={{ background: BAR_BG }}>
                 {viewMonth.toLocaleString(getDocLocale(), { month: "long", year: "numeric" })}
               </div>
@@ -604,7 +591,6 @@ export default function BookingBar() {
               </button>
             </div>
 
-            {/* ✅ Months SCROLLER: keep scrolling to see next months (loads more automatically) */}
             <div
               ref={monthsScrollRef}
               onScroll={onMonthsScroll}
@@ -625,7 +611,6 @@ export default function BookingBar() {
               </div>
             </div>
 
-            {/* Footer */}
             <div className="flex items-center justify-between px-4 py-3 border-t border-black/10 bg-black/5">
               <button
                 type="button"
@@ -682,10 +667,11 @@ function MiniMonth({
 
   const weekdays = useMemo(() => {
     const locale = getDocLocale();
-    // Jan 1, 2024 is a Monday — perfect base for Mon→Sun in all locales
     const baseMonday = new Date(2024, 0, 1);
     return Array.from({ length: 7 }).map((_, i) =>
-      new Intl.DateTimeFormat(locale, { weekday: "short" }).format(new Date(baseMonday.getFullYear(), baseMonday.getMonth(), baseMonday.getDate() + i))
+      new Intl.DateTimeFormat(locale, { weekday: "short" }).format(
+        new Date(baseMonday.getFullYear(), baseMonday.getMonth(), baseMonday.getDate() + i)
+      )
     );
   }, []);
 
