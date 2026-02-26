@@ -12,12 +12,12 @@ type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 function getOrangeWords(locale: Locale) {
   const map: Record<Locale, string[]> = {
     en: ["Scooter", "e-Bike", "Mallorca"],
-    es: ["Scooter", "e-Bike", "Mallorca"],
-    de: ["Scooter", "e-Bike", "Mallorca"],
-    fr: ["Scooter", "e-Bike", "Majorque"],
-    sv: ["Scooter", "e-Bike", "Mallorca"],
-    it: ["Scooter", "e-Bike", "Maiorca"],
-    pt: ["Scooter", "e-Bike", "Maiorca"],
+    es: ["Moto", "Bici-Electrica", "Mallorca"],
+    de: ["Scooter", "Elektrische","fiets", "Mallorca"],
+    fr: ["Scooter", "Vélo", "électrique", "Majorque"],
+    sv: ["Scooter", "Elcykel", "Mallorca"],
+    it: ["Scooter", "Bicicletta","elettrica", "Maiorca"],
+    pt: ["Scooter", "Bicicleta","elétrica", "Maiorca"],
   };
   return map[locale] ?? map.en;
 }
@@ -161,7 +161,7 @@ export default function HomeClient() {
                 className={[
                   "transition-all duration-700 ease-out",
                   "mt-0 sm:mt-0",
-                  introOn ? "opacity-100 translate-y-[-70px] " : "opacity-0 translate-y-4",
+                  introOn ? "opacity-100 translate-y-[-120px] " : "opacity-0 translate-y-4",
                 ].join(" ")}
               >
                 <h1 className="font-serif text-[32px] leading-[1.10] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">
@@ -190,7 +190,7 @@ export default function HomeClient() {
                   introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
                 ].join(" ")}
               >
-                <div className="scale-[0.88] origin-top translate-y-[-100px] md:scale-100 md:translate-y-[-250px] md:origin-center">
+                <div className="scale-[0.88] origin-top translate-y-[-170px] md:scale-100 md:translate-y-[-250px] md:origin-center">
                   <BookingBar />
                 </div>
               </div>

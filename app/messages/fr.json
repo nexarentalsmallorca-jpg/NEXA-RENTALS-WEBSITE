@@ -7,7 +7,7 @@
     "about": "À propos de NEXA"
   },
   "hero": {
-    "title": "Louez un scooter et un e-bike\nà Majorque",
+    "title": "Louez Scooter et Vélo électrique\nà Majorque",
     "subtitle": "Réservez en quelques secondes"
   },
   "booking": {
@@ -31,7 +31,7 @@
     "daysPlural": "jours",
     "discountPerDay": "remise /jour",
     "chooseThenTap": "Choisissez un véhicule — puis appuyez sur",
-    "reserve": "Réserver",
+    "reserve": "Réserver maintenant",
     "changeDates": "Changer les dates",
     "freeHelmet": "Casque gratuit inclus",
     "assistance247": "Assistance 24/7",

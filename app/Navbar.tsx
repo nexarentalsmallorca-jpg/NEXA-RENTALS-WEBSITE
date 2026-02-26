@@ -116,20 +116,20 @@ export default function Navbar() {
   }, [mobileOpen]);
 
   const onSelectLocale = (nextLocale: Locale) => {
-  setLangOpen(false);
-  setMobileOpen(false);
+    setLangOpen(false);
+    setMobileOpen(false);
 
-  const nextPath = replaceLocaleInPath(pathname, currentLocale, nextLocale);
-  const qs = searchParams?.toString() || "";
-  const finalPath = qs ? `${nextPath}?${qs}` : nextPath;
+    const nextPath = replaceLocaleInPath(pathname, currentLocale, nextLocale);
+    const qs = searchParams?.toString() || "";
+    const finalPath = qs ? `${nextPath}?${qs}` : nextPath;
 
-  router.push(finalPath);
+    router.push(finalPath);
 
-  // ✅ Force Next.js to re-render translations
-  setTimeout(() => {
-    router.refresh();
-  }, 50);
-};
+    // ✅ Force Next.js to re-render translations
+    setTimeout(() => {
+      router.refresh();
+    }, 50);
+  };
 
   return (
     <>
@@ -277,12 +277,14 @@ export default function Navbar() {
                   <a className="nav-link" href={blogsHref}>
                     {t("blogs")}
                   </a>
-                  <a className="nav-link" href={contactHref}>
-                    {t("contact")}
-                  </a>
                   <a className="nav-link" href={aboutHref}>
                     {t("about")}
                   </a>
+
+                  {/* CONTACT as minimal luxury CTA (last) */}
+                  <a className="nav-link nav-cta" href={contactHref}>
+  CONTACT US
+</a>
                 </nav>
 
                 {/* FAR RIGHT: Language dropdown */}
@@ -290,7 +292,7 @@ export default function Navbar() {
                   <button
                     type="button"
                     onClick={() => setLangOpen((v) => !v)}
-                    className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-white/90 backdrop-blur-sm hover:bg-white/10"
+                    className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-[#1b1f27]/75 px-3 py-2 text-xs text-white/90 backdrop-blur-sm hover:bg-[#232a35]/80 hover:border-white/20"
                     aria-expanded={langOpen}
                     aria-label="Select language"
                   >
@@ -338,7 +340,6 @@ export default function Navbar() {
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </header>
@@ -426,6 +427,127 @@ export default function Navbar() {
           </nav>
         </aside>
       </div>
+
+      {/* ULTRA LUXURY NAV LINK FONT + HOVER/CLICK (DESKTOP NAV ONLY) */}
+      <style jsx global>{`
+        .nav-link {
+          position: relative;
+          display: inline-flex;
+          align-items: center;
+          padding: 10px 2px;
+          font-family: "Cinzel", "Playfair Display", "Cormorant Garamond", "Didot", "Bodoni MT", serif;
+          font-weight: 600;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: rgba(255, 255, 255, 0.94);
+          transition: transform 220ms ease, color 220ms ease, text-shadow 220ms ease, opacity 220ms ease,
+            filter 220ms ease, background-color 220ms ease, box-shadow 220ms ease, border-color 220ms ease;
+          will-change: transform;
+          -webkit-tap-highlight-color: transparent;
+        }
+
+        .nav-link::after {
+          content: "";
+          position: absolute;
+          left: 50%;
+          bottom: 1px;
+          width: 0%;
+          height: 2px;
+          transform: translateX(-50%);
+          background: linear-gradient(
+            90deg,
+            rgba(255, 255, 255, 0),
+            rgba(255, 163, 41, 1),
+            rgba(255, 255, 255, 0)
+          );
+          opacity: 0;
+          filter: drop-shadow(0 0 10px rgba(255, 163, 41, 0.55));
+          transition: width 260ms ease, opacity 260ms ease;
+        }
+
+        .nav-link:hover {
+          color: rgba(255, 255, 255, 1);
+          transform: translateY(-1px);
+          text-shadow: 0 0 22px rgba(255, 163, 41, 0.32), 0 0 10px rgba(255, 255, 255, 0.12);
+          filter: brightness(1.08);
+        }
+
+        .nav-link:hover::after {
+          width: 125%;
+          opacity: 1;
+        }
+
+        .nav-link:active {
+          transform: translateY(0px) scale(0.965);
+          text-shadow: 0 0 14px rgba(255, 163, 41, 0.26);
+          filter: brightness(1.02);
+        }
+
+        .nav-link:focus-visible {
+          outline: none;
+          text-shadow: 0 0 22px rgba(255, 163, 41, 0.34), 0 0 10px rgba(255, 255, 255, 0.14);
+        }
+
+        .nav-link:focus-visible::after {
+          width: 125%;
+          opacity: 1;
+        }
+
+        /* PREMIUM GREY LUXURY CTA */
+.nav-cta {
+  padding: 10px 18px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+
+  /* premium gradient grey */
+  background: linear-gradient(
+    180deg,
+    rgba(60, 64, 72, 0.85) 0%,
+    rgba(38, 41, 48, 0.9) 55%,
+    rgba(22, 24, 29, 0.95) 100%
+  );
+
+  color: rgba(255, 255, 255, 0.96);
+  letter-spacing: 0.16em;
+
+  backdrop-filter: blur(10px);
+
+  box-shadow:
+    0 10px 26px rgba(0, 0, 0, 0.35),
+    inset 0 1px 0 rgba(255, 255, 255, 0.08),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* remove underline glow */
+.nav-cta::after {
+  display: none;
+}
+
+.nav-cta:hover {
+  transform: translateY(-1px);
+  border-color: rgba(255, 163, 41, 0.45);
+
+  box-shadow:
+    0 16px 36px rgba(0, 0, 0, 0.45),
+    0 0 22px rgba(255, 163, 41, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+
+  color: #fff;
+}
+
+.nav-cta:active {
+  transform: translateY(0px) scale(0.985);
+}
+
+.nav-cta:focus-visible {
+  outline: none;
+  box-shadow:
+    0 0 0 3px rgba(255, 163, 41, 0.25),
+    0 14px 34px rgba(0, 0, 0, 0.35);
+}
+      `}</style>
     </>
   );
 }
