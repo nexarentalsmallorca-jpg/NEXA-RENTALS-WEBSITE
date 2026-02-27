@@ -217,18 +217,32 @@ export default function CheckoutClient() {
     router.push(`/${locale}/vehicles?${sp.toString()}`);
   };
 
-  const payNowAction = () => {
-    alert(
-      `${t("stripeReady")}\n\n${t("onlineToday")}: €${money(payNow)} (${t(
-        "percent50"
-      )})\n${t("payAtPickup")}: €${money(payPickup)} (${t(
-        "percent50"
-      )})\n${t("depositAtPickup")}: €${deposit} (${t(
-        "cashCard"
-      )})\n\n${t("contractReadySaved")}`
-    );
-  };
+  const payNowAction = async () => {
+  if (!canPay) return;
 
+  // amount Stripe needs is in cents
+  const amountCents = Math.round(payNow * 100);
+
+  const res = await fetch("/api/create-checkout", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      amount: amountCents,
+      name: `NEXA Deposit 50% — ${vehicle.name} (${rentalDays} day${rentalDays > 1 ? "s" : ""})`,
+      // optional: send extra info if you want later for webhooks/logs
+      // metadata: { vehicleId, pickupLocation, pickupTime, dropoffTime, from: from?.toISOString() ?? "", to: to?.toISOString() ?? "" }
+    }),
+  });
+
+  const data = await res.json();
+
+  if (!res.ok || !data?.url) {
+    alert("Payment error. Please try again.");
+    return;
+  }
+
+  window.location.href = data.url;
+};
   return (
     <div className="min-h-screen text-white" style={{ background: BG }}>
       {/* subtle premium background */}

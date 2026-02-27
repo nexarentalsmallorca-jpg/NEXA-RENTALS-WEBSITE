@@ -216,5 +216,104 @@
       "fiftyPercent": "50%",
       "contractReadySaved": "Contract-ready details saved."
     }
+  },
+  
+  "featuredFleet": {
+    "header": {
+      "kicker": "Featured Fleet",
+      "title": "Pick your ride",
+      "subtitle": "Premium picks — choose dates and rent instantly.",
+      "viewAll": "View all vehicles"
+    },
+    "badges": {
+      "bestSeller": "Best Seller",
+      "comfortPick": "Comfort Pick",
+      "practical": "Practical",
+      "greatValue": "Great Value"
+    },
+    "vehicleTypes": {
+      "Scooter": "Scooter",
+      "E-Bike": "E-Bike"
+    },
+    "pricing": {
+      "from": "from",
+      "perDay": "/day"
+    },
+    "cta": {
+      "tapToRent": "Tap to rent",
+      "rentIt": "Rent it"
+    },
+    "modal": {
+      "title": "SELECT DATES",
+      "subtitle": "Choose pickup & drop-off — then proceed to checkout."
+    },
+    "fields": {
+      "pickupDate": "Pick-up Date",
+      "dropoffDate": "Drop-off Date",
+      "time": "Time"
+    },
+    "dropdowns": {
+      "pickupTime": "Pick-up time",
+      "dropoffTime": "Drop-off time"
+    },
+    "buttons": {
+      "back": "Back",
+      "proceed": "Proceed to checkout"
+    },
+    "calendar": {
+      "selectPickup": "Select pick-up date",
+      "selectDropoff": "Select drop-off date",
+      "clear": "Clear",
+      "done": "Done"
+    },
+    "months": {
+      "january": "January",
+      "february": "February",
+      "march": "March",
+      "april": "April",
+      "may": "May",
+      "june": "June",
+      "july": "July",
+      "august": "August",
+      "september": "September",
+      "october": "October",
+      "november": "November",
+      "december": "December"
+    },
+    "weekdays": {
+      "mon": "Mon",
+      "tue": "Tue",
+      "wed": "Wed",
+      "thu": "Thu",
+      "fri": "Fri",
+      "sat": "Sat",
+      "sun": "Sun"
+    },
+    "errors": {
+      "missingDates": "Please select pickup and drop-off dates."
+    }
+  },
+  
+  "shopSection": {
+    "imageAlt": "NEXA shop",
+    "titleLine1": "Prefer renting in person?",
+    "titleLine2": "Visit our shop in Magaluf",
+    "typed": "Visit our shop in Magaluf and rent directly in person — no booking needed.",
+    "info": {
+      "pickupLocationTitle": "Pickup Location",
+      "pickupLocationValue": "Magaluf (Carrer Galeón 13)",
+      "openingHoursTitle": "Opening Hours",
+      "openingHoursValue": "Daily • 10:00 – 22:00"
+    },
+    "bring": {
+      "title": "What to bring",
+      "item1": "Valid ID (passport or residence card)",
+      "item2": "Driving license (if required for your vehicle)",
+      "item3": "Payment method (card/cash depending on availability)"
+    },
+    "buttons": {
+      "directions": "Get Directions",
+      "whatsapp": "WhatsApp Us"
+    }
   }
 }

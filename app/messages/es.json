@@ -216,5 +216,104 @@
       "fiftyPercent": "50%",
       "contractReadySaved": "Datos guardados para el contrato."
     }
+  },
+  
+  "featuredFleet": {
+    "header": {
+      "kicker": "Flota destacada",
+      "title": "Elige tu vehículo",
+      "subtitle": "Selección premium — elige fechas y alquila al instante.",
+      "viewAll": "Ver todos los vehículos"
+    },
+    "badges": {
+      "bestSeller": "Más vendido",
+      "comfortPick": "Más cómodo",
+      "practical": "Práctico",
+      "greatValue": "Gran relación calidad-precio"
+    },
+    "vehicleTypes": {
+      "Scooter": "Scooter",
+      "E-Bike": "Bici eléctrica"
+    },
+    "pricing": {
+      "from": "desde",
+      "perDay": "/día"
+    },
+    "cta": {
+      "tapToRent": "Toca para alquilar",
+      "rentIt": "Alquilar"
+    },
+    "modal": {
+      "title": "SELECCIONAR FECHAS",
+      "subtitle": "Elige recogida y devolución — y continúa al checkout."
+    },
+    "fields": {
+      "pickupDate": "Fecha de recogida",
+      "dropoffDate": "Fecha de devolución",
+      "time": "Hora"
+    },
+    "dropdowns": {
+      "pickupTime": "Hora de recogida",
+      "dropoffTime": "Hora de devolución"
+    },
+    "buttons": {
+      "back": "Atrás",
+      "proceed": "Ir al checkout"
+    },
+    "calendar": {
+      "selectPickup": "Selecciona la fecha de recogida",
+      "selectDropoff": "Selecciona la fecha de devolución",
+      "clear": "Borrar",
+      "done": "Listo"
+    },
+    "months": {
+      "january": "Enero",
+      "february": "Febrero",
+      "march": "Marzo",
+      "april": "Abril",
+      "may": "Mayo",
+      "june": "Junio",
+      "july": "Julio",
+      "august": "Agosto",
+      "september": "Septiembre",
+      "october": "Octubre",
+      "november": "Noviembre",
+      "december": "Diciembre"
+    },
+    "weekdays": {
+      "mon": "Lun",
+      "tue": "Mar",
+      "wed": "Mié",
+      "thu": "Jue",
+      "fri": "Vie",
+      "sat": "Sáb",
+      "sun": "Dom"
+    },
+    "errors": {
+      "missingDates": "Por favor selecciona las fechas de recogida y devolución."
+    }
+  },
+  
+  "shopSection": {
+    "imageAlt": "Tienda NEXA",
+    "titleLine1": "¿Prefieres alquilar en persona?",
+    "titleLine2": "Visita nuestra tienda en Magaluf",
+    "typed": "Visita nuestra tienda en Magaluf y alquila directamente en persona — no necesitas reserva.",
+    "info": {
+      "pickupLocationTitle": "Lugar de recogida",
+      "pickupLocationValue": "Magaluf (Carrer Galeón 13)",
+      "openingHoursTitle": "Horario de apertura",
+      "openingHoursValue": "Diario • 10:00 – 22:00"
+    },
+    "bring": {
+      "title": "Qué debes traer",
+      "item1": "Documento de identidad válido (pasaporte o tarjeta de residencia)",
+      "item2": "Permiso de conducir (si es necesario para tu vehículo)",
+      "item3": "Método de pago (tarjeta/efectivo según disponibilidad)"
+    },
+    "buttons": {
+      "directions": "Cómo llegar",
+      "whatsapp": "Escríbenos por WhatsApp"
+    }
   }
 }

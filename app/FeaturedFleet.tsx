@@ -2,6 +2,7 @@
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import { useTranslations } from "next-intl";
 
 /* ============================== CONFIG ============================== */
 const ORANGE = "#FF7A00";
@@ -147,6 +148,7 @@ function timeToMinutes(t: string) {
 
 /* ============================== UI ============================== */
 export default function FeaturedFleet() {
+  const t = useTranslations("featuredFleet");
   const router = useRouter();
   const sp = useSearchParams();
 
@@ -230,13 +232,13 @@ export default function FeaturedFleet() {
 
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      const t = e.target as Node;
+      const tnode = e.target as Node;
 
-      if (pickupTimePopRef.current && pickupTimePopRef.current.contains(t)) return;
-      if (dropoffTimePopRef.current && dropoffTimePopRef.current.contains(t)) return;
+      if (pickupTimePopRef.current && pickupTimePopRef.current.contains(tnode)) return;
+      if (dropoffTimePopRef.current && dropoffTimePopRef.current.contains(tnode)) return;
 
-      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(t)) return;
-      if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(t)) return;
+      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(tnode)) return;
+      if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(tnode)) return;
 
       setPickupTimeOpen(false);
       setDropoffTimeOpen(false);
@@ -348,6 +350,21 @@ export default function FeaturedFleet() {
     setDropoffTimeOpen(false);
   }
 
+  function badgeToKey(badge: string) {
+    switch (badge) {
+      case "Best Seller":
+        return "badges.bestSeller";
+      case "Comfort Pick":
+        return "badges.comfortPick";
+      case "Practical":
+        return "badges.practical";
+      case "Great Value":
+        return "badges.greatValue";
+      default:
+        return null;
+    }
+  }
+
   function proceedToCheckout() {
     setCalendarOpen(false);
     setPickupTimeOpen(false);
@@ -356,7 +373,7 @@ export default function FeaturedFleet() {
     if (!selected) return;
 
     if (!range.from || !range.to) {
-      setErr("Please select pickup and drop-off dates.");
+      setErr(t("errors.missingDates"));
       setActiveField(range.from ? "dropoff" : "pickup");
       setCalendarOpen(true);
       return;
@@ -408,18 +425,18 @@ export default function FeaturedFleet() {
                 color: "transparent",
               }}
             >
-              Featured Fleet
+              {t("header.kicker")}
             </div>
 
             <h2 className="mt-3 text-2xl md:text-3xl font-black tracking-tight" style={{ fontFamily: "var(--font-heading)" }}>
-              Pick your ride
+              {t("header.title")}
             </h2>
 
-            <p className="mt-2 text-white/65 max-w-2xl">Premium picks — choose dates and rent instantly.</p>
+            <p className="mt-2 text-white/65 max-w-2xl">{t("header.subtitle")}</p>
           </div>
 
           <button onClick={goToVehicles} className="rounded-xl px-6 py-3 text-sm font-black text-black hover:opacity-90 transition" style={{ background: ORANGE }}>
-            View all vehicles
+            {t("header.viewAll")}
           </button>
         </div>
       </div>
@@ -432,7 +449,14 @@ export default function FeaturedFleet() {
             const show = idx <= activeIndex;
             const isPiaggio = v.id === "s2";
 
-            const badgeText = isPiaggio ? "Best Seller" : v.badge;
+            const badgeText = isPiaggio
+              ? t("badges.bestSeller")
+              : (() => {
+                  const k = badgeToKey(v.badge);
+                  return k ? t(k as any) : v.badge;
+                })();
+
+            const typeLabel = t(`vehicleTypes.${v.type}` as any);
 
             return (
               <button
@@ -500,21 +524,21 @@ export default function FeaturedFleet() {
 
                   <div className="mt-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[11px] font-bold tracking-wide text-white/55">{v.type}</div>
+                      <div className="text-[11px] font-bold tracking-wide text-white/55">{typeLabel}</div>
                       <div className="truncate text-sm md:text-[15px] font-black text-white">{v.name}</div>
                     </div>
 
                     <div className="shrink-0 text-right">
-                      <div className="text-[11px] font-bold text-white/55">from</div>
+                      <div className="text-[11px] font-bold text-white/55">{t("pricing.from")}</div>
                       <div className="text-sm font-black" style={{ color: ORANGE }}>
                         €{v.pricePerDay}
-                        <span className="text-xs text-white/45">/day</span>
+                        <span className="text-xs text-white/45">{t("pricing.perDay")}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between">
-                    <div className="text-xs text-white/55">Tap to rent</div>
+                    <div className="text-xs text-white/55">{t("cta.tapToRent")}</div>
                     <div
                       className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black text-black transition group-hover:brightness-110"
                       style={{
@@ -522,7 +546,7 @@ export default function FeaturedFleet() {
                         boxShadow: isPiaggio ? "0 18px 46px rgba(255,122,0,0.26)" : "0 16px 40px rgba(255,122,0,0.16)",
                       }}
                     >
-                      Rent it
+                      {t("cta.rentIt")}
                       <ArrowIcon />
                     </div>
                   </div>
@@ -536,6 +560,13 @@ export default function FeaturedFleet() {
         <div className="hidden lg:grid grid-cols-4 gap-8">
           {items.map((v, idx) => {
             const show = idx <= activeIndex;
+
+            const badgeText = (() => {
+              const k = badgeToKey(v.badge);
+              return k ? t(k as any) : v.badge;
+            })();
+
+            const typeLabel = t(`vehicleTypes.${v.type}` as any);
 
             return (
               <button
@@ -582,7 +613,7 @@ export default function FeaturedFleet() {
                         boxShadow: "0 0 18px rgba(255,122,0,0.35)",
                       }}
                     />
-                    {v.badge}
+                    {badgeText}
                   </div>
 
                   <div className="relative mx-auto mt-3 h-[220px] w-full">
@@ -597,21 +628,21 @@ export default function FeaturedFleet() {
 
                   <div className="mt-4 flex items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <div className="text-[11px] font-bold tracking-wide text-white/55">{v.type}</div>
+                      <div className="text-[11px] font-bold tracking-wide text-white/55">{typeLabel}</div>
                       <div className="truncate text-sm md:text-[15px] font-black text-white">{v.name}</div>
                     </div>
 
                     <div className="shrink-0 text-right">
-                      <div className="text-[11px] font-bold text-white/55">from</div>
+                      <div className="text-[11px] font-bold text-white/55">{t("pricing.from")}</div>
                       <div className="text-sm font-black" style={{ color: ORANGE }}>
                         €{v.pricePerDay}
-                        <span className="text-xs text-white/45">/day</span>
+                        <span className="text-xs text-white/45">{t("pricing.perDay")}</span>
                       </div>
                     </div>
                   </div>
 
                   <div className="mt-4 flex items-center justify-between">
-                    <div className="text-xs text-white/55">Tap to rent</div>
+                    <div className="text-xs text-white/55">{t("cta.tapToRent")}</div>
                     <div
                       className="inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-black text-black transition group-hover:brightness-110"
                       style={{
@@ -619,7 +650,7 @@ export default function FeaturedFleet() {
                         boxShadow: "0 16px 40px rgba(255,122,0,0.16)",
                       }}
                     >
-                      Rent it
+                      {t("cta.rentIt")}
                       <ArrowIcon />
                     </div>
                   </div>
@@ -655,9 +686,9 @@ export default function FeaturedFleet() {
             <div className="relative p-5 md:p-6">
               <div className="flex items-start justify-between gap-4">
                 <div className="min-w-0">
-                  <div className="text-xs font-bold tracking-wide text-white/60">SELECT DATES</div>
+                  <div className="text-xs font-bold tracking-wide text-white/60">{t("modal.title")}</div>
                   <div className="mt-1 text-lg md:text-xl font-black text-white">{selected?.name}</div>
-                  <div className="mt-1 text-sm text-white/60">Choose pickup & drop-off — then proceed to checkout.</div>
+                  <div className="mt-1 text-sm text-white/60">{t("modal.subtitle")}</div>
                 </div>
 
                 <button
@@ -694,7 +725,7 @@ export default function FeaturedFleet() {
                     <div className="flex items-center gap-3">
                       <CalendarMini />
                       <div className="leading-tight">
-                        <div className="text-[11px] font-semibold text-black/65">Pick-up Date</div>
+                        <div className="text-[11px] font-semibold text-black/65">{t("fields.pickupDate")}</div>
                         <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.from)}</div>
                       </div>
                     </div>
@@ -712,7 +743,7 @@ export default function FeaturedFleet() {
                       <div className="flex items-center gap-3">
                         <ClockMini />
                         <div className="leading-tight">
-                          <div className="text-[11px] font-semibold text-black/65">Time</div>
+                          <div className="text-[11px] font-semibold text-black/65">{t("fields.time")}</div>
                           <div className="text-[13px] font-extrabold text-black">{formatTimeLabel(pickupTime)}</div>
                         </div>
                       </div>
@@ -722,13 +753,13 @@ export default function FeaturedFleet() {
                     {pickupTimeOpen && (
                       <div ref={pickupTimePopRef}>
                         <TimeDropdown
-                          title="Pick-up time"
+                          title={t("dropdowns.pickupTime")}
                           value={pickupTime}
                           options={TIME_OPTIONS}
-                          onSelect={(t) => {
-                            setPickupTime(t);
+                          onSelect={(time) => {
+                            setPickupTime(time);
                             if (range.from && range.to && isExactMinDay(range.from, range.to)) {
-                              if (timeToMinutes(dropoffTime) < timeToMinutes(t)) setDropoffTime(t);
+                              if (timeToMinutes(dropoffTime) < timeToMinutes(time)) setDropoffTime(time);
                             }
                             setPickupTimeOpen(false);
                           }}
@@ -750,7 +781,7 @@ export default function FeaturedFleet() {
                     <div className="flex items-center gap-3">
                       <CalendarMini />
                       <div className="leading-tight">
-                        <div className="text-[11px] font-semibold text-black/65">Drop-off Date</div>
+                        <div className="text-[11px] font-semibold text-black/65">{t("fields.dropoffDate")}</div>
                         <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.to)}</div>
                       </div>
                     </div>
@@ -768,7 +799,7 @@ export default function FeaturedFleet() {
                       <div className="flex items-center gap-3">
                         <ClockMini />
                         <div className="leading-tight">
-                          <div className="text-[11px] font-semibold text-black/65">Time</div>
+                          <div className="text-[11px] font-semibold text-black/65">{t("fields.time")}</div>
                           <div className="text-[13px] font-extrabold text-black">{formatTimeLabel(dropoffTime)}</div>
                         </div>
                       </div>
@@ -778,11 +809,11 @@ export default function FeaturedFleet() {
                     {dropoffTimeOpen && (
                       <div ref={dropoffTimePopRef}>
                         <TimeDropdown
-                          title="Drop-off time"
+                          title={t("dropdowns.dropoffTime")}
                           value={dropoffTime}
                           options={DROP_TIME_OPTIONS}
-                          onSelect={(t) => {
-                            setDropoffTime(t);
+                          onSelect={(time) => {
+                            setDropoffTime(time);
                             setDropoffTimeOpen(false);
                           }}
                           onClose={() => setDropoffTimeOpen(false)}
@@ -817,7 +848,7 @@ export default function FeaturedFleet() {
                     boxShadow: "inset 0 1px 0 rgba(255,255,255,0.05)",
                   }}
                 >
-                  Back
+                  {t("buttons.back")}
                 </button>
 
                 <button
@@ -829,7 +860,7 @@ export default function FeaturedFleet() {
                     boxShadow: "0 18px 44px rgba(255,122,0,0.20)",
                   }}
                 >
-                  Proceed to checkout
+                  {t("buttons.proceed")}
                 </button>
               </div>
             </div>
@@ -855,7 +886,7 @@ export default function FeaturedFleet() {
                 <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
                   <div>
                     <div className="text-sm text-black/55 font-semibold">
-                      {activeField === "pickup" ? "Select pick-up date" : "Select drop-off date"}
+                      {activeField === "pickup" ? t("calendar.selectPickup") : t("calendar.selectDropoff")}
                     </div>
                     <div className="text-base font-extrabold text-black">
                       {fmtLabel(range.from)} → {fmtLabel(range.to)}
@@ -896,7 +927,7 @@ export default function FeaturedFleet() {
 
                 <div className="flex items-center justify-between px-4 py-3 border-t border-black/10 bg-black/5">
                   <button type="button" onClick={clearDates} className="text-sm font-extrabold text-black/70 hover:text-black transition">
-                    Clear
+                    {t("calendar.clear")}
                   </button>
 
                   <button
@@ -905,7 +936,7 @@ export default function FeaturedFleet() {
                     className="rounded-xl px-5 py-2 font-extrabold text-black hover:brightness-95 transition"
                     style={{ background: DEEP_ORANGE }}
                   >
-                    Done
+                    {t("calendar.done")}
                   </button>
                 </div>
               </div>
@@ -938,9 +969,24 @@ function MonthYearPicker({
   viewMonth: Date;
   setViewMonth: React.Dispatch<React.SetStateAction<Date>>;
 }) {
+  const t = useTranslations("featuredFleet");
+
   const months = useMemo(
-    () => ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
-    []
+    () => [
+      t("months.january"),
+      t("months.february"),
+      t("months.march"),
+      t("months.april"),
+      t("months.may"),
+      t("months.june"),
+      t("months.july"),
+      t("months.august"),
+      t("months.september"),
+      t("months.october"),
+      t("months.november"),
+      t("months.december"),
+    ],
+    [t]
   );
 
   const years = useMemo(() => {
@@ -963,7 +1009,7 @@ function MonthYearPicker({
         style={{ background: BAR_BG }}
       >
         {months.map((m, idx) => (
-          <option key={m} value={idx}>
+          <option key={`${m}-${idx}`} value={idx}>
             {m}
           </option>
         ))}
@@ -1000,16 +1046,27 @@ function MiniMonth({
   onPick: (d: Date) => void;
   activeField: ActiveField;
 }) {
+  const t = useTranslations("featuredFleet");
   const cells = useMemo(() => buildMonthGrid(month), [month]);
 
   const minDropDay = activeField === "dropoff" && range.from ? minDropoffDate(range.from) : null;
 
+  const monthLabel = month.toLocaleString(undefined, { month: "long", year: "numeric" });
+
   return (
     <div className="rounded-xl border border-black/10 p-3" style={{ background: BAR_BG }}>
-      <div className="mb-2 text-sm font-extrabold text-black">{month.toLocaleString(undefined, { month: "long", year: "numeric" })}</div>
+      <div className="mb-2 text-sm font-extrabold text-black">{monthLabel}</div>
 
       <div className="grid grid-cols-7 text-[11px] text-black/55 mb-2 font-semibold">
-        {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => (
+        {[
+          t("weekdays.mon"),
+          t("weekdays.tue"),
+          t("weekdays.wed"),
+          t("weekdays.thu"),
+          t("weekdays.fri"),
+          t("weekdays.sat"),
+          t("weekdays.sun"),
+        ].map((w) => (
           <div key={w} className="py-1 text-center">
             {w}
           </div>

@@ -1,7 +1,7 @@
 "use client";
 
 import React from "react";
-
+import Link from "next/link";
 export default function NexaFooter() {
   const year = new Date().getFullYear();
 
@@ -140,12 +140,30 @@ export default function NexaFooter() {
           </p>
 
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs md:justify-end" style={{ color: THEME.textDim }}>
-            <a href="/terms" className="transition hover:text-white">Terms & Conditions</a>
-            <a href="/privacy" className="transition hover:text-white">Privacy Policy</a>
-            <a href="/deposit-policy" className="transition hover:text-white">Deposit Policy</a>
-            <a href="/refunds" className="transition hover:text-white">Refund Policy</a>
-            <a href="/cookies" className="transition hover:text-white">Cookies</a>
-          </div>
+  <Link href="/terms" className="transition hover:text-white">
+    Terms & Conditions
+  </Link>
+
+  <Link href="/privacy" className="transition hover:text-white">
+    Privacy Policy
+  </Link>
+
+  <Link href="/deposit-policy" className="transition hover:text-white">
+    Deposit Policy
+  </Link>
+
+  <Link href="/refund-policy" className="transition hover:text-white">
+    Refund Policy
+  </Link>
+
+  <Link href="/cookies" className="transition hover:text-white">
+    Cookies
+  </Link>
+
+  <Link href="/about" className="transition hover:text-white">
+    About NEXA
+  </Link>
+</div>
         </div>
       </div>
     </footer>

@@ -164,8 +164,7 @@ export default function HomeClient() {
                   introOn ? "opacity-100 translate-y-[-120px] " : "opacity-0 translate-y-4",
                 ].join(" ")}
               >
-                <h1 className="font-serif text-[32px] leading-[1.10] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">
-                  {typedLines
+<h1 className="font-playfair text-[35px] leading-[1.08] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">                  {typedLines
                     .filter((l) => l.trim().length > 0)
                     .map((line, idx, arr) => (
                       <div key={idx} className="whitespace-pre-wrap">

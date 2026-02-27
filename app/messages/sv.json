@@ -216,5 +216,104 @@
       "fiftyPercent": "50%",
       "contractReadySaved": "Uppgifter sparade för kontrakt."
     }
+  },
+  
+  "featuredFleet": {
+    "header": {
+      "kicker": "Utvald flotta",
+      "title": "Välj din hoj",
+      "subtitle": "Premiumval — välj datum och hyr direkt.",
+      "viewAll": "Se alla fordon"
+    },
+    "badges": {
+      "bestSeller": "Bästsäljare",
+      "comfortPick": "Komfortval",
+      "practical": "Praktisk",
+      "greatValue": "Prisvärt"
+    },
+    "vehicleTypes": {
+      "Scooter": "Scooter",
+      "E-Bike": "Elcykel"
+    },
+    "pricing": {
+      "from": "från",
+      "perDay": "/dag"
+    },
+    "cta": {
+      "tapToRent": "Tryck för att hyra",
+      "rentIt": "Hyr"
+    },
+    "modal": {
+      "title": "VÄLJ DATUM",
+      "subtitle": "Välj upphämtning och återlämning — gå sedan till kassan."
+    },
+    "fields": {
+      "pickupDate": "Upphämtningsdatum",
+      "dropoffDate": "Återlämningsdatum",
+      "time": "Tid"
+    },
+    "dropdowns": {
+      "pickupTime": "Upphämtningstid",
+      "dropoffTime": "Återlämningstid"
+    },
+    "buttons": {
+      "back": "Tillbaka",
+      "proceed": "Gå till kassan"
+    },
+    "calendar": {
+      "selectPickup": "Välj upphämtningsdatum",
+      "selectDropoff": "Välj återlämningsdatum",
+      "clear": "Rensa",
+      "done": "Klar"
+    },
+    "months": {
+      "january": "Januari",
+      "february": "Februari",
+      "march": "Mars",
+      "april": "April",
+      "may": "Maj",
+      "june": "Juni",
+      "july": "Juli",
+      "august": "Augusti",
+      "september": "September",
+      "october": "Oktober",
+      "november": "November",
+      "december": "December"
+    },
+    "weekdays": {
+      "mon": "Mån",
+      "tue": "Tis",
+      "wed": "Ons",
+      "thu": "Tor",
+      "fri": "Fre",
+      "sat": "Lör",
+      "sun": "Sön"
+    },
+    "errors": {
+      "missingDates": "Vänligen välj datum för upphämtning och återlämning."
+    }
+  },
+  
+  "shopSection": {
+    "imageAlt": "NEXA-butik",
+    "titleLine1": "Föredrar du att hyra på plats?",
+    "titleLine2": "Besök vår butik i Magaluf",
+    "typed": "Besök vår butik i Magaluf och hyr direkt på plats — ingen bokning behövs.",
+    "info": {
+      "pickupLocationTitle": "Upphämtningsplats",
+      "pickupLocationValue": "Magaluf (Carrer Galeón 13)",
+      "openingHoursTitle": "Öppettider",
+      "openingHoursValue": "Dagligen • 10:00 – 22:00"
+    },
+    "bring": {
+      "title": "Ta med",
+      "item1": "Giltig ID-handling (pass eller uppehållskort)",
+      "item2": "Körkort (om det krävs för ditt fordon)",
+      "item3": "Betalningsmetod (kort/kontant beroende på tillgänglighet)"
+    },
+    "buttons": {
+      "directions": "Vägbeskrivning",
+      "whatsapp": "WhatsAppa oss"
+    }
   }
 }

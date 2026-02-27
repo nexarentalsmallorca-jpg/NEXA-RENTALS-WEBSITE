@@ -110,21 +110,6 @@ const VEHICLES: Vehicle[] = [
     spec2: "Phone holder • 2 Helmets",
   },
   {
-    id: "e1",
-    name: "ENGWE X26 (Performance)",
-    brand: "ENGWE",
-    type: "E-Bike",
-    seats: 1,
-    pricePerDay: 29,
-    rating: 4.6,
-    reviews: 51,
-    imageUrl: "/images/citybike2.png",
-    badges: ["Premium", "Cruise Control"],
-    spec1: "Up to 90km range",
-    spec2: "Lock • Helmet included",
-    featured: true,
-  },
-  {
     id: "e2",
     name: "ENGWE M20 (JOY)",
     brand: "ENGWE",
@@ -263,72 +248,78 @@ export default function VehiclesClient() {
       </div>
 
       <Navbar />
-      <div className="h-20 md:h-24" />
+      
 
       {/* Header: premium + calm */}
-      <header className="mx-auto max-w-7xl px-4 pt-6 pb-6">
-        <div className="flex flex-col gap-4">
-          <div className="flex flex-col md:flex-row md:items-end md:justify-between gap-4">
-            <div>
-              <div
-                className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black text-white/75"
-                style={{ borderColor: THEME.borderSoft, background: THEME.surface }}
-              >
-                <span className="h-2 w-2 rounded-full" style={{ background: ORANGE }} />
-                {t("liveAvailability")}
-              </div>
+      <header className="mx-auto max-w-7xl px-4 pt-0 pb-3 md:pb-4">
+  {/* 2-column header (desktop), stacked (mobile) */}
+  <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3 md:gap-4 items-start">
+    {/* LEFT: Title + chips */}
+    <div className="min-w-0">
+      <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.05]">
+        {t("available")} <span style={{ color: ORANGE }}>{t("vehiclesWord")}</span>
+      </h1>
 
-              <h1 className="mt-4 text-4xl md:text-5xl font-black tracking-tight leading-[1.05]">
-                {t("available")} <span style={{ color: ORANGE }}>{t("vehiclesWord")}</span>
-              </h1>
+      {/* chips */}
+      <div className="mt-2 flex flex-wrap gap-2">
+        <BigChip>{pickupLocation}</BigChip>
+        <BigChip>
+          {fmtDate(from, locale)} • {formatTimeLabel(pickupTime, locale)}
+        </BigChip>
+        <BigChip>
+          {fmtDate(to, locale)} • {formatTimeLabel(dropoffTime, locale)}
+        </BigChip>
+        <BigChip>
+          {rentalDays} {t(rentalDays > 1 ? "daysPlural" : "daysSingular")}
+        </BigChip>
+        {discountPct > 0 && (
+          <BigChip accent>
+            {discountPct}% {t("discountPerDay")}
+          </BigChip>
+        )}
+      </div>
 
-              {/* booking chips */}
-              <div className="mt-4 flex flex-wrap gap-2">
-                <BigChip>{pickupLocation}</BigChip>
-                <BigChip>
-                  {fmtDate(from, locale)} • {formatTimeLabel(pickupTime, locale)}
-                </BigChip>
-                <BigChip>
-                  {fmtDate(to, locale)} • {formatTimeLabel(dropoffTime, locale)}
-                </BigChip>
-                <BigChip>
-                  {rentalDays} {t(rentalDays > 1 ? "daysPlural" : "daysSingular")}
-                </BigChip>
-                {discountPct > 0 && <BigChip accent>{discountPct}% {t("discountPerDay")}</BigChip>}
-              </div>
+      <div className="mt-2 text-sm" style={{ color: THEME.textSoft }}>
+        {t("chooseThenTap")} <span className="text-white/85 font-bold">{t("reserve")}</span>.
+      </div>
+    </div>
 
-              <div className="mt-3 text-sm" style={{ color: THEME.textSoft }}>
-                {t("chooseThenTap")} <span className="text-white/85 font-bold">{t("reserve")}</span>.
-              </div>
-            </div>
+    {/* RIGHT: Live + Change dates (same block, higher) */}
+    <div className="flex md:flex-col items-start md:items-end gap-2 md:gap-3">
+      <div
+        className="inline-flex items-center gap-2 rounded-full border px-4 py-2 text-xs font-black text-white/75"
+        style={{ borderColor: THEME.borderSoft, background: THEME.surface }}
+      >
+        <span className="h-2 w-2 rounded-full" style={{ background: ORANGE }} />
+        {t("liveAvailability")}
+      </div>
 
-            <button
-              onClick={() => router.push("/")}
-              className="rounded-2xl px-6 py-4 text-base md:text-sm font-black border hover:bg-white/5 transition"
-              style={{ borderColor: THEME.border }}
-            >
-              {t("changeDates")}
-            </button>
-          </div>
+      <button
+        onClick={() => router.push("/")}
+        className="rounded-2xl px-6 py-3 text-sm font-black border hover:bg-white/5 transition"
+        style={{ borderColor: THEME.border }}
+      >
+        {t("changeDates")}
+      </button>
+    </div>
+  </div>
 
-          {/* trust row */}
-          <div className="mt-2 grid grid-cols-1 md:grid-cols-3 gap-3">
-            <TrustPill icon="helmet" title={t("freeHelmet")} />
-            <TrustPill icon="support" title={t("assistance247")} />
-            <TrustPill icon="shield" title={t("fullInsurance")} />
-          </div>
+  {/* ✅ Trust row moved up + tighter spacing */}
+  <div className="mt-3 grid grid-cols-1 md:grid-cols-3 gap-3">
+    <TrustPill icon="helmet" title={t("freeHelmet")} />
+    <TrustPill icon="support" title={t("assistance247")} />
+    <TrustPill icon="shield" title={t("fullInsurance")} />
+  </div>
 
-          {/* soft divider */}
-          <div
-            className="mt-1 h-px w-full"
-            style={{
-              background:
-                "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.12), rgba(255,255,255,0))",
-            }}
-          />
-        </div>
-      </header>
-
+  {/* ✅ Divider tighter */}
+  <div
+    className="mt-3 h-px w-full"
+    style={{
+      background:
+        "linear-gradient(90deg, rgba(255,255,255,0), rgba(255,255,255,0.12), rgba(255,255,255,0))",
+    }}
+  />
+</header>
       {/* Vehicles: 3 columns only */}
       <main className="mx-auto max-w-7xl px-4 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -341,7 +332,14 @@ export default function VehiclesClient() {
 
             // sizing
             const pad = isPiaggioBig ? "p-6" : "p-5";
-            const imgH = isPiaggioBig ? "h-[200px]" : "h-[175px]";
+            const isP275 = v.id === "e3";
+
+const imgH =
+  isPiaggioBig
+    ? "h-[200px]"
+    : isP275
+    ? "h-[210px] md:h-[230px]"
+    : "h-[175px]";
             const nameSize = isPiaggioBig ? "text-xl md:text-2xl" : "text-lg md:text-xl";
             const priceSize = isPiaggioBig ? "text-4xl" : "text-3xl";
 

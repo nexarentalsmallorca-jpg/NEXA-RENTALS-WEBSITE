@@ -547,6 +547,31 @@ export default function Navbar() {
     0 0 0 3px rgba(255, 163, 41, 0.25),
     0 14px 34px rgba(0, 0, 0, 0.35);
 }
+
+        /* keep underline effect off for the CTA (cleaner / more premium) */
+        .nav-cta::after {
+          display: none;
+        }
+
+        .nav-cta:hover {
+          transform: translateY(-1px);
+          border-color: rgba(255, 163, 41, 0.62);
+          box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22), 0 0 26px rgba(255, 163, 41, 0.12),
+            0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+          text-shadow: 0 0 18px rgba(255, 163, 41, 0.18), 0 0 10px rgba(0, 0, 0, 0.35);
+          filter: none;
+        }
+
+        .nav-cta:active {
+          transform: translateY(0px) scale(0.985);
+          box-shadow: 0 10px 26px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        }
+
+        .nav-cta:focus-visible {
+          outline: none;
+          box-shadow: 0 0 0 3px rgba(255, 163, 41, 0.24), 0 14px 34px rgba(0, 0, 0, 0.22),
+            0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+        }
       `}</style>
     </>
   );

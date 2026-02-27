@@ -2,8 +2,11 @@
 
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
+import { useTranslations } from "next-intl";
 
 export default function ShopSection() {
+  const t = useTranslations("shopSection");
+
   const sectionRef = useRef<HTMLElement | null>(null);
   const [typed, setTyped] = useState("");
   const [inView, setInView] = useState(false);
@@ -18,8 +21,7 @@ export default function ShopSection() {
   useEffect(() => {
     if (!inView) return;
 
-    const text =
-      "Visit our shop in Magaluf and rent directly in person — no booking needed.";
+    const text = t("typed");
 
     let i = 0;
     const id = setInterval(() => {
@@ -29,34 +31,26 @@ export default function ShopSection() {
     }, 20);
 
     return () => clearInterval(id);
-  }, [inView]);
+  }, [inView, t]);
 
   useEffect(() => {
     const el = sectionRef.current;
     if (!el) return;
 
-    const obs = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { threshold: 0.35 }
-    );
+    const obs = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), { threshold: 0.35 });
 
     obs.observe(el);
     return () => obs.disconnect();
   }, []);
 
   return (
-    <section
-      ref={sectionRef}
-      id="shop"
-      className="relative overflow-hidden py-10 md:py-12 lg:py-16 text-white"
-    >
+    <section ref={sectionRef} id="shop" className="relative overflow-hidden py-10 md:py-12 lg:py-16 text-white">
       {/* ✅ Subtle spotlight behind shop image */}
       <div className="pointer-events-none absolute inset-0 -z-10">
         <div
           className="absolute left-[20%] top-[55%] h-[320px] w-[320px] md:h-[380px] md:w-[380px] lg:h-[420px] lg:w-[420px] -translate-x-1/2 -translate-y-1/2 rounded-full blur-[70px] lg:blur-[80px] opacity-30"
           style={{
-            background:
-              "radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.00) 70%)",
+            background: "radial-gradient(circle, rgba(255,255,255,0.12) 0%, rgba(255,255,255,0.00) 70%)",
           }}
         />
       </div>
@@ -73,7 +67,7 @@ export default function ShopSection() {
           >
             <Image
               src="/images/shop.png"
-              alt="NEXA shop"
+              alt={t("imageAlt")}
               width={1100}
               height={1100}
               className="h-auto w-[92%] max-w-[520px] mx-auto lg:mx-0 lg:w-full lg:max-w-none lg:scale-700"
@@ -81,38 +75,19 @@ export default function ShopSection() {
           </div>
 
           {/* RIGHT CONTENT */}
-          <div
-            className={[
-              "lg:col-span-9",
-              "lg:pl-100",
-              inView ? "reveal-on" : "reveal-off",
-            ].join(" ")}
-          >
+          <div className={["lg:col-span-9", "lg:pl-100", inView ? "reveal-on" : "reveal-off"].join(" ")}>
             <h2 className="reveal-item text-xl md:text-2xl lg:text-3xl font-extrabold tracking-tight text-white">
-              Prefer renting in person?
-              <span className="block text-orange-400">
-                Visit our shop in Magaluf
-              </span>
+              {t("titleLine1")}
+              <span className="block text-orange-400">{t("titleLine2")}</span>
             </h2>
 
-            <p
-              className="reveal-item mt-3 max-w-lg text-[12px] md:text-[13px] lg:text-sm"
-              style={{ color: THEME.textSoft }}
-            >
+            <p className="reveal-item mt-3 max-w-lg text-[12px] md:text-[13px] lg:text-sm" style={{ color: THEME.textSoft }}>
               {typed || " "}
             </p>
 
             <div className="reveal-item mt-5 md:mt-6 grid gap-3 md:gap-4 sm:grid-cols-2">
-              <InfoLine
-                title="Pickup Location"
-                value="Magaluf (Carrer Galeón 13)"
-                theme={THEME}
-              />
-              <InfoLine
-                title="Opening Hours"
-                value="Daily • 10:00 – 22:00"
-                theme={THEME}
-              />
+              <InfoLine title={t("info.pickupLocationTitle")} value={t("info.pickupLocationValue")} theme={THEME} />
+              <InfoLine title={t("info.openingHoursTitle")} value={t("info.openingHoursValue")} theme={THEME} />
             </div>
 
             {/* Glass box */}
@@ -123,24 +98,22 @@ export default function ShopSection() {
                 boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
               }}
             >
-              <div className="text-[13px] md:text-sm font-semibold text-white">
-                What to bring
-              </div>
+              <div className="text-[13px] md:text-sm font-semibold text-white">{t("bring.title")}</div>
               <ul
                 className="mt-3 space-y-2 text-[12px] md:text-[13px] lg:text-[13px]"
                 style={{ color: THEME.textSoft }}
               >
                 <li className="flex gap-2">
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-orange-400" />
-                  Valid ID (passport or residence card)
+                  {t("bring.item1")}
                 </li>
                 <li className="flex gap-2">
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-orange-400" />
-                  Driving license (if required for your vehicle)
+                  {t("bring.item2")}
                 </li>
                 <li className="flex gap-2">
                   <span className="mt-1.5 h-1.5 w-1.5 rounded-full bg-orange-400" />
-                  Payment method (card/cash depending on availability)
+                  {t("bring.item3")}
                 </li>
               </ul>
             </div>
@@ -157,7 +130,7 @@ export default function ShopSection() {
                   boxShadow: "0 18px 44px rgba(255,122,0,0.18)",
                 }}
               >
-                Get Directions
+                {t("buttons.directions")}
               </a>
 
               <a
@@ -169,7 +142,7 @@ export default function ShopSection() {
                   background: THEME.surface,
                 }}
               >
-                WhatsApp Us
+                {t("buttons.whatsapp")}
               </a>
             </div>
           </div>
@@ -196,15 +169,10 @@ function InfoLine({
         boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
       }}
     >
-      <div
-        className="text-[11px] md:text-[12px] font-semibold tracking-wide"
-        style={{ color: theme.textSoft }}
-      >
+      <div className="text-[11px] md:text-[12px] font-semibold tracking-wide" style={{ color: theme.textSoft }}>
         {title}
       </div>
-      <div className="mt-1 text-[13px] md:text-sm font-semibold text-white">
-        {value}
-      </div>
+      <div className="mt-1 text-[13px] md:text-sm font-semibold text-white">{value}</div>
     </div>
   );
 }
