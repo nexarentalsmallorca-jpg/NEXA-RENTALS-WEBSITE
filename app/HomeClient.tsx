@@ -219,11 +219,13 @@ export default function HomeClient() {
         }
 
         @media (max-width: 640px) {
-          .hero-bg-image {
-            background-image: url("/images/heromobile-bg.png");
-            background-position: center bottom;
-          }
-        }
+  .hero-bg-image {
+    background-image: url("/images/heromobile-bg.png");
+    background-position: center bottom;
+
+    filter: brightness(3); /* ← ADD THIS LINE ONLY */
+  }
+}
       `}</style>
     </div>
   );
