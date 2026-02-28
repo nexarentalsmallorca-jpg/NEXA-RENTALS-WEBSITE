@@ -61,6 +61,17 @@ export async function POST(req: Request) {
         returnDateISO: returnDateISO ? String(returnDateISO) : "",
         bikeName: bikeName ? String(bikeName) : "",
         paymentType: "deposit_50_percent",
+
+        // ✅ ADDED (so webhook + emails can read standard fields)
+        customer_email: customerEmail ? String(customerEmail) : "",
+        vehicle_name: bikeName ? String(bikeName) : "",
+        pickup_date: pickupDateISO ? String(pickupDateISO) : "",
+        dropoff_date: returnDateISO ? String(returnDateISO) : "",
+        // Optional fields your webhook might support later:
+        customer_name: "",
+        phone: "",
+        pickup_time: "",
+        dropoff_time: "",
       },
     });
 

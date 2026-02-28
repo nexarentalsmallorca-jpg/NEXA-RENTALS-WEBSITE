@@ -13,6 +13,7 @@
   "dependencies": {
     "@stripe/react-stripe-js": "^5.6.0",
     "@stripe/stripe-js": "^8.8.0",
+    "@supabase/supabase-js": "^2.98.0",
     "date-fns": "^4.1.0",
     "framer-motion": "^12.34.0",
     "next": "16.1.6",
@@ -20,6 +21,7 @@
     "react": "19.2.3",
     "react-day-picker": "^9.13.2",
     "react-dom": "19.2.3",
+    "resend": "^6.9.3",
     "stripe": "^20.4.0"
   },
   "devDependencies": {
