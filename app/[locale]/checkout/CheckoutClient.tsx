@@ -5,6 +5,7 @@ import React, { useMemo, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../Navbar";
 import { useLocale, useTranslations } from "next-intl";
+import CheckoutShell from "./CheckoutShell";
 
 /* ---------------- types ---------------- */
 type VehicleType = "Scooter" | "E-Bike";
@@ -131,9 +132,6 @@ function daysBetween(from?: Date, to?: Date) {
   const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
   return Math.max(1, days);
 }
-function money(n: number) {
-  return Math.round(n);
-}
 function discountRate(days: number) {
   if (days >= 14) return 0.22;
   if (days >= 7) return 0.15;
@@ -147,6 +145,11 @@ function emailOk(v: string) {
 function phoneOk(v: string) {
   const digits = v.replace(/[^\d+]/g, "");
   return digits.length >= 7;
+}
+
+// ✅ Always display 2 decimals
+function eur(cents: number) {
+  return (cents / 100).toFixed(2);
 }
 
 /* ---------------- page ---------------- */
@@ -173,15 +176,18 @@ export default function CheckoutClient() {
     [vehicleId]
   );
 
-  // price
+  // ✅ price (compute in cents to avoid rounding bugs)
   const rate = discountRate(rentalDays);
-  const discountedPerDay = vehicle.pricePerDay * (1 - rate);
-  const total = discountedPerDay * rentalDays;
+  const discountedPerDayEur = vehicle.pricePerDay * (1 - rate); // eur (can have decimals)
+  const totalEur = discountedPerDayEur * rentalDays;
+
+  const totalCents = Math.round(totalEur * 100);
+  const payNowCents = Math.round(totalCents * 0.5); // 50% deposit
+  const payPickupCents = totalCents - payNowCents;
+
   const discountPct = Math.round(rate * 100);
 
-  // payment policy
-  const payNow = total * 0.5;
-  const payPickup = total - payNow;
+  // deposit reminder (your static text)
   const deposit = 150;
 
   // required details
@@ -212,37 +218,60 @@ export default function CheckoutClient() {
     contractReadyOk &&
     agreeTerms;
 
+  // Stripe Elements state
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [payLoading, setPayLoading] = useState(false);
+  const [payError, setPayError] = useState<string | null>(null);
+
   // ✅ FIX: include locale in the route
   const backToVehicles = () => {
     router.push(`/${locale}/vehicles?${sp.toString()}`);
   };
 
+  // ✅ Create PaymentIntent (server calculates 50% deposit from totalCents)
   const payNowAction = async () => {
-  if (!canPay) return;
+    if (!canPay) return;
 
-  // amount Stripe needs is in cents
-  const amountCents = Math.round(payNow * 100);
+    try {
+      setPayError(null);
+      setPayLoading(true);
 
-  const res = await fetch("/api/create-checkout", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({
-      amount: amountCents,
-      name: `NEXA Deposit 50% — ${vehicle.name} (${rentalDays} day${rentalDays > 1 ? "s" : ""})`,
-      // optional: send extra info if you want later for webhooks/logs
-      // metadata: { vehicleId, pickupLocation, pickupTime, dropoffTime, from: from?.toISOString() ?? "", to: to?.toISOString() ?? "" }
-    }),
-  });
+      const bookingId = `bk_${vehicle.id}_${Date.now()}`;
 
-  const data = await res.json();
+      const res = await fetch("/api/stripe/create-payment-intent", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          bookingId,
+          totalAmount: totalCents, // ✅ FULL total in cents (server calculates 50%)
+          currency: "eur",
+          customerEmail: email,
+          pickupDateISO: from?.toISOString() ?? "",
+          returnDateISO: to?.toISOString() ?? "",
+          bikeName: vehicle.name,
+        }),
+      });
 
-  if (!res.ok || !data?.url) {
-    alert("Payment error. Please try again.");
-    return;
-  }
+      const data = await res.json();
 
-  window.location.href = data.url;
-};
+      if (!res.ok || !data?.clientSecret) {
+        throw new Error(data?.error || "Payment init failed. Try again.");
+      }
+
+      setClientSecret(data.clientSecret);
+
+      setTimeout(() => {
+        document
+          .getElementById("stripe-embedded")
+          ?.scrollIntoView({ behavior: "smooth" });
+      }, 150);
+    } catch (e: any) {
+      setPayError(e.message || "Something went wrong.");
+    } finally {
+      setPayLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen text-white" style={{ background: BG }}>
       {/* subtle premium background */}
@@ -253,9 +282,9 @@ export default function CheckoutClient() {
       </div>
 
       <Navbar />
-      <div className="h-16 md:h-20" />
+      <div className="h-0 md:h-1" />
 
-      <header className="mx-auto max-w-6xl px-4 pt-5 pb-3">
+      <header className="mx-auto max-w-6xl px-4 pt-2 pb-2">
         <div className="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
           <div>
             <div className="text-[12px] font-black text-white/65">
@@ -279,9 +308,7 @@ export default function CheckoutClient() {
                 {t(rentalDays > 1 ? "daysPlural" : "daysSingular")}
               </Chip>
               {discountPct > 0 && (
-                <Chip accent>
-                  {t("savePct", { pct: discountPct })}
-                </Chip>
+                <Chip accent>{t("savePct", { pct: discountPct })}</Chip>
               )}
             </div>
           </div>
@@ -335,7 +362,7 @@ export default function CheckoutClient() {
                 {discountPct > 0 && (
                   <div className="text-[11px] font-black text-white/55">
                     <span className="line-through">
-                      €{money(vehicle.pricePerDay)}
+                      €{vehicle.pricePerDay.toFixed(2)}
                     </span>{" "}
                     {t("perDayShort")}
                   </div>
@@ -344,7 +371,7 @@ export default function CheckoutClient() {
                   className="text-xl font-black leading-none"
                   style={{ color: ORANGE }}
                 >
-                  €{money(discountedPerDay)}
+                  €{discountedPerDayEur.toFixed(2)}
                   <span className="text-[11px] text-white/60">
                     {t("perDayShort")}
                   </span>
@@ -352,7 +379,7 @@ export default function CheckoutClient() {
                 <div className="mt-1 text-[11px] text-white/60">
                   {t("total")}:{" "}
                   <span className="font-black text-white/85">
-                    €{money(total)}
+                    €{eur(totalCents)}
                   </span>
                 </div>
               </div>
@@ -371,9 +398,7 @@ export default function CheckoutClient() {
             <div className="mt-4">
               <div className="flex items-end justify-between">
                 <div className="text-[15px] font-black">{t("included")}</div>
-                <div className="text-[11px] text-white/55">
-                  {t("noExtraFees")}
-                </div>
+                <div className="text-[11px] text-white/55">{t("noExtraFees")}</div>
               </div>
 
               {/* ✅ MOBILE: tiny horizontal row | ✅ DESKTOP: keep exactly as before */}
@@ -427,9 +452,7 @@ export default function CheckoutClient() {
                 <div className="font-black" style={{ color: ORANGE }}>
                   {t("contractReadyTitle")}
                 </div>
-                <div className="mt-1 text-white/70">
-                  {t("contractReadyDesc")}
-                </div>
+                <div className="mt-1 text-white/70">{t("contractReadyDesc")}</div>
               </div>
             </div>
           </section>
@@ -448,13 +471,10 @@ export default function CheckoutClient() {
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[15px] font-black">{t("yourDetails")}</div>
-                  <div className="mt-1 text-[12px] text-white/65">
-                    {t("detailsHint")}
-                  </div>
+                  <div className="mt-1 text-[12px] text-white/65">{t("detailsHint")}</div>
                 </div>
                 <div className="text-[11px] text-white/55">
-                  {t("required")}{" "}
-                  <span className="text-white/80 font-black">*</span>
+                  {t("required")} <span className="text-white/80 font-black">*</span>
                 </div>
               </div>
 
@@ -531,13 +551,9 @@ export default function CheckoutClient() {
                     <div className="text-[13px] font-black">
                       {t("documentsOptional")}
                     </div>
-                    <div className="text-[11px] text-white/55">
-                      {t("fasterPickup")}
-                    </div>
+                    <div className="text-[11px] text-white/55">{t("fasterPickup")}</div>
                   </div>
-                  <div className="mt-1 text-[12px] text-white/65">
-                    {t("documentsDesc")}
-                  </div>
+                  <div className="mt-1 text-[12px] text-white/65">{t("documentsDesc")}</div>
 
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <UploadField
@@ -616,11 +632,9 @@ export default function CheckoutClient() {
                 </div>
 
                 <div className="text-right">
-                  <div className="text-[11px] text-white/55">
-                    {t("onlineToday")}
-                  </div>
+                  <div className="text-[11px] text-white/55">{t("onlineToday")}</div>
                   <div className="text-xl font-black" style={{ color: ORANGE }}>
-                    €{money(payNow)}
+                    €{eur(payNowCents)}
                   </div>
                 </div>
               </div>
@@ -637,18 +651,16 @@ export default function CheckoutClient() {
                   left={<span className="text-white/70">{t("payNow50")}</span>}
                   right={
                     <span className="font-black text-white/90">
-                      €{money(payNow)}
+                      €{eur(payNowCents)}
                     </span>
                   }
                 />
                 <div className="mt-2">
                   <Row
-                    left={
-                      <span className="text-white/70">{t("payPickup50")}</span>
-                    }
+                    left={<span className="text-white/70">{t("payPickup50")}</span>}
                     right={
                       <span className="font-black text-white/90">
-                        €{money(payPickup)}
+                        €{eur(payPickupCents)}
                       </span>
                     }
                   />
@@ -659,12 +671,10 @@ export default function CheckoutClient() {
                   style={{ borderColor: "rgba(255,255,255,0.10)" }}
                 >
                   <Row
-                    left={
-                      <span className="text-white/55">{t("rentalTotal")}</span>
-                    }
+                    left={<span className="text-white/55">{t("rentalTotal")}</span>}
                     right={
                       <span className="font-black text-white/80">
-                        €{money(total)}
+                        €{eur(totalCents)}
                       </span>
                     }
                   />
@@ -697,22 +707,38 @@ export default function CheckoutClient() {
                 />
               </div>
 
-              {/* CTA */}
+              {/* CTA (hover + click effects) */}
               <button
                 onClick={payNowAction}
-                disabled={!canPay}
-                className="mt-4 w-full rounded-2xl px-6 py-4 text-[14px] font-black text-black transition"
+                disabled={!canPay || payLoading}
+                className={[
+                  "mt-4 w-full rounded-2xl px-6 py-4 text-[14px] font-black text-black",
+                  "transition-all duration-200",
+                  "hover:brightness-110 hover:-translate-y-[1px]",
+                  "active:translate-y-0 active:scale-[0.99]",
+                  "disabled:opacity-60 disabled:cursor-not-allowed disabled:hover:translate-y-0",
+                ].join(" ")}
                 style={{
                   background: canPay
                     ? "linear-gradient(180deg, rgba(255,122,0,1), rgba(255,122,0,0.92))"
                     : "rgba(255,255,255,0.10)",
-                  boxShadow: "none",
-                  opacity: canPay ? 1 : 0.6,
-                  cursor: canPay ? "pointer" : "not-allowed",
                 }}
               >
-                {t("pay50NowAndBook")}
+                {payLoading ? "Preparing secure checkout..." : t("pay50NowAndBook")}
               </button>
+
+              {/* Error + embedded Stripe checkout */}
+              {payError && (
+                <div className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-[12px] text-white/80">
+                  {payError}
+                </div>
+              )}
+
+              {clientSecret && (
+                <div id="stripe-embedded" className="mt-4">
+                  <CheckoutShell clientSecret={clientSecret} />
+                </div>
+              )}
 
               {/* IMPORTANT deposit reminder (highlighted & near button) */}
               <div
@@ -735,9 +761,7 @@ export default function CheckoutClient() {
               </div>
 
               {!canPay && (
-                <div className="mt-3 text-[11px] text-white/45">
-                  {t("toContinue")}
-                </div>
+                <div className="mt-3 text-[11px] text-white/45">{t("toContinue")}</div>
               )}
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/55">
@@ -747,6 +771,9 @@ export default function CheckoutClient() {
                 <span className="text-white/35">•</span>
                 <span>{t("noHiddenFees")}</span>
               </div>
+
+              {/* NOTE: The "insecure connection" autofill warning is a BROWSER HTTPS warning.
+                 It will disappear automatically on your real domain (HTTPS), or if you test using an https tunnel (ngrok). */}
             </div>
           </section>
         </div>
@@ -824,7 +851,6 @@ function Included({
   );
 }
 
-/* ✅ NEW: tiny included (mobile/tablet only) */
 function IncludedMini({
   title,
   sub,
@@ -898,9 +924,7 @@ function CheckLine({
         className="mt-1 h-4 w-4"
         style={{ accentColor: ORANGE }}
       />
-      <span
-        className={`text-[12px] ${optional ? "text-white/65" : "text-white/70"}`}
-      >
+      <span className={`text-[12px] ${optional ? "text-white/65" : "text-white/70"}`}>
         {text}
       </span>
     </label>
@@ -938,9 +962,7 @@ function UploadField({
           accept="image/*"
           onChange={(e) => onFile(e.target.files?.[0] ?? null)}
           className="w-full text-[12px]"
-          style={{
-            color: brandColor,
-          }}
+          style={{ color: brandColor }}
         />
       </div>
 
