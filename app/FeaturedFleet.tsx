@@ -32,7 +32,7 @@ const FEATURED: Vehicle[] = [
     id: "s2",
     name: "PIAGGIO LIBERTY 125",
     type: "Scooter",
-    pricePerDay: 37,
+    pricePerDay: 45,
     badge: "Comfort Pick",
     imageUrl: "/images/liberty125.png",
   },
@@ -48,7 +48,7 @@ const FEATURED: Vehicle[] = [
     id: "e2",
     name: "CITY e-BIKE COMFORT",
     type: "E-Bike",
-    pricePerDay: 25,
+    pricePerDay: 28,
     badge: "Great Value",
     imageUrl: "/images/e20.png",
   },
@@ -106,6 +106,9 @@ function buildMonthGrid(viewMonth: Date) {
 }
 function toISO(d: Date) {
   return d.toISOString();
+}
+function formatPrice(price: number) {
+  return Math.round(price);
 }
 
 /* ---------------------- 24h / 1-day helpers ---------------------- */
@@ -531,7 +534,7 @@ export default function FeaturedFleet() {
                     <div className="shrink-0 text-right">
                       <div className="text-[11px] font-bold text-white/55">{t("pricing.from")}</div>
                       <div className="text-sm font-black" style={{ color: ORANGE }}>
-                        €{v.pricePerDay}
+                        €{formatPrice(v.pricePerDay)}
                         <span className="text-xs text-white/45">{t("pricing.perDay")}</span>
                       </div>
                     </div>
@@ -635,7 +638,7 @@ export default function FeaturedFleet() {
                     <div className="shrink-0 text-right">
                       <div className="text-[11px] font-bold text-white/55">{t("pricing.from")}</div>
                       <div className="text-sm font-black" style={{ color: ORANGE }}>
-                        €{v.pricePerDay}
+                        €{formatPrice(v.pricePerDay)}
                         <span className="text-xs text-white/45">{t("pricing.perDay")}</span>
                       </div>
                     </div>

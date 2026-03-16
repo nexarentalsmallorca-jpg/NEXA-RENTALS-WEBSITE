@@ -132,13 +132,33 @@ function daysBetween(from?: Date, to?: Date) {
   const days = Math.ceil(diff / (1000 * 60 * 60 * 24));
   return Math.max(1, days);
 }
-function discountRate(days: number) {
-  if (days >= 14) return 0.22;
-  if (days >= 7) return 0.15;
-  if (days >= 4) return 0.1;
-  if (days >= 2) return 0.06;
-  return 0;
+
+/* ✅ EXACT fixed daily pricing */
+function discountedPricePerDay(vehicle: Vehicle, days: number) {
+  const safeDays = Math.max(1, days);
+
+  // EXACT fixed prices for the 45€/day scooters
+  if (vehicle.id === "s2" || vehicle.id === "s3") {
+    if (safeDays === 1) return 45;
+    if (safeDays === 2) return 42;
+    if (safeDays === 3) return 39;
+    if (safeDays === 4) return 37;
+    return 35; // 5+ days
+  }
+
+  // Other vehicles: proportional version of same ladder
+  const ladderRatios: Record<number, number> = {
+    1: 1,
+    2: 42 / 45,
+    3: 39 / 45,
+    4: 37 / 45,
+    5: 35 / 45,
+  };
+
+  const step = safeDays >= 5 ? 5 : safeDays;
+  return Math.round(vehicle.pricePerDay * ladderRatios[step]);
 }
+
 function emailOk(v: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v.trim());
 }
@@ -147,9 +167,9 @@ function phoneOk(v: string) {
   return digits.length >= 7;
 }
 
-// ✅ Always display 2 decimals
+// whole euro display only
 function eur(cents: number) {
-  return (cents / 100).toFixed(2);
+  return String(Math.round(cents / 100));
 }
 
 /* ---------------- page ---------------- */
@@ -176,36 +196,35 @@ export default function CheckoutClient() {
     [vehicleId]
   );
 
-  // ✅ price (compute in cents to avoid rounding bugs)
-  const rate = discountRate(rentalDays);
-  const discountedPerDayEur = vehicle.pricePerDay * (1 - rate); // eur (can have decimals)
+  // ✅ ONLY this exact fixed-price logic is used
+  const discountedPerDayEur = discountedPricePerDay(vehicle, rentalDays);
   const totalEur = discountedPerDayEur * rentalDays;
 
   const totalCents = Math.round(totalEur * 100);
-  const payNowCents = Math.round(totalCents * 0.5); // 50% deposit
+  const payNowCents = Math.round(totalCents * 0.5);
   const payPickupCents = totalCents - payNowCents;
 
-  const discountPct = Math.round(rate * 100);
+  const discountPct = Math.max(
+    0,
+    Math.round(
+      ((vehicle.pricePerDay - discountedPerDayEur) / vehicle.pricePerDay) * 100
+    )
+  );
 
-  // deposit reminder (your static text)
   const deposit = 150;
 
-  // required details
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
 
-  // optional notes
   const [notes, setNotes] = useState("");
 
-  // optional uploads
   const [dlFront, setDlFront] = useState<File | null>(null);
   const [dlBack, setDlBack] = useState<File | null>(null);
   const [idFront, setIdFront] = useState<File | null>(null);
   const [idBack, setIdBack] = useState<File | null>(null);
 
-  // checkboxes
   const [contractReadyOk, setContractReadyOk] = useState(false);
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [marketingOptIn, setMarketingOptIn] = useState(false);
@@ -218,17 +237,14 @@ export default function CheckoutClient() {
     contractReadyOk &&
     agreeTerms;
 
-  // Stripe Elements state
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [payLoading, setPayLoading] = useState(false);
   const [payError, setPayError] = useState<string | null>(null);
 
-  // ✅ FIX: include locale in the route
   const backToVehicles = () => {
     router.push(`/${locale}/vehicles?${sp.toString()}`);
   };
 
-  // ✅ Create PaymentIntent (server calculates 50% deposit from totalCents)
   const payNowAction = async () => {
     if (!canPay) return;
 
@@ -243,7 +259,7 @@ export default function CheckoutClient() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           bookingId,
-          totalAmount: totalCents, // ✅ FULL total in cents (server calculates 50%)
+          totalAmount: totalCents,
           currency: "eur",
           customerEmail: email,
           pickupDateISO: from?.toISOString() ?? "",
@@ -274,7 +290,6 @@ export default function CheckoutClient() {
 
   return (
     <div className="min-h-screen text-white" style={{ background: BG }}>
-      {/* subtle premium background */}
       <div className="pointer-events-none fixed inset-0 -z-10">
         <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.025),transparent_65%)]" />
         <div className="absolute inset-0 opacity-[0.05] [background-image:radial-gradient(rgba(255,255,255,0.85)_1px,transparent_1px)] [background-size:20px_20px]" />
@@ -325,7 +340,6 @@ export default function CheckoutClient() {
 
       <main className="mx-auto max-w-6xl px-4 pb-14">
         <div className="grid grid-cols-1 lg:grid-cols-[1.05fr_0.95fr] gap-5">
-          {/* LEFT: vehicle */}
           <section
             className="rounded-3xl border p-4 md:p-5"
             style={{
@@ -362,7 +376,7 @@ export default function CheckoutClient() {
                 {discountPct > 0 && (
                   <div className="text-[11px] font-black text-white/55">
                     <span className="line-through">
-                      €{vehicle.pricePerDay.toFixed(2)}
+                      €{Math.round(vehicle.pricePerDay)}
                     </span>{" "}
                     {t("perDayShort")}
                   </div>
@@ -371,7 +385,7 @@ export default function CheckoutClient() {
                   className="text-xl font-black leading-none"
                   style={{ color: ORANGE }}
                 >
-                  €{discountedPerDayEur.toFixed(2)}
+                  €{Math.round(discountedPerDayEur)}
                   <span className="text-[11px] text-white/60">
                     {t("perDayShort")}
                   </span>
@@ -387,7 +401,6 @@ export default function CheckoutClient() {
 
             <div className="relative mt-4 h-[180px] md:h-[210px] w-full">
               <div className="pointer-events-none absolute left-1/2 bottom-7 h-8 w-[65%] -translate-x-1/2 rounded-full bg-black/60 blur-xl opacity-70" />
-              {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src={vehicle.imageUrl}
                 alt={vehicle.name}
@@ -401,44 +414,17 @@ export default function CheckoutClient() {
                 <div className="text-[11px] text-white/55">{t("noExtraFees")}</div>
               </div>
 
-              {/* ✅ MOBILE: tiny horizontal row | ✅ DESKTOP: keep exactly as before */}
               <div className="mt-3">
-                {/* mobile / tablet */}
                 <div className="flex gap-2 overflow-x-auto md:overflow-visible lg:hidden">
-                  <IncludedMini
-                    title={t("helmet")}
-                    sub={t("free")}
-                    badge={t("includedBadge")}
-                  />
-                  <IncludedMini
-                    title={t("lock")}
-                    sub={t("free")}
-                    badge={t("includedBadge")}
-                  />
-                  <IncludedMini
-                    title={t("cargoBox")}
-                    sub={t("free")}
-                    badge={t("includedBadge")}
-                  />
+                  <IncludedMini title={t("helmet")} sub={t("free")} badge={t("includedBadge")} />
+                  <IncludedMini title={t("lock")} sub={t("free")} badge={t("includedBadge")} />
+                  <IncludedMini title={t("cargoBox")} sub={t("free")} badge={t("includedBadge")} />
                 </div>
 
-                {/* desktop (unchanged) */}
                 <div className="hidden lg:grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Included
-                    title={t("helmet")}
-                    sub={t("free")}
-                    badge={t("includedBadge")}
-                  />
-                  <Included
-                    title={t("lock")}
-                    sub={t("free")}
-                    badge={t("includedBadge")}
-                  />
-                  <Included
-                    title={t("cargoBox")}
-                    sub={t("free")}
-                    badge={t("includedBadge")}
-                  />
+                  <Included title={t("helmet")} sub={t("free")} badge={t("includedBadge")} />
+                  <Included title={t("lock")} sub={t("free")} badge={t("includedBadge")} />
+                  <Included title={t("cargoBox")} sub={t("free")} badge={t("includedBadge")} />
                 </div>
               </div>
 
@@ -457,9 +443,7 @@ export default function CheckoutClient() {
             </div>
           </section>
 
-          {/* RIGHT */}
           <section className="space-y-5">
-            {/* details */}
             <div
               className="rounded-3xl border p-4 md:p-5"
               style={{
@@ -539,7 +523,6 @@ export default function CheckoutClient() {
                   />
                 </Field>
 
-                {/* uploads */}
                 <div
                   className="rounded-2xl border p-4"
                   style={{
@@ -548,9 +531,7 @@ export default function CheckoutClient() {
                   }}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-[13px] font-black">
-                      {t("documentsOptional")}
-                    </div>
+                    <div className="text-[13px] font-black">{t("documentsOptional")}</div>
                     <div className="text-[11px] text-white/55">{t("fasterPickup")}</div>
                   </div>
                   <div className="mt-1 text-[12px] text-white/65">{t("documentsDesc")}</div>
@@ -606,7 +587,6 @@ export default function CheckoutClient() {
               </div>
             </div>
 
-            {/* payment */}
             <div
               className="rounded-3xl border p-4 md:p-5"
               style={{
@@ -639,7 +619,6 @@ export default function CheckoutClient() {
                 </div>
               </div>
 
-              {/* SIMPLE breakdown */}
               <div
                 className="mt-4 rounded-2xl border p-4 text-[13px]"
                 style={{
@@ -649,20 +628,12 @@ export default function CheckoutClient() {
               >
                 <Row
                   left={<span className="text-white/70">{t("payNow50")}</span>}
-                  right={
-                    <span className="font-black text-white/90">
-                      €{eur(payNowCents)}
-                    </span>
-                  }
+                  right={<span className="font-black text-white/90">€{eur(payNowCents)}</span>}
                 />
                 <div className="mt-2">
                   <Row
                     left={<span className="text-white/70">{t("payPickup50")}</span>}
-                    right={
-                      <span className="font-black text-white/90">
-                        €{eur(payPickupCents)}
-                      </span>
-                    }
+                    right={<span className="font-black text-white/90">€{eur(payPickupCents)}</span>}
                   />
                 </div>
 
@@ -672,16 +643,11 @@ export default function CheckoutClient() {
                 >
                   <Row
                     left={<span className="text-white/55">{t("rentalTotal")}</span>}
-                    right={
-                      <span className="font-black text-white/80">
-                        €{eur(totalCents)}
-                      </span>
-                    }
+                    right={<span className="font-black text-white/80">€{eur(totalCents)}</span>}
                   />
                 </div>
               </div>
 
-              {/* checkboxes */}
               <div
                 className="mt-4 rounded-2xl border p-4 space-y-3"
                 style={{
@@ -689,25 +655,11 @@ export default function CheckoutClient() {
                   background: "rgba(0,0,0,0.25)",
                 }}
               >
-                <CheckLine
-                  checked={contractReadyOk}
-                  onChange={setContractReadyOk}
-                  text={t("checkContractReady")}
-                />
-                <CheckLine
-                  checked={agreeTerms}
-                  onChange={setAgreeTerms}
-                  text={t("checkAgreeTerms")}
-                />
-                <CheckLine
-                  checked={marketingOptIn}
-                  onChange={setMarketingOptIn}
-                  text={t("checkMarketing")}
-                  optional
-                />
+                <CheckLine checked={contractReadyOk} onChange={setContractReadyOk} text={t("checkContractReady")} />
+                <CheckLine checked={agreeTerms} onChange={setAgreeTerms} text={t("checkAgreeTerms")} />
+                <CheckLine checked={marketingOptIn} onChange={setMarketingOptIn} text={t("checkMarketing")} optional />
               </div>
 
-              {/* CTA (hover + click effects) */}
               <button
                 onClick={payNowAction}
                 disabled={!canPay || payLoading}
@@ -727,7 +679,6 @@ export default function CheckoutClient() {
                 {payLoading ? "Preparing secure checkout..." : t("pay50NowAndBook")}
               </button>
 
-              {/* Error + embedded Stripe checkout */}
               {payError && (
                 <div className="mt-3 rounded-2xl border border-red-500/30 bg-red-500/10 p-3 text-[12px] text-white/80">
                   {payError}
@@ -740,7 +691,6 @@ export default function CheckoutClient() {
                 </div>
               )}
 
-              {/* IMPORTANT deposit reminder (highlighted & near button) */}
               <div
                 className="mt-3 rounded-2xl border p-3 text-[12px]"
                 style={{
@@ -771,9 +721,6 @@ export default function CheckoutClient() {
                 <span className="text-white/35">•</span>
                 <span>{t("noHiddenFees")}</span>
               </div>
-
-              {/* NOTE: The "insecure connection" autofill warning is a BROWSER HTTPS warning.
-                 It will disappear automatically on your real domain (HTTPS), or if you test using an https tunnel (ngrok). */}
             </div>
           </section>
         </div>
