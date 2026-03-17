@@ -42,10 +42,7 @@ export async function POST(req: Request) {
     const currency = (pi.currency || "eur").toUpperCase();
 
     // Save booking (upsert avoids duplicates if webhook retries)
-    await supabase
-  .from("bookings")
-  .upsert(
-    {
+    const payload = {
       stripe_payment_intent_id: pi.id,
       status: "paid",
       customer_name: md.customer_name || "",
@@ -58,9 +55,20 @@ export async function POST(req: Request) {
       vehicle_name: md.vehicle_name || "",
       amount,
       currency: pi.currency || "eur",
-    },
-    { onConflict: "stripe_payment_intent_id" }
-  );
+    };
+
+    console.log("SUPABASE PAYLOAD:", payload);
+
+    const { data: bookingRow, error: bookingError } = await supabase
+      .from("bookings")
+      .upsert(payload, { onConflict: "stripe_payment_intent_id" })
+      .select();
+
+    console.log("SUPABASE RESULT:", bookingRow);
+
+    if (bookingError) {
+      console.error("SUPABASE UPSERT ERROR:", bookingError);
+    }
 
     // Email you
     await resend.emails.send({
