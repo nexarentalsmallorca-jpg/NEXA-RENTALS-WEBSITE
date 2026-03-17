@@ -42,40 +42,25 @@ export async function POST(req: Request) {
     const currency = (pi.currency || "eur").toUpperCase();
 
     // Save booking (upsert avoids duplicates if webhook retries)
-    await supabase.from("bookings").upsert({
+    await supabase
+  .from("bookings")
+  .upsert(
+    {
       stripe_payment_intent_id: pi.id,
       status: "paid",
-
-      booking_id: md.bookingId || "",
       customer_name: md.customer_name || "",
       customer_email: md.customer_email || "",
       phone: md.phone || "",
-
       pickup_date: md.pickup_date || "",
       pickup_time: md.pickup_time || "",
       dropoff_date: md.dropoff_date || "",
       dropoff_time: md.dropoff_time || "",
-      pickup_location: md.pickup_location || "",
-
-      vehicle_id: md.vehicle_id || "",
       vehicle_name: md.vehicle_name || "",
-
-      notes: md.notes || "",
-      dl_front_name: md.dl_front_name || "",
-      dl_back_name: md.dl_back_name || "",
-      id_front_name: md.id_front_name || "",
-      id_back_name: md.id_back_name || "",
-
-      marketing_opt_in: md.marketing_opt_in || "no",
-      payment_type: md.paymentType || "",
-
-      total_amount: md.totalAmount ? Number(md.totalAmount) : 0,
-      deposit_amount: md.depositAmount ? Number(md.depositAmount) : 0,
-      remaining_amount: md.remainingAmount ? Number(md.remainingAmount) : 0,
-
       amount,
       currency: pi.currency || "eur",
-    });
+    },
+    { onConflict: "stripe_payment_intent_id" }
+  );
 
     // Email you
     await resend.emails.send({
