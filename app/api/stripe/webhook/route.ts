@@ -45,14 +45,34 @@ export async function POST(req: Request) {
     await supabase.from("bookings").upsert({
       stripe_payment_intent_id: pi.id,
       status: "paid",
+
+      booking_id: md.bookingId || "",
       customer_name: md.customer_name || "",
       customer_email: md.customer_email || "",
       phone: md.phone || "",
+
       pickup_date: md.pickup_date || "",
       pickup_time: md.pickup_time || "",
       dropoff_date: md.dropoff_date || "",
       dropoff_time: md.dropoff_time || "",
+      pickup_location: md.pickup_location || "",
+
+      vehicle_id: md.vehicle_id || "",
       vehicle_name: md.vehicle_name || "",
+
+      notes: md.notes || "",
+      dl_front_name: md.dl_front_name || "",
+      dl_back_name: md.dl_back_name || "",
+      id_front_name: md.id_front_name || "",
+      id_back_name: md.id_back_name || "",
+
+      marketing_opt_in: md.marketing_opt_in || "no",
+      payment_type: md.paymentType || "",
+
+      total_amount: md.totalAmount ? Number(md.totalAmount) : 0,
+      deposit_amount: md.depositAmount ? Number(md.depositAmount) : 0,
+      remaining_amount: md.remainingAmount ? Number(md.remainingAmount) : 0,
+
       amount,
       currency: pi.currency || "eur",
     });
@@ -64,14 +84,28 @@ export async function POST(req: Request) {
       subject: `✅ New booking paid — ${(amount / 100).toFixed(2)} ${currency}`,
       html: `
         <h2>New booking received ✅</h2>
+        <p><b>Booking ID:</b> ${md.bookingId || "-"}</p>
         <p><b>Name:</b> ${md.customer_name || "-"}</p>
         <p><b>Email:</b> ${md.customer_email || "-"}</p>
         <p><b>Phone:</b> ${md.phone || "-"}</p>
         <hr/>
         <p><b>Vehicle:</b> ${md.vehicle_name || "-"}</p>
+        <p><b>Vehicle ID:</b> ${md.vehicle_id || "-"}</p>
         <p><b>Pickup:</b> ${md.pickup_date || "-"} ${md.pickup_time || ""}</p>
         <p><b>Dropoff:</b> ${md.dropoff_date || "-"} ${md.dropoff_time || ""}</p>
+        <p><b>Pickup location:</b> ${md.pickup_location || "-"}</p>
+        <p><b>Notes:</b> ${md.notes || "-"}</p>
+        <hr/>
+        <p><b>Driving licence front:</b> ${md.dl_front_name || "-"}</p>
+        <p><b>Driving licence back:</b> ${md.dl_back_name || "-"}</p>
+        <p><b>ID front:</b> ${md.id_front_name || "-"}</p>
+        <p><b>ID back:</b> ${md.id_back_name || "-"}</p>
+        <hr/>
+        <p><b>Total rental amount:</b> ${md.totalAmount ? (Number(md.totalAmount) / 100).toFixed(2) : "-"} ${currency}</p>
+        <p><b>Deposit paid now:</b> ${md.depositAmount ? (Number(md.depositAmount) / 100).toFixed(2) : "-"} ${currency}</p>
+        <p><b>Remaining amount:</b> ${md.remainingAmount ? (Number(md.remainingAmount) / 100).toFixed(2) : "-"} ${currency}</p>
         <p><b>Amount Paid:</b> ${(amount / 100).toFixed(2)} ${currency}</p>
+        <p><b>Marketing opt-in:</b> ${md.marketing_opt_in || "no"}</p>
         <p><b>PaymentIntent:</b> ${pi.id}</p>
       `,
     });
@@ -87,10 +121,13 @@ export async function POST(req: Request) {
           <h2>Your booking is confirmed ✅</h2>
           <p>Hi ${md.customer_name || ""},</p>
           <p>Here are your booking details:</p>
+          <p><b>Booking ID:</b> ${md.bookingId || "-"}</p>
           <p><b>Vehicle:</b> ${md.vehicle_name || "-"}</p>
           <p><b>Pickup:</b> ${md.pickup_date || "-"} ${md.pickup_time || ""}</p>
           <p><b>Dropoff:</b> ${md.dropoff_date || "-"} ${md.dropoff_time || ""}</p>
+          <p><b>Pickup location:</b> ${md.pickup_location || "-"}</p>
           <p><b>Amount Paid:</b> ${(amount / 100).toFixed(2)} ${currency}</p>
+          <p><b>Remaining amount at pickup:</b> ${md.remainingAmount ? (Number(md.remainingAmount) / 100).toFixed(2) : "-"} ${currency}</p>
           <p>If you need help, reply to this email.</p>
         `,
       });
