@@ -9,7 +9,7 @@ type ActiveField = "pickup" | "dropoff";
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
 /* ----------------------------- Config ----------------------------- */
-const BAR_BG = "#F6D7C6";
+const BAR_BG = "#fff9f5";
 const DEEP_ORANGE = "#FF6A00";
 const DEFAULT_LOCATION = "Magaluf (Carrer Galeón 13)";
 
@@ -273,23 +273,24 @@ export default function BookingBar() {
     const next = clampRange(range.from, day);
 
     if (next.from && next.to) {
-      const minDay = minDropoffDate(next.from);
-      if (isBeforeDay(next.to, minDay)) {
-        setRange({ from: next.from, to: minDay });
-      } else {
-        setRange(next);
-      }
-    } else {
-      setRange(next);
-    }
+  const minDay = minDropoffDate(next.from);
+  if (isBeforeDay(next.to, minDay)) {
+    setRange({ from: next.from, to: minDay });
+  } else {
+    setRange(next);
+  }
+} else {
+  setRange(next);
+}
 
-    if (next.from && next.to && isExactMinDay(next.from, next.to)) {
-      if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
-        setDropoffTime(pickupTime);
-      }
-    }
+if (next.from && next.to && isExactMinDay(next.from, next.to)) {
+  if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
+    setDropoffTime(pickupTime);
+  }
+}
 
-    if (next.from && next.to) closeCalendar();
+// keep calendar open after selecting dropoff date
+// user will close it manually with Done button
   }
 
   function togglePickupTime() {
@@ -594,7 +595,7 @@ export default function BookingBar() {
             <div
               ref={monthsScrollRef}
               onScroll={onMonthsScroll}
-              className="px-3 pb-4 overflow-y-auto"
+              className="px-3 pb-4 overflow-y-auto md:overflow-y-scroll"
               style={{ maxHeight: "55svh" }}
             >
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -640,6 +641,28 @@ export default function BookingBar() {
               to {
                 transform: translateY(0) scale(1);
                 opacity: 1;
+              }
+            }
+
+            @media (min-width: 768px) {
+              div[ref]::-webkit-scrollbar,
+              .md\\:overflow-y-scroll::-webkit-scrollbar {
+                width: 10px;
+              }
+              div[ref]::-webkit-scrollbar-track,
+              .md\\:overflow-y-scroll::-webkit-scrollbar-track {
+                background: rgba(0, 0, 0, 0.08);
+                border-radius: 999px;
+              }
+              div[ref]::-webkit-scrollbar-thumb,
+              .md\\:overflow-y-scroll::-webkit-scrollbar-thumb {
+                background: rgba(255, 106, 0, 0.7);
+                border-radius: 999px;
+                border: 2px solid ${BAR_BG};
+              }
+              div[ref]::-webkit-scrollbar-thumb:hover,
+              .md\\:overflow-y-scroll::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 106, 0, 0.95);
               }
             }
           `}</style>
@@ -693,21 +716,24 @@ function MiniMonth({
         {cells.map((d, idx) => {
           if (!d) return <div key={idx} className="h-9" />;
 
-          const disabledByPast = isPastDay(d);
-          const disabledByMinDrop = !!minDropDay && startOfDay(d) < startOfDay(minDropDay);
+          const isStart = !!range.from && isSameDay(d, range.from);
+const isEnd = !!range.to && isSameDay(d, range.to);
 
-          const disabled = disabledByPast || disabledByMinDrop;
+const disabledByPast = isPastDay(d) && !isStart && !isEnd;
+const disabledByMinDrop =
+  !!minDropDay && startOfDay(d) < startOfDay(minDropDay) && !isStart && !isEnd;
 
-          const inRange =
-            range.from &&
-            range.to &&
-            startOfDay(d) >= startOfDay(range.from) &&
-            startOfDay(d) <= startOfDay(range.to);
+const disabled = disabledByPast || disabledByMinDrop;
 
-          const isStart = range.from && isSameDay(d, range.from);
-          const isEnd = range.to && isSameDay(d, range.to);
+const inRange =
+  !!range.from &&
+  !!range.to &&
+  startOfDay(d) >= startOfDay(range.from) &&
+  startOfDay(d) <= startOfDay(range.to);
 
-          const hoverClass = !disabled && !(isStart || isEnd) ? "hover:bg-orange-200" : "";
+const isMiddleRange = inRange && !isStart && !isEnd;
+
+const hoverClass = !disabled && !isStart && !isEnd ? "hover:bg-orange-200" : "";
 
           return (
             <button
@@ -718,10 +744,11 @@ function MiniMonth({
               className={[
                 "h-9 rounded-lg font-extrabold text-[13px]",
                 "transition-colors duration-150 ease-out",
-                disabled ? "text-black/25 cursor-not-allowed" : "text-black",
+                disabled ? "text-black/25 cursor-not-allowed" : "",
+                !disabled && !isStart && !isEnd ? "text-black" : "",
                 hoverClass,
-                inRange && !disabled ? "bg-orange-300/60" : "",
-                (isStart || isEnd) && !disabled ? "text-black" : "",
+                isMiddleRange && !disabled ? "bg-orange-300/60 text-black" : "",
+                (isStart || isEnd) && !disabled ? "text-white shadow-[0_6px_16px_rgba(255,106,0,0.35)]" : "",
               ].join(" ")}
               style={(isStart || isEnd) && !disabled ? { background: DEEP_ORANGE } : undefined}
             >

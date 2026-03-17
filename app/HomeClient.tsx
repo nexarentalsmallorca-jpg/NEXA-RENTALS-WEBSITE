@@ -189,7 +189,7 @@ export default function HomeClient() {
                   introOn ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6",
                 ].join(" ")}
               >
-                <div className="scale-[0.88] origin-top translate-y-[-170px] md:scale-100 md:translate-y-[-250px] md:origin-center">
+                <div className="scale-[0.88] origin-top translate-y-[-280px] md:scale-100 md:translate-y-[-550px] md:origin-center">
                   <BookingBar />
                 </div>
               </div>

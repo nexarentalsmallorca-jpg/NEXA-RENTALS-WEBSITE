@@ -121,7 +121,7 @@ export default function ShopSection() {
             {/* Buttons */}
             <div className="reveal-item mt-6 md:mt-7 flex flex-wrap gap-3">
               <a
-                href="https://www.google.com/maps/search/?api=1&query=Carrer%20Gale%C3%B3n%2013%20Magaluf"
+                href="https://maps.app.goo.gl/hkkkK8UhTesYi1qM9"
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-xl px-4 md:px-5 py-2.5 text-[13px] md:text-sm font-extrabold text-black transition hover:brightness-110 active:scale-[0.99]"
@@ -134,7 +134,7 @@ export default function ShopSection() {
               </a>
 
               <a
-                href="https://wa.me/34000000000"
+                href="https://wa.me/34971482342"
                 target="_blank"
                 rel="noreferrer"
                 className="rounded-xl px-4 md:px-5 py-2.5 text-[13px] md:text-sm font-bold text-white transition ring-1 ring-white/10 hover:bg-white/[0.05]"

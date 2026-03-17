@@ -139,16 +139,16 @@ export default function Navbar() {
           navRef.current = el;
         }}
         className={[
-          "fixed left-0 right-0 top-0 z-[9999]",
+          "fixed left-0 right-0 top-5 md:top-10 z-[9999]",
           "transition-transform duration-500 ease-out",
-          hidden ? "-translate-y-full" : "translate-y-0",
+          hidden ? "-translate-y-[160%]" : "translate-y-0",
         ].join(" ")}
       >
         {/* No bg, no border — just spacing */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           {/* MOBILE: grid 3 columns: left language, middle logo, right hamburger */}
           {/* DESKTOP: flex: logo left, nav right, language far right */}
-          <div className="py-0 md:py 8">
+          <div className="py-0 md:py -8">
             {/* MOBILE ROW */}
             <div className="grid grid-cols-3 items-center md:hidden">
               {/* LEFT: Language */}
@@ -207,13 +207,13 @@ export default function Navbar() {
               {/* MIDDLE: Logo */}
               <a href={homeHref} className="justify-self-center select-none">
                 <Image
-                  src="/images/logo.png"
-                  alt="NEXA Rentals"
-                  width={112}
-                  height={112}
-                  priority
-                  className="h-32 w-32 object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)]"
-                />
+  src="/images/reallogo.png"
+  alt="NEXA Rentals"
+  width={300}
+  height={100}
+  className="h-16 w-auto object-contain"
+  priority
+/>
               </a>
 
               {/* RIGHT: Hamburger */}
@@ -256,13 +256,13 @@ export default function Navbar() {
               {/* LEFT: Logo */}
               <a href={homeHref} className="select-none flex items-center">
                 <Image
-                  src="/images/logo.png"
-                  alt="NEXA Rentals"
-                  width={112}
-                  height={112}
-                  priority
-                  className="h-40 w-40 object-contain drop-shadow-[0_6px_18px_rgba(0,0,0,0.45)]"
-                />
+  src="/images/reallogo.png"
+  alt="NEXA Rentals"
+  width={300}
+  height={100}
+  className="h-20 w-auto object-contain"
+  priority
+/>
               </a>
 
               {/* RIGHT SIDE: Nav links then language at far right */}
@@ -345,7 +345,7 @@ export default function Navbar() {
       </header>
 
       {/* ✅ Global layout fix: pushes ALL pages below fixed navbar */}
-      <div aria-hidden className="h-[var(--nav-height)]" />
+      <div aria-hidden className="h-[calc(var(--nav-height)+74px)] md:h-[calc(var(--nav-height)+120px)]" />
 
       {/* MOBILE DRAWER (unchanged) */}
       <div className="md:hidden">

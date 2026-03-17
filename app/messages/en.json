@@ -21,7 +21,7 @@
     "selectPickupDate": "Select pick-up date",
     "selectDropoffDate": "Select drop-off date",
     "clear": "Clear",
-    "done": "Done"
+    "done": "Select"
   },
   "vehicles": {
     "liveAvailability": "Live availability",
@@ -315,5 +315,24 @@
       "directions": "Get Directions",
       "whatsapp": "WhatsApp Us"
     }
-  }
+  },
+
+  "footer": {
+  "pickup": "Magaluf Pickup",
+  "address": "Carrer Galeón 13, Magaluf",
+  "hours": "Daily · 09:00 – 20:00",
+  "getUpdates": "Get Updates",
+  "dealsText": "Deals, discounts & seasonal offers.",
+  "yourEmail": "Your email",
+  "join": "Join",
+  "noSpam": "No spam. Unsubscribe anytime.",
+  "follow": "Follow",
+  "allRightsReserved": "All rights reserved.",
+  "terms": "Terms & Conditions",
+  "privacy": "Privacy Policy",
+  "depositPolicy": "Deposit Policy",
+  "refundPolicy": "Refund Policy",
+  "cookies": "Cookies",
+  "aboutNexa": "About NEXA"
+}
 }

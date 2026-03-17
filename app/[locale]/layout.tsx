@@ -52,19 +52,19 @@ export default async function RootLayout({children, params}: Props) {
       <body suppressHydrationWarning>
         <NextIntlClientProvider locale={safeLocale} messages={messages}>
           {children}
+
+          <WhatsAppSupport
+            phone="34600000000"
+            messages={[
+              "Hey! Need any help?",
+              "Want the best scooter for your trip?",
+              "Booking takes only Few seconds ⚡",
+              "Message us, we reply fast 🙂",
+            ]}
+          />
+
+          <NexaFooter />
         </NextIntlClientProvider>
-
-        <WhatsAppSupport
-          phone="34600000000"
-          messages={[
-            "Hey! Need any help?",
-            "Want the best scooter for your trip?",
-            "Booking takes only Few seconds ⚡",
-            "Message us, we reply fast 🙂",
-          ]}
-        />
-
-        <NexaFooter />
       </body>
     </html>
   );

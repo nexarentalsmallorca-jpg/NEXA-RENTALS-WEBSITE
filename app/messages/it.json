@@ -21,7 +21,7 @@
     "selectPickupDate": "Seleziona data ritiro",
     "selectDropoffDate": "Seleziona data riconsegna",
     "clear": "Cancella",
-    "done": "Fatto"
+    "done": "Selezionare"
   },
   "vehicles": {
     "liveAvailability": "Disponibilità in tempo reale",
@@ -314,5 +314,23 @@
       "directions": "Indicazioni stradali",
       "whatsapp": "Scrivici su WhatsApp"
     }
-  }
+  },
+  "footer": {
+  "pickup": "Ritiro a Magaluf",
+  "address": "Carrer Galeón 13, Magaluf",
+  "hours": "Tutti i giorni · 09:00 – 20:00",
+  "getUpdates": "Ricevi aggiornamenti",
+  "dealsText": "Offerte, sconti e promozioni stagionali.",
+  "yourEmail": "La tua email",
+  "join": "Iscriviti",
+  "noSpam": "Niente spam. Disiscriviti in qualsiasi momento.",
+  "follow": "Segui",
+  "allRightsReserved": "Tutti i diritti riservati.",
+  "terms": "Termini e Condizioni",
+  "privacy": "Informativa sulla Privacy",
+  "depositPolicy": "Politica sul Deposito",
+  "refundPolicy": "Politica di Rimborso",
+  "cookies": "Cookie",
+  "aboutNexa": "Su NEXA"
+}
 }

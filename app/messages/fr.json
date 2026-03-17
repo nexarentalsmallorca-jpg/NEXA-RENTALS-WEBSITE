@@ -20,7 +20,7 @@
     "search": "Rechercher",
     "selectPickupDate": "Choisir la date de retrait",
     "selectDropoffDate": "Choisir la date de retour",
-    "clear": "Effacer",
+    "clear": "Sélectionner",
     "done": "OK"
   },
   "vehicles": {
@@ -315,5 +315,23 @@
       "directions": "Itinéraire",
       "whatsapp": "Nous écrire sur WhatsApp"
     }
-  }
+  },
+  "footer": {
+  "pickup": "Retrait à Magaluf",
+  "address": "Carrer Galeón 13, Magaluf",
+  "hours": "Tous les jours · 09:00 – 20:00",
+  "getUpdates": "Recevoir les nouveautés",
+  "dealsText": "Offres, réductions et promotions saisonnières.",
+  "yourEmail": "Votre e-mail",
+  "join": "Rejoindre",
+  "noSpam": "Aucun spam. Désabonnement à tout moment.",
+  "follow": "Suivre",
+  "allRightsReserved": "Tous droits réservés.",
+  "terms": "Conditions générales",
+  "privacy": "Politique de confidentialité",
+  "depositPolicy": "Politique de dépôt",
+  "refundPolicy": "Politique de remboursement",
+  "cookies": "Cookies",
+  "aboutNexa": "À propos de NEXA"
+}
 }

@@ -2,8 +2,11 @@
 
 import React from "react";
 import Link from "next/link";
+import { useTranslations } from "next-intl";
+
 export default function NexaFooter() {
   const year = new Date().getFullYear();
+  const t = useTranslations("footer");
 
   const THEME = {
     bg: "#0f1115",
@@ -64,20 +67,20 @@ export default function NexaFooter() {
           {/* LEFT */}
           <div className="space-y-4">
             <div className="flex items-center gap-3">
-              <img src="./images/logo.png" alt="NEXA Rentals" className="h-10 w-auto" />
+              <img src="./images/reallogo.png" alt="NEXA Rentals" className="h-10 w-auto" />
             </div>
 
             <div className="space-y-1 text-sm" style={{ color: THEME.textSoft }}>
-              <p className="font-medium text-white/85">Magaluf Pickup</p>
-              <p>Carrer Galeón 13, Mallorca</p>
-              <p>Daily · 10:00 – 22:00</p>
+              <p className="font-medium text-white/85">{t("pickup")}</p>
+              <p>{t("address")}</p>
+              <p>{t("hours")}</p>
               <p>
-                <a className="transition hover:text-white" href="tel:+34XXXXXXXXX">
-                  +34 XXX XXX XXX
+                <a className="transition hover:text-white" href="tel:+34 971482342">
+                  +34 971482342
                 </a>{" "}
                 ·{" "}
-                <a className="transition hover:text-white" href="mailto:info@nexarentals.com">
-                  info@nexarentals.com
+                <a className="transition hover:text-white" href="mailto:info@nexarentals.es">
+                  info@nexarentals.es
                 </a>
               </p>
             </div>
@@ -85,15 +88,15 @@ export default function NexaFooter() {
 
           {/* MIDDLE */}
           <div className="md:text-center">
-            <p className="text-sm font-semibold tracking-wide">Get Updates</p>
+            <p className="text-sm font-semibold tracking-wide">{t("getUpdates")}</p>
             <p className="mt-1 text-sm" style={{ color: THEME.textSoft }}>
-              Deals, discounts & seasonal offers.
+              {t("dealsText")}
             </p>
 
             <form className="mt-4 flex w-full max-w-md gap-2 md:mx-auto" onSubmit={(e) => e.preventDefault()}>
               <input
                 type="email"
-                placeholder="Your email"
+                placeholder={t("yourEmail")}
                 className="w-full rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/40 ring-1 ring-white/10 outline-none transition focus:ring-orange-500/40"
                 style={{
                   background: THEME.surface,
@@ -108,18 +111,18 @@ export default function NexaFooter() {
                   boxShadow: "0 18px 44px rgba(255,122,0,0.18)",
                 }}
               >
-                Join
+                {t("join")}
               </button>
             </form>
 
             <p className="mt-3 text-xs" style={{ color: THEME.textDim }}>
-              No spam. Unsubscribe anytime.
+              {t("noSpam")}
             </p>
           </div>
 
-          {/* RIGHT: UPDATED ICONS */}
+          {/* RIGHT */}
           <div className="md:justify-self-end">
-            <p className="text-sm font-semibold tracking-wide md:text-right">Follow</p>
+            <p className="text-sm font-semibold tracking-wide md:text-right">{t("follow")}</p>
 
             <div className="mt-4 flex gap-3 md:justify-end">
               <SocialIcon label="Instagram" href="#" icon="instagram" />
@@ -136,34 +139,34 @@ export default function NexaFooter() {
           style={{ borderTop: `1px solid ${THEME.borderSoft}` }}
         >
           <p className="text-xs" style={{ color: THEME.textDim }}>
-            © {year} NEXA Rentals. All rights reserved.
+            © {year} NEXA Rentals. {t("allRightsReserved")}
           </p>
 
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs md:justify-end" style={{ color: THEME.textDim }}>
-  <Link href="/terms" className="transition hover:text-white">
-    Terms & Conditions
-  </Link>
+            <Link href="/terms" className="transition hover:text-white">
+              {t("terms")}
+            </Link>
 
-  <Link href="/privacy" className="transition hover:text-white">
-    Privacy Policy
-  </Link>
+            <Link href="/privacy" className="transition hover:text-white">
+              {t("privacy")}
+            </Link>
 
-  <Link href="/deposit-policy" className="transition hover:text-white">
-    Deposit Policy
-  </Link>
+            <Link href="/deposit-policy" className="transition hover:text-white">
+              {t("depositPolicy")}
+            </Link>
 
-  <Link href="/refund-policy" className="transition hover:text-white">
-    Refund Policy
-  </Link>
+            <Link href="/refund-policy" className="transition hover:text-white">
+              {t("refundPolicy")}
+            </Link>
 
-  <Link href="/cookies" className="transition hover:text-white">
-    Cookies
-  </Link>
+            <Link href="/cookies" className="transition hover:text-white">
+              {t("cookies")}
+            </Link>
 
-  <Link href="/about" className="transition hover:text-white">
-    About NEXA
-  </Link>
-</div>
+            <Link href="/about" className="transition hover:text-white">
+              {t("aboutNexa")}
+            </Link>
+          </div>
         </div>
       </div>
     </footer>
