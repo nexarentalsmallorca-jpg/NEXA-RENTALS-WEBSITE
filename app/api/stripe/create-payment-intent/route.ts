@@ -15,12 +15,24 @@ export async function POST(req: Request) {
 
     const {
       bookingId,
-      totalAmount, // cents
+      totalAmount,
       currency = "eur",
       customerEmail,
+      customerName,
+      phone,
       pickupDateISO,
       returnDateISO,
+      pickupTime,
+      dropoffTime,
+      pickupLocation,
       bikeName,
+      vehicleId,
+      notes,
+      dlFrontName,
+      dlBackName,
+      idFrontName,
+      idBackName,
+      marketingOptIn,
     } = body;
 
     // Basic validation
@@ -45,7 +57,6 @@ export async function POST(req: Request) {
       amount: depositAmount,
       currency: currency.toLowerCase(),
 
-      // Enables Apple Pay, Google Pay automatically
       automatic_payment_methods: {
         enabled: true,
       },
@@ -57,21 +68,28 @@ export async function POST(req: Request) {
         totalAmount: String(totalAmount),
         depositAmount: String(depositAmount),
         remainingAmount: String(totalAmount - depositAmount),
-        pickupDateISO: pickupDateISO ? String(pickupDateISO) : "",
-        returnDateISO: returnDateISO ? String(returnDateISO) : "",
-        bikeName: bikeName ? String(bikeName) : "",
-        paymentType: "deposit_50_percent",
 
-        // ✅ ADDED (so webhook + emails can read standard fields)
+        paymentType: "pay_50_percent",
+
         customer_email: customerEmail ? String(customerEmail) : "",
+        customer_name: customerName ? String(customerName) : "",
+        phone: phone ? String(phone) : "",
+
+        vehicle_id: vehicleId ? String(vehicleId) : "",
         vehicle_name: bikeName ? String(bikeName) : "",
+
         pickup_date: pickupDateISO ? String(pickupDateISO) : "",
         dropoff_date: returnDateISO ? String(returnDateISO) : "",
-        // Optional fields your webhook might support later:
-        customer_name: "",
-        phone: "",
-        pickup_time: "",
-        dropoff_time: "",
+        pickup_time: pickupTime ? String(pickupTime) : "",
+        dropoff_time: dropoffTime ? String(dropoffTime) : "",
+        pickup_location: pickupLocation ? String(pickupLocation) : "",
+
+        notes: notes ? String(notes).slice(0, 500) : "",
+        dl_front_name: dlFrontName ? String(dlFrontName) : "",
+        dl_back_name: dlBackName ? String(dlBackName) : "",
+        id_front_name: idFrontName ? String(idFrontName) : "",
+        id_back_name: idBackName ? String(idBackName) : "",
+        marketing_opt_in: marketingOptIn ? "yes" : "no",
       },
     });
 

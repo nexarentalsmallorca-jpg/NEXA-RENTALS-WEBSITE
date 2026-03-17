@@ -253,6 +253,7 @@ export default function CheckoutClient() {
       setPayLoading(true);
 
       const bookingId = `bk_${vehicle.id}_${Date.now()}`;
+      const customerName = `${firstName.trim()} ${surname.trim()}`.trim();
 
       const res = await fetch("/api/stripe/create-payment-intent", {
         method: "POST",
@@ -261,10 +262,22 @@ export default function CheckoutClient() {
           bookingId,
           totalAmount: totalCents,
           currency: "eur",
-          customerEmail: email,
+          customerEmail: email.trim(),
+          customerName,
+          phone: phone.trim(),
           pickupDateISO: from?.toISOString() ?? "",
           returnDateISO: to?.toISOString() ?? "",
+          pickupTime,
+          dropoffTime,
+          pickupLocation,
           bikeName: vehicle.name,
+          vehicleId: vehicle.id,
+          notes: notes.trim(),
+          dlFrontName: dlFront?.name ?? "",
+          dlBackName: dlBack?.name ?? "",
+          idFrontName: idFront?.name ?? "",
+          idBackName: idBack?.name ?? "",
+          marketingOptIn,
         }),
       });
 
