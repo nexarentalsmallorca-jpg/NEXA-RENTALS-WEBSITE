@@ -197,7 +197,7 @@ export async function POST(req: Request) {
 
               <p>
                 <b>Nexa Rentals Team</b><br/>
-                Magaluf, Mallorca
+                Magaluf, Mallorca (Spain)
               </p>
             </div>
           `,
