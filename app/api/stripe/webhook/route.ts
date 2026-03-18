@@ -81,39 +81,65 @@ export async function POST(req: Request) {
         to: OWNER_EMAIL,
         subject: `✅ New booking paid — ${(amount / 100).toFixed(2)} ${currency}`,
         html: `
-          <h2>New booking received ✅</h2>
-          <p><b>Booking ID:</b> ${md.bookingId || "-"}</p>
-          <p><b>Name:</b> ${md.customer_name || "-"}</p>
-          <p><b>Email:</b> ${md.customer_email || "-"}</p>
-          <p><b>Phone:</b> ${md.phone || "-"}</p>
-          <hr/>
-          <p><b>Vehicle:</b> ${md.vehicle_name || "-"}</p>
-          <p><b>Vehicle ID:</b> ${md.vehicle_id || "-"}</p>
-          <p><b>Pickup:</b> ${md.pickup_date || "-"} ${md.pickup_time || ""}</p>
-          <p><b>Dropoff:</b> ${md.dropoff_date || "-"} ${md.dropoff_time || ""}</p>
-          <p><b>Pickup location:</b> ${md.pickup_location || "-"}</p>
-          <p><b>Notes:</b> ${md.notes || "-"}</p>
-          <hr/>
-          <p><b>Driving licence front:</b> ${md.dl_front_name || "-"}</p>
-          <p><b>Driving licence back:</b> ${md.dl_back_name || "-"}</p>
-          <p><b>ID front:</b> ${md.id_front_name || "-"}</p>
-          <p><b>ID back:</b> ${md.id_back_name || "-"}</p>
-          <hr/>
-          <p><b>Total rental amount:</b> ${
-            md.totalAmount ? (Number(md.totalAmount) / 100).toFixed(2) : "-"
-          } ${currency}</p>
-          <p><b>Deposit paid now:</b> ${
-            md.depositAmount ? (Number(md.depositAmount) / 100).toFixed(2) : "-"
-          } ${currency}</p>
-          <p><b>Remaining amount:</b> ${
-            md.remainingAmount
-              ? (Number(md.remainingAmount) / 100).toFixed(2)
-              : "-"
-          } ${currency}</p>
-          <p><b>Amount Paid:</b> ${(amount / 100).toFixed(2)} ${currency}</p>
-          <p><b>Marketing opt-in:</b> ${md.marketing_opt_in || "no"}</p>
-          <p><b>PaymentIntent:</b> ${pi.id}</p>
-        `,
+  <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
+    
+    <h2 style="color:#0ea5e9;">Your booking is confirmed ✅</h2>
+
+    <p>Hi ${md.customer_name || ""},</p>
+    <p>Thank you for choosing <b>Nexa Rentals</b>. Your booking has been successfully confirmed.</p>
+
+    <hr/>
+
+    <h3>📄 Booking Details</h3>
+    <p><b>Booking ID:</b> ${md.bookingId || "-"}</p>
+    <p><b>Vehicle:</b> ${md.vehicle_name || "-"}</p>
+    <p><b>Pickup:</b> ${md.pickup_date || "-"} ${md.pickup_time || ""}</p>
+    <p><b>Dropoff:</b> ${md.dropoff_date || "-"} ${md.dropoff_time || ""}</p>
+    <p><b>Pickup Location:</b> ${md.pickup_location || "Magaluf (Carrer Galeón 13)"}</p>
+
+    <hr/>
+
+    <h3>💳 Payment Summary</h3>
+    <p><b>Amount Paid:</b> ${(amount / 100).toFixed(2)} ${currency}</p>
+    <p><b>Remaining Amount (to pay at pickup):</b> ${
+      md.remainingAmount
+        ? (Number(md.remainingAmount) / 100).toFixed(2)
+        : "-"
+    } ${currency}</p>
+
+    <hr/>
+
+    <h3>📍 Pickup Instructions</h3>
+    <ul>
+      <li>Please arrive at the pickup location on time.</li>
+      <li>Bring all required documents (see below).</li>
+      <li>Our team will assist you with the vehicle handover.</li>
+    </ul>
+
+    <h3>🪪 Required Documents</h3>
+    <ul>
+      <li>Valid driving licence (original, no copies)</li>
+      <li>Passport or national ID</li>
+    </ul>
+
+    <h3>💰 Deposit & Payment</h3>
+    <ul>
+      <li>A <b>€150 security deposit</b> is required at pickup</li>
+      <li>Deposit is accepted <b>ONLY by card</b></li>
+      <li>Remaining rental amount must be paid at pickup</li>
+    </ul>
+
+    <hr/>
+
+    <p>If you have any questions, simply reply to this email or contact us directly.</p>
+
+    <p>We look forward to serving you 🚀</p>
+
+    <p><b>Nexa Rentals Team</b><br/>
+    Magaluf, Mallorca</p>
+
+  </div>
+`,
       });
 
       if (ownerEmailResult.error) {
