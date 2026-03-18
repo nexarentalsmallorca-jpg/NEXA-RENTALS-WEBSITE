@@ -106,25 +106,39 @@ export async function POST(req: Request) {
     // Email customer confirmation
     const customerEmail = md.customer_email;
     if (customerEmail) {
-      await resend.emails.send({
-        from: `Nexa Rentals <${FROM_EMAIL}>`,
-        to: customerEmail,
-        subject: "✅ Your booking is confirmed",
-        html: `
-          <h2>Your booking is confirmed ✅</h2>
-          <p>Hi ${md.customer_name || ""},</p>
-          <p>Here are your booking details:</p>
-          <p><b>Booking ID:</b> ${md.bookingId || "-"}</p>
-          <p><b>Vehicle:</b> ${md.vehicle_name || "-"}</p>
-          <p><b>Pickup:</b> ${md.pickup_date || "-"} ${md.pickup_time || ""}</p>
-          <p><b>Dropoff:</b> ${md.dropoff_date || "-"} ${md.dropoff_time || ""}</p>
-          <p><b>Pickup location:</b> ${md.pickup_location || "-"}</p>
-          <p><b>Amount Paid:</b> ${(amount / 100).toFixed(2)} ${currency}</p>
-          <p><b>Remaining amount at pickup:</b> ${md.remainingAmount ? (Number(md.remainingAmount) / 100).toFixed(2) : "-"} ${currency}</p>
-          <p>If you need help, reply to this email.</p>
-        `,
-      });
-    }
+  try {
+    const emailResult = await resend.emails.send({
+      from: "Nexa Rentals <onboarding@resend.dev>",
+      to: customerEmail,
+      subject: "✅ Your booking is confirmed",
+      html: `
+        <h2>Your booking is confirmed ✅</h2>
+        <p>Hi ${md.customer_name || ""},</p>
+        <p>Here are your booking details:</p>
+
+        <p><b>Booking ID:</b> ${md.bookingId || "-"}</p>
+        <p><b>Vehicle:</b> ${md.vehicle_name || "-"}</p>
+        <p><b>Pickup:</b> ${md.pickup_date || "-"} ${md.pickup_time || ""}</p>
+        <p><b>Dropoff:</b> ${md.dropoff_date || "-"} ${md.dropoff_time || ""}</p>
+        <p><b>Pickup Location:</b> ${md.pickup_location || "-"}</p>
+
+        <p><b>Amount Paid:</b> ${(amount / 100).toFixed(2)} ${currency}</p>
+
+        <p><b>Remaining amount at pickup:</b> ${
+          md.remainingAmount
+            ? (Number(md.remainingAmount) / 100).toFixed(2)
+            : "-"
+        } ${currency}</p>
+
+        <p>If you need help, reply to this email.</p>
+      `,
+    });
+
+    console.log("✅ EMAIL SENT:", emailResult);
+  } catch (error) {
+    console.error("❌ EMAIL ERROR:", error);
+  }
+}
   }
 
   return NextResponse.json({ received: true });
