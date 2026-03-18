@@ -20,6 +20,15 @@ const FROM_EMAIL =
   process.env.RESEND_FROM ||
   "onboarding@resend.dev";
 
+function formatDate(dateString?: string) {
+  if (!dateString) return "-";
+  const d = new Date(dateString);
+  const day = String(d.getDate()).padStart(2, "0");
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const year = d.getFullYear();
+  return `${day}-${month}-${year}`;
+}
+
 export async function POST(req: Request) {
   const sig = req.headers.get("stripe-signature");
   const rawBody = await req.text();
@@ -80,7 +89,7 @@ export async function POST(req: Request) {
         subject: `✅ New booking paid — ${(amount / 100).toFixed(2)} ${currency}`,
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
-            <h2 style="color:#0ea5e9;">New booking received ✅</h2>
+            <h2 style="color:#f97316;">New booking received ✅</h2>
 
             <p><b>Booking ID:</b> ${md.bookingId || "-"}</p>
             <p><b>Name:</b> ${md.customer_name || "-"}</p>
@@ -91,8 +100,8 @@ export async function POST(req: Request) {
 
             <p><b>Vehicle:</b> ${md.vehicle_name || "-"}</p>
             <p><b>Vehicle ID:</b> ${md.vehicle_id || "-"}</p>
-            <p><b>Pickup:</b> ${md.pickup_date || "-"} ${md.pickup_time || ""}</p>
-            <p><b>Dropoff:</b> ${md.dropoff_date || "-"} ${md.dropoff_time || ""}</p>
+            <p><b>Pickup Date & Time:</b> ${formatDate(md.pickup_date)} at ${md.pickup_time || "-"}</p>
+            <p><b>Dropoff Date & Time:</b> ${formatDate(md.dropoff_date)} at ${md.dropoff_time || "-"}</p>
             <p><b>Pickup location:</b> ${md.pickup_location || "-"}</p>
             <p><b>Notes:</b> ${md.notes || "-"}</p>
 
@@ -143,7 +152,7 @@ export async function POST(req: Request) {
           subject: "✅ Your booking is confirmed",
           html: `
             <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
-              <h2 style="color:#0ea5e9;">Your booking is confirmed ✅</h2>
+              <h2 style="color:#f97316;">Your booking is confirmed ✅</h2>
 
               <p>Hi ${md.customer_name || ""},</p>
               <p>Thank you for choosing <b>Nexa Rentals</b>. Your booking has been successfully confirmed.</p>
@@ -153,8 +162,8 @@ export async function POST(req: Request) {
               <h3>Booking Details</h3>
               <p><b>Booking ID:</b> ${md.bookingId || "-"}</p>
               <p><b>Vehicle:</b> ${md.vehicle_name || "-"}</p>
-              <p><b>Pickup:</b> ${md.pickup_date || "-"} ${md.pickup_time || ""}</p>
-              <p><b>Dropoff:</b> ${md.dropoff_date || "-"} ${md.dropoff_time || ""}</p>
+              <p><b>Pickup Date & Time:</b> ${formatDate(md.pickup_date)} at ${md.pickup_time || "-"}</p>
+              <p><b>Dropoff Date & Time:</b> ${formatDate(md.dropoff_date)} at ${md.dropoff_time || "-"}</p>
               <p><b>Pickup Location:</b> ${md.pickup_location || "Magaluf (Carrer Galeón 13)"}</p>
 
               <hr/>
