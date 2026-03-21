@@ -1,7 +1,7 @@
 "use client";
 export const dynamic = "force-dynamic";
 
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Navbar from "../../Navbar";
 import { useLocale, useTranslations } from "next-intl";
@@ -22,22 +22,23 @@ type Vehicle = {
 };
 
 /* ---------------- fleet ---------------- */
+/* synced with VehiclesClient page */
 const VEHICLES: Vehicle[] = [
   {
     id: "s1",
     name: "ZONTES 125E",
     type: "Scooter",
-    pricePerDay: 55,
+    pricePerDay: 49,
     imageUrl: "/images/zontes125.png",
     badges: ["Premium", "Performance"],
     spec1: "125cc • Automatic",
-    spec2: "Best for fast rides",
+    spec2: "Phone holder • 2 Helmets",
   },
   {
     id: "s2",
     name: "PIAGGIO LIBERTY 125",
     type: "Scooter",
-    pricePerDay: 45,
+    pricePerDay: 39,
     imageUrl: "/images/liberty125.png",
     badges: ["Popular", "Best Seller"],
     spec1: "125cc • Automatic",
@@ -47,27 +48,17 @@ const VEHICLES: Vehicle[] = [
     id: "s3",
     name: "SYM SYMPHONY 125",
     type: "Scooter",
-    pricePerDay: 45,
+    pricePerDay: 39,
     imageUrl: "/images/sym.png",
     badges: ["Comfort", "Practical"],
     spec1: "125cc • Automatic",
     spec2: "Stable city ride",
   },
   {
-    id: "e1",
-    name: "ENGWE X26 (Performance)",
-    type: "E-Bike",
-    pricePerDay: 29,
-    imageUrl: "/images/citybike2.png",
-    badges: ["Premium", "Cruise Control"],
-    spec1: "Up to 90km range",
-    spec2: "Powerful & fun",
-  },
-  {
     id: "e2",
     name: "ENGWE M20 (JOY)",
     type: "E-Bike",
-    pricePerDay: 25,
+    pricePerDay: 28,
     imageUrl: "/images/e20.png",
     badges: ["Practical", "Power"],
     spec1: "Up to 60km range",
@@ -77,7 +68,7 @@ const VEHICLES: Vehicle[] = [
     id: "e3",
     name: "P275 SE (Comfort)",
     type: "E-Bike",
-    pricePerDay: 33,
+    pricePerDay: 28,
     imageUrl: "/images/ebike-urban.png",
     badges: ["Comfort", "Stable"],
     spec1: "Up to 45km range",
@@ -133,20 +124,23 @@ function daysBetween(from?: Date, to?: Date) {
   return Math.max(1, days);
 }
 
-/* ✅ EXACT fixed daily pricing */
+/* synced with VehiclesClient page */
 function discountedPricePerDay(vehicle: Vehicle, days: number) {
   const safeDays = Math.max(1, days);
 
-  // EXACT fixed prices for the 45€/day scooters
   if (vehicle.id === "s2" || vehicle.id === "s3") {
-    if (safeDays === 1) return 45;
-    if (safeDays === 2) return 42;
-    if (safeDays === 3) return 39;
-    if (safeDays === 4) return 37;
-    return 35; // 5+ days
+    const ladderRatios: Record<number, number> = {
+      1: 1,
+      2: 42 / 45,
+      3: 39 / 45,
+      4: 37 / 45,
+      5: 35 / 45,
+    };
+
+    const step = safeDays >= 5 ? 5 : safeDays;
+    return Math.round(vehicle.pricePerDay * ladderRatios[step]);
   }
 
-  // Other vehicles: proportional version of same ladder
   const ladderRatios: Record<number, number> = {
     1: 1,
     2: 42 / 45,
@@ -167,9 +161,12 @@ function phoneOk(v: string) {
   return digits.length >= 7;
 }
 
-// whole euro display only
-function eur(cents: number) {
-  return String(Math.round(cents / 100));
+function eur(n: number) {
+  return n.toFixed(2);
+}
+
+function eurFromCents(cents: number) {
+  return (cents / 100).toFixed(2);
 }
 
 /* ---------------- page ---------------- */
@@ -180,6 +177,29 @@ export default function CheckoutClient() {
 
   const t = useTranslations("checkout");
   const locale = useLocale();
+
+  const firstNameRef = useRef<HTMLInputElement | null>(null);
+  const surnameRef = useRef<HTMLInputElement | null>(null);
+  const phoneRef = useRef<HTMLInputElement | null>(null);
+  const emailRef = useRef<HTMLInputElement | null>(null);
+  const notesRef = useRef<HTMLTextAreaElement | null>(null);
+
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      firstNameRef.current?.focus();
+    }, 120);
+
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const moveToNextField = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    nextRef?: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>
+  ) => {
+    if (e.key !== "Enter") return;
+    e.preventDefault();
+    nextRef?.current?.focus();
+  };
 
   // booking params
   const pickupLocation =
@@ -196,7 +216,6 @@ export default function CheckoutClient() {
     [vehicleId]
   );
 
-  // ✅ ONLY this exact fixed-price logic is used
   const discountedPerDayEur = discountedPricePerDay(vehicle, rentalDays);
   const totalEur = discountedPerDayEur * rentalDays;
 
@@ -389,7 +408,7 @@ export default function CheckoutClient() {
                 {discountPct > 0 && (
                   <div className="text-[11px] font-black text-white/55">
                     <span className="line-through">
-                      €{Math.round(vehicle.pricePerDay)}
+                      €{eur(vehicle.pricePerDay)}
                     </span>{" "}
                     {t("perDayShort")}
                   </div>
@@ -398,7 +417,7 @@ export default function CheckoutClient() {
                   className="text-xl font-black leading-none"
                   style={{ color: ORANGE }}
                 >
-                  €{Math.round(discountedPerDayEur)}
+                  €{eur(discountedPerDayEur)}
                   <span className="text-[11px] text-white/60">
                     {t("perDayShort")}
                   </span>
@@ -406,7 +425,7 @@ export default function CheckoutClient() {
                 <div className="mt-1 text-[11px] text-white/60">
                   {t("total")}:{" "}
                   <span className="font-black text-white/85">
-                    €{eur(totalCents)}
+                    €{eur(totalEur)}
                   </span>
                 </div>
               </div>
@@ -479,8 +498,10 @@ export default function CheckoutClient() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                   <Field label={t("nameLabel")}>
                     <input
+                      ref={firstNameRef}
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
+                      onKeyDown={(e) => moveToNextField(e, surnameRef)}
                       className="w-full rounded-2xl border px-4 py-3 text-[14px] font-semibold text-white/90 outline-none"
                       style={{
                         borderColor: "rgba(255,255,255,0.12)",
@@ -488,13 +509,16 @@ export default function CheckoutClient() {
                       }}
                       placeholder={t("namePlaceholder")}
                       autoComplete="given-name"
+                      autoFocus
                     />
                   </Field>
 
                   <Field label={t("surnameLabel")}>
                     <input
+                      ref={surnameRef}
                       value={surname}
                       onChange={(e) => setSurname(e.target.value)}
+                      onKeyDown={(e) => moveToNextField(e, phoneRef)}
                       className="w-full rounded-2xl border px-4 py-3 text-[14px] font-semibold text-white/90 outline-none"
                       style={{
                         borderColor: "rgba(255,255,255,0.12)",
@@ -508,8 +532,10 @@ export default function CheckoutClient() {
 
                 <Field label={t("phoneLabel")}>
                   <input
+                    ref={phoneRef}
                     value={phone}
                     onChange={(e) => setPhone(e.target.value)}
+                    onKeyDown={(e) => moveToNextField(e, emailRef)}
                     className="w-full rounded-2xl border px-4 py-3 text-[14px] font-semibold text-white/90 outline-none"
                     style={{
                       borderColor: "rgba(255,255,255,0.12)",
@@ -523,8 +549,10 @@ export default function CheckoutClient() {
 
                 <Field label={t("emailLabel")}>
                   <input
+                    ref={emailRef}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    onKeyDown={(e) => moveToNextField(e, notesRef)}
                     className="w-full rounded-2xl border px-4 py-3 text-[14px] font-semibold text-white/90 outline-none"
                     style={{
                       borderColor: "rgba(255,255,255,0.12)",
@@ -587,6 +615,7 @@ export default function CheckoutClient() {
 
                 <Field label={t("notesLabel")}>
                   <textarea
+                    ref={notesRef}
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
                     className="w-full min-h-[85px] rounded-2xl border px-4 py-3 text-[14px] font-semibold text-white/90 outline-none"
@@ -627,7 +656,7 @@ export default function CheckoutClient() {
                 <div className="text-right">
                   <div className="text-[11px] text-white/55">{t("onlineToday")}</div>
                   <div className="text-xl font-black" style={{ color: ORANGE }}>
-                    €{eur(payNowCents)}
+                    €{eurFromCents(payNowCents)}
                   </div>
                 </div>
               </div>
@@ -641,12 +670,12 @@ export default function CheckoutClient() {
               >
                 <Row
                   left={<span className="text-white/70">{t("payNow50")}</span>}
-                  right={<span className="font-black text-white/90">€{eur(payNowCents)}</span>}
+                  right={<span className="font-black text-white/90">€{eurFromCents(payNowCents)}</span>}
                 />
                 <div className="mt-2">
                   <Row
                     left={<span className="text-white/70">{t("payPickup50")}</span>}
-                    right={<span className="font-black text-white/90">€{eur(payPickupCents)}</span>}
+                    right={<span className="font-black text-white/90">€{eurFromCents(payPickupCents)}</span>}
                   />
                 </div>
 
@@ -656,8 +685,20 @@ export default function CheckoutClient() {
                 >
                   <Row
                     left={<span className="text-white/55">{t("rentalTotal")}</span>}
-                    right={<span className="font-black text-white/80">€{eur(totalCents)}</span>}
+                    right={<span className="font-black text-white/80">€{eurFromCents(totalCents)}</span>}
                   />
+                </div>
+              </div>
+
+              <div
+                className="mt-3 rounded-2xl border p-3 text-[12px]"
+                style={{
+                  borderColor: "rgba(255,122,0,0.35)",
+                  background: "rgba(255,122,0,0.08)",
+                }}
+              >
+                <div className="font-black" style={{ color: ORANGE }}>
+                  Pay €{eurFromCents(payNowCents)} now to book it, and the remaining €{eurFromCents(payPickupCents)} you&apos;ll pay at pickup.
                 </div>
               </div>
 
@@ -689,7 +730,9 @@ export default function CheckoutClient() {
                     : "rgba(255,255,255,0.10)",
                 }}
               >
-                {payLoading ? "Preparing secure checkout..." : t("pay50NowAndBook")}
+                {payLoading
+                  ? "Preparing secure checkout..."
+                  : `Pay €${eurFromCents(payNowCents)} now and book`}
               </button>
 
               {payError && (
@@ -717,7 +760,7 @@ export default function CheckoutClient() {
                 <div className="mt-1 text-white/75">
                   {t("depositTextBefore")}{" "}
                   <span className="font-black" style={{ color: "#FFB074" }}>
-                    €{deposit}
+                    €{eur(deposit)}
                   </span>{" "}
                   {t("depositTextAfter")}
                 </div>

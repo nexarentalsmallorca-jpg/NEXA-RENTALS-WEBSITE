@@ -7,6 +7,7 @@ import Navbar from "../../Navbar";
 import { useTranslations, useLocale } from "next-intl";
 
 type VehicleType = "Scooter" | "E-Bike";
+type AvailabilityStatus = "available" | "one-left" | "rented-out";
 
 type Vehicle = {
   id: string;
@@ -22,6 +23,7 @@ type Vehicle = {
   featured?: boolean;
   spec1?: string;
   spec2?: string;
+  availability: AvailabilityStatus;
 };
 
 function startOfDay(d: Date) {
@@ -74,7 +76,7 @@ const VEHICLES: Vehicle[] = [
     brand: "ZONTES",
     type: "Scooter",
     seats: 2,
-    pricePerDay: 55,
+    pricePerDay: 49,
     rating: 4.8,
     reviews: 241,
     imageUrl: "/images/zontes125.png",
@@ -82,6 +84,7 @@ const VEHICLES: Vehicle[] = [
     spec1: "125cc • Automatic",
     spec2: "Phone holder • 2 Helmets",
     featured: true,
+    availability: "rented-out",
   },
   {
     id: "s2",
@@ -89,7 +92,7 @@ const VEHICLES: Vehicle[] = [
     brand: "PIAGGIO",
     type: "Scooter",
     seats: 2,
-    pricePerDay: 45,
+    pricePerDay: 39,
     rating: 4.7,
     reviews: 190,
     imageUrl: "/images/liberty125.png",
@@ -97,6 +100,7 @@ const VEHICLES: Vehicle[] = [
     spec1: "125cc • Automatic",
     spec2: "Phone holder • 2 Helmets",
     featured: true,
+    availability: "available",
   },
   {
     id: "s3",
@@ -104,13 +108,14 @@ const VEHICLES: Vehicle[] = [
     brand: "SYM",
     type: "Scooter",
     seats: 2,
-    pricePerDay: 45,
+    pricePerDay: 39,
     rating: 4.9,
     reviews: 112,
     imageUrl: "/images/sym.png",
     badges: ["Comfort", "Practical"],
     spec1: "125cc • Automatic",
     spec2: "Phone holder • 2 Helmets",
+    availability: "one-left",
   },
   {
     id: "e2",
@@ -118,13 +123,14 @@ const VEHICLES: Vehicle[] = [
     brand: "ENGWE",
     type: "E-Bike",
     seats: 1,
-    pricePerDay: 25,
+    pricePerDay: 28,
     rating: 4.5,
     reviews: 34,
     imageUrl: "/images/e20.png",
     badges: ["Practical", "Power"],
     spec1: "Up to 60km range",
     spec2: "Lock • Helmet included",
+    availability: "rented-out",
   },
   {
     id: "e3",
@@ -132,13 +138,14 @@ const VEHICLES: Vehicle[] = [
     brand: "ENGWE",
     type: "E-Bike",
     seats: 1,
-    pricePerDay: 33,
+    pricePerDay: 28,
     rating: 4.7,
     reviews: 29,
     imageUrl: "/images/ebike-urban.png",
     badges: ["Comfort", "Stable"],
     spec1: "Up to 45km range",
     spec2: "Lock • Helmet included",
+    availability: "rented-out",
   },
 ];
 
@@ -159,11 +166,16 @@ function discountedPricePerDay(vehicle: Vehicle, days: number) {
   const safeDays = Math.max(1, days);
 
   if (vehicle.id === "s2" || vehicle.id === "s3") {
-    if (safeDays === 1) return 45;
-    if (safeDays === 2) return 42;
-    if (safeDays === 3) return 39;
-    if (safeDays === 4) return 37;
-    return 35;
+    const ladderRatios: Record<number, number> = {
+      1: 1,
+      2: 42 / 45,
+      3: 39 / 45,
+      4: 37 / 45,
+      5: 35 / 45,
+    };
+
+    const step = safeDays >= 5 ? 5 : safeDays;
+    return Math.round(vehicle.pricePerDay * ladderRatios[step]);
   }
 
   const ladderRatios: Record<number, number> = {
@@ -181,19 +193,52 @@ function discountedPricePerDay(vehicle: Vehicle, days: number) {
 function displayDiscountPct(days: number) {
   const safeDays = Math.max(1, days);
 
-  const basePrice = 45;
-  let discounted = 45;
+  const basePrice = 39;
+  let discounted = 39;
 
-  if (safeDays === 2) discounted = 42;
-  else if (safeDays === 3) discounted = 39;
-  else if (safeDays === 4) discounted = 37;
-  else if (safeDays >= 5) discounted = 35;
+  if (safeDays === 2) discounted = Math.round(39 * (42 / 45));
+  else if (safeDays === 3) discounted = Math.round(39 * (39 / 45));
+  else if (safeDays === 4) discounted = Math.round(39 * (37 / 45));
+  else if (safeDays >= 5) discounted = Math.round(39 * (35 / 45));
 
   return Math.max(0, Math.round(((basePrice - discounted) / basePrice) * 100));
 }
 
 function money(n: number) {
   return Math.round(n);
+}
+
+function getAvailabilityMeta(status: AvailabilityStatus) {
+  if (status === "available") {
+    return {
+      label: "Available",
+      subLabel: "Available",
+      pillBg: "rgba(34,197,94,0.14)",
+      pillBorder: "rgba(34,197,94,0.28)",
+      pillText: "#4ADE80",
+      textColor: "#4ADE80",
+    };
+  }
+
+  if (status === "one-left") {
+    return {
+      label: "1 Left",
+      subLabel: "Only 1 left",
+      pillBg: "rgba(255,122,0,0.14)",
+      pillBorder: "rgba(255,122,0,0.28)",
+      pillText: "#FFB074",
+      textColor: "#FFB074",
+    };
+  }
+
+  return {
+    label: "RENTED OUT",
+    subLabel: "RENTED OUT",
+    pillBg: "rgba(239,68,68,0.14)",
+    pillBorder: "rgba(239,68,68,0.24)",
+    pillText: "#F87171",
+    textColor: "#F87171",
+  };
 }
 
 export default function VehiclesClient() {
@@ -214,11 +259,13 @@ export default function VehiclesClient() {
 
   const results = useMemo(() => {
     const map = new Map(VEHICLES.map((v) => [v.id, v]));
-    const orderedIds = ["s2", "s1", "s3", "e1", "e2", "e3"];
+    const orderedIds = ["s2", "s3", "s1", "e2", "e3"];
     return orderedIds.map((id) => map.get(id)!).filter(Boolean);
   }, []);
 
   const onSelectVehicle = (v: Vehicle) => {
+    if (v.availability === "rented-out") return;
+
     const params = new URLSearchParams(sp.toString());
     params.set("vehicleId", v.id);
     router.push(`/checkout?${params.toString()}`);
@@ -348,7 +395,6 @@ export default function VehiclesClient() {
           </div>
         </div>
 
-        {/* mobile: pills in one horizontal row with content width only */}
         <div className="mt-2 md:hidden overflow-x-auto scrollbar-hide">
           <div className="flex items-center gap-2 w-max pr-2">
             <TrustPillCompact icon="helmet" title="Free 2nd Helmet" />
@@ -357,7 +403,6 @@ export default function VehiclesClient() {
           </div>
         </div>
 
-        {/* desktop/tablet unchanged */}
         <div className="hidden md:grid mt-3 grid-cols-1 md:grid-cols-3 gap-3">
           <TrustPill icon="helmet" title="Free 2nd Helmet" />
           <TrustPill icon="support" title="Free Locks Included" />
@@ -377,6 +422,9 @@ export default function VehiclesClient() {
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {results.map((v, idx) => {
             const isPiaggioBig = v.id === "s2";
+            const isUnavailable = v.availability === "rented-out";
+            const isOneLeft = v.availability === "one-left";
+            const availabilityMeta = getAvailabilityMeta(v.availability);
 
             const discountedPerDay = discountedPricePerDay(v, rentalDays);
             const total = discountedPerDay * rentalDays;
@@ -404,12 +452,19 @@ export default function VehiclesClient() {
                 transition={{ duration: 0.35, delay: Math.min(0.2, idx * 0.03) }}
                 className="relative overflow-hidden rounded-3xl border"
                 style={{
-                  borderColor: isPiaggioBig ? "rgba(255,122,0,0.26)" : THEME.borderSoft,
+                  borderColor: isPiaggioBig
+                    ? "rgba(255,122,0,0.32)"
+                    : isUnavailable
+                    ? "rgba(239,68,68,0.16)"
+                    : THEME.borderSoft,
                   background:
                     "linear-gradient(180deg, rgba(255,255,255,0.055), rgba(255,255,255,0.028))",
                   boxShadow: isPiaggioBig
-                    ? "0 30px 90px rgba(255,122,0,0.10)"
+                    ? "0 30px 90px rgba(255,122,0,0.14)"
+                    : isUnavailable
+                    ? "0 24px 70px rgba(120,0,0,0.16)"
                     : "0 24px 70px rgba(0,0,0,0.38)",
+                  opacity: isUnavailable ? 0.88 : 1,
                 }}
               >
                 <div
@@ -425,22 +480,65 @@ export default function VehiclesClient() {
                   <div
                     className="absolute left-1/2 top-[-120px] h-[260px] w-[260px] -translate-x-1/2 rounded-full blur-3xl opacity-30"
                     style={{
-                      background:
-                        "radial-gradient(circle, rgba(255,122,0,0.28) 0%, rgba(255,122,0,0) 70%)",
+                      background: isUnavailable
+                        ? "radial-gradient(circle, rgba(239,68,68,0.18) 0%, rgba(239,68,68,0) 70%)"
+                        : "radial-gradient(circle, rgba(255,122,0,0.28) 0%, rgba(255,122,0,0) 70%)",
                     }}
                   />
                 </div>
 
+                {isPiaggioBig && (
+  <>
+    <div
+      className="pointer-events-none absolute inset-0"
+      style={{
+        background:
+          "linear-gradient(135deg, rgba(255,122,0,0.10) 0%, rgba(255,122,0,0.03) 38%, rgba(255,255,255,0.015) 100%)",
+      }}
+    />
+    <motion.div
+      aria-hidden="true"
+      className="pointer-events-none absolute -left-[60%] bottom-[-42%] h-[220%] w-[28%] rotate-[32deg]"
+      animate={{ x: ["0%", "500%"], y: ["0%", "-6%"] }}
+      transition={{
+        duration: 4.2,
+        repeat: Infinity,
+        ease: "linear",
+        repeatDelay: 0,
+      }}
+      style={{
+        background:
+          "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.025) 20%, rgba(255,245,232,0.34) 50%, rgba(255,255,255,0.04) 80%, rgba(255,255,255,0) 100%)",
+        filter: "blur(11px)",
+        mixBlendMode: "screen",
+        opacity: 0.82,
+      }}
+    />
+  </>
+)}
                 <div className={`relative z-10 ${pad}`}>
-                  <div className="flex flex-wrap gap-2">
-                    {topTags.map((b) => (
-                      <MiniBadge
-                        key={b}
-                        highlight={v.id === "s2" && (b === "Popular" || b === "Best Seller")}
-                      >
-                        {b}
-                      </MiniBadge>
-                    ))}
+                  <div className="flex flex-wrap items-center justify-between gap-2">
+                    <div className="flex flex-wrap gap-2">
+                      {topTags.map((b) => (
+                        <MiniBadge
+                          key={b}
+                          highlight={v.id === "s2" && (b === "Popular" || b === "Best Seller")}
+                        >
+                          {b}
+                        </MiniBadge>
+                      ))}
+                    </div>
+
+                    <span
+                      className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-black"
+                      style={{
+                        borderColor: availabilityMeta.pillBorder,
+                        background: availabilityMeta.pillBg,
+                        color: availabilityMeta.pillText,
+                      }}
+                    >
+                      {availabilityMeta.label}
+                    </span>
                   </div>
 
                   <div className="mt-3">
@@ -487,15 +585,22 @@ export default function VehiclesClient() {
 
                     <button
                       onClick={() => onSelectVehicle(v)}
-                      className="shrink-0 rounded-2xl px-6 py-3 text-[15px] font-black text-black hover:opacity-90 transition"
+                      disabled={isUnavailable}
+                      className="shrink-0 rounded-2xl px-6 py-3 text-[15px] font-black transition"
                       style={{
-                        background:
-                          "linear-gradient(180deg, rgba(255,122,0,1), rgba(255,122,0,0.85))",
-                        boxShadow: "0 18px 38px rgba(255,122,0,0.18)",
+                        color: isUnavailable ? "rgba(255,255,255,0.75)" : "#000",
+                        background: isUnavailable
+                          ? "linear-gradient(180deg, rgba(120,120,120,0.95), rgba(95,95,95,0.90))"
+                          : "linear-gradient(180deg, rgba(255,122,0,1), rgba(255,122,0,0.85))",
+                        boxShadow: isUnavailable
+                          ? "none"
+                          : "0 18px 38px rgba(255,122,0,0.18)",
+                        cursor: isUnavailable ? "not-allowed" : "pointer",
+                        opacity: isUnavailable ? 0.9 : 1,
                       }}
-                      aria-label={`${t("reserve")} ${v.name}`}
+                      aria-label={`${isUnavailable ? "Unavailable" : t("reserve")} ${v.name}`}
                     >
-                      {t("reserve")}
+                      {isUnavailable ? "RENTED OUT" : t("reserve")}
                     </button>
                   </div>
 
@@ -506,10 +611,46 @@ export default function VehiclesClient() {
                   <div className="mt-3 flex items-center gap-2 text-xs" style={{ color: THEME.textDim }}>
                     <span
                       className="inline-block h-1.5 w-1.5 rounded-full"
-                      style={{ background: "rgba(255,122,0,0.55)" }}
+                      style={{ background: availabilityMeta.textColor }}
                     />
-                    {t("instantConfirmation")} • {t("localSupport")}
+                    <span style={{ color: availabilityMeta.textColor, fontWeight: 800 }}>
+                      {availabilityMeta.subLabel}
+                    </span>
+                    <span>•</span>
+                    <span>
+                      {t("instantConfirmation")} • {t("localSupport")}
+                    </span>
                   </div>
+
+                  {isPiaggioBig && (
+                    <div className="mt-3">
+                      <span
+                        className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-black"
+                        style={{
+                          borderColor: "rgba(34,197,94,0.28)",
+                          background: "rgba(34,197,94,0.12)",
+                          color: "#4ADE80",
+                        }}
+                      >
+                        Main Available Pick
+                      </span>
+                    </div>
+                  )}
+
+                  {isOneLeft && (
+                    <div className="mt-3">
+                      <span
+                        className="inline-flex items-center rounded-full border px-3 py-1 text-[11px] font-black"
+                        style={{
+                          borderColor: "rgba(255,122,0,0.28)",
+                          background: "rgba(255,122,0,0.10)",
+                          color: "#FFB074",
+                        }}
+                      >
+                        Only 1 left
+                      </span>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             );
