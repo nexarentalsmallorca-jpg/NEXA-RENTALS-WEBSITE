@@ -64,7 +64,7 @@ export default function Navbar() {
   const fleetHref = `/${currentLocale}/fleet`;
   const blogsHref = `/${currentLocale}/#blogs`;
   const contactHref = `/${currentLocale}/#contact`;
-  const aboutHref = `/${currentLocale}/#about`;
+  const aboutHref = `/${currentLocale}/about`;
 
   useEffect(() => {
     const setNavHeight = () => {
@@ -79,7 +79,6 @@ export default function Navbar() {
       const y = window.scrollY;
       setHidden(y > 1);
 
-      // Close overlays when scrolling
       if (y > 1) {
         setMobileOpen(false);
         setLangOpen(false);
@@ -125,7 +124,6 @@ export default function Navbar() {
 
     router.push(finalPath);
 
-    // ✅ Force Next.js to re-render translations
     setTimeout(() => {
       router.refresh();
     }, 50);
@@ -133,25 +131,36 @@ export default function Navbar() {
 
   return (
     <>
+      {/* TOP ANNOUNCEMENT BAR */}
+      <div className="fixed inset-x-0 top-0 z-[10000]">
+        <div className="border-b border-[#ff7a00]/20 bg-black/88 backdrop-blur-md">
+          <div className="mx-auto flex min-h-[42px] max-w-7xl items-center justify-center px-4 text-center sm:px-6">
+            <p className="text-[11px] font-medium uppercase tracking-[0.18em] text-white/88 sm:text-xs md:text-sm">
+              <span className="font-semibold text-[#FF7A00]">Opening 1st of April</span>
+              <span className="mx-2 text-white/35">•</span>
+              <span>Book online with Nexa Rentals</span>
+              <span className="mx-2 text-white/35">•</span>
+              <span className="font-semibold text-[#FF7A00]">Fast premium booking service</span>
+            </p>
+          </div>
+        </div>
+      </div>
+
       {/* FIXED NAVBAR (NO BACKGROUND) */}
       <header
         ref={(el) => {
           navRef.current = el;
         }}
         className={[
-          "fixed left-0 right-0 top-5 md:top-10 z-[9999]",
+          "fixed left-0 right-0 top-[52px] md:top-[58px] z-[9999]",
           "transition-transform duration-500 ease-out",
           hidden ? "-translate-y-[160%]" : "translate-y-0",
         ].join(" ")}
       >
-        {/* No bg, no border — just spacing */}
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          {/* MOBILE: grid 3 columns: left language, middle logo, right hamburger */}
-          {/* DESKTOP: flex: logo left, nav right, language far right */}
           <div className="py-0 md:py -8">
             {/* MOBILE ROW */}
             <div className="grid grid-cols-3 items-center md:hidden">
-              {/* LEFT: Language */}
               <div className="relative justify-self-start">
                 <button
                   type="button"
@@ -171,7 +180,6 @@ export default function Navbar() {
                   <span className="text-white/70">▾</span>
                 </button>
 
-                {/* Dropdown */}
                 <div
                   className={[
                     "absolute left-0 mt-2 w-[240px] overflow-hidden rounded-2xl border border-white/10 bg-[#0f1115]/90 backdrop-blur-xl",
@@ -204,19 +212,17 @@ export default function Navbar() {
                 </div>
               </div>
 
-              {/* MIDDLE: Logo */}
               <a href={homeHref} className="justify-self-center select-none">
                 <Image
-  src="/images/reallogo.png"
-  alt="NEXA Rentals"
-  width={300}
-  height={100}
-  className="h-16 w-auto object-contain"
-  priority
-/>
+                  src="/images/reallogo.png"
+                  alt="NEXA Rentals"
+                  width={300}
+                  height={100}
+                  className="h-16 w-auto object-contain"
+                  priority
+                />
               </a>
 
-              {/* RIGHT: Hamburger */}
               <button
                 type="button"
                 aria-label={mobileOpen ? "Close menu" : "Open menu"}
@@ -253,19 +259,17 @@ export default function Navbar() {
 
             {/* DESKTOP ROW */}
             <div className="hidden md:flex items-center">
-              {/* LEFT: Logo */}
               <a href={homeHref} className="select-none flex items-center">
                 <Image
-  src="/images/reallogo.png"
-  alt="NEXA Rentals"
-  width={300}
-  height={100}
-  className="h-20 w-auto object-contain"
-  priority
-/>
+                  src="/images/reallogo.png"
+                  alt="NEXA Rentals"
+                  width={300}
+                  height={100}
+                  className="h-20 w-auto object-contain"
+                  priority
+                />
               </a>
 
-              {/* RIGHT SIDE: Nav links then language at far right */}
               <div className="ml-auto flex items-center gap-10">
                 <nav className="flex items-center gap-10">
                   <a className="nav-link" href={homeHref}>
@@ -281,13 +285,11 @@ export default function Navbar() {
                     {t("about")}
                   </a>
 
-                  {/* CONTACT as minimal luxury CTA (last) */}
                   <a className="nav-link nav-cta" href={contactHref}>
-  CONTACT US
-</a>
+                    CONTACT US
+                  </a>
                 </nav>
 
-                {/* FAR RIGHT: Language dropdown */}
                 <div className="relative">
                   <button
                     type="button"
@@ -344,10 +346,8 @@ export default function Navbar() {
         </div>
       </header>
 
-      {/* ✅ Global layout fix: pushes ALL pages below fixed navbar */}
-      <div aria-hidden className="h-[calc(var(--nav-height)+74px)] md:h-[calc(var(--nav-height)+120px)]" />
+      <div aria-hidden className="h-[calc(var(--nav-height)+116px)] md:h-[calc(var(--nav-height)+156px)]" />
 
-      {/* MOBILE DRAWER (unchanged) */}
       <div className="md:hidden">
         <div
           onClick={() => setMobileOpen(false)}
@@ -428,7 +428,6 @@ export default function Navbar() {
         </aside>
       </div>
 
-      {/* ULTRA LUXURY NAV LINK FONT + HOVER/CLICK (DESKTOP NAV ONLY) */}
       <style jsx global>{`
         .nav-link {
           position: relative;
@@ -493,62 +492,51 @@ export default function Navbar() {
           opacity: 1;
         }
 
-        /* PREMIUM GREY LUXURY CTA */
-.nav-cta {
-  padding: 10px 18px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.18);
+        .nav-cta {
+          padding: 10px 18px;
+          border-radius: 999px;
+          border: 1px solid rgba(255, 255, 255, 0.18);
+          background: linear-gradient(
+            180deg,
+            rgba(60, 64, 72, 0.85) 0%,
+            rgba(38, 41, 48, 0.9) 55%,
+            rgba(22, 24, 29, 0.95) 100%
+          );
+          color: rgba(255, 255, 255, 0.96);
+          letter-spacing: 0.16em;
+          backdrop-filter: blur(10px);
+          box-shadow:
+            0 10px 26px rgba(0, 0, 0, 0.35),
+            inset 0 1px 0 rgba(255, 255, 255, 0.08),
+            inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
 
-  /* premium gradient grey */
-  background: linear-gradient(
-    180deg,
-    rgba(60, 64, 72, 0.85) 0%,
-    rgba(38, 41, 48, 0.9) 55%,
-    rgba(22, 24, 29, 0.95) 100%
-  );
+        .nav-cta::after {
+          display: none;
+        }
 
-  color: rgba(255, 255, 255, 0.96);
-  letter-spacing: 0.16em;
+        .nav-cta:hover {
+          transform: translateY(-1px);
+          border-color: rgba(255, 163, 41, 0.45);
+          box-shadow:
+            0 16px 36px rgba(0, 0, 0, 0.45),
+            0 0 22px rgba(255, 163, 41, 0.18),
+            inset 0 1px 0 rgba(255, 255, 255, 0.1);
+          color: #fff;
+        }
 
-  backdrop-filter: blur(10px);
+        .nav-cta:active {
+          transform: translateY(0px) scale(0.985);
+        }
 
-  box-shadow:
-    0 10px 26px rgba(0, 0, 0, 0.35),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08),
-    inset 0 -1px 0 rgba(0, 0, 0, 0.6);
+        .nav-cta:focus-visible {
+          outline: none;
+          box-shadow:
+            0 0 0 3px rgba(255, 163, 41, 0.25),
+            0 14px 34px rgba(0, 0, 0, 0.35);
+        }
 
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-}
-
-/* remove underline glow */
-.nav-cta::after {
-  display: none;
-}
-
-.nav-cta:hover {
-  transform: translateY(-1px);
-  border-color: rgba(255, 163, 41, 0.45);
-
-  box-shadow:
-    0 16px 36px rgba(0, 0, 0, 0.45),
-    0 0 22px rgba(255, 163, 41, 0.18),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-
-  color: #fff;
-}
-
-.nav-cta:active {
-  transform: translateY(0px) scale(0.985);
-}
-
-.nav-cta:focus-visible {
-  outline: none;
-  box-shadow:
-    0 0 0 3px rgba(255, 163, 41, 0.25),
-    0 14px 34px rgba(0, 0, 0, 0.35);
-}
-
-        /* keep underline effect off for the CTA (cleaner / more premium) */
         .nav-cta::after {
           display: none;
         }

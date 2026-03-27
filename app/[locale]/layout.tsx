@@ -22,9 +22,9 @@ const playfair = Playfair_Display({
   display: "swap",
 });
 
-export const metadata: Metadata = {
-  title: "NEXA Rentals",
-  description: "Premium scooter & e-bike rentals in Mallorca",
+export const metadata = {
+  title: "Scooter Rental Magaluf Mallorca | Nexa Rentals",
+  description: "Rent scooters and e-bikes in Magaluf, Mallorca. Fast online booking, premium vehicles, and Elite Costumer Experience.",
 };
 
 export function generateStaticParams() {

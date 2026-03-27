@@ -11,13 +11,13 @@ type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
 function getOrangeWords(locale: Locale) {
   const map: Record<Locale, string[]> = {
-    en: ["Scooter", "e-Bike", "Mallorca"],
-    es: ["Moto", "Bici-Electrica", "Mallorca"],
-    de: ["Scooter", "Elektrische","fiets", "Mallorca"],
-    fr: ["Scooter", "Vélo", "électrique", "Majorque"],
-    sv: ["Scooter", "Elcykel", "Mallorca"],
-    it: ["Scooter", "Bicicletta","elettrica", "Maiorca"],
-    pt: ["Scooter", "Bicicleta","elétrica", "Maiorca"],
+    en: ["Scooter", "e-Bike", "Mallorca", "Magaluf"],
+    es: ["Moto", "Bici-Electrica", "Mallorca", "Magaluf"],
+    de: ["Scooter", "Elektrische", "fiets", "Mallorca", "Magaluf"],
+    fr: ["Scooter", "Vélo", "électrique", "Majorque", "Magaluf"],
+    sv: ["Scooter", "Elcykel", "Mallorca", "Magaluf"],
+    it: ["Scooter", "Bicicletta", "elettrica", "Maiorca", "Magaluf"],
+    pt: ["Scooter", "Bicicleta", "elétrica", "Maiorca", "Magaluf"],
   };
   return map[locale] ?? map.en;
 }
@@ -52,10 +52,17 @@ function normalizeHeroTitle(raw: string, locale: Locale) {
   return s.trimEnd();
 }
 
+function getSeoHeroTitle(locale: Locale, translatedTitle: string) {
+  if (locale === "en") {
+    return "Best Scooter Rental in Magaluf, Mallorca\nRent Scooters & E-Bikes in Mallorca";
+  }
+
+  return normalizeHeroTitle(translatedTitle, locale);
+}
+
 export default function HomeClient() {
   const locale = (useLocale() as Locale) || "en";
 
-  // ✅ pull translations directly from messages
   const tHero = useTranslations("hero");
 
   const heroTitle = tHero("title");
@@ -73,7 +80,7 @@ export default function HomeClient() {
     textDim: "rgba(255,255,255,0.50)",
   };
 
-  const fullText = useMemo(() => normalizeHeroTitle(heroTitle, locale), [heroTitle, locale]);
+  const fullText = useMemo(() => getSeoHeroTitle(locale, heroTitle), [heroTitle, locale]);
 
   useEffect(() => {
     let i = 0;
@@ -164,7 +171,8 @@ export default function HomeClient() {
                   introOn ? "opacity-100 translate-y-[-120px] " : "opacity-0 translate-y-4",
                 ].join(" ")}
               >
-<h1 className="font-playfair text-[35px] leading-[1.08] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">                  {typedLines
+                <h1 className="font-playfair text-[35px] leading-[1.08] sm:text-[46px] md:text-[60px] lg:text-[56px] lg:leading-[1.05]">
+                  {typedLines
                     .filter((l) => l.trim().length > 0)
                     .map((line, idx, arr) => (
                       <div key={idx} className="whitespace-pre-wrap">
@@ -200,6 +208,42 @@ export default function HomeClient() {
         </div>
       </main>
 
+      <section className="relative -mt-2 pb-10 sm:pb-12">
+        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+          <div
+            className="rounded-[28px] border backdrop-blur-sm p-5 sm:p-7 lg:p-8"
+            style={{
+              background: THEME.surface,
+              borderColor: THEME.borderSoft,
+            }}
+          >
+            <h2 className="font-playfair text-[24px] sm:text-[30px] leading-tight text-white">
+              Scooter Rental in Magaluf, Mallorca
+            </h2>
+            <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
+              Looking for the best scooter rental in Magaluf, Mallorca? Nexa Rentals offers premium scooters and e-bikes
+              with fast online booking, modern vehicles, and a smooth rental experience for tourists exploring the island.
+            </p>
+
+            <h2 className="mt-8 font-playfair text-[22px] sm:text-[28px] leading-tight text-white">
+              E-Bike Rental in Mallorca
+            </h2>
+            <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
+              Discover beaches, scenic coastal roads, and beautiful Mallorca views with our e-bike and scooter rental
+              service. Book online in seconds and enjoy flexible pickup in Magaluf.
+            </p>
+
+            <h2 className="mt-8 font-playfair text-[22px] sm:text-[28px] leading-tight text-white">
+              Why Choose Nexa Rentals
+            </h2>
+            <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
+              Nexa Rentals combines premium vehicles, simple online booking, tourist-friendly service, and a modern rental
+              experience designed for visitors who want freedom, comfort, and reliability in Mallorca.
+            </p>
+          </div>
+        </div>
+      </section>
+
       <section className="relative pt-8 sm:pt-10 pb-12 sm:pb-14">
         <div className="mx-auto max-w-7xl px-4">
           <FeaturedFleet />
@@ -218,15 +262,13 @@ export default function HomeClient() {
           background-position: right bottom;
         }
 
-    @media (max-width: 640px) {
-  .hero-bg-image {
-    background-image: url("/images/heromobile-bg.png");
-    background-position: center bottom;
-
-    filter: brightness(3);
-  }
-}
-
+        @media (max-width: 640px) {
+          .hero-bg-image {
+            background-image: url("/images/heromobile-bg.png");
+            background-position: center bottom;
+            filter: brightness(3);
+          }
+        }
       `}</style>
     </div>
   );
