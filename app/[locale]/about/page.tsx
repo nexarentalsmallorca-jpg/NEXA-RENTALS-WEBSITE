@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import Navbar from "@/app/Navbar";
 
@@ -86,9 +87,11 @@ const faqs = [
 export default function AboutPage() {
   return (
     <>
-      <div className="relative z-[10001]">
-        <Navbar />
-      </div>
+      <Suspense fallback={null}>
+  <div className="relative z-[10001]">
+    <Navbar />
+  </div>
+</Suspense>
 
       <main className="relative z-0 overflow-hidden bg-black text-white">
         {/* Background effects */}
