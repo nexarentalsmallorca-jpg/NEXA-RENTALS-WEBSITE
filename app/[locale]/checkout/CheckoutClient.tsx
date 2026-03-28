@@ -286,7 +286,7 @@ export default function CheckoutClient() {
     if (idFront) formData.append("idFront", idFront);
     if (idBack) formData.append("idBack", idBack);
 
-    const res = await fetch("/api/upload-booking-documents", {
+    const res = await fetch("/api/stripe/upload-booking-documents", {
       method: "POST",
       body: formData,
     });
