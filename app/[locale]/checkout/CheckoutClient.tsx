@@ -181,7 +181,49 @@ function eurFromCents(cents: number) {
 }
 
 /* ---------------- page ---------------- */
+const MAX_IMAGE_WIDTH = 1600;
+const JPEG_QUALITY = 0.72;
 
+async function compressImage(file: File): Promise<File> {
+  if (!file.type.startsWith("image/")) return file;
+
+  const imageBitmap = await createImageBitmap(file);
+
+  let width = imageBitmap.width;
+  let height = imageBitmap.height;
+
+  if (width > MAX_IMAGE_WIDTH) {
+    const ratio = MAX_IMAGE_WIDTH / width;
+    width = Math.round(width * ratio);
+    height = Math.round(height * ratio);
+  }
+
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return file;
+
+  ctx.drawImage(imageBitmap, 0, 0, width, height);
+
+  const blob: Blob = await new Promise((resolve, reject) => {
+    canvas.toBlob(
+      (result) => {
+        if (result) resolve(result);
+        else reject(new Error("Image compression failed"));
+      },
+      "image/jpeg",
+      JPEG_QUALITY
+    );
+  });
+
+  const baseName = file.name.replace(/\.[^.]+$/, "");
+  return new File([blob], `${baseName}.jpg`, {
+    type: "image/jpeg",
+    lastModified: Date.now(),
+  });
+}
 export default function CheckoutClient() {
   const sp = useSearchParams();
   const router = useRouter();
@@ -1000,6 +1042,8 @@ function UploadField({
   chooseHint: string;
   removeText: string;
 }) {
+  const [localError, setLocalError] = useState<string | null>(null);
+
   return (
     <div
       className="rounded-2xl border p-3"
@@ -1014,7 +1058,26 @@ function UploadField({
         <input
           type="file"
           accept="image/*,.pdf"
-          onChange={(e) => onFile(e.target.files?.[0] ?? null)}
+          onChange={async (e) => {
+            try {
+              setLocalError(null);
+              const selected = e.target.files?.[0] ?? null;
+
+              if (!selected) {
+                onFile(null);
+                return;
+              }
+
+              const finalFile = selected.type.startsWith("image/")
+                ? await compressImage(selected)
+                : selected;
+
+              onFile(finalFile);
+            } catch (err: any) {
+              setLocalError(err?.message || "Could not process file.");
+              onFile(null);
+            }
+          }}
           className="w-full text-[12px]"
           style={{ color: brandColor }}
         />
@@ -1025,7 +1088,10 @@ function UploadField({
           <span className="text-white/60 truncate">{file.name}</span>
           <button
             type="button"
-            onClick={() => onFile(null)}
+            onClick={() => {
+              setLocalError(null);
+              onFile(null);
+            }}
             className="rounded-full px-3 py-1 font-black border hover:bg-white/5 transition"
             style={{ borderColor: "rgba(255,255,255,0.12)", color: "#FFB074" }}
           >
@@ -1036,6 +1102,10 @@ function UploadField({
         <div className="mt-2 text-[11px]" style={{ color: brandColor }}>
           {chooseHint}
         </div>
+      )}
+
+      {localError && (
+        <div className="mt-2 text-[11px] text-red-300">{localError}</div>
       )}
     </div>
   );
