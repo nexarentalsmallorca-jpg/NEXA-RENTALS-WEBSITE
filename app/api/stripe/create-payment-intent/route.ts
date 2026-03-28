@@ -32,6 +32,10 @@ export async function POST(req: Request) {
       dlBackName,
       idFrontName,
       idBackName,
+      dlFrontPath,
+      dlBackPath,
+      idFrontPath,
+      idBackPath,
       marketingOptIn,
     } = body;
 
@@ -85,10 +89,17 @@ export async function POST(req: Request) {
         pickup_location: pickupLocation ? String(pickupLocation) : "",
 
         notes: notes ? String(notes).slice(0, 500) : "",
+
         dl_front_name: dlFrontName ? String(dlFrontName) : "",
         dl_back_name: dlBackName ? String(dlBackName) : "",
         id_front_name: idFrontName ? String(idFrontName) : "",
         id_back_name: idBackName ? String(idBackName) : "",
+
+        dl_front_path: dlFrontPath ? String(dlFrontPath) : "",
+        dl_back_path: dlBackPath ? String(dlBackPath) : "",
+        id_front_path: idFrontPath ? String(idFrontPath) : "",
+        id_back_path: idBackPath ? String(idBackPath) : "",
+
         marketing_opt_in: marketingOptIn ? "yes" : "no",
       },
     });

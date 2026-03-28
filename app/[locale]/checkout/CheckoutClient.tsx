@@ -21,6 +21,17 @@ type Vehicle = {
   spec2?: string;
 };
 
+type UploadedDocumentPaths = {
+  dlFrontPath: string;
+  dlBackPath: string;
+  idFrontPath: string;
+  idBackPath: string;
+  dlFrontName: string;
+  dlBackName: string;
+  idFrontName: string;
+  idBackName: string;
+};
+
 /* ---------------- fleet ---------------- */
 /* synced with VehiclesClient page */
 const VEHICLES: Vehicle[] = [
@@ -264,6 +275,40 @@ export default function CheckoutClient() {
     router.push(`/${locale}/vehicles?${sp.toString()}`);
   };
 
+  async function uploadBookingDocuments(
+    bookingId: string
+  ): Promise<UploadedDocumentPaths> {
+    const formData = new FormData();
+    formData.append("bookingId", bookingId);
+
+    if (dlFront) formData.append("dlFront", dlFront);
+    if (dlBack) formData.append("dlBack", dlBack);
+    if (idFront) formData.append("idFront", idFront);
+    if (idBack) formData.append("idBack", idBack);
+
+    const res = await fetch("/api/upload-booking-documents", {
+      method: "POST",
+      body: formData,
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      throw new Error(data?.error || "Document upload failed.");
+    }
+
+    return {
+      dlFrontPath: data?.dlFrontPath || "",
+      dlBackPath: data?.dlBackPath || "",
+      idFrontPath: data?.idFrontPath || "",
+      idBackPath: data?.idBackPath || "",
+      dlFrontName: data?.dlFrontName || dlFront?.name || "",
+      dlBackName: data?.dlBackName || dlBack?.name || "",
+      idFrontName: data?.idFrontName || idFront?.name || "",
+      idBackName: data?.idBackName || idBack?.name || "",
+    };
+  }
+
   const payNowAction = async () => {
     if (!canPay) return;
 
@@ -273,6 +318,8 @@ export default function CheckoutClient() {
 
       const bookingId = `bk_${vehicle.id}_${Date.now()}`;
       const customerName = `${firstName.trim()} ${surname.trim()}`.trim();
+
+      const uploadedDocs = await uploadBookingDocuments(bookingId);
 
       const res = await fetch("/api/stripe/create-payment-intent", {
         method: "POST",
@@ -292,10 +339,14 @@ export default function CheckoutClient() {
           bikeName: vehicle.name,
           vehicleId: vehicle.id,
           notes: notes.trim(),
-          dlFrontName: dlFront?.name ?? "",
-          dlBackName: dlBack?.name ?? "",
-          idFrontName: idFront?.name ?? "",
-          idBackName: idBack?.name ?? "",
+          dlFrontName: uploadedDocs.dlFrontName,
+          dlBackName: uploadedDocs.dlBackName,
+          idFrontName: uploadedDocs.idFrontName,
+          idBackName: uploadedDocs.idBackName,
+          dlFrontPath: uploadedDocs.dlFrontPath,
+          dlBackPath: uploadedDocs.dlBackPath,
+          idFrontPath: uploadedDocs.idFrontPath,
+          idBackPath: uploadedDocs.idBackPath,
           marketingOptIn,
         }),
       });
@@ -962,7 +1013,7 @@ function UploadField({
       <div className="mt-2">
         <input
           type="file"
-          accept="image/*"
+          accept="image/*,.pdf"
           onChange={(e) => onFile(e.target.files?.[0] ?? null)}
           className="w-full text-[12px]"
           style={{ color: brandColor }}

@@ -64,6 +64,10 @@ export async function POST(req: Request) {
       dropoff_date: md.dropoff_date || "",
       dropoff_time: md.dropoff_time || "",
       vehicle_name: md.vehicle_name || "",
+      dl_front_path: md.dl_front_path || "",
+      dl_back_path: md.dl_back_path || "",
+      id_front_path: md.id_front_path || "",
+      id_back_path: md.id_back_path || "",
       amount,
       currency: pi.currency || "eur",
     };
@@ -108,9 +112,16 @@ export async function POST(req: Request) {
             <hr/>
 
             <p><b>Driving licence front:</b> ${md.dl_front_name || "-"}</p>
+            <p><b>Driving licence front path:</b> ${md.dl_front_path || "-"}</p>
+
             <p><b>Driving licence back:</b> ${md.dl_back_name || "-"}</p>
+            <p><b>Driving licence back path:</b> ${md.dl_back_path || "-"}</p>
+
             <p><b>ID front:</b> ${md.id_front_name || "-"}</p>
+            <p><b>ID front path:</b> ${md.id_front_path || "-"}</p>
+
             <p><b>ID back:</b> ${md.id_back_name || "-"}</p>
+            <p><b>ID back path:</b> ${md.id_back_path || "-"}</p>
 
             <hr/>
 
