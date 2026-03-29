@@ -7,9 +7,9 @@ type PageProps = {
 };
 
 export const metadata: Metadata = {
-  title: "Scooter Rental Magaluf Mallorca | Nexa Rentals",
+  title: "Scooter Rental Mallorca | Nexa Rentals Magaluf",
   description:
-    "Rent scooters and e-bikes in Magaluf, Mallorca with Nexa Rentals. Fast online booking, premium vehicles, and a smooth rental experience for tourists.",
+    "Looking for scooter rental in Mallorca? Nexa Rentals offers premium scooters and e-bikes in Magaluf with fast online booking, modern vehicles, and a smooth rental experience for tourists.",
 };
 
 export default async function Page({ params }: PageProps) {

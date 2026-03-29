@@ -318,8 +318,8 @@ export default function VehiclesClient() {
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 md:gap-4 items-start">
           <div className="min-w-0">
             <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.05]">
-              {t("available")} <span style={{ color: ORANGE }}>{t("vehiclesWord")}</span>
-            </h1>
+  Scooter Rental <span style={{ color: ORANGE }}>Mallorca</span>
+</h1>
 
             <div className="mt-2 flex flex-wrap gap-2">
               <div className="hidden md:block">
@@ -375,7 +375,10 @@ export default function VehiclesClient() {
               {t("chooseThenTap")} <span className="text-white/85 font-bold">{t("reserve")}</span>.
             </div>
           </div>
-
+<div className="mt-3 max-w-3xl text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
+  Explore our premium scooter rental Mallorca fleet, including 125cc scooters and e-bikes in Magaluf. 
+  Nexa Rentals offers modern vehicles, easy online booking, and tourist-friendly rental options for exploring Mallorca with comfort and freedom.
+</div>
           <div className="flex md:flex-col items-start md:items-end gap-2 md:gap-3">
             <div
               className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 md:px-4 md:py-2 text-[11px] md:text-xs font-black text-white/75"
@@ -419,7 +422,40 @@ export default function VehiclesClient() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  <section
+    className="mb-6 rounded-3xl border p-5 md:p-7"
+    style={{
+      borderColor: THEME.borderSoft,
+      background:
+        "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.020))",
+    }}
+  >
+    <h2 className="text-2xl md:text-3xl font-black tracking-tight">
+      Premium Scooter Rental in Magaluf, Mallorca
+    </h2>
+
+    <p className="mt-4 text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
+      Looking for scooter rental in Mallorca? Nexa Rentals offers premium 125cc scooters and e-bikes in Magaluf with fast online booking and a smooth rental experience for tourists. Our fleet is designed for beach trips, scenic coastal roads, town visits, and easy travel around Mallorca.
+    </p>
+
+    <h2 className="mt-6 text-xl md:text-2xl font-black tracking-tight">
+      125cc Scooter Rental Mallorca
+    </h2>
+
+    <p className="mt-3 text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
+      Choose from reliable 125cc scooter rental options in Mallorca, including practical and premium models for comfortable island riding. Nexa Rentals helps visitors enjoy more flexibility, faster movement, and a more enjoyable Mallorca experience.
+    </p>
+
+    <h2 className="mt-6 text-xl md:text-2xl font-black tracking-tight">
+      E-Bike Rental Mallorca
+    </h2>
+
+    <p className="mt-3 text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
+      Our e-bike rental Mallorca options are ideal for relaxed rides, short local trips, and visitors who want an easy and eco-friendly way to explore Magaluf and nearby areas.
+    </p>
+  </section>
+
+  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {results.map((v, idx) => {
             const isPiaggioBig = v.id === "s2";
             const isUnavailable = v.availability === "rented-out";
@@ -551,8 +587,8 @@ export default function VehiclesClient() {
                       style={{ background: "rgba(0,0,0,0.45)" }}
                     />
                     <img
-                      src={v.imageUrl}
-                      alt={v.name}
+  src={v.imageUrl}
+  alt={`${v.name} scooter rental Mallorca Nexa Rentals`}
                       className="absolute inset-0 mx-auto h-full w-full object-contain drop-shadow-[0_36px_46px_rgba(0,0,0,0.50)]"
                     />
                   </div>

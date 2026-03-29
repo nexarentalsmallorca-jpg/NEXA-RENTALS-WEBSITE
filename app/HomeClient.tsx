@@ -54,7 +54,7 @@ function normalizeHeroTitle(raw: string, locale: Locale) {
 
 function getSeoHeroTitle(locale: Locale, translatedTitle: string) {
   if (locale === "en") {
-    return "Best Scooter Rental in Magaluf, Mallorca\nRent Scooters & E-Bikes in Mallorca";
+    return "Scooter Rental Mallorca\nPremium Scooters & E-Bikes in Magaluf";
   }
 
   return normalizeHeroTitle(translatedTitle, locale);
@@ -209,40 +209,44 @@ export default function HomeClient() {
       </main>
 
       <section className="relative -mt-2 pb-10 sm:pb-12">
-        <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
-          <div
-            className="rounded-[28px] border backdrop-blur-sm p-5 sm:p-7 lg:p-8"
-            style={{
-              background: THEME.surface,
-              borderColor: THEME.borderSoft,
-            }}
-          >
-            <h2 className="font-playfair text-[24px] sm:text-[30px] leading-tight text-white">
-              Scooter Rental in Magaluf, Mallorca
-            </h2>
-            <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
-              Looking for the best scooter rental in Magaluf, Mallorca? Nexa Rentals offers premium scooters and e-bikes
-              with fast online booking, modern vehicles, and a smooth rental experience for tourists exploring the island.
-            </p>
+  <div className="mx-auto max-w-5xl px-4 sm:px-6 lg:px-8">
+    <div
+      className="rounded-[28px] border backdrop-blur-sm p-5 sm:p-7 lg:p-8"
+      style={{
+        background: THEME.surface,
+        borderColor: THEME.borderSoft,
+      }}
+    >
+      <h2 className="font-playfair text-[24px] sm:text-[30px] leading-tight text-white">
+        Scooter Rental Mallorca for Tourists
+      </h2>
+      <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
+        Looking for scooter rental in Mallorca? Nexa Rentals offers premium scooters and e-bikes in Magaluf with fast online booking, modern vehicles, and a smooth rental experience for tourists. Rent a scooter in Mallorca and explore beaches, coastal roads, viewpoints, and local towns with comfort and flexibility.
+      </p>
 
-            <h2 className="mt-8 font-playfair text-[22px] sm:text-[28px] leading-tight text-white">
-              E-Bike Rental in Mallorca
-            </h2>
-            <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
-              Discover beaches, scenic coastal roads, and beautiful Mallorca views with our e-bike and scooter rental
-              service. Book online in seconds and enjoy flexible pickup in Magaluf.
-            </p>
+      <h2 className="mt-8 font-playfair text-[22px] sm:text-[28px] leading-tight text-white">
+        Scooter Rental in Magaluf
+      </h2>
+      <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
+        Our scooter rental service in Magaluf is designed for visitors who want a simple, stylish, and reliable way to move around Mallorca. With online booking and premium vehicles, Nexa Rentals makes it easy to enjoy the island without delays.
+      </p>
 
-            <h2 className="mt-8 font-playfair text-[22px] sm:text-[28px] leading-tight text-white">
-              Why Choose Nexa Rentals
-            </h2>
-            <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
-              Nexa Rentals combines premium vehicles, simple online booking, tourist-friendly service, and a modern rental
-              experience designed for visitors who want freedom, comfort, and reliability in Mallorca.
-            </p>
-          </div>
-        </div>
-      </section>
+      <h2 className="mt-8 font-playfair text-[22px] sm:text-[28px] leading-tight text-white">
+        E-Bike Rental Mallorca
+      </h2>
+      <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
+        Discover Mallorca with our e-bike rental options, perfect for scenic coastal rides, relaxed day trips, and eco-friendly travel. Nexa Rentals helps tourists enjoy Mallorca with more freedom, convenience, and comfort.
+      </p>
+
+      <h2 className="mt-8 font-playfair text-[22px] sm:text-[28px] leading-tight text-white">
+        Why Choose Nexa Rentals
+      </h2>
+      <p className="mt-4 text-[15px] sm:text-[16px] leading-7 text-white/75">
+        Nexa Rentals combines premium scooters, e-bikes, simple online booking, tourist-friendly service, and a modern rental experience built for Mallorca. Whether you want scooter rental in Magaluf or a flexible way to explore the island, Nexa Rentals is designed to give you a smooth and reliable experience.
+      </p>
+    </div>
+  </div>
+</section>
 
       <section className="relative pt-8 sm:pt-10 pb-12 sm:pb-14">
         <div className="mx-auto max-w-7xl px-4">
