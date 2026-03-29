@@ -21,6 +21,7 @@ const routes = [
   // 🔥 HIGH INTENT PAGES
   "/rent-scooter-mallorca-125cc",
   "/best-scooter-rental-mallorca",
+  "/best-scooter-rental-magaluf",
 
   // 🔥 FUTURE / EXPANSION PAGES
   "/cheap-scooter-rental-magaluf",
