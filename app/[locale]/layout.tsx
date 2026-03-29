@@ -26,6 +26,11 @@ export const metadata: Metadata = {
   title: "Scooter Rental Mallorca | Nexa Rentals Magaluf",
   description:
     "Looking for scooter rental in Mallorca? Nexa Rentals offers premium scooters and e-bikes in Magaluf with fast online booking, modern vehicles, and a smooth rental experience for tourists.",
+
+  // ✅ GOOGLE VERIFICATION ADDED HERE
+  verification: {
+    google: "google32d4fee161d3ccbb",
+  },
 };
 
 export function generateStaticParams() {
