@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useMemo } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import Navbar from "../../Navbar";
+import BookingBar from "../../components/BookingBar";
 import { useTranslations, useLocale } from "next-intl";
 
 type VehicleType = "Scooter" | "E-Bike";
@@ -248,6 +249,8 @@ export default function VehiclesClient() {
   const sp = useSearchParams();
   const router = useRouter();
 
+  const [showBookingPopup, setShowBookingPopup] = useState(false);
+
   const pickupLocation = safeParam(sp, "pickupLocation") ?? "Magaluf (Carrer Galeón 13)";
   const from = parseISO(safeParam(sp, "from"));
   const to = parseISO(safeParam(sp, "to"));
@@ -256,6 +259,7 @@ export default function VehiclesClient() {
   const rentalDays = useMemo(() => daysBetween(from, to), [from, to]);
 
   const discountPct = displayDiscountPct(rentalDays);
+  const hasSelectedDates = Boolean(from && to);
 
   const results = useMemo(() => {
     const map = new Map(VEHICLES.map((v) => [v.id, v]));
@@ -263,8 +267,30 @@ export default function VehiclesClient() {
     return orderedIds.map((id) => map.get(id)!).filter(Boolean);
   }, []);
 
+  useEffect(() => {
+    if (!hasSelectedDates) return;
+
+    const pendingVehicleId = window.localStorage.getItem("nexa_pending_vehicle_id");
+    if (!pendingVehicleId) return;
+
+    const vehicle = results.find((v) => v.id === pendingVehicleId);
+    window.localStorage.removeItem("nexa_pending_vehicle_id");
+
+    if (!vehicle || vehicle.availability === "rented-out") return;
+
+    const params = new URLSearchParams(sp.toString());
+    params.set("vehicleId", vehicle.id);
+    router.push(`/checkout?${params.toString()}`);
+  }, [hasSelectedDates, results, router, sp]);
+
   const onSelectVehicle = (v: Vehicle) => {
     if (v.availability === "rented-out") return;
+
+    if (!hasSelectedDates) {
+      window.localStorage.setItem("nexa_pending_vehicle_id", v.id);
+      setShowBookingPopup(true);
+      return;
+    }
 
     const params = new URLSearchParams(sp.toString());
     params.set("vehicleId", v.id);
@@ -318,8 +344,8 @@ export default function VehiclesClient() {
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-2 md:gap-4 items-start">
           <div className="min-w-0">
             <h1 className="text-4xl md:text-5xl font-black tracking-tight leading-[1.05]">
-  Scooter Rental <span style={{ color: ORANGE }}>Mallorca</span>
-</h1>
+              Scooter Rental <span style={{ color: ORANGE }}>Mallorca</span>
+            </h1>
 
             <div className="mt-2 flex flex-wrap gap-2">
               <div className="hidden md:block">
@@ -375,10 +401,7 @@ export default function VehiclesClient() {
               {t("chooseThenTap")} <span className="text-white/85 font-bold">{t("reserve")}</span>.
             </div>
           </div>
-<div className="mt-3 max-w-3xl text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
-  Explore our premium scooter rental Mallorca fleet, including 125cc scooters and e-bikes in Magaluf. 
-  Nexa Rentals offers modern vehicles, easy online booking, and tourist-friendly rental options for exploring Mallorca with comfort and freedom.
-</div>
+
           <div className="flex md:flex-col items-start md:items-end gap-2 md:gap-3">
             <div
               className="inline-flex items-center gap-2 rounded-full border px-3 py-1.5 md:px-4 md:py-2 text-[11px] md:text-xs font-black text-white/75"
@@ -422,40 +445,7 @@ export default function VehiclesClient() {
       </header>
 
       <main className="mx-auto max-w-7xl px-4 pb-16">
-  <section
-    className="mb-6 rounded-3xl border p-5 md:p-7"
-    style={{
-      borderColor: THEME.borderSoft,
-      background:
-        "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.020))",
-    }}
-  >
-    <h2 className="text-2xl md:text-3xl font-black tracking-tight">
-      Premium Scooter Rental in Magaluf, Mallorca
-    </h2>
-
-    <p className="mt-4 text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
-      Looking for scooter rental in Mallorca? Nexa Rentals offers premium 125cc scooters and e-bikes in Magaluf with fast online booking and a smooth rental experience for tourists. Our fleet is designed for beach trips, scenic coastal roads, town visits, and easy travel around Mallorca.
-    </p>
-
-    <h2 className="mt-6 text-xl md:text-2xl font-black tracking-tight">
-      125cc Scooter Rental Mallorca
-    </h2>
-
-    <p className="mt-3 text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
-      Choose from reliable 125cc scooter rental options in Mallorca, including practical and premium models for comfortable island riding. Nexa Rentals helps visitors enjoy more flexibility, faster movement, and a more enjoyable Mallorca experience.
-    </p>
-
-    <h2 className="mt-6 text-xl md:text-2xl font-black tracking-tight">
-      E-Bike Rental Mallorca
-    </h2>
-
-    <p className="mt-3 text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
-      Our e-bike rental Mallorca options are ideal for relaxed rides, short local trips, and visitors who want an easy and eco-friendly way to explore Magaluf and nearby areas.
-    </p>
-  </section>
-
-  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           {results.map((v, idx) => {
             const isPiaggioBig = v.id === "s2";
             const isUnavailable = v.availability === "rented-out";
@@ -524,34 +514,35 @@ export default function VehiclesClient() {
                 </div>
 
                 {isPiaggioBig && (
-  <>
-    <div
-      className="pointer-events-none absolute inset-0"
-      style={{
-        background:
-          "linear-gradient(135deg, rgba(255,122,0,0.10) 0%, rgba(255,122,0,0.03) 38%, rgba(255,255,255,0.015) 100%)",
-      }}
-    />
-    <motion.div
-      aria-hidden="true"
-      className="pointer-events-none absolute -left-[60%] bottom-[-42%] h-[220%] w-[28%] rotate-[32deg]"
-      animate={{ x: ["0%", "500%"], y: ["0%", "-6%"] }}
-      transition={{
-        duration: 4.2,
-        repeat: Infinity,
-        ease: "linear",
-        repeatDelay: 0,
-      }}
-      style={{
-        background:
-          "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.025) 20%, rgba(255,245,232,0.34) 50%, rgba(255,255,255,0.04) 80%, rgba(255,255,255,0) 100%)",
-        filter: "blur(11px)",
-        mixBlendMode: "screen",
-        opacity: 0.82,
-      }}
-    />
-  </>
-)}
+                  <>
+                    <div
+                      className="pointer-events-none absolute inset-0"
+                      style={{
+                        background:
+                          "linear-gradient(135deg, rgba(255,122,0,0.10) 0%, rgba(255,122,0,0.03) 38%, rgba(255,255,255,0.015) 100%)",
+                      }}
+                    />
+                    <motion.div
+                      aria-hidden="true"
+                      className="pointer-events-none absolute -left-[60%] bottom-[-42%] h-[220%] w-[28%] rotate-[32deg]"
+                      animate={{ x: ["0%", "500%"], y: ["0%", "-6%"] }}
+                      transition={{
+                        duration: 4.2,
+                        repeat: Infinity,
+                        ease: "linear",
+                        repeatDelay: 0,
+                      }}
+                      style={{
+                        background:
+                          "linear-gradient(180deg, rgba(255,255,255,0) 0%, rgba(255,255,255,0.025) 20%, rgba(255,245,232,0.34) 50%, rgba(255,255,255,0.04) 80%, rgba(255,255,255,0) 100%)",
+                        filter: "blur(11px)",
+                        mixBlendMode: "screen",
+                        opacity: 0.82,
+                      }}
+                    />
+                  </>
+                )}
+
                 <div className={`relative z-10 ${pad}`}>
                   <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex flex-wrap gap-2">
@@ -587,8 +578,8 @@ export default function VehiclesClient() {
                       style={{ background: "rgba(0,0,0,0.45)" }}
                     />
                     <img
-  src={v.imageUrl}
-  alt={`${v.name} scooter rental Mallorca Nexa Rentals`}
+                      src={v.imageUrl}
+                      alt={`${v.name} scooter rental Mallorca Nexa Rentals`}
                       className="absolute inset-0 mx-auto h-full w-full object-contain drop-shadow-[0_36px_46px_rgba(0,0,0,0.50)]"
                     />
                   </div>
@@ -692,7 +683,95 @@ export default function VehiclesClient() {
             );
           })}
         </div>
+
+        <section
+          className="mt-6 rounded-3xl border p-5 md:p-7"
+          style={{
+            borderColor: THEME.borderSoft,
+            background:
+              "linear-gradient(180deg, rgba(255,255,255,0.045), rgba(255,255,255,0.020))",
+          }}
+        >
+          <h2 className="text-2xl md:text-3xl font-black tracking-tight">
+            Premium Scooter Rental in Magaluf, Mallorca
+          </h2>
+
+          <p className="mt-4 text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
+            Looking for scooter rental in Mallorca? Nexa Rentals offers premium 125cc scooters and e-bikes in Magaluf
+            with fast online booking and a smooth rental experience for tourists. Our fleet is designed for beach trips,
+            scenic coastal roads, town visits, and easy travel around Mallorca.
+          </p>
+
+          <h2 className="mt-6 text-xl md:text-2xl font-black tracking-tight">
+            125cc Scooter Rental Mallorca
+          </h2>
+
+          <p className="mt-3 text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
+            Choose from reliable 125cc scooter rental options in Mallorca, including practical and premium models for
+            comfortable island riding. Nexa Rentals helps visitors enjoy more flexibility, faster movement, and a more
+            enjoyable Mallorca experience.
+          </p>
+
+          <h2 className="mt-6 text-xl md:text-2xl font-black tracking-tight">
+            E-Bike Rental Mallorca
+          </h2>
+
+          <p className="mt-3 text-[14px] md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
+            Our e-bike rental Mallorca options are ideal for relaxed rides, short local trips, and visitors who want an
+            easy and eco-friendly way to explore Magaluf and nearby areas.
+          </p>
+        </section>
       </main>
+
+      {showBookingPopup && (
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+          <button
+            type="button"
+            aria-label="Close booking popup"
+            onClick={() => {
+              setShowBookingPopup(false);
+              window.localStorage.removeItem("nexa_pending_vehicle_id");
+            }}
+            className="absolute inset-0 bg-black/70 backdrop-blur-[2px]"
+          />
+
+          <div
+            className="relative z-10 w-full max-w-4xl rounded-[28px] border p-5 md:p-6"
+            style={{
+              borderColor: THEME.borderSoft,
+              background: "linear-gradient(180deg, rgba(15,17,21,0.98), rgba(12,14,18,0.98))",
+              boxShadow: "0 30px 90px rgba(0,0,0,0.55)",
+            }}
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <h3 className="text-xl md:text-2xl font-black tracking-tight">
+                  Select your dates first
+                </h3>
+                <p className="mt-2 text-sm md:text-[15px] leading-7" style={{ color: THEME.textSoft }}>
+                  Choose your pickup and dropoff dates to continue to checkout for your selected vehicle.
+                </p>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setShowBookingPopup(false);
+                  window.localStorage.removeItem("nexa_pending_vehicle_id");
+                }}
+                className="rounded-full border px-3 py-1.5 text-sm font-black hover:bg-white/5 transition"
+                style={{ borderColor: THEME.borderSoft }}
+              >
+                Close
+              </button>
+            </div>
+
+            <div className="mt-5">
+              <BookingBar />
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="pointer-events-none h-16 w-full" />
     </div>
