@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useRef, useState } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -48,7 +49,6 @@ export default function Navbar() {
 
   const navRef = useRef<HTMLElement | null>(null);
   const [hidden, setHidden] = useState(false);
-
   const [mobileOpen, setMobileOpen] = useState(false);
   const [langOpen, setLangOpen] = useState(false);
 
@@ -57,13 +57,12 @@ export default function Navbar() {
   const searchParams = useSearchParams();
 
   const currentLocale: Locale = safeGetLocaleFromPath(pathname);
-
   const currentLang = LANGUAGES.find((l) => l.code === currentLocale) ?? LANGUAGES[0];
 
   const homeHref = `/${currentLocale}`;
   const fleetHref = `/${currentLocale}/fleet`;
   const blogsHref = `/${currentLocale}/#blogs`;
-  const contactHref = `/${currentLocale}/#contact`;
+  const contactHref = `/${currentLocale}/contact`;
   const aboutHref = `/${currentLocale}/about`;
 
   useEffect(() => {
@@ -101,6 +100,7 @@ export default function Navbar() {
         setLangOpen(false);
       }
     };
+
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
@@ -131,7 +131,6 @@ export default function Navbar() {
 
   return (
     <>
-      {/* TOP ANNOUNCEMENT BAR */}
       <div className="fixed inset-x-0 top-0 z-[10000]">
         <div className="border-b border-[#ff7a00]/20 bg-black/88 backdrop-blur-md">
           <div className="mx-auto flex min-h-[42px] max-w-7xl items-center justify-center px-4 text-center sm:px-6">
@@ -146,7 +145,6 @@ export default function Navbar() {
         </div>
       </div>
 
-      {/* FIXED NAVBAR (NO BACKGROUND) */}
       <header
         ref={(el) => {
           navRef.current = el;
@@ -159,7 +157,6 @@ export default function Navbar() {
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="py-0 md:py -8">
-            {/* MOBILE ROW */}
             <div className="grid grid-cols-3 items-center md:hidden">
               <div className="relative justify-self-start">
                 <button
@@ -212,7 +209,7 @@ export default function Navbar() {
                 </div>
               </div>
 
-              <a href={homeHref} className="justify-self-center select-none">
+              <Link href={homeHref} className="justify-self-center select-none">
                 <Image
                   src="/images/reallogo.png"
                   alt="NEXA Rentals"
@@ -221,7 +218,7 @@ export default function Navbar() {
                   className="h-16 w-auto object-contain"
                   priority
                 />
-              </a>
+              </Link>
 
               <button
                 type="button"
@@ -257,9 +254,8 @@ export default function Navbar() {
               </button>
             </div>
 
-            {/* DESKTOP ROW */}
             <div className="hidden md:flex items-center">
-              <a href={homeHref} className="select-none flex items-center">
+              <Link href={homeHref} className="select-none flex items-center">
                 <Image
                   src="/images/reallogo.png"
                   alt="NEXA Rentals"
@@ -268,26 +264,29 @@ export default function Navbar() {
                   className="h-20 w-auto object-contain"
                   priority
                 />
-              </a>
+              </Link>
 
               <div className="ml-auto flex items-center gap-10">
                 <nav className="flex items-center gap-10">
-                  <a className="nav-link" href={homeHref}>
+                  <Link className="nav-link" href={homeHref}>
                     {t("home")}
-                  </a>
-                  <a className="nav-link" href={fleetHref}>
-                    {t("fleet")}
-                  </a>
-                  <a className="nav-link" href={blogsHref}>
-                    {t("blogs")}
-                  </a>
-                  <a className="nav-link" href={aboutHref}>
-                    {t("about")}
-                  </a>
+                  </Link>
 
-                  <a className="nav-link nav-cta" href={contactHref}>
+                  <Link className="nav-link" href={fleetHref}>
+                    {t("fleet")}
+                  </Link>
+
+                  <Link className="nav-link" href={blogsHref}>
+                    {t("blogs")}
+                  </Link>
+
+                  <Link className="nav-link" href={aboutHref}>
+                    {t("about")}
+                  </Link>
+
+                  <Link className="nav-link nav-cta" href={contactHref}>
                     CONTACT US
-                  </a>
+                  </Link>
                 </nav>
 
                 <div className="relative">
@@ -380,50 +379,50 @@ export default function Navbar() {
           </div>
 
           <nav className="px-5 py-4">
-            <a
+            <Link
               className="flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 hover:text-white hover:bg-white/5 transition"
               href={homeHref}
               onClick={() => setMobileOpen(false)}
             >
               <Image src="/images/home.png" alt="Home" width={22} height={22} className="opacity-90" />
               <span>{t("home")}</span>
-            </a>
+            </Link>
 
-            <a
+            <Link
               className="mt-2 flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 hover:text-white hover:bg-white/5 transition"
               href={fleetHref}
               onClick={() => setMobileOpen(false)}
             >
               <Image src="/images/fleet.png" alt="Our Fleet" width={22} height={22} className="opacity-90" />
               <span>{t("fleet")}</span>
-            </a>
+            </Link>
 
-            <a
+            <Link
               className="mt-2 flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 hover:text-white hover:bg-white/5 transition"
               href={blogsHref}
               onClick={() => setMobileOpen(false)}
             >
               <Image src="/images/blogs.png" alt="Blogs" width={22} height={22} className="opacity-90" />
               <span>{t("blogs")}</span>
-            </a>
+            </Link>
 
-            <a
+            <Link
               className="mt-2 flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 hover:text-white hover:bg-white/5 transition"
               href={contactHref}
               onClick={() => setMobileOpen(false)}
             >
               <Image src="/images/contact.png" alt="Contact" width={22} height={22} className="opacity-90" />
               <span>{t("contact")}</span>
-            </a>
+            </Link>
 
-            <a
+            <Link
               className="mt-2 flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 hover:text-white hover:bg-white/5 transition"
               href={aboutHref}
               onClick={() => setMobileOpen(false)}
             >
               <Image src="/images/nexa.png" alt="About NEXA" width={22} height={22} className="opacity-90" />
               <span>{t("about")}</span>
-            </a>
+            </Link>
           </nav>
         </aside>
       </div>
