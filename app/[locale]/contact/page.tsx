@@ -1,7 +1,7 @@
 "use client";
 
 import Navbar from "@/app/Navbar";
-import { FormEvent, useState } from "react";
+import { FormEvent, Suspense, useState } from "react";
 
 const ORANGE = "#FF7A00";
 
@@ -12,7 +12,7 @@ const ADDRESS = "Carrer Galeón 13, Magaluf, Mallorca";
 const MAPS_LINK =
   "https://www.google.com/maps/search/?api=1&query=Carrer+Gale%C3%B3n+13,+Magaluf,+Mallorca";
 
-export default function ContactPage() {
+function ContactPageContent() {
   const [formData, setFormData] = useState({
     fullName: "",
     email: "",
@@ -74,11 +74,12 @@ export default function ContactPage() {
 
   return (
     <>
-      <Navbar />
+      <Suspense fallback={null}>
+        <Navbar />
+      </Suspense>
 
       <main className="min-h-screen bg-[#0a0a0a] text-white px-4 sm:px-6 py-12 sm:py-16 md:py-20">
         <div className="max-w-6xl mx-auto">
-          {/* HERO */}
           <div className="text-center mb-10 sm:mb-14 md:mb-16">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold mb-4 leading-tight">
               Contact <span style={{ color: ORANGE }}>NEXA Rentals</span>
@@ -89,7 +90,6 @@ export default function ContactPage() {
             </p>
           </div>
 
-          {/* CONTACT INFO */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6 mb-10 sm:mb-14 md:mb-16">
             <a
               href={`https://wa.me/${WHATSAPP_NUMBER}`}
@@ -133,7 +133,6 @@ export default function ContactPage() {
             </a>
           </div>
 
-          {/* FORM */}
           <div className="bg-[#111] p-5 sm:p-7 md:p-8 rounded-2xl border border-[#1f1f1f]">
             <h2 className="text-xl sm:text-2xl font-semibold mb-6">
               Send us a message
@@ -213,5 +212,13 @@ export default function ContactPage() {
         </div>
       </main>
     </>
+  );
+}
+
+export default function ContactPage() {
+  return (
+    <Suspense fallback={null}>
+      <ContactPageContent />
+    </Suspense>
   );
 }
