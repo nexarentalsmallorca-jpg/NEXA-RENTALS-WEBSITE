@@ -236,10 +236,18 @@ export default function CheckoutClient() {
   const phoneRef = useRef<HTMLInputElement | null>(null);
   const emailRef = useRef<HTMLInputElement | null>(null);
   const notesRef = useRef<HTMLTextAreaElement | null>(null);
+  const formStartRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     const timer = window.setTimeout(() => {
-      firstNameRef.current?.focus();
+      formStartRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+
+      window.setTimeout(() => {
+        firstNameRef.current?.focus();
+      }, 220);
     }, 120);
 
     return () => window.clearTimeout(timer);
@@ -570,6 +578,7 @@ export default function CheckoutClient() {
 
           <section className="space-y-5">
             <div
+              ref={formStartRef}
               className="rounded-3xl border p-4 md:p-5"
               style={{
                 borderColor: "rgba(255,255,255,0.10)",
