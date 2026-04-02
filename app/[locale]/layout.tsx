@@ -67,7 +67,7 @@ export default async function RootLayout({ children, params }: Props) {
           {children}
 
           <WhatsAppSupport
-            phone="34600000000"
+            phone="34971482342"
             messages={[
               "Hey! Need any help?",
               "Want the best scooter for your trip?",
