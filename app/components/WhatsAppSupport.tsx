@@ -13,8 +13,8 @@ type Props = {
 };
 
 export default function WhatsAppSupport({
-  phone = "34600000000",
-  message = "Hi NEXA Rentals! I need help with booking.",
+  phone = "34971482342",
+  message = "Hi Nexa Rentals, I want to book a scooter in Magaluf. Is it available?",
   messages = [
     "Hey! Need any help?",
     "Want the best scooter for your trip?",
