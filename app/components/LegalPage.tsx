@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import Navbar from "../Navbar";
 
 type LegalSection = {
@@ -19,7 +19,9 @@ export default function LegalPage({
 }: LegalPageProps) {
   return (
     <main className="min-h-screen bg-black text-white">
-      <Navbar />
+      <Suspense fallback={<div className="h-24 w-full" />}>
+        <Navbar />
+      </Suspense>
 
       <div className="mx-auto max-w-4xl px-6 pb-16 pt-28 md:px-8 md:pb-20 md:pt-32">
         <h1 className="mb-4 text-4xl font-bold tracking-tight text-[#FF7A00] md:text-5xl">
