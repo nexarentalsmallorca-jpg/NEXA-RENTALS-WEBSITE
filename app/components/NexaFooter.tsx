@@ -2,11 +2,12 @@
 
 import React from "react";
 import Link from "next/link";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 
 export default function NexaFooter() {
   const year = new Date().getFullYear();
   const t = useTranslations("footer");
+  const locale = useLocale();
 
   const THEME = {
     bg: "#0f1115",
@@ -143,27 +144,27 @@ export default function NexaFooter() {
           </p>
 
           <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs md:justify-end" style={{ color: THEME.textDim }}>
-            <Link href="/terms" className="transition hover:text-white">
+            <Link href={`/${locale}/terms-and-conditions`} className="transition hover:text-white">
               {t("terms")}
             </Link>
 
-            <Link href="/privacy" className="transition hover:text-white">
+            <Link href={`/${locale}/privacy-policy`} className="transition hover:text-white">
               {t("privacy")}
             </Link>
 
-            <Link href="/deposit-policy" className="transition hover:text-white">
+            <Link href={`/${locale}/deposit-policy`} className="transition hover:text-white">
               {t("depositPolicy")}
             </Link>
 
-            <Link href="/refund-policy" className="transition hover:text-white">
+            <Link href={`/${locale}/refund-policy`} className="transition hover:text-white">
               {t("refundPolicy")}
             </Link>
 
-            <Link href="/cookies" className="transition hover:text-white">
+            <Link href={`/${locale}/cookies`} className="transition hover:text-white">
               {t("cookies")}
             </Link>
 
-            <Link href="/about" className="transition hover:text-white">
+            <Link href={`/${locale}/about-nexa`} className="transition hover:text-white">
               {t("aboutNexa")}
             </Link>
           </div>
