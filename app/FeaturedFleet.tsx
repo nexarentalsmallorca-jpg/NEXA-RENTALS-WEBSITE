@@ -147,7 +147,7 @@ function buildMonthGrid(viewMonth: Date) {
   return cells;
 }
 function toISO(d: Date) {
-  return d.toISOString();
+  return d.toLocaleDateString("en-CA");
 }
 function formatPrice(price: number) {
   return Math.round(price);

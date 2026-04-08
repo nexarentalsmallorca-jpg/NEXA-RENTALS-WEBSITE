@@ -79,7 +79,7 @@ function parseISO(v?: string) {
   return Number.isNaN(d.getTime()) ? undefined : d;
 }
 function toISO(d: Date) {
-  return d.toISOString();
+  return d.toLocaleDateString("en-CA");
 }
 
 /* -------------------------- Time helpers -------------------------- */

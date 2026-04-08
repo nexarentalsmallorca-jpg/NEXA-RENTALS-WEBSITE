@@ -129,8 +129,8 @@ export default function FleetClient() {
     const params = new URLSearchParams(sp.toString());
     params.set("vehicleId", vehicleId);
     params.set("pickupLocation", pickupLocation);
-    params.set("from", from!.toISOString());
-    params.set("to", to!.toISOString());
+    params.set("from", from ? from.toLocaleDateString("en-CA") : "");
+params.set("to", to ? to.toLocaleDateString("en-CA") : "");
     params.set("pickupTime", pickupTime);
     params.set("dropoffTime", dropoffTime);
 
