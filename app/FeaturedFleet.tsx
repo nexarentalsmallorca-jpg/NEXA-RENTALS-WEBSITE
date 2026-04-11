@@ -113,9 +113,6 @@ function isBeforeDay(a: Date, b: Date) {
 function minDropoffDate(from: Date) {
   return startOfDay(addDays(from, 1));
 }
-function isExactMinDay(from: Date, to: Date) {
-  return isSameDay(to, addDays(from, 1));
-}
 function clampRange(from?: Date, to?: Date): DateRange {
   if (!from && !to) return {};
   if (from && !to) return { from };
@@ -152,13 +149,31 @@ function toISO(d: Date) {
 function formatPrice(price: number) {
   return Math.round(price);
 }
+function dayDiff(from: Date, to: Date) {
+  const ms = startOfDay(to).getTime() - startOfDay(from).getTime();
+  return Math.round(ms / 86400000);
+}
+function isWholeDayRental(from?: Date, to?: Date, pickupTime?: string, dropoffTime?: string) {
+  if (!from || !to || !pickupTime || !dropoffTime) return false;
+  const days = dayDiff(from, to);
+  if (days < 1) return false;
+  return pickupTime === dropoffTime;
+}
+function rentalLengthLabel(from?: Date, to?: Date) {
+  if (!from || !to) return "";
+  const days = dayDiff(from, to);
+  if (days < 1) return "";
+  if (days === 1) return "1 day (24h)";
+  return `${days} days (${days * 24}h)`;
+}
 
 /* =========================== TIME HELPERS =========================== */
 function buildTimeOptions() {
   const out: string[] = [];
-  for (let h = 9; h <= 21; h++) {
+  for (let h = 9; h <= 20; h++) {
     for (const m of [0, 30]) {
-      if (h === 21 && m === 30) continue;
+      if (h === 9 && m === 0) continue;
+      if (h === 20 && m === 30) continue;
       out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
   }
@@ -237,10 +252,9 @@ export default function FeaturedFleet() {
     const el = sectionRef.current;
     if (!el) return;
 
-    const obs = new IntersectionObserver(
-      ([entry]) => setInView(entry.isIntersecting),
-      { threshold: 0.35 }
-    );
+    const obs = new IntersectionObserver(([entry]) => setInView(entry.isIntersecting), {
+      threshold: 0.35,
+    });
 
     obs.observe(el);
     return () => obs.disconnect();
@@ -292,16 +306,13 @@ export default function FeaturedFleet() {
     return () => window.removeEventListener("mousedown", onDown);
   }, []);
 
+  useEffect(() => {
+    setDropoffTime(pickupTime);
+  }, [pickupTime]);
+
   const DROP_TIME_OPTIONS = useMemo(() => {
-    if (!range.from || !range.to) return TIME_OPTIONS;
-
-    if (isExactMinDay(range.from, range.to)) {
-      const minMins = timeToMinutes(pickupTime);
-      return TIME_OPTIONS.filter((time) => timeToMinutes(time) >= minMins);
-    }
-
-    return TIME_OPTIONS;
-  }, [TIME_OPTIONS, range.from, range.to, pickupTime]);
+    return [pickupTime];
+  }, [pickupTime]);
 
   const monthsList = useMemo(
     () => Array.from({ length: monthsAhead + 1 }, (_, i) => addMonths(scrollStartMonth, i)),
@@ -317,6 +328,8 @@ export default function FeaturedFleet() {
 
     return Math.max(0, Math.min(monthsList.length - 1, diffMonths));
   }, [scrollStartMonth, viewMonth, monthsList.length]);
+
+  const rentalLabel = useMemo(() => rentalLengthLabel(range.from, range.to), [range.from, range.to]);
 
   useEffect(() => {
     if (!calendarOpen) return;
@@ -335,9 +348,7 @@ export default function FeaturedFleet() {
     setDropoffTimeOpen(false);
     setActiveField(which);
 
-    const anchor = startOfMonth(
-      (which === "pickup" ? range.from : range.to) || range.from || today
-    );
+    const anchor = startOfMonth((which === "pickup" ? range.from : range.to) || range.from || today);
 
     setScrollStartMonth(anchor);
     setViewMonth(anchor);
@@ -350,6 +361,7 @@ export default function FeaturedFleet() {
   }
 
   function clearDates() {
+    setErr("");
     setRange({});
     setActiveField("pickup");
   }
@@ -359,23 +371,22 @@ export default function FeaturedFleet() {
 
     if (activeField === "dropoff" && range.from) {
       const minDay = minDropoffDate(range.from);
-      if (isBeforeDay(day, minDay)) return;
+      if (isBeforeDay(day, minDay)) {
+        setErr("Return must be at least 1 full day after pickup. Rentals must follow 24h, 48h, 72h format.");
+        return;
+      }
     }
+
+    setErr("");
 
     if (activeField === "pickup") {
       const nextFrom = day;
       const minDay = minDropoffDate(nextFrom);
-      const nextTo =
-        range.to && !isBeforeDay(range.to, minDay) ? range.to : minDay;
+      const nextTo = range.to && !isBeforeDay(range.to, minDay) ? range.to : minDay;
 
       setRange({ from: nextFrom, to: nextTo });
+      setDropoffTime(pickupTime);
       setActiveField("dropoff");
-
-      if (nextTo && isExactMinDay(nextFrom, nextTo)) {
-        if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
-          setDropoffTime(pickupTime);
-        }
-      }
       return;
     }
 
@@ -390,6 +401,7 @@ export default function FeaturedFleet() {
       const minDay = minDropoffDate(next.from);
       if (isBeforeDay(next.to, minDay)) {
         setRange({ from: next.from, to: minDay });
+        setErr("Minimum rental is 1 full day. Please choose 1 day, 2 days, 3 days, etc.");
       } else {
         setRange(next);
       }
@@ -397,23 +409,21 @@ export default function FeaturedFleet() {
       setRange(next);
     }
 
-    if (next.from && next.to && isExactMinDay(next.from, next.to)) {
-      if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
-        setDropoffTime(pickupTime);
-      }
-    }
+    setDropoffTime(pickupTime);
   }
 
   function togglePickupTime() {
     setCalendarOpen(false);
     setDropoffTimeOpen(false);
     setPickupTimeOpen((v) => !v);
+    setErr("");
   }
 
   function toggleDropoffTime() {
     setCalendarOpen(false);
     setPickupTimeOpen(false);
     setDropoffTimeOpen((v) => !v);
+    setErr("Return time must match pickup time exactly. Example: 10:00 pickup = 10:00 return after 1 day, 2 days, 3 days, etc.");
   }
 
   function openPickerForVehicle(v: Vehicle) {
@@ -554,14 +564,14 @@ export default function FeaturedFleet() {
     const minDay = minDropoffDate(range.from);
     if (isBeforeDay(range.to, minDay)) {
       setRange({ from: range.from, to: minDay });
+      setErr("Minimum rental is 1 full day. Please choose 1 day, 2 days, 3 days, etc.");
       return;
     }
 
-    if (isExactMinDay(range.from, range.to)) {
-      if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
-        setDropoffTime(pickupTime);
-        return;
-      }
+    if (!isWholeDayRental(range.from, range.to, pickupTime, dropoffTime)) {
+      setDropoffTime(pickupTime);
+      setErr("Rentals must follow exact 24h blocks. Return time must match pickup time, for example 24h, 48h, 72h, etc.");
+      return;
     }
 
     const params = new URLSearchParams(sp.toString());
@@ -569,7 +579,7 @@ export default function FeaturedFleet() {
     params.set("from", toISO(range.from));
     params.set("to", toISO(range.to));
     params.set("pickupTime", pickupTime);
-    params.set("dropoffTime", dropoffTime);
+    params.set("dropoffTime", pickupTime);
 
     if (pickerMode === "viewAll") {
       router.push(`/${currentLocale}/vehicles?${params.toString()}`);
@@ -620,9 +630,7 @@ export default function FeaturedFleet() {
                 {t("header.title")}
               </h2>
 
-              <p className="mt-2 text-white/65 max-w-2xl">
-                {t("header.subtitle")}
-              </p>
+              <p className="mt-2 text-white/65 max-w-2xl">{t("header.subtitle")}</p>
             </div>
 
             <button
@@ -699,15 +707,9 @@ export default function FeaturedFleet() {
                       <div
                         className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black"
                         style={{
-                          borderColor: isPiaggio
-                            ? "rgba(255,122,0,0.55)"
-                            : "rgba(255,255,255,0.14)",
-                          background: isPiaggio
-                            ? "rgba(255,122,0,0.18)"
-                            : "rgba(0,0,0,0.18)",
-                          color: isPiaggio
-                            ? "rgba(255,255,255,0.95)"
-                            : "rgba(255,255,255,0.80)",
+                          borderColor: isPiaggio ? "rgba(255,122,0,0.55)" : "rgba(255,255,255,0.14)",
+                          background: isPiaggio ? "rgba(255,122,0,0.18)" : "rgba(0,0,0,0.18)",
+                          color: isPiaggio ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.80)",
                         }}
                       >
                         <span
@@ -748,23 +750,15 @@ export default function FeaturedFleet() {
 
                     <div className="mt-4 flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-[11px] font-bold tracking-wide text-white/55">
-                          {typeLabel}
-                        </div>
-                        <div className="truncate text-sm md:text-[15px] font-black text-white">
-                          {v.name}
-                        </div>
+                        <div className="text-[11px] font-bold tracking-wide text-white/55">{typeLabel}</div>
+                        <div className="truncate text-sm md:text-[15px] font-black text-white">{v.name}</div>
                       </div>
 
                       <div className="shrink-0 text-right">
-                        <div className="text-[11px] font-bold text-white/55">
-                          {t("pricing.from")}
-                        </div>
+                        <div className="text-[11px] font-bold text-white/55">{t("pricing.from")}</div>
                         <div className="text-sm font-black" style={{ color: ORANGE }}>
                           €{formatPrice(v.pricePerDay)}
-                          <span className="text-xs text-white/45">
-                            {t("pricing.perDay")}
-                          </span>
+                          <span className="text-xs text-white/45">{t("pricing.perDay")}</span>
                         </div>
                       </div>
                     </div>
@@ -780,11 +774,7 @@ export default function FeaturedFleet() {
                             : "rgba(255,255,255,0.82)",
                         }}
                       >
-                        {!v.available
-                          ? "RENTED OUT"
-                          : v.stockLabel === "Available"
-                          ? "Available"
-                          : "Only 1 left"}
+                        {!v.available ? "RENTED OUT" : v.stockLabel === "Available" ? "Available" : "Only 1 left"}
                       </div>
 
                       <div
@@ -885,12 +875,8 @@ export default function FeaturedFleet() {
                       <div
                         className="inline-flex items-center gap-2 rounded-full border px-3 py-1 text-[11px] font-black"
                         style={{
-                          borderColor: isBestSeller
-                            ? "rgba(255,122,0,0.34)"
-                            : "rgba(255,255,255,0.14)",
-                          background: isBestSeller
-                            ? "rgba(255,122,0,0.13)"
-                            : "rgba(0,0,0,0.18)",
+                          borderColor: isBestSeller ? "rgba(255,122,0,0.34)" : "rgba(255,255,255,0.14)",
+                          background: isBestSeller ? "rgba(255,122,0,0.13)" : "rgba(0,0,0,0.18)",
                           color: "rgba(255,255,255,0.82)",
                         }}
                       >
@@ -932,23 +918,15 @@ export default function FeaturedFleet() {
 
                     <div className="mt-4 flex items-start justify-between gap-3">
                       <div className="min-w-0">
-                        <div className="text-[11px] font-bold tracking-wide text-white/55">
-                          {typeLabel}
-                        </div>
-                        <div className="truncate text-sm md:text-[15px] font-black text-white">
-                          {v.name}
-                        </div>
+                        <div className="text-[11px] font-bold tracking-wide text-white/55">{typeLabel}</div>
+                        <div className="truncate text-sm md:text-[15px] font-black text-white">{v.name}</div>
                       </div>
 
                       <div className="shrink-0 text-right">
-                        <div className="text-[11px] font-bold text-white/55">
-                          {t("pricing.from")}
-                        </div>
+                        <div className="text-[11px] font-bold text-white/55">{t("pricing.from")}</div>
                         <div className="text-sm font-black" style={{ color: ORANGE }}>
                           €{formatPrice(v.pricePerDay)}
-                          <span className="text-xs text-white/45">
-                            {t("pricing.perDay")}
-                          </span>
+                          <span className="text-xs text-white/45">{t("pricing.perDay")}</span>
                         </div>
                       </div>
                     </div>
@@ -962,11 +940,7 @@ export default function FeaturedFleet() {
                           borderColor: availability.border,
                         }}
                       >
-                        {!v.available
-                          ? "RENTED OUT"
-                          : v.stockLabel === "1 Left"
-                          ? "Only 1 left"
-                          : "Available"}
+                        {!v.available ? "RENTED OUT" : v.stockLabel === "1 Left" ? "Only 1 left" : "Available"}
                       </div>
                     </div>
 
@@ -981,11 +955,7 @@ export default function FeaturedFleet() {
                             : "rgba(255,255,255,0.82)",
                         }}
                       >
-                        {!v.available
-                          ? "RENTED OUT"
-                          : v.stockLabel === "1 Left"
-                          ? "Only 1 left"
-                          : "Available"}
+                        {!v.available ? "RENTED OUT" : v.stockLabel === "1 Left" ? "Only 1 left" : "Available"}
                       </div>
 
                       <div
@@ -1030,10 +1000,8 @@ export default function FeaturedFleet() {
               className="relative w-full max-w-5xl overflow-visible rounded-[28px] border"
               style={{
                 borderColor: "rgba(255,255,255,0.12)",
-                background:
-                  "linear-gradient(180deg, rgba(15,17,21,0.96) 0%, rgba(12,14,18,0.96) 100%)",
-                boxShadow:
-                  "0 36px 110px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06)",
+                background: "linear-gradient(180deg, rgba(15,17,21,0.96) 0%, rgba(12,14,18,0.96) 100%)",
+                boxShadow: "0 36px 110px rgba(0,0,0,0.75), inset 0 1px 0 rgba(255,255,255,0.06)",
               }}
             >
               <div className="relative p-5 md:p-6">
@@ -1043,9 +1011,7 @@ export default function FeaturedFleet() {
                       {pickerMode === "viewAll" ? t("header.viewAll") : t("modal.title")}
                     </div>
                     <div className="mt-1 text-lg md:text-xl font-black text-white">
-                      {pickerMode === "viewAll"
-                        ? "Select your booking dates first"
-                        : selected?.name}
+                      {pickerMode === "viewAll" ? "Select your booking dates first" : selected?.name}
                     </div>
                     <div className="mt-1 text-sm text-white/60">
                       {pickerMode === "viewAll"
@@ -1077,6 +1043,12 @@ export default function FeaturedFleet() {
                         {pickupLocation}
                       </span>
                     </span>
+
+                    {rentalLabel ? (
+                      <span className="inline-flex items-center rounded-full bg-black/40 px-3 py-1 backdrop-blur text-white">
+                        {rentalLabel}
+                      </span>
+                    ) : null}
                   </div>
 
                   <div
@@ -1099,12 +1071,8 @@ export default function FeaturedFleet() {
                       >
                         <CalendarMini />
                         <div className="leading-tight">
-                          <div className="text-[11px] font-semibold text-black/65">
-                            Pickup date
-                          </div>
-                          <div className="text-[13px] font-extrabold text-black">
-                            {fmtLabel(range.from)}
-                          </div>
+                          <div className="text-[11px] font-semibold text-black/65">Pickup date</div>
+                          <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.from)}</div>
                         </div>
                       </button>
 
@@ -1122,9 +1090,7 @@ export default function FeaturedFleet() {
                         >
                           <ClockMini />
                           <div className="leading-tight">
-                            <div className="text-[11px] font-semibold text-black/65">
-                              Time
-                            </div>
+                            <div className="text-[11px] font-semibold text-black/65">Time</div>
                             <div className="text-[13px] font-extrabold text-black">
                               {formatTimeLabel(pickupTime)}
                             </div>
@@ -1139,11 +1105,8 @@ export default function FeaturedFleet() {
                               options={TIME_OPTIONS}
                               onSelect={(selectedTime) => {
                                 setPickupTime(selectedTime);
-                                if (range.from && range.to && isExactMinDay(range.from, range.to)) {
-                                  if (timeToMinutes(dropoffTime) < timeToMinutes(selectedTime)) {
-                                    setDropoffTime(selectedTime);
-                                  }
-                                }
+                                setDropoffTime(selectedTime);
+                                setErr("");
                                 setPickupTimeOpen(false);
                               }}
                               onClose={() => setPickupTimeOpen(false)}
@@ -1165,12 +1128,8 @@ export default function FeaturedFleet() {
                       >
                         <CalendarMini />
                         <div className="leading-tight">
-                          <div className="text-[11px] font-semibold text-black/65">
-                            Dropoff date
-                          </div>
-                          <div className="text-[13px] font-extrabold text-black">
-                            {fmtLabel(range.to)}
-                          </div>
+                          <div className="text-[11px] font-semibold text-black/65">Dropoff date</div>
+                          <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.to)}</div>
                         </div>
                       </button>
 
@@ -1188,9 +1147,7 @@ export default function FeaturedFleet() {
                         >
                           <ClockMini />
                           <div className="leading-tight">
-                            <div className="text-[11px] font-semibold text-black/65">
-                              Time
-                            </div>
+                            <div className="text-[11px] font-semibold text-black/65">Time</div>
                             <div className="text-[13px] font-extrabold text-black">
                               {formatTimeLabel(dropoffTime)}
                             </div>
@@ -1205,6 +1162,7 @@ export default function FeaturedFleet() {
                               options={DROP_TIME_OPTIONS}
                               onSelect={(selectedTime) => {
                                 setDropoffTime(selectedTime);
+                                setErr("");
                                 setDropoffTimeOpen(false);
                               }}
                               onClose={() => setDropoffTimeOpen(false)}
@@ -1238,7 +1196,15 @@ export default function FeaturedFleet() {
                     >
                       {err}
                     </div>
-                  ) : null}
+                  ) : (
+                    <div className="mt-4 rounded-2xl border px-4 py-3 text-sm" style={{
+                      borderColor: "rgba(255,122,0,0.22)",
+                      background: "rgba(255,122,0,0.06)",
+                      color: "rgba(255,255,255,0.78)",
+                    }}>
+                      Rental hours: 09:30 AM - 08:00 PM. Return time must match pickup time exactly for 24h, 48h, 72h, etc.
+                    </div>
+                  )}
                 </div>
 
                 <div className="mt-5 flex flex-col-reverse gap-3 md:flex-row md:items-center md:justify-between">
@@ -1291,6 +1257,9 @@ export default function FeaturedFleet() {
                   <div className="text-base font-extrabold text-black">
                     {fmtLabel(range.from)} → {fmtLabel(range.to)}
                   </div>
+                  <div className="mt-1 text-[12px] font-semibold text-black/60">
+                    Select only 1 day, 2 days, 3 days, etc. Return time will always match pickup time.
+                  </div>
                 </div>
 
                 <button
@@ -1323,9 +1292,7 @@ export default function FeaturedFleet() {
 
                 <button
                   type="button"
-                  onClick={() =>
-                    scrollToMonth(Math.min(monthsList.length - 1, currentIndex + 1))
-                  }
+                  onClick={() => scrollToMonth(Math.min(monthsList.length - 1, currentIndex + 1))}
                   className="h-9 w-9 rounded-xl border border-black/15 hover:bg-black/5 transition"
                 >
                   ›

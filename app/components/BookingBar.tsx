@@ -84,11 +84,12 @@ function toISO(d: Date) {
 
 /* -------------------------- Time helpers -------------------------- */
 function buildTimeOptions() {
-  // 09:00 to 21:00 inclusive, every 30 min
+  // 09:30 to 20:00 inclusive, every 30 min
   const out: string[] = [];
-  for (let h = 9; h <= 21; h++) {
+  for (let h = 9; h <= 20; h++) {
     for (const m of [0, 30]) {
-      if (h === 21 && m === 30) continue;
+      if (h === 9 && m === 0) continue;
+      if (h === 20 && m === 30) continue;
       out.push(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`);
     }
   }
@@ -131,8 +132,22 @@ function minDropoffDate(from: Date) {
 function isBeforeDay(a: Date, b: Date) {
   return startOfDay(a) < startOfDay(b);
 }
-function isExactMinDay(from: Date, to: Date) {
-  return isSameDay(to, addDays(from, 1));
+function dayDiff(from: Date, to: Date) {
+  const ms = startOfDay(to).getTime() - startOfDay(from).getTime();
+  return Math.round(ms / 86400000);
+}
+function isWholeDayRental(from?: Date, to?: Date, pickupTime?: string, dropoffTime?: string) {
+  if (!from || !to || !pickupTime || !dropoffTime) return false;
+  const days = dayDiff(from, to);
+  if (days < 1) return false;
+  return pickupTime === dropoffTime;
+}
+function rentalLengthLabel(from?: Date, to?: Date) {
+  if (!from || !to) return "";
+  const days = dayDiff(from, to);
+  if (days < 1) return "";
+  if (days === 1) return "1 day (24h)";
+  return `${days} days (${days * 24}h)`;
 }
 
 /* ========================== MAIN COMPONENT ========================== */
@@ -164,9 +179,12 @@ export default function BookingBar() {
     if (urlPickupTime && isValidTimeOption(urlPickupTime, TIME_OPTIONS)) return urlPickupTime;
     return "10:00";
   });
+
   const [dropoffTime, setDropoffTime] = useState(() => {
-    if (urlDropoffTime && isValidTimeOption(urlDropoffTime, TIME_OPTIONS)) return urlDropoffTime;
-    return "10:00";
+    if (urlDropoffTime && isValidTimeOption(urlDropoffTime, TIME_OPTIONS)) {
+      return urlDropoffTime;
+    }
+    return urlPickupTime && isValidTimeOption(urlPickupTime, TIME_OPTIONS) ? urlPickupTime : "10:00";
   });
 
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -178,6 +196,7 @@ export default function BookingBar() {
 
   const [pickupTimeOpen, setPickupTimeOpen] = useState(false);
   const [dropoffTimeOpen, setDropoffTimeOpen] = useState(false);
+  const [validationNotice, setValidationNotice] = useState("");
 
   const pickupTimeBtnRef = useRef<HTMLButtonElement | null>(null);
   const dropoffTimeBtnRef = useRef<HTMLButtonElement | null>(null);
@@ -205,22 +224,27 @@ export default function BookingBar() {
     return () => window.removeEventListener("mousedown", onDown);
   }, []);
 
+  useEffect(() => {
+    setDropoffTime(pickupTime);
+  }, [pickupTime]);
+
   const DROP_TIME_OPTIONS = useMemo(() => {
-    if (!range.from || !range.to) return TIME_OPTIONS;
-
-    if (isExactMinDay(range.from, range.to)) {
-      const minMins = timeToMinutes(pickupTime);
-      return TIME_OPTIONS.filter((t) => timeToMinutes(t) >= minMins);
-    }
-
-    return TIME_OPTIONS;
-  }, [TIME_OPTIONS, range.from, range.to, pickupTime]);
+    // Exact 24h / 48h / 72h logic: return time must always match pickup time
+    return [pickupTime];
+  }, [pickupTime]);
 
   const monthsList = useMemo(() => {
     return Array.from({ length: monthsAhead + 1 }, (_, i) => addMonths(scrollStartMonth, i));
   }, [scrollStartMonth, monthsAhead]);
 
+  const rentalLabel = useMemo(() => rentalLengthLabel(range.from, range.to), [range.from, range.to]);
+
+  function showValidationNotice(message: string) {
+    setValidationNotice(message);
+  }
+
   function openCalendar(which: ActiveField) {
+    setValidationNotice("");
     setPickupTimeOpen(false);
     setDropoffTimeOpen(false);
     setActiveField(which);
@@ -232,10 +256,13 @@ export default function BookingBar() {
 
     setCalendarOpen(true);
   }
+
   function closeCalendar() {
     setCalendarOpen(false);
   }
+
   function clearDates() {
+    setValidationNotice("");
     setRange({});
     setActiveField("pickup");
   }
@@ -245,23 +272,24 @@ export default function BookingBar() {
 
     if (activeField === "dropoff" && range.from) {
       const minDay = minDropoffDate(range.from);
-      if (isBeforeDay(day, minDay)) return;
+      if (isBeforeDay(day, minDay)) {
+        showValidationNotice(
+          "Return must be at least 1 full day after pickup. Rentals must follow 24h, 48h, 72h, etc. format."
+        );
+        return;
+      }
     }
+
+    setValidationNotice("");
 
     if (activeField === "pickup") {
       const nextFrom = day;
-
       const minDay = minDropoffDate(nextFrom);
       const nextTo = range.to && !isBeforeDay(range.to, minDay) ? range.to : minDay;
 
       setRange({ from: nextFrom, to: nextTo });
+      setDropoffTime(pickupTime);
       setActiveField("dropoff");
-
-      if (nextTo && isExactMinDay(nextFrom, nextTo)) {
-        if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
-          setDropoffTime(pickupTime);
-        }
-      }
       return;
     }
 
@@ -273,36 +301,38 @@ export default function BookingBar() {
     const next = clampRange(range.from, day);
 
     if (next.from && next.to) {
-  const minDay = minDropoffDate(next.from);
-  if (isBeforeDay(next.to, minDay)) {
-    setRange({ from: next.from, to: minDay });
-  } else {
-    setRange(next);
-  }
-} else {
-  setRange(next);
-}
+      const minDay = minDropoffDate(next.from);
+      if (isBeforeDay(next.to, minDay)) {
+        setRange({ from: next.from, to: minDay });
+        showValidationNotice(
+          "Return must be at least 1 full day after pickup. Rentals must follow 24h, 48h, 72h, etc. format."
+        );
+      } else {
+        setRange(next);
+      }
+    } else {
+      setRange(next);
+    }
 
-if (next.from && next.to && isExactMinDay(next.from, next.to)) {
-  if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
     setDropoffTime(pickupTime);
-  }
-}
-
-// keep calendar open after selecting dropoff date
-// user will close it manually with Done button
+    // keep calendar open after selecting dropoff date
+    // user will close it manually with Done button
   }
 
   function togglePickupTime() {
     setCalendarOpen(false);
     setDropoffTimeOpen(false);
     setPickupTimeOpen((v) => !v);
+    setValidationNotice("");
   }
 
   function toggleDropoffTime() {
     setCalendarOpen(false);
     setPickupTimeOpen(false);
     setDropoffTimeOpen((v) => !v);
+    setValidationNotice(
+      "Return time must match pickup time exactly. Example: 10:00 pickup = 10:00 return after 1 day, 2 days, 3 days, etc."
+    );
   }
 
   function onSearch() {
@@ -313,6 +343,7 @@ if (next.from && next.to && isExactMinDay(next.from, next.to)) {
     if (!range.from || !range.to) {
       setActiveField(range.from ? "dropoff" : "pickup");
       setCalendarOpen(true);
+      showValidationNotice("Please select both pickup and return dates.");
       return;
     }
 
@@ -320,14 +351,18 @@ if (next.from && next.to && isExactMinDay(next.from, next.to)) {
 
     if (isBeforeDay(range.to, minDay)) {
       setRange({ from: range.from, to: minDay });
+      showValidationNotice(
+        "Minimum rental is 1 full day. Please choose 1 day, 2 days, 3 days, etc."
+      );
       return;
     }
 
-    if (isExactMinDay(range.from, range.to)) {
-      if (timeToMinutes(dropoffTime) < timeToMinutes(pickupTime)) {
-        setDropoffTime(pickupTime);
-        return;
-      }
+    if (!isWholeDayRental(range.from, range.to, pickupTime, dropoffTime)) {
+      setDropoffTime(pickupTime);
+      showValidationNotice(
+        "Rentals must follow exact 24h blocks. Return time must match pickup time, for example 24h, 48h, 72h, etc."
+      );
+      return;
     }
 
     const params = new URLSearchParams({
@@ -335,7 +370,7 @@ if (next.from && next.to && isExactMinDay(next.from, next.to)) {
       from: toISO(range.from),
       to: toISO(range.to),
       pickupTime,
-      dropoffTime,
+      dropoffTime: pickupTime,
     });
 
     // ✅ IMPORTANT FIX: keep locale in the URL
@@ -401,6 +436,12 @@ if (next.from && next.to && isExactMinDay(next.from, next.to)) {
           <span className="whitespace-nowrap">{t("pickup")}</span>{" "}
           <span className="text-white truncate max-w-[220px] sm:max-w-[360px]">{pickupLocation}</span>
         </span>
+
+        {rentalLabel ? (
+          <span className="inline-flex items-center rounded-full bg-black/40 px-3 py-1 backdrop-blur text-white">
+            {rentalLabel}
+          </span>
+        ) : null}
       </div>
 
       <div
@@ -455,11 +496,8 @@ if (next.from && next.to && isExactMinDay(next.from, next.to)) {
                   options={TIME_OPTIONS}
                   onSelect={(tSel) => {
                     setPickupTime(tSel);
-                    if (range.from && range.to && isExactMinDay(range.from, range.to)) {
-                      if (timeToMinutes(dropoffTime) < timeToMinutes(tSel)) {
-                        setDropoffTime(tSel);
-                      }
-                    }
+                    setDropoffTime(tSel);
+                    setValidationNotice("");
                     setPickupTimeOpen(false);
                   }}
                   onClose={() => setPickupTimeOpen(false)}
@@ -513,6 +551,7 @@ if (next.from && next.to && isExactMinDay(next.from, next.to)) {
                   options={DROP_TIME_OPTIONS}
                   onSelect={(tSel) => {
                     setDropoffTime(tSel);
+                    setValidationNotice("");
                     setDropoffTimeOpen(false);
                   }}
                   onClose={() => setDropoffTimeOpen(false)}
@@ -533,6 +572,18 @@ if (next.from && next.to && isExactMinDay(next.from, next.to)) {
         >
           {t("search")}
         </button>
+      </div>
+
+      <div className="mt-2 min-h-[22px]">
+        {validationNotice ? (
+          <div className="inline-flex max-w-full rounded-xl border border-[#FF6A00]/25 bg-[#FFF0E6] px-3 py-2 text-[12px] font-semibold text-[#9A3D00] shadow-sm">
+            {validationNotice}
+          </div>
+        ) : (
+          <div className="text-[12px] text-white/75 font-medium">
+            Rental hours: 09:30 AM - 08:00 PM. Return time must match pickup time exactly for 24h, 48h, 72h, etc.
+          </div>
+        )}
       </div>
 
       {calendarOpen && (
@@ -559,6 +610,9 @@ if (next.from && next.to && isExactMinDay(next.from, next.to)) {
                 <div className="text-base font-extrabold text-black">
                   {fmtLabel(range.from)} → {fmtLabel(range.to)}
                 </div>
+                <div className="mt-1 text-[12px] font-semibold text-black/60">
+                  Select only 1 day, 2 days, 3 days, etc. Return time will always match pickup time.
+                </div>
               </div>
 
               <button
@@ -579,7 +633,10 @@ if (next.from && next.to && isExactMinDay(next.from, next.to)) {
                 ‹
               </button>
 
-              <div className="rounded-xl border border-black/15 px-4 py-2 font-extrabold text-black" style={{ background: BAR_BG }}>
+              <div
+                className="rounded-xl border border-black/15 px-4 py-2 font-extrabold text-black"
+                style={{ background: BAR_BG }}
+              >
                 {viewMonth.toLocaleString(getDocLocale(), { month: "long", year: "numeric" })}
               </div>
 
@@ -717,23 +774,23 @@ function MiniMonth({
           if (!d) return <div key={idx} className="h-9" />;
 
           const isStart = !!range.from && isSameDay(d, range.from);
-const isEnd = !!range.to && isSameDay(d, range.to);
+          const isEnd = !!range.to && isSameDay(d, range.to);
 
-const disabledByPast = isPastDay(d) && !isStart && !isEnd;
-const disabledByMinDrop =
-  !!minDropDay && startOfDay(d) < startOfDay(minDropDay) && !isStart && !isEnd;
+          const disabledByPast = isPastDay(d) && !isStart && !isEnd;
+          const disabledByMinDrop =
+            !!minDropDay && startOfDay(d) < startOfDay(minDropDay) && !isStart && !isEnd;
 
-const disabled = disabledByPast || disabledByMinDrop;
+          const disabled = disabledByPast || disabledByMinDrop;
 
-const inRange =
-  !!range.from &&
-  !!range.to &&
-  startOfDay(d) >= startOfDay(range.from) &&
-  startOfDay(d) <= startOfDay(range.to);
+          const inRange =
+            !!range.from &&
+            !!range.to &&
+            startOfDay(d) >= startOfDay(range.from) &&
+            startOfDay(d) <= startOfDay(range.to);
 
-const isMiddleRange = inRange && !isStart && !isEnd;
+          const isMiddleRange = inRange && !isStart && !isEnd;
 
-const hoverClass = !disabled && !isStart && !isEnd ? "hover:bg-orange-200" : "";
+          const hoverClass = !disabled && !isStart && !isEnd ? "hover:bg-orange-200" : "";
 
           return (
             <button
