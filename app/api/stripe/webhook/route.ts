@@ -89,7 +89,7 @@ export async function POST(req: Request) {
     try {
       const ownerEmailResult = await resend.emails.send({
         from: `Nexa Bookings <${FROM_EMAIL}>`,
-        to: OWNER_EMAIL,
+        to: [OWNER_EMAIL, "nexarentalsmallorca@gmail.com"],
         subject: `✅ New booking paid — ${(amount / 100).toFixed(2)} ${currency}`,
         html: `
           <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
