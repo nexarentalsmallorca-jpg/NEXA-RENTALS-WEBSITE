@@ -101,7 +101,7 @@ const VEHICLES: Vehicle[] = [
     spec1: "125cc • Automatic",
     spec2: "Phone holder • 2 Helmets",
     featured: true,
-    availability: "available",
+    availability: "rented-out",
   },
   {
     id: "s3",
@@ -116,7 +116,7 @@ const VEHICLES: Vehicle[] = [
     badges: ["Comfort", "Practical"],
     spec1: "125cc • Automatic",
     spec2: "Phone holder • 2 Helmets",
-    availability: "one-left",
+    availability: "rented-out",
   },
   {
     id: "e2",
