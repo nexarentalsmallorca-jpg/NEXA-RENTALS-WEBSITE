@@ -101,7 +101,7 @@ const VEHICLES: Vehicle[] = [
     spec1: "125cc • Automatic",
     spec2: "Phone holder • 2 Helmets",
     featured: true,
-    availability: "rented-out",
+    availability: "available",
   },
   {
     id: "s3",
