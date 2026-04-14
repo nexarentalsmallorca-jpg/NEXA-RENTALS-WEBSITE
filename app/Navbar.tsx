@@ -345,7 +345,7 @@ export default function Navbar() {
         </div>
       </header>
 
-      <div aria-hidden className="h-[calc(var(--nav-height)+116px)] md:h-[calc(var(--nav-height)+156px)]" />
+      <div aria-hidden className="h-[calc(var(--nav-height)+116px)] md:h-[calc(var(--nav-height)+70px)]" />
 
       <div className="md:hidden">
         <div
@@ -432,7 +432,7 @@ export default function Navbar() {
           position: relative;
           display: inline-flex;
           align-items: center;
-          padding: 10px 2px;
+          padding: 0px 3px;
           font-family: "Cinzel", "Playfair Display", "Cormorant Garamond", "Didot", "Bodoni MT", serif;
           font-weight: 600;
           letter-spacing: 0.12em;

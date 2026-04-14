@@ -1,12 +1,18 @@
 // app/[locale]/layout.tsx
-import "../globals.css";
 import type { Metadata } from "next";
-import { Inter, Playfair_Display } from "next/font/google";
+import { Inter, Playfair_Display, Poppins } from "next/font/google";
 import NexaFooter from "../components/NexaFooter";
 import WhatsAppSupport from "../components/WhatsAppSupport";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { locales } from "../../i18n/routing";
+
+const poppins = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "600", "700", "800", "900"],
+  variable: "--font-poppins",
+  display: "swap",
+});
 
 const inter = Inter({
   subsets: ["latin"],
@@ -59,7 +65,7 @@ export default async function RootLayout({ children, params }: Props) {
   return (
     <html
       lang={safeLocale}
-      className={`${inter.variable} ${playfair.variable}`}
+      className={`${inter.variable} ${playfair.variable} ${poppins.variable}`}
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>

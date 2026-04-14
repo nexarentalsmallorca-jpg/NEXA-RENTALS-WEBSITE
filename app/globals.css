@@ -243,3 +243,6 @@ body::after {
   position: relative;
   z-index: 1;
 }
+.font-poppins {
+  font-family: var(--font-poppins), sans-serif;
+}
