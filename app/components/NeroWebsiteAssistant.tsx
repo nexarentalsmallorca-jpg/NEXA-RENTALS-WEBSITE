@@ -61,6 +61,7 @@ export default function NeroWebsiteAssistant() {
   const ghostTimeoutRef = useRef<number | null>(null);
   const lastAutoFocusRef = useRef(0);
   const hasAutoFocusedOnceRef = useRef(false);
+  const touchStartYRef = useRef(0);
 
   const canUseMic = useMemo(() => {
     if (typeof window === "undefined") return false;
@@ -130,6 +131,41 @@ export default function NeroWebsiteAssistant() {
       inputRef.current?.focus({ preventScroll: true });
       startGhostTyping();
     }, scroll ? 650 : 180);
+  }
+
+  function handleChatTouchStart(e: React.TouchEvent<HTMLDivElement>) {
+    touchStartYRef.current = e.touches[0]?.clientY || 0;
+  }
+
+  function handleChatTouchMove(e: React.TouchEvent<HTMLDivElement>) {
+    const box = chatScrollRef.current;
+    if (!box) return;
+
+    const currentY = e.touches[0]?.clientY || 0;
+    const deltaY = touchStartYRef.current - currentY;
+
+    const canScrollInside = box.scrollHeight > box.clientHeight + 2;
+
+    if (!canScrollInside) {
+      box.style.overflowY = "visible";
+
+      window.requestAnimationFrame(() => {
+        if (box) box.style.overflowY = "auto";
+      });
+
+      return;
+    }
+
+    const atTop = box.scrollTop <= 0;
+    const atBottom = box.scrollTop + box.clientHeight >= box.scrollHeight - 2;
+
+    if ((atTop && deltaY < 0) || (atBottom && deltaY > 0)) {
+      box.style.overflowY = "visible";
+
+      window.requestAnimationFrame(() => {
+        if (box) box.style.overflowY = "auto";
+      });
+    }
   }
 
   useEffect(() => {
@@ -381,7 +417,6 @@ export default function NeroWebsiteAssistant() {
         </div>
 
         <div className="grid gap-[clamp(18px,1.6vw,24px)] lg:grid-cols-[minmax(310px,380px)_minmax(0,1fr)] lg:items-stretch">
-          {/* Desktop side panel only */}
           <aside className="relative hidden overflow-hidden rounded-[clamp(28px,2.4vw,34px)] border border-white/10 bg-white/[0.035] p-[clamp(16px,1.45vw,22px)] shadow-[0_26px_90px_rgba(0,0,0,0.45),0_0_70px_rgba(124,58,237,0.14)] backdrop-blur-2xl lg:block lg:h-[min(700px,calc(100vh-150px))] lg:min-h-[560px]">
             <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(96,165,250,0.18),transparent_34%),radial-gradient(circle_at_top_right,rgba(249,115,22,0.16),transparent_34%),radial-gradient(circle_at_bottom,rgba(168,85,247,0.16),transparent_42%)]" />
             <div className="pointer-events-none absolute inset-[1px] rounded-[clamp(27px,2.3vw,33px)] border border-white/5" />
@@ -498,7 +533,13 @@ export default function NeroWebsiteAssistant() {
 
             <div
               ref={chatScrollRef}
-              className="relative z-10 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-contain p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 sm:space-y-4 sm:p-[clamp(14px,1.35vw,24px)]"
+              onTouchStart={handleChatTouchStart}
+              onTouchMove={handleChatTouchMove}
+              className="relative z-10 min-h-0 flex-1 space-y-3 overflow-y-auto overscroll-auto p-3 scrollbar-thin scrollbar-track-transparent scrollbar-thumb-white/10 sm:space-y-4 sm:p-[clamp(14px,1.35vw,24px)]"
+              style={{
+                WebkitOverflowScrolling: "touch",
+                touchAction: "pan-y",
+              }}
             >
               {messages.map((msg, index) => {
                 const isUser = msg.role === "user";
