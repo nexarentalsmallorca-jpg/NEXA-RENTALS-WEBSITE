@@ -60,7 +60,7 @@ const VEHICLES: Vehicle[] = [
     name: "SYM SYMPHONY 125",
     type: "Scooter",
     pricePerDay: 39,
-    imageUrl: "/images/sym.png",
+    imageUrl: "/images/sym1.png",
     badges: ["Comfort", "Practical"],
     spec1: "125cc • Automatic",
     spec2: "Stable city ride",
@@ -269,7 +269,7 @@ export default function CheckoutClient() {
   const to = parseISO(safeParam(sp, "to"));
   const pickupTime = safeParam(sp, "pickupTime") ?? "10:00";
   const dropoffTime = safeParam(sp, "dropoffTime") ?? "10:00";
-  const rentalDays = useMemo(() => daysBetween(from, to), [from, to]);
+  const plan = safeParam(sp, "plan") ?? "full";
 
   const vehicleId = safeParam(sp, "vehicleId") ?? "s2";
   const vehicle = useMemo(
@@ -277,18 +277,40 @@ export default function CheckoutClient() {
     [vehicleId]
   );
 
-  const discountedPerDayEur = discountedPricePerDay(vehicle, rentalDays);
-  const totalEur = discountedPerDayEur * rentalDays;
+  const rentalDaysFromParams = Number(safeParam(sp, "days") ?? "");
+  const rateFromParams = Number(safeParam(sp, "rate") ?? "");
+  const totalFromParams = Number(safeParam(sp, "total") ?? "");
+
+  const rentalDays = useMemo(() => {
+    if (Number.isFinite(rentalDaysFromParams) && rentalDaysFromParams > 0) {
+      return rentalDaysFromParams;
+    }
+    return daysBetween(from, to);
+  }, [from, to, rentalDaysFromParams]);
+
+  const discountedPerDayEur = useMemo(() => {
+    if (Number.isFinite(rateFromParams) && rateFromParams > 0) {
+      return rateFromParams;
+    }
+    return discountedPricePerDay(vehicle, rentalDays);
+  }, [rateFromParams, vehicle, rentalDays]);
+
+  const totalEur = useMemo(() => {
+    if (Number.isFinite(totalFromParams) && totalFromParams > 0) {
+      return totalFromParams;
+    }
+    return discountedPerDayEur * rentalDays;
+  }, [totalFromParams, discountedPerDayEur, rentalDays]);
 
   const totalCents = Math.round(totalEur * 100);
   const payNowCents = Math.round(totalCents * 0.5);
   const payPickupCents = totalCents - payNowCents;
 
+  const referencePrice = plan === "half" ? 45 : 55;
+
   const discountPct = Math.max(
     0,
-    Math.round(
-      ((vehicle.pricePerDay - discountedPerDayEur) / vehicle.pricePerDay) * 100
-    )
+    Math.round(((referencePrice - discountedPerDayEur) / referencePrice) * 100)
   );
 
   const deposit = 150;
@@ -382,12 +404,14 @@ export default function CheckoutClient() {
           customerName,
           phone: phone.trim(),
           pickupDateISO: from ? from.toLocaleDateString("en-CA") : "",
-returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
+          returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
           pickupTime,
           dropoffTime,
           pickupLocation,
           bikeName: vehicle.name,
           vehicleId: vehicle.id,
+          plan,
+          ratePerDay: discountedPerDayEur,
           notes: notes.trim(),
           dlFrontName: uploadedDocs.dlFrontName,
           dlBackName: uploadedDocs.dlBackName,
@@ -508,9 +532,7 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
               >
                 {discountPct > 0 && (
                   <div className="text-[11px] font-black text-white/55">
-                    <span className="line-through">
-                      €{eur(vehicle.pricePerDay)}
-                    </span>{" "}
+                    <span className="line-through">€{eur(referencePrice)}</span>{" "}
                     {t("perDayShort")}
                   </div>
                 )}
@@ -544,20 +566,46 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
             <div className="mt-4">
               <div className="flex items-end justify-between">
                 <div className="text-[15px] font-black">{t("included")}</div>
-                <div className="text-[11px] text-white/55">{t("noExtraFees")}</div>
+                <div className="text-[11px] text-white/55">
+                  {t("noExtraFees")}
+                </div>
               </div>
 
               <div className="mt-3">
                 <div className="flex gap-2 overflow-x-auto md:overflow-visible lg:hidden">
-                  <IncludedMini title={t("helmet")} sub={t("free")} badge={t("includedBadge")} />
-                  <IncludedMini title={t("lock")} sub={t("free")} badge={t("includedBadge")} />
-                  <IncludedMini title={t("cargoBox")} sub={t("free")} badge={t("includedBadge")} />
+                  <IncludedMini
+                    title={t("helmet")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
+                  <IncludedMini
+                    title={t("lock")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
+                  <IncludedMini
+                    title={t("cargoBox")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
                 </div>
 
                 <div className="hidden lg:grid grid-cols-1 md:grid-cols-3 gap-3">
-                  <Included title={t("helmet")} sub={t("free")} badge={t("includedBadge")} />
-                  <Included title={t("lock")} sub={t("free")} badge={t("includedBadge")} />
-                  <Included title={t("cargoBox")} sub={t("free")} badge={t("includedBadge")} />
+                  <Included
+                    title={t("helmet")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
+                  <Included
+                    title={t("lock")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
+                  <Included
+                    title={t("cargoBox")}
+                    sub={t("free")}
+                    badge={t("includedBadge")}
+                  />
                 </div>
               </div>
 
@@ -571,7 +619,9 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
                 <div className="font-black" style={{ color: ORANGE }}>
                   {t("contractReadyTitle")}
                 </div>
-                <div className="mt-1 text-white/70">{t("contractReadyDesc")}</div>
+                <div className="mt-1 text-white/70">
+                  {t("contractReadyDesc")}
+                </div>
               </div>
             </div>
           </section>
@@ -589,10 +639,13 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
               <div className="flex items-start justify-between gap-3">
                 <div>
                   <div className="text-[15px] font-black">{t("yourDetails")}</div>
-                  <div className="mt-1 text-[12px] text-white/65">{t("detailsHint")}</div>
+                  <div className="mt-1 text-[12px] text-white/65">
+                    {t("detailsHint")}
+                  </div>
                 </div>
                 <div className="text-[11px] text-white/55">
-                  {t("required")} <span className="text-white/80 font-black">*</span>
+                  {t("required")}{" "}
+                  <span className="text-white/80 font-black">*</span>
                 </div>
               </div>
 
@@ -674,10 +727,16 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
                   }}
                 >
                   <div className="flex items-center justify-between gap-3">
-                    <div className="text-[13px] font-black">{t("documentsOptional")}</div>
-                    <div className="text-[11px] text-white/55">{t("fasterPickup")}</div>
+                    <div className="text-[13px] font-black">
+                      {t("documentsOptional")}
+                    </div>
+                    <div className="text-[11px] text-white/55">
+                      {t("fasterPickup")}
+                    </div>
                   </div>
-                  <div className="mt-1 text-[12px] text-white/65">{t("documentsDesc")}</div>
+                  <div className="mt-1 text-[12px] text-white/65">
+                    {t("documentsDesc")}
+                  </div>
 
                   <div className="mt-4 grid grid-cols-1 md:grid-cols-2 gap-3">
                     <UploadField
@@ -756,7 +815,9 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
                 </div>
 
                 <div className="text-right">
-                  <div className="text-[11px] text-white/55">{t("onlineToday")}</div>
+                  <div className="text-[11px] text-white/55">
+                    {t("onlineToday")}
+                  </div>
                   <div className="text-xl font-black" style={{ color: ORANGE }}>
                     €{eurFromCents(payNowCents)}
                   </div>
@@ -772,12 +833,20 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
               >
                 <Row
                   left={<span className="text-white/70">{t("payNow50")}</span>}
-                  right={<span className="font-black text-white/90">€{eurFromCents(payNowCents)}</span>}
+                  right={
+                    <span className="font-black text-white/90">
+                      €{eurFromCents(payNowCents)}
+                    </span>
+                  }
                 />
                 <div className="mt-2">
                   <Row
                     left={<span className="text-white/70">{t("payPickup50")}</span>}
-                    right={<span className="font-black text-white/90">€{eurFromCents(payPickupCents)}</span>}
+                    right={
+                      <span className="font-black text-white/90">
+                        €{eurFromCents(payPickupCents)}
+                      </span>
+                    }
                   />
                 </div>
 
@@ -787,7 +856,11 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
                 >
                   <Row
                     left={<span className="text-white/55">{t("rentalTotal")}</span>}
-                    right={<span className="font-black text-white/80">€{eurFromCents(totalCents)}</span>}
+                    right={
+                      <span className="font-black text-white/80">
+                        €{eurFromCents(totalCents)}
+                      </span>
+                    }
                   />
                 </div>
               </div>
@@ -811,9 +884,22 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
                   background: "rgba(0,0,0,0.25)",
                 }}
               >
-                <CheckLine checked={contractReadyOk} onChange={setContractReadyOk} text={t("checkContractReady")} />
-                <CheckLine checked={agreeTerms} onChange={setAgreeTerms} text={t("checkAgreeTerms")} />
-                <CheckLine checked={marketingOptIn} onChange={setMarketingOptIn} text={t("checkMarketing")} optional />
+                <CheckLine
+                  checked={contractReadyOk}
+                  onChange={setContractReadyOk}
+                  text={t("checkContractReady")}
+                />
+                <CheckLine
+                  checked={agreeTerms}
+                  onChange={setAgreeTerms}
+                  text={t("checkAgreeTerms")}
+                />
+                <CheckLine
+                  checked={marketingOptIn}
+                  onChange={setMarketingOptIn}
+                  text={t("checkMarketing")}
+                  optional
+                />
               </div>
 
               <button
@@ -869,7 +955,9 @@ returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
               </div>
 
               {!canPay && (
-                <div className="mt-3 text-[11px] text-white/45">{t("toContinue")}</div>
+                <div className="mt-3 text-[11px] text-white/45">
+                  {t("toContinue")}
+                </div>
               )}
 
               <div className="mt-4 flex flex-wrap items-center justify-between gap-2 text-[11px] text-white/55">

@@ -1,46 +1,17 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useMemo, useState, useEffect, useRef } from "react";
+import { useTranslations } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
 
 type DateRange = { from?: Date; to?: Date };
 type ActiveField = "pickup" | "dropoff";
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
-type RentalPlan = "half" | "full" | null;
 
 /* ----------------------------- Config ----------------------------- */
 const BAR_BG = "#fff9f5";
-const CARD_BG = "#fffdfb";
 const DEEP_ORANGE = "#FF6A00";
-const SOFT_ORANGE = "#FFF0E6";
-const DARK_CARD = "#0E1117";
 const DEFAULT_LOCATION = "Magaluf (Carrer Galeón 13)";
-
-const HALF_DAY_OLD_PRICE = 45;
-const HALF_DAY_PRICE = 39;
-const HALF_DAY_RETURN_TIME = "20:00";
-const HALF_DAY_TIME_OPTIONS = [
-  "09:30",
-  "10:00",
-  "10:30",
-  "11:00",
-  "11:30",
-  "12:00",
-  "12:30",
-  "13:00",
-  "13:30",
-  "14:00",
-];
-
-const FULL_DAY_BASE_PRICE = 49;
-const FULL_DAY_PRICING: Record<number, number> = {
-  1: 49,
-  2: 47,
-  3: 45,
-  4: 44,
-  5: 43,
-  6: 42,
-};
 
 /* -------------------------- Locale helpers -------------------------- */
 function getDocLocale() {
@@ -67,9 +38,6 @@ function endOfMonth(d: Date) {
 function addMonths(d: Date, delta: number) {
   return new Date(d.getFullYear(), d.getMonth() + delta, 1);
 }
-function addDays(d: Date, days: number) {
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
-}
 function isSameDay(a: Date, b: Date) {
   return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 }
@@ -83,6 +51,28 @@ function clampRange(from?: Date, to?: Date): DateRange {
   if (from && to && to < from) return { from: to, to: from };
   return { from, to };
 }
+function fmtLabel(d?: Date) {
+  if (!d) return "--/--/----";
+  const locale = getDocLocale();
+  return d.toLocaleDateString(locale, { day: "2-digit", month: "short", year: "numeric" });
+}
+function buildMonthGrid(viewMonth: Date) {
+  const first = startOfMonth(viewMonth);
+  const last = endOfMonth(viewMonth);
+
+  // Monday start: Mon=0..Sun=6
+  const startDow = (first.getDay() + 6) % 7;
+
+  const cells: (Date | null)[] = [];
+  for (let i = 0; i < startDow; i++) cells.push(null);
+
+  for (let d = 1; d <= last.getDate(); d++) {
+    cells.push(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), d));
+  }
+
+  while (cells.length % 7 !== 0) cells.push(null);
+  return cells;
+}
 function parseISO(v?: string) {
   if (!v) return undefined;
   const d = new Date(v);
@@ -91,41 +81,10 @@ function parseISO(v?: string) {
 function toISO(d: Date) {
   return d.toLocaleDateString("en-CA");
 }
-function fmtLabel(d?: Date) {
-  if (!d) return "--/--/----";
-  const locale = getDocLocale();
-  return d.toLocaleDateString(locale, {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-function buildMonthGrid(viewMonth: Date) {
-  const first = startOfMonth(viewMonth);
-  const last = endOfMonth(viewMonth);
-  const startDow = (first.getDay() + 6) % 7;
-
-  const cells: (Date | null)[] = [];
-  for (let i = 0; i < startDow; i++) cells.push(null);
-  for (let d = 1; d <= last.getDate(); d++) {
-    cells.push(new Date(viewMonth.getFullYear(), viewMonth.getMonth(), d));
-  }
-  while (cells.length % 7 !== 0) cells.push(null);
-  return cells;
-}
-function minDropoffDate(from: Date) {
-  return startOfDay(addDays(from, 1));
-}
-function isBeforeDay(a: Date, b: Date) {
-  return startOfDay(a) < startOfDay(b);
-}
-function dayDiff(from: Date, to: Date) {
-  const ms = startOfDay(to).getTime() - startOfDay(from).getTime();
-  return Math.round(ms / 86400000);
-}
 
 /* -------------------------- Time helpers -------------------------- */
-function buildFullDayTimeOptions() {
+function buildTimeOptions() {
+  // 09:30 to 20:00 inclusive, every 30 min
   const out: string[] = [];
   for (let h = 9; h <= 20; h++) {
     for (const m of [0, 30]) {
@@ -154,10 +113,6 @@ function timeToMinutes(t: string) {
   const [hh, mm] = t.split(":").map(Number);
   return hh * 60 + mm;
 }
-function nowMinutes() {
-  const now = new Date();
-  return now.getHours() * 60 + now.getMinutes();
-}
 
 /* -------------------------- URL helpers -------------------------- */
 function getQueryParam(name: string) {
@@ -167,210 +122,138 @@ function getQueryParam(name: string) {
   return v || undefined;
 }
 
-/* -------------------------- Pricing helpers -------------------------- */
-function getFullDayRate(days: number) {
-  if (days <= 1) return FULL_DAY_PRICING[1];
-  if (days >= 6) return FULL_DAY_PRICING[6];
-  return FULL_DAY_PRICING[days];
+/* ---------------------- 24h / 1-day helpers ---------------------- */
+function addDays(d: Date, days: number) {
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() + days);
+}
+function minDropoffDate(from: Date) {
+  return startOfDay(addDays(from, 1));
+}
+function isBeforeDay(a: Date, b: Date) {
+  return startOfDay(a) < startOfDay(b);
+}
+function dayDiff(from: Date, to: Date) {
+  const ms = startOfDay(to).getTime() - startOfDay(from).getTime();
+  return Math.round(ms / 86400000);
+}
+function isWholeDayRental(from?: Date, to?: Date, pickupTime?: string, dropoffTime?: string) {
+  if (!from || !to || !pickupTime || !dropoffTime) return false;
+  const days = dayDiff(from, to);
+  if (days < 1) return false;
+  return pickupTime === dropoffTime;
+}
+function rentalLengthLabel(from?: Date, to?: Date) {
+  if (!from || !to) return "";
+  const days = dayDiff(from, to);
+  if (days < 1) return "";
+  if (days === 1) return "1 day (24h)";
+  return `${days} days (${days * 24}h)`;
 }
 
 /* ========================== MAIN COMPONENT ========================== */
 export default function BookingBar() {
+  const t = useTranslations("booking");
+
   const router = useRouter();
   const pathname = usePathname() || "/";
   const currentLocale = useMemo(() => getLocaleFromPath(pathname), [pathname]);
 
-  const FULL_DAY_TIME_OPTIONS = useMemo(() => buildFullDayTimeOptions(), []);
+  const TIME_OPTIONS = useMemo(() => buildTimeOptions(), []);
   const today = useMemo(() => startOfDay(new Date()), []);
-  const tomorrow = useMemo(() => addDays(today, 1), [today]);
+  const tomorrow = useMemo(() => new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1), [today]);
 
   const urlFrom = parseISO(getQueryParam("from"));
   const urlTo = parseISO(getQueryParam("to"));
   const urlPickupTime = getQueryParam("pickupTime");
   const urlDropoffTime = getQueryParam("dropoffTime");
   const urlPickupLocation = getQueryParam("pickupLocation");
-  const urlPlan = getQueryParam("plan") as RentalPlan | undefined;
 
-  const [pickupLocation] = useState(urlPickupLocation || DEFAULT_LOCATION);
-  const [plan, setPlan] = useState<RentalPlan>(urlPlan === "half" || urlPlan === "full" ? urlPlan : null);
-  const [range, setRange] = useState<DateRange>(() => {
-    if (urlPlan === "half" && urlFrom) {
-      return { from: startOfDay(urlFrom), to: startOfDay(urlFrom) };
-    }
-    if (urlPlan === "full" && urlFrom && urlTo) {
-      return clampRange(startOfDay(urlFrom), startOfDay(urlTo));
-    }
-    return {};
-  });
+  const initialPickupLocation = urlPickupLocation || DEFAULT_LOCATION;
+  const initialFrom = urlFrom ? startOfDay(urlFrom) : today;
+  const initialTo = urlTo ? startOfDay(urlTo) : tomorrow;
+
+  const [pickupLocation] = useState(initialPickupLocation);
+  const [range, setRange] = useState<DateRange>(() => clampRange(initialFrom, initialTo));
 
   const [pickupTime, setPickupTime] = useState(() => {
-    if (urlPlan === "half" && urlPickupTime && isValidTimeOption(urlPickupTime, HALF_DAY_TIME_OPTIONS)) {
-      return urlPickupTime;
-    }
-    if (urlPlan === "full" && urlPickupTime && isValidTimeOption(urlPickupTime, FULL_DAY_TIME_OPTIONS)) {
-      return urlPickupTime;
-    }
+    if (urlPickupTime && isValidTimeOption(urlPickupTime, TIME_OPTIONS)) return urlPickupTime;
     return "10:00";
   });
 
   const [dropoffTime, setDropoffTime] = useState(() => {
-    if (urlPlan === "half") return HALF_DAY_RETURN_TIME;
-    if (urlPlan === "full" && urlDropoffTime && isValidTimeOption(urlDropoffTime, FULL_DAY_TIME_OPTIONS)) {
+    if (urlDropoffTime && isValidTimeOption(urlDropoffTime, TIME_OPTIONS)) {
       return urlDropoffTime;
     }
-    return "10:00";
+    return urlPickupTime && isValidTimeOption(urlPickupTime, TIME_OPTIONS) ? urlPickupTime : "10:00";
   });
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeField, setActiveField] = useState<ActiveField>("pickup");
-  const [pickupTimeOpen, setPickupTimeOpen] = useState(false);
-  const [validationNotice, setValidationNotice] = useState("");
 
-  const [scrollStartMonth, setScrollStartMonth] = useState(() => startOfMonth(urlFrom || today));
-  const [viewMonth, setViewMonth] = useState(() => startOfMonth(urlFrom || today));
+  const [scrollStartMonth, setScrollStartMonth] = useState(() => startOfMonth(initialFrom));
+  const [viewMonth, setViewMonth] = useState(() => startOfMonth(initialFrom));
   const [monthsAhead, setMonthsAhead] = useState(10);
 
+  const [pickupTimeOpen, setPickupTimeOpen] = useState(false);
+  const [dropoffTimeOpen, setDropoffTimeOpen] = useState(false);
+  const [validationNotice, setValidationNotice] = useState("");
+
   const pickupTimeBtnRef = useRef<HTMLButtonElement | null>(null);
+  const dropoffTimeBtnRef = useRef<HTMLButtonElement | null>(null);
+
   const pickupTimePopRef = useRef<HTMLDivElement | null>(null);
+  const dropoffTimePopRef = useRef<HTMLDivElement | null>(null);
+
   const monthsScrollRef = useRef<HTMLDivElement | null>(null);
   const monthWrapRefs = useRef<Array<HTMLDivElement | null>>([]);
 
-  const hasChosenPlan = plan !== null;
-  const pickupTimeOptions = plan === "half" ? HALF_DAY_TIME_OPTIONS : FULL_DAY_TIME_OPTIONS;
-
-  const monthsList = useMemo(() => {
-    return Array.from({ length: monthsAhead + 1 }, (_, i) => addMonths(scrollStartMonth, i));
-  }, [scrollStartMonth, monthsAhead]);
-
-  const fullDayCount = useMemo(() => {
-    if (plan !== "full" || !range.from || !range.to) return 0;
-    return Math.max(1, dayDiff(range.from, range.to));
-  }, [plan, range.from, range.to]);
-
-  const fullDayRate = useMemo(() => {
-    if (plan !== "full" || !fullDayCount) return FULL_DAY_BASE_PRICE;
-    return getFullDayRate(fullDayCount);
-  }, [plan, fullDayCount]);
-
-  const originalPerDay = useMemo(() => {
-    if (plan === "half") return HALF_DAY_OLD_PRICE;
-    if (plan === "full") return FULL_DAY_BASE_PRICE;
-    return 0;
-  }, [plan]);
-
-  const discountedPerDay = useMemo(() => {
-    if (plan === "half") return HALF_DAY_PRICE;
-    if (plan === "full") return fullDayRate;
-    return 0;
-  }, [plan, fullDayRate]);
-
-  const totalPrice = useMemo(() => {
-    if (plan === "half") return HALF_DAY_PRICE;
-    if (plan === "full") return fullDayRate * fullDayCount;
-    return 0;
-  }, [plan, fullDayRate, fullDayCount]);
-
-  const savingsTotal = useMemo(() => {
-    if (!plan) return 0;
-    if (plan === "half") return HALF_DAY_OLD_PRICE - HALF_DAY_PRICE;
-    return (FULL_DAY_BASE_PRICE - fullDayRate) * fullDayCount;
-  }, [plan, fullDayRate, fullDayCount]);
-
-  const summaryTitle = useMemo(() => {
-    if (plan === "half") return "Half Day Plan";
-    if (plan === "full") return fullDayCount <= 1 ? "1 Day Plan" : `${fullDayCount} Day Plan`;
-    return "Select Rental Type";
-  }, [plan, fullDayCount]);
-
-  const halfDayAvailableForSelectedDay = useMemo(() => {
-    if (!range.from) return true;
-    if (!isSameDay(range.from, today)) return true;
-    return nowMinutes() <= 14 * 60;
-  }, [range.from, today]);
-
   useEffect(() => {
     function onDown(e: MouseEvent) {
-      const target = e.target as Node;
+      const tNode = e.target as Node;
 
-      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(target)) return;
-      if (pickupTimePopRef.current && pickupTimePopRef.current.contains(target)) return;
+      if (pickupTimePopRef.current && pickupTimePopRef.current.contains(tNode)) return;
+      if (dropoffTimePopRef.current && dropoffTimePopRef.current.contains(tNode)) return;
+
+      if (pickupTimeBtnRef.current && pickupTimeBtnRef.current.contains(tNode)) return;
+      if (dropoffTimeBtnRef.current && dropoffTimeBtnRef.current.contains(tNode)) return;
 
       setPickupTimeOpen(false);
+      setDropoffTimeOpen(false);
     }
-
     window.addEventListener("mousedown", onDown);
     return () => window.removeEventListener("mousedown", onDown);
   }, []);
 
   useEffect(() => {
-    if (plan === "half") {
-      if (!isValidTimeOption(pickupTime, HALF_DAY_TIME_OPTIONS)) {
-        setPickupTime("10:00");
-      }
-      setDropoffTime(HALF_DAY_RETURN_TIME);
+    setDropoffTime(pickupTime);
+  }, [pickupTime]);
 
-      setRange((prev) => {
-        const from = prev.from || today;
-        return { from, to: from };
-      });
-    }
+  const DROP_TIME_OPTIONS = useMemo(() => {
+    // Exact 24h / 48h / 72h logic: return time must always match pickup time
+    return [pickupTime];
+  }, [pickupTime]);
 
-    if (plan === "full") {
-      if (!isValidTimeOption(pickupTime, FULL_DAY_TIME_OPTIONS)) {
-        setPickupTime("10:00");
-      }
-      setDropoffTime(pickupTime);
+  const monthsList = useMemo(() => {
+    return Array.from({ length: monthsAhead + 1 }, (_, i) => addMonths(scrollStartMonth, i));
+  }, [scrollStartMonth, monthsAhead]);
 
-      setRange((prev) => {
-        const from = prev.from || today;
-        const to = prev.to && !isSameDay(prev.to, from) ? prev.to : minDropoffDate(from);
-        return { from, to };
-      });
-    }
-
-    setValidationNotice("");
-  }, [plan, today]);
-
-  useEffect(() => {
-    if (plan === "full") {
-      setDropoffTime(pickupTime);
-    }
-  }, [pickupTime, plan]);
-
-  useEffect(() => {
-    if (plan === "half" && !halfDayAvailableForSelectedDay) {
-      setPlan("full");
-      setValidationNotice("Half day is only available for same-day rentals before 2:00 PM.");
-    }
-  }, [plan, halfDayAvailableForSelectedDay]);
+  const rentalLabel = useMemo(() => rentalLengthLabel(range.from, range.to), [range.from, range.to]);
 
   function showValidationNotice(message: string) {
     setValidationNotice(message);
   }
 
-  function requirePlanFirst() {
-    showValidationNotice("Please select Half Day or Full Day first.");
-  }
-
   function openCalendar(which: ActiveField) {
-    if (!hasChosenPlan) {
-      requirePlanFirst();
-      return;
-    }
-
-    if (plan === "half" && which === "dropoff") {
-      showValidationNotice("Half day always returns the same day at 8:00 PM.");
-      return;
-    }
-
     setValidationNotice("");
     setPickupTimeOpen(false);
+    setDropoffTimeOpen(false);
     setActiveField(which);
 
     const anchor = startOfMonth((which === "pickup" ? range.from : range.to) || range.from || today);
     setScrollStartMonth(anchor);
     setViewMonth(anchor);
     setMonthsAhead(10);
+
     setCalendarOpen(true);
   }
 
@@ -380,29 +263,19 @@ export default function BookingBar() {
 
   function clearDates() {
     setValidationNotice("");
-    if (plan === "half") {
-      setRange({});
-      return;
-    }
-    if (plan === "full") {
-      setRange({});
-      setActiveField("pickup");
-    }
+    setRange({});
+    setActiveField("pickup");
   }
 
   function pickDate(day: Date) {
     if (isPastDay(day)) return;
 
-    if (plan === "half") {
-      setRange({ from: day, to: day });
-      setValidationNotice("");
-      return;
-    }
-
-    if (plan === "full" && activeField === "dropoff" && range.from) {
+    if (activeField === "dropoff" && range.from) {
       const minDay = minDropoffDate(range.from);
       if (isBeforeDay(day, minDay)) {
-        showValidationNotice("Full day rental must be at least 24 hours. Return date must be at least 1 day after pickup.");
+        showValidationNotice(
+          "Return must be at least 1 full day after pickup. Rentals must follow 24h, 48h, 72h, etc. format."
+        );
         return;
       }
     }
@@ -415,6 +288,7 @@ export default function BookingBar() {
       const nextTo = range.to && !isBeforeDay(range.to, minDay) ? range.to : minDay;
 
       setRange({ from: nextFrom, to: nextTo });
+      setDropoffTime(pickupTime);
       setActiveField("dropoff");
       return;
     }
@@ -430,92 +304,76 @@ export default function BookingBar() {
       const minDay = minDropoffDate(next.from);
       if (isBeforeDay(next.to, minDay)) {
         setRange({ from: next.from, to: minDay });
+        showValidationNotice(
+          "Return must be at least 1 full day after pickup. Rentals must follow 24h, 48h, 72h, etc. format."
+        );
       } else {
         setRange(next);
       }
     } else {
       setRange(next);
     }
+
+    setDropoffTime(pickupTime);
+    // keep calendar open after selecting dropoff date
+    // user will close it manually with Done button
   }
 
   function togglePickupTime() {
-    if (!hasChosenPlan) {
-      requirePlanFirst();
-      return;
-    }
-
     setCalendarOpen(false);
+    setDropoffTimeOpen(false);
     setPickupTimeOpen((v) => !v);
     setValidationNotice("");
+  }
+
+  function toggleDropoffTime() {
+    setCalendarOpen(false);
+    setPickupTimeOpen(false);
+    setDropoffTimeOpen((v) => !v);
+    setValidationNotice(
+      "Return time must match pickup time exactly. Example: 10:00 pickup = 10:00 return after 1 day, 2 days, 3 days, etc."
+    );
   }
 
   function onSearch() {
     setCalendarOpen(false);
     setPickupTimeOpen(false);
+    setDropoffTimeOpen(false);
 
-    if (!plan) {
-      requirePlanFirst();
-      return;
-    }
-
-    if (!range.from) {
-      showValidationNotice("Please select your pickup date.");
-      return;
-    }
-
-    if (plan === "half") {
-      const pickupMinutes = timeToMinutes(pickupTime);
-      const selectedToday = isSameDay(range.from, today);
-
-      if (selectedToday && nowMinutes() > 14 * 60) {
-        showValidationNotice("Half day is only available before 2:00 PM.");
-        return;
-      }
-
-      if (pickupMinutes > 14 * 60) {
-        showValidationNotice("Half day pickup time must be from 9:30 AM until 2:00 PM.");
-        return;
-      }
-
-      const params = new URLSearchParams({
-        pickupLocation,
-        plan: "half",
-        from: toISO(range.from),
-        to: toISO(range.from),
-        pickupTime,
-        dropoffTime: HALF_DAY_RETURN_TIME,
-      });
-
-      router.push(`/${currentLocale}/vehicles?${params.toString()}`);
-      return;
-    }
-
-    if (!range.to) {
-      showValidationNotice("Please select your return date.");
+    if (!range.from || !range.to) {
+      setActiveField(range.from ? "dropoff" : "pickup");
+      setCalendarOpen(true);
+      showValidationNotice("Please select both pickup and return dates.");
       return;
     }
 
     const minDay = minDropoffDate(range.from);
+
     if (isBeforeDay(range.to, minDay)) {
-      showValidationNotice("Full day rental must be at least 24 hours.");
+      setRange({ from: range.from, to: minDay });
+      showValidationNotice(
+        "Minimum rental is 1 full day. Please choose 1 day, 2 days, 3 days, etc."
+      );
       return;
     }
 
-    if (pickupTime !== dropoffTime) {
+    if (!isWholeDayRental(range.from, range.to, pickupTime, dropoffTime)) {
       setDropoffTime(pickupTime);
-      showValidationNotice("For full day rentals, return time must match pickup time exactly.");
+      showValidationNotice(
+        "Rentals must follow exact 24h blocks. Return time must match pickup time, for example 24h, 48h, 72h, etc."
+      );
       return;
     }
 
     const params = new URLSearchParams({
       pickupLocation,
-      plan: "full",
       from: toISO(range.from),
       to: toISO(range.to),
       pickupTime,
       dropoffTime: pickupTime,
     });
 
+    // ✅ IMPORTANT FIX: keep locale in the URL
     router.push(`/${currentLocale}/vehicles?${params.toString()}`);
   }
 
@@ -547,12 +405,12 @@ export default function BookingBar() {
   useEffect(() => {
     if (!calendarOpen) return;
 
-    const t = window.setTimeout(() => {
+    const t2 = window.setTimeout(() => {
       monthsScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
       setViewMonth(scrollStartMonth);
     }, 0);
 
-    return () => window.clearTimeout(t);
+    return () => window.clearTimeout(t2);
   }, [calendarOpen, scrollStartMonth]);
 
   function scrollToMonth(index: number) {
@@ -566,350 +424,200 @@ export default function BookingBar() {
     const a = startOfMonth(scrollStartMonth).getTime();
     const b = startOfMonth(viewMonth).getTime();
     const diffMonths =
-      (new Date(b).getFullYear() - new Date(a).getFullYear()) * 12 +
-      (new Date(b).getMonth() - new Date(a).getMonth());
-
+      (new Date(b).getFullYear() - new Date(a).getFullYear()) * 12 + (new Date(b).getMonth() - new Date(a).getMonth());
     return Math.max(0, Math.min(monthsList.length - 1, diffMonths));
   }, [scrollStartMonth, viewMonth, monthsList.length]);
 
   return (
-    <div className="relative z-50 w-full max-w-[370px]">
-      <div className="overflow-hidden rounded-[30px] border border-white/60 shadow-[0_22px_80px_rgba(0,0,0,0.20)] backdrop-blur-sm" style={{ background: BAR_BG }}>
-        <div className="border-b border-black/8 px-5 py-4">
-          <div className="mb-3 inline-flex items-center gap-2 rounded-full bg-[#6E6E73] px-3 py-1.5 text-[12px] font-semibold text-white">
-            <PinIcon />
-            <span className="truncate">{pickupLocation}</span>
-          </div>
+    <div className="relative z-50 w-full">
+      <div className="mb-2 flex items-center gap-2 text-sm font-semibold text-white/80">
+        <span className="inline-flex items-center gap-2 rounded-full bg-black/40 px-3 py-1 backdrop-blur">
+          <PinIcon />
+          <span className="whitespace-nowrap">{t("pickup")}</span>{" "}
+          <span className="text-white truncate max-w-[220px] sm:max-w-[360px]">{pickupLocation}</span>
+        </span>
 
-          <div className="text-[11px] font-extrabold uppercase tracking-[0.18em] text-black/45">
-            Premium Booking
-          </div>
+        {rentalLabel ? (
+          <span className="inline-flex items-center rounded-full bg-black/40 px-3 py-1 backdrop-blur text-white">
+            {rentalLabel}
+          </span>
+        ) : null}
+      </div>
 
-          <h3 className="mt-1 text-[30px] font-black leading-none text-black">
-            Book Your Ride
-          </h3>
-
-          <p className="mt-2 text-[13px] font-medium leading-5 text-black/60">
-            Choose rental type first. Then select your date and time.
-          </p>
-        </div>
-
-        <div className="p-4">
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              type="button"
-              onClick={() => {
-                setPlan("half");
-                setValidationNotice("");
-              }}
-              className={[
-                "relative rounded-[24px] border px-4 py-4 text-left transition",
-                plan === "half"
-                  ? "border-transparent shadow-[0_14px_32px_rgba(255,106,0,0.22)]"
-                  : "border-black/10 hover:border-black/20",
-              ].join(" ")}
-              style={{ background: plan === "half" ? CARD_BG : "#ffffff" }}
-            >
-              <div className="absolute left-3 top-3 rounded-full bg-black px-2.5 py-1 text-[10px] font-black uppercase tracking-wide text-white">
-                Most Popular
-              </div>
-
-              <div className="mt-7 text-[13px] font-black uppercase tracking-[0.08em] text-black/45">
-                Half Day
-              </div>
-
-              <div className="mt-1 flex items-end gap-2">
-                <span className="text-[22px] font-black leading-none text-black/35 line-through">
-                  €{HALF_DAY_OLD_PRICE}
-                </span>
-                <span className="text-[34px] font-black leading-none text-[#FF6A00]">
-                  €{HALF_DAY_PRICE}
-                </span>
-              </div>
-
-              <div className="mt-3 text-[12px] font-semibold leading-5 text-black/65">
-                Pickup from 09:30 to 14:00
-                <br />
-                Return same day at 20:00
-              </div>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => {
-                setPlan("full");
-                setValidationNotice("");
-              }}
-              className={[
-                "rounded-[24px] border px-4 py-4 text-left transition",
-                plan === "full"
-                  ? "border-transparent shadow-[0_14px_32px_rgba(255,106,0,0.22)]"
-                  : "border-black/10 hover:border-black/20",
-              ].join(" ")}
-              style={{ background: plan === "full" ? CARD_BG : "#ffffff" }}
-            >
-              <div className="text-[13px] font-black uppercase tracking-[0.08em] text-black/45">
-                Full Day
-              </div>
-
-              <div className="mt-1 flex items-end gap-2">
-                <span className="text-[22px] font-black leading-none text-black/35 line-through">
-                  €55
-                </span>
-                <span className="text-[34px] font-black leading-none text-black">
-                  €49
-                </span>
-              </div>
-
-              <div className="mt-3 text-[12px] font-semibold leading-5 text-black/65">
-                24h, 48h, 72h, etc.
-                <br />
-                Return time = pickup time
-              </div>
-            </button>
-          </div>
-
-          <div className="mt-4 space-y-3">
-            <button
-              type="button"
-              onClick={() => openCalendar("pickup")}
-              disabled={!hasChosenPlan}
-              className={[
-                "flex w-full items-center justify-between rounded-[20px] border px-4 py-4 text-left transition",
-                hasChosenPlan
-                  ? "border-black/10 hover:border-black/20"
-                  : "cursor-not-allowed border-black/8 opacity-55",
-              ].join(" ")}
-              style={{ background: CARD_BG }}
-            >
-              <div className="flex items-center gap-3">
-                <CalendarMini />
-                <div>
-                  <div className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-black/45">
-                    Pickup Date
-                  </div>
-                  <div className="text-[16px] font-black text-black">
-                    {fmtLabel(range.from)}
-                  </div>
-                </div>
-              </div>
-              <span className="text-[13px] font-bold text-black/55">Change</span>
-            </button>
-
-            <div className="grid grid-cols-2 gap-3">
-              <button
-                type="button"
-                onClick={togglePickupTime}
-                disabled={!hasChosenPlan}
-                ref={pickupTimeBtnRef}
-                className={[
-                  "relative flex items-center justify-between rounded-[20px] border px-4 py-4 text-left transition",
-                  hasChosenPlan
-                    ? "border-black/10 hover:border-black/20"
-                    : "cursor-not-allowed border-black/8 opacity-55",
-                ].join(" ")}
-                style={{ background: CARD_BG }}
-              >
-                <div className="flex items-center gap-3">
-                  <ClockMini />
-                  <div>
-                    <div className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-black/45">
-                      Pickup Time
-                    </div>
-                    <div className="text-[16px] font-black text-black">
-                      {formatTimeLabel(pickupTime)}
-                    </div>
-                  </div>
-                </div>
-
-                <span className="text-[13px] font-bold text-black/55">Select</span>
-
-                {pickupTimeOpen && hasChosenPlan && (
-                  <div ref={pickupTimePopRef}>
-                    <TimeDropdown
-                      title={plan === "half" ? "Half Day Pickup Time" : "Full Day Pickup Time"}
-                      value={pickupTime}
-                      options={pickupTimeOptions}
-                      onSelect={(selected) => {
-                        setPickupTime(selected);
-                        if (plan === "full") setDropoffTime(selected);
-                        setPickupTimeOpen(false);
-                        setValidationNotice("");
-                      }}
-                      onClose={() => setPickupTimeOpen(false)}
-                    />
-                  </div>
-                )}
-              </button>
-
-              <div
-                className="flex items-center justify-between rounded-[20px] border border-black/10 px-4 py-4"
-                style={{ background: plan === "half" ? SOFT_ORANGE : CARD_BG }}
-              >
-                <div className="flex items-center gap-3">
-                  <ClockMini />
-                  <div>
-                    <div className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-black/45">
-                      Return Time
-                    </div>
-                    <div className="text-[16px] font-black text-black">
-                      {plan === "half" ? formatTimeLabel(HALF_DAY_RETURN_TIME) : formatTimeLabel(dropoffTime)}
-                    </div>
-                  </div>
-                </div>
-                <span className="text-[12px] font-bold text-black/50">
-                  {plan === "half" ? "Fixed" : "Matched"}
-                </span>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => openCalendar("dropoff")}
-              disabled={!hasChosenPlan || plan === "half"}
-              className={[
-                "flex w-full items-center justify-between rounded-[20px] border px-4 py-4 text-left transition",
-                hasChosenPlan && plan === "full"
-                  ? "border-black/10 hover:border-black/20"
-                  : "cursor-not-allowed border-black/8 opacity-55",
-              ].join(" ")}
-              style={{ background: plan === "half" ? SOFT_ORANGE : CARD_BG }}
-            >
-              <div className="flex items-center gap-3">
-                <CalendarMini />
-                <div>
-                  <div className="text-[11px] font-extrabold uppercase tracking-[0.12em] text-black/45">
-                    Return Date
-                  </div>
-                  <div className="text-[16px] font-black text-black">
-                    {plan === "half" ? fmtLabel(range.from) : fmtLabel(range.to)}
-                  </div>
-                </div>
-              </div>
-              <span className="text-[13px] font-bold text-black/55">
-                {plan === "half" ? "Same Day" : "Change"}
-              </span>
-            </button>
-          </div>
-
-          <div className="mt-4 rounded-[24px] p-4 text-white shadow-[0_18px_40px_rgba(0,0,0,0.18)]" style={{ background: DARK_CARD }}>
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <div className="text-[11px] font-extrabold uppercase tracking-[0.14em] text-white/45">
-                  Booking Summary
-                </div>
-                <div className="mt-2 text-[24px] font-black leading-none">
-                  {summaryTitle}
-                </div>
-              </div>
-
-              <div className="rounded-[20px] bg-white/8 px-4 py-3 text-right">
-                <div className="text-[10px] font-extrabold uppercase tracking-[0.12em] text-white/50">
-                  Final Price
-                </div>
-                <div className="mt-1 text-[34px] font-black leading-none">
-                  {plan ? `€${totalPrice}` : "--"}
-                </div>
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-2 text-[13px] font-semibold text-white/78">
-              <div>
-                {fmtLabel(range.from)} • {formatTimeLabel(pickupTime)}
-              </div>
-              <div>
-                {plan === "half" ? fmtLabel(range.from) : fmtLabel(range.to)} •{" "}
-                {plan === "half" ? formatTimeLabel(HALF_DAY_RETURN_TIME) : formatTimeLabel(dropoffTime)}
-              </div>
-            </div>
-
-            <div className="mt-4 space-y-2">
-              <div className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-[13px] font-bold text-white/85">
-                <span>Price/day before discount</span>
-                <span>{plan ? `€${originalPerDay}` : "--"}</span>
-              </div>
-
-              <div className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-[13px] font-bold text-white/85">
-                <span>Discounted price/day</span>
-                <span>{plan ? `€${discountedPerDay}` : "--"}</span>
-              </div>
-
-              <div className="flex items-center justify-between rounded-2xl border border-white/10 px-4 py-3 text-[13px] font-bold text-white/85">
-                <span>
-                  {plan === "half" ? "Rental total" : "Total price"}
-                </span>
-                <span>{plan ? `€${totalPrice}` : "--"}</span>
-              </div>
-
-              {plan === "full" && fullDayCount > 1 ? (
-                <div className="flex items-center justify-between rounded-2xl border border-[#FF6A00]/25 bg-[#1A202B] px-4 py-3 text-[13px] font-bold text-[#FFB27A]">
-                  <span>Total discount</span>
-                  <span>-€{savingsTotal}</span>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
+      <div
+        className={[
+          "grid grid-cols-1 gap-2",
+          "lg:inline-flex lg:items-stretch lg:gap-0",
+          "rounded-2xl overflow-visible border border-black/10 shadow-[0_20px_60px_rgba(0,0,0,0.35)]",
+        ].join(" ")}
+        style={{ background: BAR_BG }}
+      >
+        <div className="flex gap-2 lg:contents">
           <button
             type="button"
-            onClick={onSearch}
-            className="mt-4 w-full rounded-[22px] px-6 py-4 text-[18px] font-black text-white transition hover:brightness-95 active:scale-[0.99]"
-            style={{ background: DEEP_ORANGE }}
+            onClick={() => openCalendar("pickup")}
+            className={[
+              "flex-1 flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition",
+              "rounded-2xl border border-black/15",
+              "lg:flex-none lg:rounded-none lg:border-0 lg:min-w-[170px] lg:border-r lg:border-black/15",
+            ].join(" ")}
           >
-            Check Availability
+            <CalendarMini />
+            <div className="leading-tight">
+              <div className="text-[11px] font-semibold text-black/65">{t("pickupDate")}</div>
+              <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.from)}</div>
+            </div>
           </button>
 
-          <div className="mt-4 min-h-[52px]">
-            {validationNotice ? (
-              <div className="rounded-[18px] border border-[#FF6A00]/25 bg-[#FFF0E6] px-4 py-3 text-[13px] font-bold leading-5 text-[#9A3D00]">
-                {validationNotice}
+          <div
+            className={[
+              "relative flex-1 rounded-2xl border border-black/15",
+              "lg:flex-none lg:rounded-none lg:border-0 lg:min-w-[160px] lg:border-r lg:border-black/15",
+            ].join(" ")}
+          >
+            <button
+              ref={pickupTimeBtnRef}
+              type="button"
+              onClick={togglePickupTime}
+              className="w-full h-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition rounded-2xl lg:rounded-none"
+            >
+              <ClockMini />
+              <div className="leading-tight">
+                <div className="text-[11px] font-semibold text-black/65">{t("time")}</div>
+                <div className="text-[13px] font-extrabold text-black">{formatTimeLabel(pickupTime)}</div>
               </div>
-            ) : (
-              <div className="rounded-[18px] border border-[#FF6A00]/20 bg-[#FFF4EC] px-4 py-3 text-[13px] font-semibold leading-5 text-[#9A3D00]">
-                Select Half Day or Full Day first.
-                <br />
-                Full day discounts are applied automatically from selected dates.
+            </button>
+
+            {pickupTimeOpen && (
+              <div ref={pickupTimePopRef}>
+                <TimeDropdown
+                  title={t("pickupTime")}
+                  value={pickupTime}
+                  options={TIME_OPTIONS}
+                  onSelect={(tSel) => {
+                    setPickupTime(tSel);
+                    setDropoffTime(tSel);
+                    setValidationNotice("");
+                    setPickupTimeOpen(false);
+                  }}
+                  onClose={() => setPickupTimeOpen(false)}
+                />
               </div>
             )}
           </div>
         </div>
+
+        <div className="flex gap-2 lg:contents">
+          <button
+            type="button"
+            onClick={() => openCalendar("dropoff")}
+            className={[
+              "flex-1 flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition",
+              "rounded-2xl border border-black/15",
+              "lg:flex-none lg:rounded-none lg:border-0 lg:min-w-[170px] lg:border-r lg:border-black/15",
+            ].join(" ")}
+          >
+            <CalendarMini />
+            <div className="leading-tight">
+              <div className="text-[11px] font-semibold text-black/65">{t("dropoffDate")}</div>
+              <div className="text-[13px] font-extrabold text-black">{fmtLabel(range.to)}</div>
+            </div>
+          </button>
+
+          <div
+            className={[
+              "relative flex-1 rounded-2xl border border-black/15",
+              "lg:flex-none lg:rounded-none lg:border-0 lg:min-w-[160px]",
+            ].join(" ")}
+          >
+            <button
+              ref={dropoffTimeBtnRef}
+              type="button"
+              onClick={toggleDropoffTime}
+              className="w-full h-full flex items-center gap-3 px-4 py-3 text-left hover:bg-black/5 transition rounded-2xl lg:rounded-none"
+            >
+              <ClockMini />
+              <div className="leading-tight">
+                <div className="text-[11px] font-semibold text-black/65">{t("time")}</div>
+                <div className="text-[13px] font-extrabold text-black">{formatTimeLabel(dropoffTime)}</div>
+              </div>
+            </button>
+
+            {dropoffTimeOpen && (
+              <div ref={dropoffTimePopRef}>
+                <TimeDropdown
+                  title={t("dropoffTime")}
+                  value={dropoffTime}
+                  options={DROP_TIME_OPTIONS}
+                  onSelect={(tSel) => {
+                    setDropoffTime(tSel);
+                    setValidationNotice("");
+                    setDropoffTimeOpen(false);
+                  }}
+                  onClose={() => setDropoffTimeOpen(false)}
+                />
+              </div>
+            )}
+          </div>
+        </div>
+
+        <button
+          type="button"
+          onClick={onSearch}
+          className={[
+            "w-full rounded-2xl py-3 font-extrabold text-black text-[15px] hover:brightness-95 active:scale-[0.99] transition",
+            "lg:w-auto lg:rounded-r-2xl lg:rounded-l-none lg:px-7 lg:min-w-[120px] lg:py-0",
+          ].join(" ")}
+          style={{ background: DEEP_ORANGE }}
+        >
+          {t("search")}
+        </button>
+      </div>
+
+      <div className="mt-2 min-h-[22px]">
+        {validationNotice ? (
+          <div className="inline-flex max-w-full rounded-xl border border-[#FF6A00]/25 bg-[#FFF0E6] px-3 py-2 text-[12px] font-semibold text-[#9A3D00] shadow-sm">
+            {validationNotice}
+          </div>
+        ) : (
+          <div className="text-[12px] text-white/75 font-medium">
+            Rental hours: 09:30 AM - 08:00 PM. Return time must match pickup time exactly for 24h, 48h, 72h, etc.
+          </div>
+        )}
       </div>
 
       {calendarOpen && (
         <div
-          className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 p-3 backdrop-blur-sm"
+          className="fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 backdrop-blur-sm p-3"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) closeCalendar();
           }}
         >
           <div
-            className="max-h-[85svh] w-full max-w-[560px] overflow-hidden rounded-2xl shadow-2xl animate-[pop_.12s_ease-out]"
+            className={[
+              "w-full max-w-[560px]",
+              "max-h-[85svh]",
+              "rounded-2xl shadow-2xl overflow-hidden",
+              "animate-[pop_.12s_ease-out]",
+            ].join(" ")}
             style={{ background: BAR_BG }}
           >
-            <div className="flex items-center justify-between border-b border-black/10 px-4 py-3">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-black/10">
               <div>
-                <div className="text-sm font-semibold text-black/55">
-                  {plan === "half"
-                    ? "Select half-day date"
-                    : activeField === "pickup"
-                    ? "Select pickup date"
-                    : "Select return date"}
+                <div className="text-sm text-black/55 font-semibold">
+                  {activeField === "pickup" ? t("selectPickupDate") : t("selectDropoffDate")}
                 </div>
-
                 <div className="text-base font-extrabold text-black">
-                  {fmtLabel(range.from)} → {plan === "half" ? fmtLabel(range.from) : fmtLabel(range.to)}
+                  {fmtLabel(range.from)} → {fmtLabel(range.to)}
                 </div>
-
                 <div className="mt-1 text-[12px] font-semibold text-black/60">
-                  {plan === "half"
-                    ? "Half day is only for the same selected day."
-                    : "Return date must be at least 1 day after pickup for 24h, 48h, 72h, etc."}
+                  Select only 1 day, 2 days, 3 days, etc. Return time will always match pickup time.
                 </div>
               </div>
 
               <button
                 onClick={closeCalendar}
-                className="h-9 w-9 rounded-xl text-black/70 transition hover:bg-black/5"
+                className="h-9 w-9 rounded-xl hover:bg-black/5 text-black/70 transition"
                 aria-label="Close"
               >
                 ✕
@@ -920,19 +628,22 @@ export default function BookingBar() {
               <button
                 type="button"
                 onClick={() => scrollToMonth(Math.max(0, currentIndex - 1))}
-                className="h-9 w-9 rounded-xl border border-black/15 transition hover:bg-black/5"
+                className="h-9 w-9 rounded-xl border border-black/15 hover:bg-black/5 transition"
               >
                 ‹
               </button>
 
-              <div className="rounded-xl border border-black/15 px-4 py-2 font-extrabold text-black">
+              <div
+                className="rounded-xl border border-black/15 px-4 py-2 font-extrabold text-black"
+                style={{ background: BAR_BG }}
+              >
                 {viewMonth.toLocaleString(getDocLocale(), { month: "long", year: "numeric" })}
               </div>
 
               <button
                 type="button"
                 onClick={() => scrollToMonth(Math.min(monthsList.length - 1, currentIndex + 1))}
-                className="h-9 w-9 rounded-xl border border-black/15 transition hover:bg-black/5"
+                className="h-9 w-9 rounded-xl border border-black/15 hover:bg-black/5 transition"
               >
                 ›
               </button>
@@ -941,10 +652,10 @@ export default function BookingBar() {
             <div
               ref={monthsScrollRef}
               onScroll={onMonthsScroll}
-              className="overflow-y-auto px-3 pb-4 md:overflow-y-scroll"
+              className="px-3 pb-4 overflow-y-auto md:overflow-y-scroll"
               style={{ maxHeight: "55svh" }}
             >
-              <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {monthsList.map((m, i) => (
                   <div
                     key={`${m.getFullYear()}-${m.getMonth()}`}
@@ -952,34 +663,28 @@ export default function BookingBar() {
                       monthWrapRefs.current[i] = el;
                     }}
                   >
-                    <MiniMonth
-                      month={m}
-                      range={range}
-                      onPick={pickDate}
-                      activeField={activeField}
-                      plan={plan}
-                    />
+                    <MiniMonth month={m} range={range} onPick={pickDate} activeField={activeField} />
                   </div>
                 ))}
               </div>
             </div>
 
-            <div className="flex items-center justify-between border-t border-black/10 bg-black/5 px-4 py-3">
+            <div className="flex items-center justify-between px-4 py-3 border-t border-black/10 bg-black/5">
               <button
                 type="button"
                 onClick={clearDates}
-                className="text-sm font-extrabold text-black/70 transition hover:text-black"
+                className="text-sm font-extrabold text-black/70 hover:text-black transition"
               >
-                Clear
+                {t("clear")}
               </button>
 
               <button
                 type="button"
                 onClick={closeCalendar}
-                className="rounded-xl px-5 py-2 font-extrabold text-white transition hover:brightness-95"
+                className="rounded-xl px-5 py-2 font-extrabold text-black hover:brightness-95 transition"
                 style={{ background: DEEP_ORANGE }}
               >
-                Done
+                {t("done")}
               </button>
             </div>
           </div>
@@ -995,6 +700,28 @@ export default function BookingBar() {
                 opacity: 1;
               }
             }
+
+            @media (min-width: 768px) {
+              div[ref]::-webkit-scrollbar,
+              .md\\:overflow-y-scroll::-webkit-scrollbar {
+                width: 10px;
+              }
+              div[ref]::-webkit-scrollbar-track,
+              .md\\:overflow-y-scroll::-webkit-scrollbar-track {
+                background: rgba(0, 0, 0, 0.08);
+                border-radius: 999px;
+              }
+              div[ref]::-webkit-scrollbar-thumb,
+              .md\\:overflow-y-scroll::-webkit-scrollbar-thumb {
+                background: rgba(255, 106, 0, 0.7);
+                border-radius: 999px;
+                border: 2px solid ${BAR_BG};
+              }
+              div[ref]::-webkit-scrollbar-thumb:hover,
+              .md\\:overflow-y-scroll::-webkit-scrollbar-thumb:hover {
+                background: rgba(255, 106, 0, 0.95);
+              }
+            }
           `}</style>
         </div>
       )}
@@ -1008,20 +735,15 @@ function MiniMonth({
   range,
   onPick,
   activeField,
-  plan,
 }: {
   month: Date;
   range: DateRange;
   onPick: (d: Date) => void;
   activeField: ActiveField;
-  plan: RentalPlan;
 }) {
   const cells = useMemo(() => buildMonthGrid(month), [month]);
 
-  const minDropDay =
-    activeField === "dropoff" && range.from && plan === "full"
-      ? minDropoffDate(range.from)
-      : null;
+  const minDropDay = activeField === "dropoff" && range.from ? minDropoffDate(range.from) : null;
 
   const weekdays = useMemo(() => {
     const locale = getDocLocale();
@@ -1039,7 +761,7 @@ function MiniMonth({
         {month.toLocaleString(getDocLocale(), { month: "long", year: "numeric" })}
       </div>
 
-      <div className="mb-2 grid grid-cols-7 text-[11px] font-semibold text-black/55">
+      <div className="grid grid-cols-7 text-[11px] text-black/55 mb-2 font-semibold">
         {weekdays.map((w, idx) => (
           <div key={`${w}-${idx}`} className="py-1 text-center">
             {w}
@@ -1068,6 +790,8 @@ function MiniMonth({
 
           const isMiddleRange = inRange && !isStart && !isEnd;
 
+          const hoverClass = !disabled && !isStart && !isEnd ? "hover:bg-orange-200" : "";
+
           return (
             <button
               key={idx}
@@ -1075,12 +799,13 @@ function MiniMonth({
               disabled={disabled}
               onClick={() => onPick(d)}
               className={[
-                "h-9 rounded-lg text-[13px] font-extrabold transition-colors duration-150 ease-out",
-                disabled ? "cursor-not-allowed text-black/25" : "text-black hover:bg-orange-200",
+                "h-9 rounded-lg font-extrabold text-[13px]",
+                "transition-colors duration-150 ease-out",
+                disabled ? "text-black/25 cursor-not-allowed" : "",
+                !disabled && !isStart && !isEnd ? "text-black" : "",
+                hoverClass,
                 isMiddleRange && !disabled ? "bg-orange-300/60 text-black" : "",
-                (isStart || isEnd) && !disabled
-                  ? "text-white shadow-[0_6px_16px_rgba(255,106,0,0.35)]"
-                  : "",
+                (isStart || isEnd) && !disabled ? "text-white shadow-[0_6px_16px_rgba(255,106,0,0.35)]" : "",
               ].join(" ")}
               style={(isStart || isEnd) && !disabled ? { background: DEEP_ORANGE } : undefined}
             >
@@ -1109,12 +834,12 @@ function TimeDropdown({
 }) {
   return (
     <div
-      className="absolute left-0 top-[calc(100%+10px)] z-[999] w-[250px] overflow-hidden rounded-2xl border border-black/10 shadow-2xl"
+      className="absolute left-0 bottom-full mb-2 z-[999] w-[240px] rounded-2xl border border-black/10 shadow-2xl overflow-hidden"
       style={{ background: BAR_BG }}
     >
-      <div className="flex items-center justify-between border-b border-black/10 px-3 py-2">
+      <div className="flex items-center justify-between px-3 py-2 border-b border-black/10">
         <div className="text-sm font-extrabold text-black">{title}</div>
-        <button onClick={onClose} className="h-8 w-8 rounded-xl text-black/70 transition hover:bg-black/5">
+        <button onClick={onClose} className="h-8 w-8 rounded-xl hover:bg-black/5 text-black/70 transition">
           ✕
         </button>
       </div>
@@ -1128,8 +853,8 @@ function TimeDropdown({
               type="button"
               onClick={() => onSelect(t)}
               className={[
-                "w-full rounded-xl px-3 py-2 text-left font-extrabold transition",
-                active ? "text-white" : "text-black hover:bg-orange-200",
+                "w-full text-left px-3 py-2 rounded-xl font-extrabold transition",
+                active ? "text-black" : "text-black hover:bg-orange-200",
               ].join(" ")}
               style={active ? { background: DEEP_ORANGE } : undefined}
             >

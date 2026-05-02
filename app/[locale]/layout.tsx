@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display, Poppins } from "next/font/google";
 import NexaFooter from "../components/NexaFooter";
 import WhatsAppSupport from "../components/WhatsAppSupport";
+import NeroBookingCopilot from "../components/NeroBookingCopilot";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 import { locales } from "../../i18n/routing";
@@ -71,6 +72,8 @@ export default async function RootLayout({ children, params }: Props) {
       <body suppressHydrationWarning>
         <NextIntlClientProvider locale={safeLocale} messages={messages}>
           {children}
+
+          <NeroBookingCopilot />
 
           <WhatsAppSupport
             phone="34971482342"

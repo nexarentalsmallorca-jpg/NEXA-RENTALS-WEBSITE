@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import HomeClient from "../HomeClient";
+import HomeClient from "../HomeClientV2";
+import HomeClientV2 from "../HomeClientV2";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -17,7 +18,7 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <Suspense fallback={null}>
-      <HomeClient key={locale} />
+      <HomeClientV2 key={locale} />
     </Suspense>
   );
 }

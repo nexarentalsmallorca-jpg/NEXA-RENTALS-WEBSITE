@@ -34,8 +34,8 @@ const FEATURED: Vehicle[] = [
     pricePerDay: 39,
     badge: "Best Seller",
     imageUrl: "/images/liberty125.png",
-    available: false,
-    stockLabel: "RENTED OUT",
+    available: true,
+    stockLabel: "Available",
   },
   {
     id: "s3",
@@ -44,8 +44,8 @@ const FEATURED: Vehicle[] = [
     pricePerDay: 39,
     badge: "Practical",
     imageUrl: "/images/sym.png",
-    available: false,
-    stockLabel: "RENTED OUT",
+    available: true,
+    stockLabel: "1 Left",
   },
   {
     id: "s1",
