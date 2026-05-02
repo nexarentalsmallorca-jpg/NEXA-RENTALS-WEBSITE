@@ -1,6 +1,6 @@
 "use client";
 
-import { motion } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 import Image from "next/image";
 
 type BenefitCard = {
@@ -90,7 +90,7 @@ const benefits: BenefitCard[] = [
 
 const mobileBenefits = benefits.slice(0, 4);
 
-const containerVariants = {
+const containerVariants: Variants = {
   hidden: {},
   show: {
     transition: {
@@ -99,7 +99,7 @@ const containerVariants = {
   },
 };
 
-const itemVariants = {
+const itemVariants: Variants = {
   hidden: {
     opacity: 0,
     y: 70,
@@ -109,7 +109,7 @@ const itemVariants = {
     y: 0,
     transition: {
       duration: 0.85,
-      ease: [0.22, 1, 0.36, 1],
+      ease: "easeOut",
     },
   },
 };
@@ -191,7 +191,7 @@ function MobileMiniCard({ item, index }: { item: BenefitCard; index: number }) {
       <div
         className="mobile-flip-inner relative h-full w-full rounded-[16px] [transform-style:preserve-3d]"
         style={{
-          animationDelay: `${1.15 + index * 1.65}s`,
+          animationDelay: `${1.15 + index * 2.05}s`,
         }}
       >
         <div className="absolute inset-0 overflow-hidden rounded-[16px] border border-white/10 bg-[#050505] shadow-[0_16px_45px_rgba(0,0,0,0.48)] [backface-visibility:hidden]">
@@ -284,16 +284,16 @@ export default function WhyRidersChooseNexa() {
 
         @keyframes nexaMobileCardFlipSequence {
           0%,
-          7% {
+          9% {
             transform: rotateY(0deg);
           }
 
-          11%,
-          23% {
+          16%,
+          35% {
             transform: rotateY(180deg);
           }
 
-          27%,
+          42%,
           100% {
             transform: rotateY(0deg);
           }
@@ -305,7 +305,7 @@ export default function WhyRidersChooseNexa() {
 
         .mobile-flip-inner {
           animation-name: nexaMobileCardFlipSequence;
-          animation-duration: 6.6s;
+          animation-duration: 8.2s;
           animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
           animation-iteration-count: infinite;
           animation-fill-mode: both;
