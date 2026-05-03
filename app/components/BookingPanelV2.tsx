@@ -222,7 +222,9 @@ function buildWhatsAppAvailabilityLink(
 ) {
   const text = `Hi NEXA Rentals, I would like to rent more than one scooter${
     plan ? ` (${plan === "half" ? "Half Day" : "Full Day"})` : ""
-  }${from ? ` on ${fmtDate(from)}` : ""}. Can you please confirm availability for ${vehicleName}?`;
+  }${
+    from ? ` on ${fmtDate(from)}` : ""
+  }. Can you please confirm availability for ${vehicleName}?`;
 
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
 }
@@ -407,7 +409,8 @@ function MiniMonth({
 
       <div className="grid grid-cols-7 gap-[clamp(5px,1.4vw,8px)]">
         {cells.map((day, idx) => {
-          if (!day) return <div key={idx} className="h-[clamp(36px,7vw,44px)]" />;
+          if (!day)
+            return <div key={idx} className="h-[clamp(36px,7vw,44px)]" />;
 
           const isPast = startOfDay(day) < today;
           const isStart = !!range.from && isSameDay(day, range.from);
@@ -451,9 +454,13 @@ function MiniMonth({
                     : "#F4F4F5",
                 color: isStart || isEnd ? "#fff" : undefined,
                 boxShadow:
-                  isStart || isEnd ? "0 12px 24px rgba(255,106,0,0.24)" : "none",
+                  isStart || isEnd
+                    ? "0 12px 24px rgba(255,106,0,0.24)"
+                    : "none",
                 outline:
-                  isStart || isEnd ? "2px solid rgba(255,106,0,0.18)" : "none",
+                  isStart || isEnd
+                    ? "2px solid rgba(255,106,0,0.18)"
+                    : "none",
               }}
             >
               {day.getDate()}
@@ -477,6 +484,7 @@ function PlanCard({
   onClick,
   strong,
   step,
+  enableAiCopilot = true,
 }: {
   selected: boolean;
   label: string;
@@ -489,6 +497,7 @@ function PlanCard({
   onClick: () => void;
   strong?: boolean;
   step: "plan-half-day" | "plan-full-day";
+  enableAiCopilot?: boolean;
 }) {
   const baseBg = strong
     ? "linear-gradient(180deg,#FFFFFF 0%,#FFF9F3 100%)"
@@ -505,7 +514,7 @@ function PlanCard({
   return (
     <button
       type="button"
-      data-nexa-step={step}
+      data-nexa-step={enableAiCopilot ? step : undefined}
       onClick={onClick}
       className={[
         "nexa-plan-card group relative w-full overflow-hidden rounded-[18px] border px-[clamp(9px,0.85vw,12px)] py-[clamp(10px,0.95vw,12px)] text-left transition-all duration-300",
@@ -581,8 +590,12 @@ function PlanCard({
         <div
           className="nexa-plan-chip mt-2 inline-flex items-center rounded-full border px-2 py-1 text-[clamp(8px,0.66vw,9px)] font-black uppercase tracking-[0.06em]"
           style={{
-            borderColor: strong ? "rgba(255,106,0,0.22)" : "rgba(17,17,17,0.10)",
-            background: strong ? "rgba(255,255,255,0.74)" : "rgba(17,17,17,0.03)",
+            borderColor: strong
+              ? "rgba(255,106,0,0.22)"
+              : "rgba(17,17,17,0.10)",
+            background: strong
+              ? "rgba(255,255,255,0.74)"
+              : "rgba(17,17,17,0.03)",
             color: strong ? "#C85A00" : "rgba(17,17,17,0.58)",
           }}
         >
@@ -611,6 +624,7 @@ export default function BookingPanelV2({
   const [halfReturnTime, setHalfReturnTime] = useState("20:00");
   const [notice, setNotice] = useState("");
   const [showPriceDetails, setShowPriceDetails] = useState(false);
+  const [isMobileDevice, setIsMobileDevice] = useState(false);
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeField, setActiveField] = useState<ActiveField>("pickup");
@@ -634,6 +648,19 @@ export default function BookingPanelV2({
   useEffect(() => {
     onPricingChangeRef.current = onPricingChange;
   }, [onPricingChange]);
+
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 767px)");
+
+    const update = () => {
+      setIsMobileDevice(mq.matches);
+    };
+
+    update();
+    mq.addEventListener("change", update);
+
+    return () => mq.removeEventListener("change", update);
+  }, []);
 
   const vehicleId = useMemo(() => resolveVehicleId(vehicleName), [vehicleName]);
   const pickupOptions = plan === "half" ? pickupHalfOptions : pickupFullOptions;
@@ -698,7 +725,9 @@ export default function BookingPanelV2({
     }
 
     if (plan === "full" && range.from && range.to && fullDayCount > 0) {
-      return `${fullDayCount} Day${fullDayCount > 1 ? "s" : ""} • €${fullDayRate}/day • €${finalTotal}`;
+      return `${fullDayCount} Day${
+        fullDayCount > 1 ? "s" : ""
+      } • €${fullDayRate}/day • €${finalTotal}`;
     }
 
     return "Choose plan to begin";
@@ -824,7 +853,8 @@ export default function BookingPanelV2({
 
     const resolvedReturnDate = returnDate || range.from;
     const resolvedDays = plan === "half" ? 1 : fullDayCount;
-    const resolvedRate = plan === "half" ? activePricing.halfDayPrice : fullDayRate;
+    const resolvedRate =
+      plan === "half" ? activePricing.halfDayPrice : fullDayRate;
 
     const params = new URLSearchParams({
       vehicleId,
@@ -1192,6 +1222,7 @@ export default function BookingPanelV2({
           chip="Best value today"
           strong
           step="plan-half-day"
+          enableAiCopilot={!isMobileDevice}
           onClick={() => handlePlanSelect("half")}
         />
 
@@ -1205,6 +1236,7 @@ export default function BookingPanelV2({
           line2="Max 6 days"
           chip="Flexible rental"
           step="plan-full-day"
+          enableAiCopilot={!isMobileDevice}
           onClick={() => handlePlanSelect("full")}
         />
       </div>
@@ -1222,8 +1254,8 @@ export default function BookingPanelV2({
             Need more than one scooter?
           </div>
           <p className="nexa-whatsapp-availability-text mt-1 text-[11px] font-semibold leading-5 text-black/62">
-            If you are looking to rent multiple scooters, we recommend booking via
-            WhatsApp so our team can confirm availability instantly.
+            If you are looking to rent multiple scooters, we recommend booking
+            via WhatsApp so our team can confirm availability instantly.
           </p>
         </div>
 

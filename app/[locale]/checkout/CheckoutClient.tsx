@@ -350,7 +350,7 @@ export default function CheckoutClient() {
   const [payError, setPayError] = useState<string | null>(null);
 
   const backToVehicles = () => {
-    router.push(`/${locale}/vehicles?${sp.toString()}`);
+    router.push(`/${locale}`);
   };
 
   async function uploadBookingDocuments(
