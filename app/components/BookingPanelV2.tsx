@@ -92,6 +92,8 @@ function getSeasonalPricing(date = new Date()): SeasonalPricing {
 }
 
 const ORANGE = "#FF6A00";
+const BLUE = "#00D9FF";
+const PURPLE = "#8B5CF6";
 const PANEL_BG = "#F3F3F4";
 const CARD_BG = "#FFFFFF";
 const SOFT = "rgba(17,17,17,0.10)";
@@ -387,19 +389,23 @@ function MiniMonth({
   }, []);
 
   return (
-    <div
-      className="rounded-[18px] border p-[clamp(12px,2vw,16px)]"
-      style={{
-        background: "#fff",
-        borderColor: SOFT,
-        boxShadow: "0 10px 30px rgba(0,0,0,0.04)",
-      }}
-    >
-      <div className="mb-3 text-[clamp(18px,3vw,20px)] font-black text-black">
-        {month.toLocaleString("en", { month: "long", year: "numeric" })}
+    <div className="nexa-calendar-month-card">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <div>
+          <div className="text-[9px] font-black uppercase tracking-[0.22em] text-black/35">
+            Rental calendar
+          </div>
+          <div className="mt-1 text-[clamp(23px,3vw,30px)] font-black tracking-[-0.05em] text-black">
+            {month.toLocaleString("en", { month: "long", year: "numeric" })}
+          </div>
+        </div>
+
+        <div className="hidden rounded-full border border-black/10 bg-black/[0.03] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-black/45 sm:inline-flex">
+          Live dates
+        </div>
       </div>
 
-      <div className="mb-3 grid grid-cols-7 text-center text-[11px] font-bold text-black/45">
+      <div className="mb-3 grid grid-cols-7 text-center text-[11px] font-black text-black/40">
         {weekdays.map((w) => (
           <div key={w} className="py-1">
             {w}
@@ -407,10 +413,9 @@ function MiniMonth({
         ))}
       </div>
 
-      <div className="grid grid-cols-7 gap-[clamp(5px,1.4vw,8px)]">
+      <div className="grid grid-cols-7 gap-[clamp(6px,1.4vw,10px)]">
         {cells.map((day, idx) => {
-          if (!day)
-            return <div key={idx} className="h-[clamp(36px,7vw,44px)]" />;
+          if (!day) return <div key={idx} className="h-[clamp(38px,7vw,48px)]" />;
 
           const isPast = startOfDay(day) < today;
           const isStart = !!range.from && isSameDay(day, range.from);
@@ -440,30 +445,33 @@ function MiniMonth({
               disabled={disabled}
               onClick={() => onPick(day)}
               className={[
-                "h-[clamp(36px,7vw,44px)] rounded-[12px] text-[13px] font-black transition-all duration-200",
+                "relative h-[clamp(38px,7vw,48px)] overflow-hidden rounded-[15px] text-[13px] font-black transition-all duration-200",
                 disabled
-                  ? "cursor-not-allowed text-black/20"
-                  : "cursor-pointer text-black hover:-translate-y-[1px] hover:shadow-[0_10px_20px_rgba(255,106,0,0.14)] active:scale-[0.96]",
+                  ? "cursor-not-allowed text-black/18"
+                  : "cursor-pointer text-black hover:-translate-y-[2px] hover:shadow-[0_14px_26px_rgba(255,106,0,0.16)] active:scale-[0.96]",
               ].join(" ")}
               style={{
                 background:
                   isStart || isEnd
-                    ? "linear-gradient(135deg,#FF6A00 0%,#FF8A2B 100%)"
+                    ? `linear-gradient(135deg, ${ORANGE} 0%, ${PURPLE} 55%, ${BLUE} 120%)`
                     : inRange
-                    ? "rgba(255,106,0,0.14)"
-                    : "#F4F4F5",
+                    ? "linear-gradient(135deg,rgba(255,106,0,0.18),rgba(139,92,246,0.10))"
+                    : "linear-gradient(180deg,#FFFFFF 0%,#F4F4F7 100%)",
                 color: isStart || isEnd ? "#fff" : undefined,
                 boxShadow:
                   isStart || isEnd
-                    ? "0 12px 24px rgba(255,106,0,0.24)"
-                    : "none",
-                outline:
+                    ? "0 16px 32px rgba(255,106,0,0.25), 0 0 0 3px rgba(255,106,0,0.12)"
+                    : "inset 0 1px 0 rgba(255,255,255,0.85)",
+                border:
                   isStart || isEnd
-                    ? "2px solid rgba(255,106,0,0.18)"
-                    : "none",
+                    ? "1px solid rgba(255,255,255,0.22)"
+                    : "1px solid rgba(0,0,0,0.06)",
               }}
             >
-              {day.getDate()}
+              <span className="relative z-10">{day.getDate()}</span>
+              {(isStart || isEnd) && (
+                <span className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.35),transparent_48%)]" />
+              )}
             </button>
           );
         })}
@@ -515,6 +523,7 @@ function PlanCard({
     <button
       type="button"
       data-nexa-step={enableAiCopilot ? step : undefined}
+      data-nexa-copilot={enableAiCopilot ? "desktop" : undefined}
       onClick={onClick}
       className={[
         "nexa-plan-card group relative w-full overflow-hidden rounded-[18px] border px-[clamp(9px,0.85vw,12px)] py-[clamp(10px,0.95vw,12px)] text-left transition-all duration-300",
@@ -590,12 +599,8 @@ function PlanCard({
         <div
           className="nexa-plan-chip mt-2 inline-flex items-center rounded-full border px-2 py-1 text-[clamp(8px,0.66vw,9px)] font-black uppercase tracking-[0.06em]"
           style={{
-            borderColor: strong
-              ? "rgba(255,106,0,0.22)"
-              : "rgba(17,17,17,0.10)",
-            background: strong
-              ? "rgba(255,255,255,0.74)"
-              : "rgba(17,17,17,0.03)",
+            borderColor: strong ? "rgba(255,106,0,0.22)" : "rgba(17,17,17,0.10)",
+            background: strong ? "rgba(255,255,255,0.74)" : "rgba(17,17,17,0.03)",
             color: strong ? "#C85A00" : "rgba(17,17,17,0.58)",
           }}
         >
@@ -624,7 +629,7 @@ export default function BookingPanelV2({
   const [halfReturnTime, setHalfReturnTime] = useState("20:00");
   const [notice, setNotice] = useState("");
   const [showPriceDetails, setShowPriceDetails] = useState(false);
-  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [enableAiCopilot, setEnableAiCopilot] = useState(false);
 
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeField, setActiveField] = useState<ActiveField>("pickup");
@@ -650,10 +655,12 @@ export default function BookingPanelV2({
   }, [onPricingChange]);
 
   useEffect(() => {
-    const mq = window.matchMedia("(max-width: 767px)");
+    const mq = window.matchMedia(
+      "(min-width: 768px) and (hover: hover) and (pointer: fine)"
+    );
 
     const update = () => {
-      setIsMobileDevice(mq.matches);
+      setEnableAiCopilot(mq.matches);
     };
 
     update();
@@ -984,6 +991,42 @@ export default function BookingPanelV2({
           animation: magicalPulseDance 1.2s ease-in-out infinite;
         }
 
+        .nexa-calendar-box {
+          background:
+            radial-gradient(circle at 12% 0%, rgba(255, 106, 0, 0.13), transparent 32%),
+            radial-gradient(circle at 88% 10%, rgba(0, 217, 255, 0.13), transparent 30%),
+            radial-gradient(circle at 50% 100%, rgba(139, 92, 246, 0.10), transparent 32%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(246, 246, 249, 0.98));
+        }
+
+        .nexa-calendar-month-card {
+          border-radius: 28px;
+          border: 1px solid rgba(0, 0, 0, 0.08);
+          background:
+            radial-gradient(circle at 0% 0%, rgba(255, 106, 0, 0.10), transparent 34%),
+            radial-gradient(circle at 100% 0%, rgba(0, 217, 255, 0.08), transparent 32%),
+            linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(255, 255, 255, 0.72));
+          box-shadow:
+            0 22px 65px rgba(0, 0, 0, 0.09),
+            inset 0 1px 0 rgba(255, 255, 255, 0.95);
+          padding: clamp(16px, 2.2vw, 24px);
+          backdrop-filter: blur(18px);
+        }
+
+        .nexa-calendar-scroll::-webkit-scrollbar {
+          width: 8px;
+        }
+
+        .nexa-calendar-scroll::-webkit-scrollbar-track {
+          background: rgba(0, 0, 0, 0.05);
+          border-radius: 999px;
+        }
+
+        .nexa-calendar-scroll::-webkit-scrollbar-thumb {
+          background: linear-gradient(180deg, ${ORANGE}, ${PURPLE}, ${BLUE});
+          border-radius: 999px;
+        }
+
         @media (max-width: 767px) {
           .nexa-booking-panel {
             width: min(100%, 342px);
@@ -1158,11 +1201,18 @@ export default function BookingPanelV2({
           .nexa-calendar-box {
             width: 100% !important;
             max-height: 92svh !important;
-            border-radius: 24px 24px 0 0 !important;
+            border-radius: 30px 30px 0 0 !important;
           }
 
           .nexa-calendar-scroll {
             max-height: 62svh !important;
+            padding-left: 14px !important;
+            padding-right: 14px !important;
+          }
+
+          .nexa-calendar-month-card {
+            border-radius: 24px;
+            padding: 16px;
           }
         }
 
@@ -1222,7 +1272,7 @@ export default function BookingPanelV2({
           chip="Best value today"
           strong
           step="plan-half-day"
-          enableAiCopilot={!isMobileDevice}
+          enableAiCopilot={enableAiCopilot}
           onClick={() => handlePlanSelect("half")}
         />
 
@@ -1236,7 +1286,7 @@ export default function BookingPanelV2({
           line2="Max 6 days"
           chip="Flexible rental"
           step="plan-full-day"
-          enableAiCopilot={!isMobileDevice}
+          enableAiCopilot={enableAiCopilot}
           onClick={() => handlePlanSelect("full")}
         />
       </div>
@@ -1254,8 +1304,8 @@ export default function BookingPanelV2({
             Need more than one scooter?
           </div>
           <p className="nexa-whatsapp-availability-text mt-1 text-[11px] font-semibold leading-5 text-black/62">
-            If you are looking to rent multiple scooters, we recommend booking
-            via WhatsApp so our team can confirm availability instantly.
+            If you are looking to rent multiple scooters, we recommend booking via
+            WhatsApp so our team can confirm availability instantly.
           </p>
         </div>
 
@@ -1542,57 +1592,61 @@ export default function BookingPanelV2({
 
       {calendarOpen && (
         <div
-          className="nexa-calendar-modal fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/55 p-3 backdrop-blur-sm"
+          className="nexa-calendar-modal fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 p-3 backdrop-blur-md"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setCalendarOpen(false);
           }}
         >
           <div
-            className="nexa-calendar-box w-[min(700px,calc(100vw-24px))] overflow-hidden rounded-[24px] border bg-white shadow-[0_28px_90px_rgba(0,0,0,0.25)]"
-            style={{ borderColor: SOFT }}
+            className="nexa-calendar-box w-[min(760px,calc(100vw-24px))] overflow-hidden rounded-[32px] border shadow-[0_32px_110px_rgba(0,0,0,0.32)]"
+            style={{ borderColor: "rgba(255,255,255,0.34)" }}
           >
             <div
-              className="flex items-start justify-between border-b px-4 py-4"
-              style={{ borderColor: SOFT }}
+              className="relative overflow-hidden border-b px-5 py-5"
+              style={{ borderColor: "rgba(0,0,0,0.08)" }}
             >
-              <div>
-                <div className="text-[10px] font-extrabold uppercase tracking-[0.14em] text-black/45">
-                  {plan === "half"
-                    ? "Select rental date"
-                    : activeField === "pickup"
-                    ? "Select pickup date"
-                    : "Select drop-off date"}
+              <div className="pointer-events-none absolute right-[-60px] top-[-70px] h-44 w-44 rounded-full bg-cyan-400/20 blur-[60px]" />
+              <div className="pointer-events-none absolute left-[-60px] top-[-70px] h-44 w-44 rounded-full bg-orange-400/20 blur-[60px]" />
+
+              <div className="relative flex items-start justify-between gap-4">
+                <div>
+                  <div className="inline-flex rounded-full border border-black/10 bg-white/60 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-black/45 shadow-sm">
+                    {plan === "half"
+                      ? "Select rental date"
+                      : activeField === "pickup"
+                      ? "Select pickup date"
+                      : "Select drop-off date"}
+                  </div>
+
+                  <div className="mt-3 text-[clamp(34px,5vw,46px)] font-black leading-none tracking-[-0.07em] text-black">
+                    {viewMonth.toLocaleString("en", {
+                      month: "long",
+                      year: "numeric",
+                    })}
+                  </div>
                 </div>
 
-                <div className="mt-1 text-[22px] font-black text-black">
-                  {viewMonth.toLocaleString("en", {
-                    month: "long",
-                    year: "numeric",
-                  })}
-                </div>
+                <button
+                  type="button"
+                  onClick={() => setCalendarOpen(false)}
+                  className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-black/10 bg-white/65 text-[24px] font-black text-black shadow-[0_14px_34px_rgba(0,0,0,0.10)] transition hover:-translate-y-0.5 hover:bg-white active:scale-95"
+                >
+                  ✕
+                </button>
               </div>
-
-              <button
-                type="button"
-                onClick={() => setCalendarOpen(false)}
-                className="flex h-10 w-10 items-center justify-center rounded-full bg-[#F3F3F4] text-[18px] font-bold text-black transition hover:bg-[#ececef]"
-              >
-                ✕
-              </button>
             </div>
 
-            <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center justify-between px-5 py-4">
               <button
                 type="button"
                 onClick={() => scrollToMonth(Math.max(0, currentIndex - 1))}
-                className="flex h-10 w-10 items-center justify-center rounded-full border text-[20px] text-black transition hover:bg-[#f5f5f6]"
-                style={{ borderColor: SOFT }}
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white/70 text-[25px] font-black text-black shadow-sm transition hover:-translate-y-0.5 hover:bg-white active:scale-95"
               >
                 ‹
               </button>
 
-              <div className="rounded-full bg-[#F3F3F4] px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-black">
-                Scroll Months
+              <div className="rounded-full border border-black/10 bg-white/65 px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-black shadow-sm">
+                Scroll months
               </div>
 
               <button
@@ -1600,8 +1654,7 @@ export default function BookingPanelV2({
                 onClick={() =>
                   scrollToMonth(Math.min(monthsList.length - 1, currentIndex + 1))
                 }
-                className="flex h-10 w-10 items-center justify-center rounded-full border text-[20px] text-black transition hover:bg-[#f5f5f6]"
-                style={{ borderColor: SOFT }}
+                className="flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white/70 text-[25px] font-black text-black shadow-sm transition hover:-translate-y-0.5 hover:bg-white active:scale-95"
               >
                 ›
               </button>
@@ -1610,9 +1663,9 @@ export default function BookingPanelV2({
             <div
               ref={monthsScrollRef}
               onScroll={onMonthsScroll}
-              className="nexa-calendar-scroll max-h-[min(58svh,560px)] overflow-y-auto px-4 pb-4"
+              className="nexa-calendar-scroll max-h-[min(58svh,590px)] overflow-y-auto px-5 pb-5"
             >
-              <div className="grid grid-cols-1 gap-4">
+              <div className="grid grid-cols-1 gap-5">
                 {monthsList.map((month, index) => (
                   <div
                     key={`${month.getFullYear()}-${month.getMonth()}`}
@@ -1634,8 +1687,8 @@ export default function BookingPanelV2({
             </div>
 
             <div
-              className="flex items-center justify-between border-t px-4 py-4"
-              style={{ borderColor: SOFT }}
+              className="flex items-center justify-between border-t bg-white/45 px-5 py-4 backdrop-blur-xl"
+              style={{ borderColor: "rgba(0,0,0,0.08)" }}
             >
               <button
                 type="button"
@@ -1643,7 +1696,7 @@ export default function BookingPanelV2({
                   setRange({});
                   setNotice("");
                 }}
-                className="text-[12px] font-black text-black/55 transition hover:text-black"
+                className="text-[13px] font-black text-black/55 transition hover:text-black"
               >
                 Clear dates
               </button>
@@ -1651,9 +1704,9 @@ export default function BookingPanelV2({
               <button
                 type="button"
                 onClick={() => setCalendarOpen(false)}
-                className="rounded-[14px] px-4 py-2.5 text-[12px] font-black text-white transition hover:brightness-95"
+                className="rounded-[18px] px-6 py-3 text-[13px] font-black text-white shadow-[0_16px_34px_rgba(255,106,0,0.25)] transition hover:-translate-y-0.5 hover:brightness-105 active:scale-95"
                 style={{
-                  background: "linear-gradient(135deg,#FF6A00 0%,#FF8A2B 100%)",
+                  background: `linear-gradient(135deg,${ORANGE} 0%,${PURPLE} 58%,${BLUE} 130%)`,
                 }}
               >
                 Done
