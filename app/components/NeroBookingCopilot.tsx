@@ -22,6 +22,11 @@ const WELCOME_TIP: Tip = {
   text: "Choose your scooter, then select Half Day or Full Day to start your reservation.",
 };
 
+const MOBILE_WELCOME_TIP: Tip = {
+  title: "Nero AI Assistant",
+  text: "Created by Nexa Rentals. If you need any help with prices, license, deposit, insurance or booking, I’m here.",
+};
+
 const DEFAULT_TIP: Tip = {
   title: "Nero AI Assistant",
   text: "Created by Nexa Rentals. I can help you with prices, license, deposit, insurance and booking.",
@@ -139,6 +144,7 @@ export default function NeroBookingCopilot() {
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [selectedPlan, setSelectedPlan] = useState<PlanType>(null);
   const [isMobileLike, setIsMobileLike] = useState(false);
+  const [mobileIntroActive, setMobileIntroActive] = useState(false);
 
   const wrapperRef = useRef<HTMLDivElement | null>(null);
   const buttonRef = useRef<HTMLButtonElement | null>(null);
@@ -146,6 +152,7 @@ export default function NeroBookingCopilot() {
   const selectedPlanRef = useRef<PlanType>(null);
   const activeHoverTargetRef = useRef<HTMLElement | null>(null);
   const ownsCopilotRef = useRef(false);
+  const mobileIntroShownRef = useRef(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -178,7 +185,7 @@ export default function NeroBookingCopilot() {
 
       setIsMobileLike(mobile);
 
-      if (mobile) {
+      if (mobile && !mobileIntroActive) {
         clearHideTimer();
         activeHoverTargetRef.current = null;
         setOpen(false);
@@ -193,7 +200,7 @@ export default function NeroBookingCopilot() {
       window.removeEventListener("resize", updateDeviceMode);
       window.removeEventListener("orientationchange", updateDeviceMode);
     };
-  }, []);
+  }, [mobileIntroActive]);
 
   useEffect(() => {
     selectedPlanRef.current = selectedPlan;
@@ -255,6 +262,7 @@ export default function NeroBookingCopilot() {
   function closeTipImmediately() {
     clearHideTimer();
     activeHoverTargetRef.current = null;
+    setMobileIntroActive(false);
     setOpen(false);
   }
 
@@ -263,6 +271,7 @@ export default function NeroBookingCopilot() {
 
     hideTimerRef.current = window.setTimeout(() => {
       activeHoverTargetRef.current = null;
+      setMobileIntroActive(false);
       setOpen(false);
     }, delay);
   }
@@ -271,11 +280,13 @@ export default function NeroBookingCopilot() {
     if (isMobileLikeNow()) {
       clearHideTimer();
       activeHoverTargetRef.current = null;
+      setMobileIntroActive(false);
       setOpen(false);
       return;
     }
 
     setTip(nextTip);
+    setMobileIntroActive(false);
     setOpen(true);
 
     clearHideTimer();
@@ -286,6 +297,25 @@ export default function NeroBookingCopilot() {
         setOpen(false);
       }, duration);
     }
+  }
+
+  function showMobileIntroTip() {
+    if (!isMobileLikeNow()) return;
+    if (mobileIntroShownRef.current) return;
+
+    mobileIntroShownRef.current = true;
+
+    setTip(MOBILE_WELCOME_TIP);
+    setMobileIntroActive(true);
+    setOpen(true);
+
+    clearHideTimer();
+
+    hideTimerRef.current = window.setTimeout(() => {
+      activeHoverTargetRef.current = null;
+      setMobileIntroActive(false);
+      setOpen(false);
+    }, 3600);
   }
 
   function showHoverTip(nextTip: Tip, target: HTMLElement) {
@@ -386,15 +416,13 @@ export default function NeroBookingCopilot() {
   useEffect(() => {
     if (!allowRender) return;
 
-    if (isMobileLikeNow()) {
-      closeTipImmediately();
-      return;
-    }
-
     const welcomeTimer = window.setTimeout(() => {
-      if (!isMobileLikeNow()) {
-        showTip(WELCOME_TIP, 2400);
+      if (isMobileLikeNow()) {
+        showMobileIntroTip();
+        return;
       }
+
+      showTip(WELCOME_TIP, 2400);
     }, 900);
 
     return () => window.clearTimeout(welcomeTimer);
@@ -405,7 +433,6 @@ export default function NeroBookingCopilot() {
 
     function onMove(e: MouseEvent) {
       if (isMobileLikeNow()) {
-        closeTipImmediately();
         return;
       }
 
@@ -414,7 +441,6 @@ export default function NeroBookingCopilot() {
 
     function onMouseOver(e: MouseEvent) {
       if (isMobileLikeNow()) {
-        closeTipImmediately();
         return;
       }
 
@@ -431,7 +457,6 @@ export default function NeroBookingCopilot() {
 
     function onMouseOut(e: MouseEvent) {
       if (isMobileLikeNow()) {
-        closeTipImmediately();
         return;
       }
 
@@ -498,6 +523,8 @@ export default function NeroBookingCopilot() {
     };
   }, [allowRender]);
 
+  const shouldShowPopup = open && (!isMobileLike || mobileIntroActive);
+
   const copilot = (
     <div
       ref={wrapperRef}
@@ -517,7 +544,7 @@ export default function NeroBookingCopilot() {
       className="nero-copilot-wrap"
       data-nexa-nero-copilot="true"
     >
-      {open && !isMobileLike && (
+      {shouldShowPopup && (
         <div className="animate-[neroPop_0.2s_ease-out] relative w-[min(312px,calc(100vw-32px))] overflow-hidden rounded-[28px] border border-white/10 bg-[#0b0c12]/95 p-4 pr-10 text-white shadow-[0_22px_70px_rgba(124,58,237,0.28),0_10px_34px_rgba(249,115,22,0.18)] backdrop-blur-2xl">
           <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_top_left,rgba(59,130,246,0.18),transparent_32%),radial-gradient(circle_at_top_right,rgba(249,115,22,0.18),transparent_34%),radial-gradient(circle_at_bottom,rgba(168,85,247,0.16),transparent_38%)]" />
           <div className="pointer-events-none absolute inset-[1px] rounded-[27px] border border-white/6" />

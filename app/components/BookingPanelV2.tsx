@@ -363,14 +363,14 @@ function MiniMonth({
   range,
   plan,
   activeField,
-  today,
+  minBookableDate,
   onPick,
 }: {
   month: Date;
   range: DateRange;
   plan: RentalPlan;
   activeField: ActiveField;
-  today: Date;
+  minBookableDate: Date;
   onPick: (day: Date) => void;
 }) {
   const cells = useMemo(() => buildMonthGrid(month), [month]);
@@ -401,7 +401,7 @@ function MiniMonth({
         </div>
 
         <div className="hidden rounded-full border border-black/10 bg-black/[0.03] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-black/45 sm:inline-flex">
-          Live dates
+          From tomorrow
         </div>
       </div>
 
@@ -417,7 +417,7 @@ function MiniMonth({
         {cells.map((day, idx) => {
           if (!day) return <div key={idx} className="h-[clamp(38px,7vw,48px)]" />;
 
-          const isPast = startOfDay(day) < today;
+          const isUnavailable = startOfDay(day) < minBookableDate;
           const isStart = !!range.from && isSameDay(day, range.from);
           const isEnd = !!range.to && isSameDay(day, range.to);
 
@@ -427,7 +427,7 @@ function MiniMonth({
             startOfDay(day) >= startOfDay(range.from) &&
             startOfDay(day) <= startOfDay(range.to);
 
-          let disabled = isPast;
+          let disabled = isUnavailable;
 
           if (
             plan === "full" &&
@@ -456,6 +456,8 @@ function MiniMonth({
                     ? `linear-gradient(135deg, ${ORANGE} 0%, ${PURPLE} 55%, ${BLUE} 120%)`
                     : inRange
                     ? "linear-gradient(135deg,rgba(255,106,0,0.18),rgba(139,92,246,0.10))"
+                    : disabled
+                    ? "linear-gradient(180deg,#F4F4F5 0%,#ECECEF 100%)"
                     : "linear-gradient(180deg,#FFFFFF 0%,#F4F4F7 100%)",
                 color: isStart || isEnd ? "#fff" : undefined,
                 boxShadow:
@@ -618,7 +620,7 @@ export default function BookingPanelV2({
 }: BookingPanelV2Props) {
   const router = useRouter();
 
-  const today = useMemo(() => startOfDay(new Date()), []);
+  const minBookableDate = useMemo(() => addDays(startOfDay(new Date()), 1), []);
   const pickupHalfOptions = useMemo(() => buildTimeOptions(9, 30, 14, 0), []);
   const pickupFullOptions = useMemo(() => buildTimeOptions(9, 30, 20, 0), []);
   const returnHalfOptions = useMemo(() => ["19:00", "19:30", "20:00"], []);
@@ -642,8 +644,10 @@ export default function BookingPanelV2({
   const pickupDropdownRef = useRef<HTMLDivElement | null>(null);
   const returnDropdownRef = useRef<HTMLDivElement | null>(null);
 
-  const [scrollStartMonth, setScrollStartMonth] = useState(startOfMonth(today));
-  const [viewMonth, setViewMonth] = useState(startOfMonth(today));
+  const [scrollStartMonth, setScrollStartMonth] = useState(
+    startOfMonth(minBookableDate)
+  );
+  const [viewMonth, setViewMonth] = useState(startOfMonth(minBookableDate));
   const [monthsAhead, setMonthsAhead] = useState(12);
   const monthsScrollRef = useRef<HTMLDivElement | null>(null);
   const monthWrapRefs = useRef<Array<HTMLDivElement | null>>([]);
@@ -673,8 +677,8 @@ export default function BookingPanelV2({
   const pickupOptions = plan === "half" ? pickupHalfOptions : pickupFullOptions;
 
   const activePricing = useMemo(() => {
-    return getSeasonalPricing(range.from || today);
-  }, [range.from, today]);
+    return getSeasonalPricing(range.from || minBookableDate);
+  }, [range.from, minBookableDate]);
 
   useEffect(() => {
     onPricingChangeRef.current?.(activePricing);
@@ -772,7 +776,9 @@ export default function BookingPanelV2({
     }
 
     const anchorDate =
-      which === "pickup" ? range.from || today : range.to || range.from || today;
+      which === "pickup"
+        ? range.from || minBookableDate
+        : range.to || range.from || minBookableDate;
 
     const anchorMonth = startOfMonth(anchorDate);
 
@@ -798,12 +804,15 @@ export default function BookingPanelV2({
 
     window.setTimeout(() => {
       setActiveField("pickup");
+      setScrollStartMonth(startOfMonth(minBookableDate));
+      setViewMonth(startOfMonth(minBookableDate));
+      setMonthsAhead(12);
       setCalendarOpen(true);
     }, 60);
   }
 
   function onPickDate(day: Date) {
-    if (startOfDay(day) < today || !plan) return;
+    if (startOfDay(day) < minBookableDate || !plan) return;
 
     if (plan === "half") {
       setRange({ from: day, to: day });
@@ -902,12 +911,18 @@ export default function BookingPanelV2({
   useEffect(() => {
     if (!calendarOpen) return;
 
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
     const t = window.setTimeout(() => {
       monthsScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
       setViewMonth(scrollStartMonth);
     }, 0);
 
-    return () => window.clearTimeout(t);
+    return () => {
+      window.clearTimeout(t);
+      document.body.style.overflow = previousOverflow;
+    };
   }, [calendarOpen, scrollStartMonth]);
 
   function onMonthsScroll() {
@@ -1194,18 +1209,19 @@ export default function BookingPanelV2({
           }
 
           .nexa-calendar-modal {
-            align-items: flex-end !important;
-            padding: 0 !important;
+            align-items: center !important;
+            justify-content: center !important;
+            padding: 12px !important;
           }
 
           .nexa-calendar-box {
-            width: 100% !important;
-            max-height: 92svh !important;
-            border-radius: 30px 30px 0 0 !important;
+            width: min(100%, 430px) !important;
+            max-height: 88svh !important;
+            border-radius: 30px !important;
           }
 
           .nexa-calendar-scroll {
-            max-height: 62svh !important;
+            max-height: 52svh !important;
             padding-left: 14px !important;
             padding-right: 14px !important;
           }
@@ -1241,6 +1257,14 @@ export default function BookingPanelV2({
 
           .nexa-panel-note {
             display: none;
+          }
+
+          .nexa-calendar-box {
+            max-height: 86svh !important;
+          }
+
+          .nexa-calendar-scroll {
+            max-height: 49svh !important;
           }
         }
       `}</style>
@@ -1678,7 +1702,7 @@ export default function BookingPanelV2({
                       range={range}
                       plan={plan}
                       activeField={activeField}
-                      today={today}
+                      minBookableDate={minBookableDate}
                       onPick={onPickDate}
                     />
                   </div>
