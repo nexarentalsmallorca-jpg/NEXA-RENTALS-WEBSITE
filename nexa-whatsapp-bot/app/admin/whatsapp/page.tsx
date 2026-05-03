@@ -26,6 +26,7 @@ type Message = {
   delivery_status?: "sent" | "delivered" | "read" | "failed" | string;
   delivered_at?: string | null;
   read_at?: string | null;
+  failed_reason?: string | null;
 };
 
 type BookingInfo = {
@@ -48,6 +49,7 @@ export default function WhatsAppAdminPage() {
   const [selectedPhone, setSelectedPhone] = useState("");
   const [messages, setMessages] = useState<Message[]>([]);
   const [reply, setReply] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [loading, setLoading] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<Message | null>(null);
   const [showMobileDetails, setShowMobileDetails] = useState(false);
@@ -63,6 +65,7 @@ export default function WhatsAppAdminPage() {
 
   const messagesEndRef = useRef<HTMLDivElement | null>(null);
   const messagesBoxRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
   const previousSelectedPhoneRef = useRef("");
   const previousLastMessageIdRef = useRef("");
 
@@ -113,6 +116,7 @@ export default function WhatsAppAdminPage() {
     fetchMessages(selectedPhone);
     markRead(selectedPhone);
     setShowMobileDetails(false);
+    setSelectedFile(null);
 
     const interval = setInterval(() => fetchMessages(selectedPhone), 3000);
 
@@ -165,13 +169,16 @@ export default function WhatsAppAdminPage() {
     setPassword("");
     setSelectedPhone("");
     setMessages([]);
+    setSelectedFile(null);
   }
 
   async function apiFetch(url: string, options: RequestInit = {}) {
+    const isFormData = options.body instanceof FormData;
+
     return fetch(url, {
       ...options,
       headers: {
-        "Content-Type": "application/json",
+        ...(isFormData ? {} : { "Content-Type": "application/json" }),
         "x-admin-password": savedPassword,
         ...(options.headers || {}),
       },
@@ -249,26 +256,57 @@ export default function WhatsAppAdminPage() {
   }
 
   async function sendReply() {
-    if (!reply.trim() || !selectedPhone) return;
+    if ((!reply.trim() && !selectedFile) || !selectedPhone) return;
 
     setLoading(true);
 
-    const res = await apiFetch("/api/admin/whatsapp/send", {
-      method: "POST",
-      body: JSON.stringify({
-        phone: selectedPhone,
-        message: reply.trim(),
-      }),
-    });
+    let res: Response;
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append("phone", selectedPhone);
+      formData.append("message", reply.trim());
+      formData.append("file", selectedFile);
+
+      res = await apiFetch("/api/admin/whatsapp/send", {
+        method: "POST",
+        body: formData,
+      });
+    } else {
+      res = await apiFetch("/api/admin/whatsapp/send", {
+        method: "POST",
+        body: JSON.stringify({
+          phone: selectedPhone,
+          message: reply.trim(),
+        }),
+      });
+    }
 
     setLoading(false);
 
     if (!res.ok) {
-      alert("Message failed. Check Vercel logs.");
+      let errorMessage = "Message failed. Check Vercel logs.";
+
+      try {
+        const errorData = await res.json();
+        errorMessage =
+          errorData?.error ||
+          errorData?.message ||
+          errorData?.details ||
+          errorMessage;
+      } catch {}
+
+      alert(errorMessage);
       return;
     }
 
     setReply("");
+    setSelectedFile(null);
+
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+
     await fetchMessages(selectedPhone);
     await fetchConversations();
     scrollToBottom("smooth");
@@ -302,9 +340,19 @@ export default function WhatsAppAdminPage() {
     setCreatingContact(false);
 
     if (!res.ok) {
-      alert(
-        "Message failed. Make sure the phone number has country code, for example 34612345678. Also check Vercel logs."
-      );
+      let errorMessage =
+        "Message failed. Make sure the phone number has country code, for example 34612345678. Also check Vercel logs.";
+
+      try {
+        const errorData = await res.json();
+        errorMessage =
+          errorData?.error ||
+          errorData?.message ||
+          errorData?.details ||
+          errorMessage;
+      } catch {}
+
+      alert(errorMessage);
       return;
     }
 
@@ -341,6 +389,21 @@ export default function WhatsAppAdminPage() {
   function closeMobileChat() {
     setSelectedPhone("");
     setShowMobileDetails(false);
+    setSelectedFile(null);
+  }
+
+  function handleFileSelect(file?: File) {
+    if (!file) return;
+
+    const maxSizeMb = 15;
+    const maxSizeBytes = maxSizeMb * 1024 * 1024;
+
+    if (file.size > maxSizeBytes) {
+      alert(`File is too large. Maximum size is ${maxSizeMb}MB.`);
+      return;
+    }
+
+    setSelectedFile(file);
   }
 
   if (!savedPassword) {
@@ -734,20 +797,51 @@ export default function WhatsAppAdminPage() {
                 {!isNearBottom && (
                   <button
                     onClick={() => scrollToBottom("smooth")}
-                    className="absolute bottom-24 left-1/2 -translate-x-1/2 rounded-full bg-orange-500 text-black px-4 py-2 text-xs font-black shadow-xl md:bottom-28"
+                    className="absolute bottom-32 left-1/2 -translate-x-1/2 rounded-full bg-orange-500 text-black px-4 py-2 text-xs font-black shadow-xl md:bottom-36"
                   >
                     New messages ↓
                   </button>
                 )}
 
                 <footer className="border-t border-neutral-800 bg-neutral-900 p-3 md:p-4 pb-[calc(0.75rem+env(safe-area-inset-bottom))] shrink-0">
+                  {selectedFile && (
+                    <SelectedFilePreview
+                      file={selectedFile}
+                      onRemove={() => {
+                        setSelectedFile(null);
+                        if (fileInputRef.current) {
+                          fileInputRef.current.value = "";
+                        }
+                      }}
+                    />
+                  )}
+
                   <div className="flex gap-2 md:gap-3 items-end">
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      className="hidden"
+                      accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      onChange={(e) => handleFileSelect(e.target.files?.[0])}
+                    />
+
+                    <button
+                      type="button"
+                      onClick={() => fileInputRef.current?.click()}
+                      className="rounded-2xl bg-neutral-800 border border-neutral-700 px-4 min-h-[52px] font-black text-neutral-200 hover:bg-neutral-700 active:scale-95"
+                      title="Attach image, video, or document"
+                    >
+                      📎
+                    </button>
+
                     <textarea
                       value={reply}
                       onChange={(e) => setReply(e.target.value)}
                       placeholder={
                         selectedIsEscalated
                           ? "This chat needs human attention. Write manual reply..."
+                          : selectedFile
+                          ? "Add a caption optional..."
                           : "Write manual reply..."
                       }
                       className="flex-1 resize-none rounded-2xl bg-neutral-800 border border-neutral-700 px-4 py-3 outline-none min-h-[52px] max-h-32 text-base"
@@ -761,7 +855,7 @@ export default function WhatsAppAdminPage() {
 
                     <button
                       onClick={sendReply}
-                      disabled={loading || !reply.trim()}
+                      disabled={loading || (!reply.trim() && !selectedFile)}
                       className="rounded-2xl bg-orange-500 px-5 md:px-6 min-h-[52px] font-black text-black hover:bg-orange-400 disabled:opacity-50 active:scale-95"
                     >
                       {loading ? "..." : "Send"}
@@ -864,7 +958,10 @@ function MessageTicks({ msg }: { msg: Message }) {
 
   if (status === "failed") {
     return (
-      <span className="font-black text-red-700" title="Failed">
+      <span
+        className="font-black text-red-700"
+        title={msg.failed_reason || "Failed"}
+      >
         !
       </span>
     );
@@ -880,15 +977,63 @@ function MessageTicks({ msg }: { msg: Message }) {
 function getMessageStatus(msg: Message) {
   const raw = String(msg.delivery_status || msg.status || "").toLowerCase();
 
-  if (raw.includes("read")) return "read";
-  if (raw.includes("delivered")) return "delivered";
-  if (raw.includes("failed")) return "failed";
-  if (raw.includes("sent")) return "sent";
+  if (raw === "read" || raw.includes("read")) return "read";
+  if (raw === "delivered" || raw.includes("delivered")) return "delivered";
+  if (raw === "failed" || raw.includes("failed")) return "failed";
+  if (raw === "sent" || raw.includes("sent")) return "sent";
 
   if (msg.read_at) return "read";
   if (msg.delivered_at) return "delivered";
 
   return "sent";
+}
+
+function SelectedFilePreview({
+  file,
+  onRemove,
+}: {
+  file: File;
+  onRemove: () => void;
+}) {
+  const isImage = file.type.startsWith("image/");
+  const isVideo = file.type.startsWith("video/");
+  const objectUrl = useMemo(() => URL.createObjectURL(file), [file]);
+
+  useEffect(() => {
+    return () => URL.revokeObjectURL(objectUrl);
+  }, [objectUrl]);
+
+  return (
+    <div className="mb-3 rounded-2xl border border-neutral-700 bg-neutral-800 p-3 flex items-center gap-3">
+      <div className="h-14 w-14 rounded-xl bg-neutral-900 border border-neutral-700 overflow-hidden flex items-center justify-center shrink-0">
+        {isImage ? (
+          <img
+            src={objectUrl}
+            alt={file.name}
+            className="h-full w-full object-cover"
+          />
+        ) : isVideo ? (
+          <span className="text-xl">🎥</span>
+        ) : (
+          <span className="text-xl">📎</span>
+        )}
+      </div>
+
+      <div className="min-w-0 flex-1">
+        <p className="font-bold truncate text-sm">{file.name}</p>
+        <p className="text-xs text-neutral-400">
+          {file.type || "File"} · {formatFileSize(file.size)}
+        </p>
+      </div>
+
+      <button
+        onClick={onRemove}
+        className="rounded-full bg-neutral-700 px-3 py-2 text-xs font-bold hover:bg-neutral-600 active:scale-95"
+      >
+        Remove
+      </button>
+    </div>
+  );
 }
 
 function NewContactModal({
@@ -929,6 +1074,14 @@ function NewContactModal({
           >
             Close
           </button>
+        </div>
+
+        <div className="mt-4 rounded-2xl border border-yellow-500/30 bg-yellow-500/10 p-3">
+          <p className="text-xs text-yellow-100 leading-relaxed">
+            Important: if this customer has not messaged you first or the
+            24-hour WhatsApp window is closed, Meta may block normal first
+            messages. In that case, you need an approved WhatsApp template.
+          </p>
         </div>
 
         <div className="mt-5 space-y-3">
@@ -1227,9 +1380,14 @@ function MediaPreview({
   return (
     <button
       onClick={onOpen}
-      className="block rounded-2xl bg-neutral-800 px-4 py-3 underline break-all"
+      className="block rounded-2xl bg-neutral-800 px-4 py-3 underline break-all text-left"
     >
       📎 {msg.file_name || "Open file"}
+      {msg.content && (
+        <p className="mt-2 text-sm whitespace-pre-wrap break-words no-underline">
+          {msg.content}
+        </p>
+      )}
     </button>
   );
 }
@@ -1373,6 +1531,16 @@ function formatFullTime(date: string) {
     hour: "2-digit",
     minute: "2-digit",
   });
+}
+
+function formatFileSize(bytes: number) {
+  if (!bytes) return "0 KB";
+
+  const kb = bytes / 1024;
+  const mb = kb / 1024;
+
+  if (mb >= 1) return `${mb.toFixed(1)} MB`;
+  return `${Math.ceil(kb)} KB`;
 }
 
 function extractBookingInfo(

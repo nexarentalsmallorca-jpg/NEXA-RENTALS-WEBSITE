@@ -67,8 +67,8 @@ function getSeasonalHeroPricing(date = new Date()): SeasonalHeroPricing {
   }
 
   return {
-    halfDay: 34,
-    fullDay: 42,
+    halfDay: 32,
+    fullDay: 39,
     halfOldPrice: 45,
     fullOldPrice: 55,
   };

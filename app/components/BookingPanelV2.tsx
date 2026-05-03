@@ -77,16 +77,16 @@ function getSeasonalPricing(date = new Date()): SeasonalPricing {
 
   return {
     seasonName: "Winter Season",
-    halfDayPrice: 34,
+    halfDayPrice: 32,
     halfDayOldPrice: 45,
     fullDayOldPrice: 55,
     fullDayPricing: {
-      1: 42,
-      2: 40,
-      3: 39,
-      4: 38,
-      5: 37,
-      6: 36,
+      1: 39,
+      2: 37,
+      3: 36,
+      4: 35,
+      5: 34,
+      6: 33,
     },
   };
 }
@@ -647,7 +647,10 @@ export default function BookingPanelV2({
   }, [activePricing]);
 
   const monthsList = useMemo(
-    () => Array.from({ length: monthsAhead + 1 }, (_, i) => addMonths(scrollStartMonth, i)),
+    () =>
+      Array.from({ length: monthsAhead + 1 }, (_, i) =>
+        addMonths(scrollStartMonth, i)
+      ),
     [scrollStartMonth, monthsAhead]
   );
 
@@ -699,7 +702,15 @@ export default function BookingPanelV2({
     }
 
     return "Choose plan to begin";
-  }, [plan, range.from, range.to, fullDayCount, fullDayRate, finalTotal, activePricing]);
+  }, [
+    plan,
+    range.from,
+    range.to,
+    fullDayCount,
+    fullDayRate,
+    finalTotal,
+    activePricing,
+  ]);
 
   const canCheckout = useMemo(() => {
     if (plan === "half") {
@@ -725,9 +736,7 @@ export default function BookingPanelV2({
     }
 
     const anchorDate =
-      which === "pickup"
-        ? range.from || today
-        : range.to || range.from || today;
+      which === "pickup" ? range.from || today : range.to || range.from || today;
 
     const anchorMonth = startOfMonth(anchorDate);
 
@@ -1524,7 +1533,10 @@ export default function BookingPanelV2({
                 </div>
 
                 <div className="mt-1 text-[22px] font-black text-black">
-                  {viewMonth.toLocaleString("en", { month: "long", year: "numeric" })}
+                  {viewMonth.toLocaleString("en", {
+                    month: "long",
+                    year: "numeric",
+                  })}
                 </div>
               </div>
 

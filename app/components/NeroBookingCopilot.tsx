@@ -336,10 +336,16 @@ export default function NeroBookingCopilot() {
       );
     }
 
-    window.addEventListener("nexa:language-maintenance", handleLanguageMaintenance);
+    window.addEventListener(
+      "nexa:language-maintenance",
+      handleLanguageMaintenance
+    );
 
     return () => {
-      window.removeEventListener("nexa:language-maintenance", handleLanguageMaintenance);
+      window.removeEventListener(
+        "nexa:language-maintenance",
+        handleLanguageMaintenance
+      );
     };
   }, [allowRender]);
 
@@ -444,7 +450,7 @@ export default function NeroBookingCopilot() {
       style={{
         position: "fixed",
         right: isMobileLike ? "14px" : "clamp(14px, 1.6vw, 24px)",
-        bottom: isMobileLike ? "128px" : "104px",
+        bottom: isMobileLike ? "96px" : "104px",
         zIndex: 2147483647,
         display: "flex",
         flexDirection: "column",
@@ -681,7 +687,7 @@ export default function NeroBookingCopilot() {
         @media (max-width: 768px) {
           .nero-copilot-wrap {
             right: 14px !important;
-            bottom: 128px !important;
+            bottom: 96px !important;
           }
         }
       `}</style>
