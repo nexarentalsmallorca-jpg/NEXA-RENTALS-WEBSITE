@@ -911,17 +911,19 @@ export default function BookingPanelV2({
   useEffect(() => {
     if (!calendarOpen) return;
 
-    const previousOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
     const t = window.setTimeout(() => {
       monthsScrollRef.current?.scrollTo({ top: 0, behavior: "auto" });
       setViewMonth(scrollStartMonth);
-    }, 0);
+
+      const panel = document.querySelector(".nexa-booking-panel");
+      panel?.scrollIntoView({
+        behavior: "smooth",
+        block: "center",
+      });
+    }, 80);
 
     return () => {
       window.clearTimeout(t);
-      document.body.style.overflow = previousOverflow;
     };
   }, [calendarOpen, scrollStartMonth]);
 
@@ -1006,7 +1008,12 @@ export default function BookingPanelV2({
           animation: magicalPulseDance 1.2s ease-in-out infinite;
         }
 
+        .nexa-calendar-modal {
+          pointer-events: none;
+        }
+
         .nexa-calendar-box {
+          pointer-events: auto;
           background:
             radial-gradient(circle at 12% 0%, rgba(255, 106, 0, 0.13), transparent 32%),
             radial-gradient(circle at 88% 10%, rgba(0, 217, 255, 0.13), transparent 30%),
@@ -1209,19 +1216,21 @@ export default function BookingPanelV2({
           }
 
           .nexa-calendar-modal {
-            align-items: center !important;
+            align-items: flex-start !important;
             justify-content: center !important;
-            padding: 12px !important;
+            padding: max(10px, env(safe-area-inset-top)) 10px 10px !important;
+            background: rgba(0, 0, 0, 0.28) !important;
+            backdrop-filter: blur(6px) !important;
           }
 
           .nexa-calendar-box {
             width: min(100%, 430px) !important;
-            max-height: 88svh !important;
+            max-height: 84svh !important;
             border-radius: 30px !important;
           }
 
           .nexa-calendar-scroll {
-            max-height: 52svh !important;
+            max-height: 48svh !important;
             padding-left: 14px !important;
             padding-right: 14px !important;
           }
@@ -1260,11 +1269,11 @@ export default function BookingPanelV2({
           }
 
           .nexa-calendar-box {
-            max-height: 86svh !important;
+            max-height: 82svh !important;
           }
 
           .nexa-calendar-scroll {
-            max-height: 49svh !important;
+            max-height: 46svh !important;
           }
         }
       `}</style>
@@ -1616,7 +1625,7 @@ export default function BookingPanelV2({
 
       {calendarOpen && (
         <div
-          className="nexa-calendar-modal fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/60 p-3 backdrop-blur-md"
+          className="nexa-calendar-modal fixed inset-0 z-[2147483647] flex items-center justify-center bg-black/35 p-3 backdrop-blur-sm"
           onMouseDown={(e) => {
             if (e.target === e.currentTarget) setCalendarOpen(false);
           }}
