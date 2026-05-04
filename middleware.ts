@@ -10,7 +10,7 @@ const intlMiddleware = createMiddleware({
   defaultLocale,
 });
 
-const ADMIN_COOKIE_NAME = "nexa_admin_auth";
+const ADMIN_COOKIE_NAME = "nexa_admin_session";
 
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -47,19 +47,31 @@ export default function middleware(request: NextRequest) {
 
   const isAdminLoginRoute = pathWithoutLocale === "/admin-nexa-secret/login";
 
+  // Force admin pages to stay outside locale routes
+  if (hasLocalePrefix && isAdminRoute) {
+    const cleanAdminUrl = request.nextUrl.clone();
+    cleanAdminUrl.pathname = pathWithoutLocale;
+    return NextResponse.redirect(cleanAdminUrl);
+  }
+
   // Protect private admin dashboard with cookie auth
   if (isAdminRoute && !isAdminLoginRoute) {
     const adminToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
 
-    if (adminToken !== "ok") {
+    if (adminToken !== "active") {
       const loginUrl = request.nextUrl.clone();
-      loginUrl.pathname = hasLocalePrefix
-        ? `/${currentLocale}/admin-nexa-secret/login`
-        : "/admin-nexa-secret/login";
+      loginUrl.pathname = "/admin-nexa-secret/login";
       loginUrl.searchParams.set("next", pathname);
 
       return NextResponse.redirect(loginUrl);
     }
+
+    return NextResponse.next();
+  }
+
+  // Let admin login page load without next-intl
+  if (isAdminLoginRoute) {
+    return NextResponse.next();
   }
 
   return intlMiddleware(request);

@@ -93,7 +93,7 @@ export default function GoogleReviews3D() {
       <div className="mx-auto mb-4 max-w-4xl px-4 text-center sm:mb-[clamp(18px,2.4vw,28px)]">
         <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black text-white backdrop-blur-xl sm:mb-3 sm:gap-2 sm:px-4 sm:py-1.5 sm:text-[clamp(10px,0.85vw,12px)]">
           <span className="text-[#FF7A00]">★★★★★</span>
-          18 Google Reviews
+          27 Google Reviews
         </div>
 
         <h2 className="text-[28px] font-black leading-none tracking-[-0.04em] text-white sm:text-[clamp(34px,3.5vw,54px)]">
