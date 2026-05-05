@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
 
   premiumFooter: {
     position: "absolute",
-    bottom: 8,
+    bottom: 7,
     left: 18,
     right: 18,
     borderTopWidth: 0.65,
@@ -120,17 +120,18 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+    backgroundColor: "#ffffff",
   },
 
   premiumFooterLeft: {
-    fontSize: 6.4,
+    fontSize: 6.2,
     fontFamily: "Helvetica-Bold",
     color: "#333333",
-    letterSpacing: 0.25,
+    letterSpacing: 0.2,
   },
 
   premiumFooterRight: {
-    fontSize: 7.2,
+    fontSize: 7.1,
     fontFamily: "Helvetica-Bold",
     color: "#111111",
   },
@@ -545,12 +546,14 @@ function PremiumFooter() {
   return (
     <View style={styles.premiumFooter} fixed>
       <Text style={styles.premiumFooterLeft}>
-        This contract has been officially generated using NEXA OS · Platform NEXA OS
+        Official NEXA RENTALS contract · Generated using NEXA OS
       </Text>
 
       <Text
         style={styles.premiumFooterRight}
-        render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
+        render={({ pageNumber, totalPages }) =>
+          `Page ${pageNumber} / ${totalPages}`
+        }
       />
     </View>
   );
@@ -837,7 +840,6 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
     >
       <Page size="A4" style={styles.page}>
         <Watermark />
-        <PremiumFooter />
 
         <FrontHeader
           contractNumber={data.numeroContrato}
@@ -1079,18 +1081,20 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
             </Text>
           </View>
         </View>
+
+        <PremiumFooter />
       </Page>
 
       <Page size="A4" style={styles.termsPage} wrap={false}>
         <Watermark />
-        <PremiumFooter />
         <TermsBlock />
+        <PremiumFooter />
       </Page>
 
       <Page size="A4" style={styles.finalPage}>
         <Watermark />
-        <PremiumFooter />
         <FinalPageContent />
+        <PremiumFooter />
       </Page>
     </Document>
   );
