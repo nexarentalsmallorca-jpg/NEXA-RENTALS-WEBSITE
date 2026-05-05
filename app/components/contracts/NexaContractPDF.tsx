@@ -75,7 +75,7 @@ const TOP_LOGO_URL = `${SITE_URL}/images/nexa-logo.png`;
 const styles = StyleSheet.create({
   page: {
     paddingTop: 22,
-    paddingBottom: 30,
+    paddingBottom: 42,
     paddingHorizontal: 24,
     fontSize: 7.3,
     fontFamily: "Helvetica",
@@ -87,7 +87,7 @@ const styles = StyleSheet.create({
 
   termsPage: {
     paddingTop: 9,
-    paddingBottom: 14,
+    paddingBottom: 34,
     paddingHorizontal: 18,
     fontSize: 7.3,
     fontFamily: "Helvetica",
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
 
   finalPage: {
     paddingTop: 26,
-    paddingBottom: 30,
+    paddingBottom: 42,
     paddingHorizontal: 24,
     fontSize: 7.3,
     fontFamily: "Helvetica",
@@ -111,12 +111,12 @@ const styles = StyleSheet.create({
 
   premiumFooter: {
     position: "absolute",
-    bottom: 7,
+    bottom: 10,
     left: 18,
     right: 18,
     borderTopWidth: 0.65,
     borderTopColor: "#111111",
-    paddingTop: 3.5,
+    paddingTop: 4,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -536,7 +536,7 @@ function Field({ label, value }: { label: string; value?: string }) {
 
 function Watermark() {
   return (
-    <Text style={styles.watermarkText} fixed>
+    <Text style={styles.watermarkText}>
       OFFICIAL NEXA RENTALS CONTRACT
     </Text>
   );
@@ -544,7 +544,7 @@ function Watermark() {
 
 function PremiumFooter() {
   return (
-    <View style={styles.premiumFooter} fixed>
+    <View style={styles.premiumFooter}>
       <Text style={styles.premiumFooterLeft}>
         Official NEXA RENTALS contract · Generated using NEXA OS
       </Text>
