@@ -70,12 +70,10 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
   "https://www.nexarentals.es";
 
-// IMPORTANT: logo from public/images
 const TOP_LOGO_URL = `${SITE_URL}/images/nexa-logo.png`;
 
 const styles = StyleSheet.create({
-  /* ---------- pages ---------- */
-  frontPage: {
+  page: {
     paddingTop: 22,
     paddingBottom: 30,
     paddingHorizontal: 24,
@@ -87,20 +85,20 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
 
-  innerPage: {
-    paddingTop: 16,
+  termsPage: {
+    paddingTop: 18,
     paddingBottom: 30,
     paddingHorizontal: 24,
     fontSize: 7.3,
     fontFamily: "Helvetica",
-    color: "#111111",
-    lineHeight: 1.2,
+    color: "#000000",
+    lineHeight: 1.15,
     position: "relative",
     backgroundColor: "#ffffff",
   },
 
   finalPage: {
-    paddingTop: 18,
+    paddingTop: 26,
     paddingBottom: 30,
     paddingHorizontal: 24,
     fontSize: 7.3,
@@ -117,24 +115,23 @@ const styles = StyleSheet.create({
     right: 24,
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
-    color: "#2d2d2d",
+    color: "#222222",
   },
 
   watermarkText: {
     position: "absolute",
-    top: 370,
+    top: 395,
     left: 76,
     width: 470,
     textAlign: "center",
     fontSize: 26,
     fontFamily: "Helvetica-Bold",
     color: "#000000",
-    opacity: 0.03,
+    opacity: 0.028,
     letterSpacing: 1.5,
     transform: "rotate(-30deg)",
   },
 
-  /* ---------- front page premium header ---------- */
   premiumFrame: {
     borderWidth: 1.2,
     borderColor: "#101010",
@@ -171,14 +168,14 @@ const styles = StyleSheet.create({
   },
 
   logoBlock: {
-    width: 185,
+    width: 195,
     justifyContent: "center",
     alignItems: "flex-start",
   },
 
   logo: {
-    width: 175,
-    height: 74,
+    width: 185,
+    height: 80,
     objectFit: "contain",
   },
 
@@ -268,7 +265,6 @@ const styles = StyleSheet.create({
     color: "#000000",
   },
 
-  /* ---------- content sections ---------- */
   section: {
     borderWidth: 0.8,
     borderColor: "#111111",
@@ -327,7 +323,6 @@ const styles = StyleSheet.create({
     color: "#000000",
   },
 
-  /* ---------- terms ---------- */
   termsTitleWrap: {
     marginBottom: 5,
   },
@@ -345,38 +340,36 @@ const styles = StyleSheet.create({
   termsSubtitle: {
     textAlign: "center",
     fontSize: 6.7,
-    color: "#3c3c3c",
+    color: "#222222",
     fontFamily: "Helvetica-Bold",
   },
 
-  termsTable: {
+  termsFlowBox: {
     borderWidth: 1,
     borderColor: "#000000",
     backgroundColor: "#ffffff",
+    width: "100%",
   },
 
-  termsHeadRow: {
+  termsFlowHeader: {
     flexDirection: "row",
     backgroundColor: "#111111",
     borderBottomWidth: 0.8,
     borderBottomColor: "#000000",
   },
 
-  termsHeadLeft: {
+  termsFlowHeaderCell: {
     flex: 1,
+    paddingVertical: 4,
+    paddingHorizontal: 4,
+  },
+
+  termsFlowHeaderLeft: {
     borderRightWidth: 0.8,
     borderRightColor: "#ffffff",
-    paddingVertical: 4,
-    paddingHorizontal: 4,
   },
 
-  termsHeadRight: {
-    flex: 1,
-    paddingVertical: 4,
-    paddingHorizontal: 4,
-  },
-
-  termsHeadText: {
+  termsFlowHeaderText: {
     textAlign: "center",
     fontSize: 7,
     fontFamily: "Helvetica-Bold",
@@ -384,40 +377,40 @@ const styles = StyleSheet.create({
     color: "#ffffff",
   },
 
-  termsRow: {
+  termsFlowBody: {
     flexDirection: "row",
-    borderBottomWidth: 0.45,
-    borderBottomColor: "#b7b7b7",
+    alignItems: "flex-start",
   },
 
-  termsLeftCell: {
+  termsFlowColumnLeft: {
     flex: 1,
-    borderRightWidth: 0.85,
+    borderRightWidth: 0.8,
     borderRightColor: "#111111",
-    paddingVertical: 2.1,
+    paddingTop: 3,
+    paddingBottom: 3,
     paddingHorizontal: 4,
-    fontSize: 5.45,
-    lineHeight: 1.16,
-    color: "#000000",
-    fontFamily: "Helvetica",
   },
 
-  termsRightCell: {
+  termsFlowColumnRight: {
     flex: 1,
-    paddingVertical: 2.1,
+    paddingTop: 3,
+    paddingBottom: 3,
     paddingHorizontal: 4,
-    fontSize: 5.45,
-    lineHeight: 1.16,
+  },
+
+  termParagraph: {
+    fontSize: 4.65,
+    lineHeight: 1.06,
     color: "#000000",
+    marginBottom: 1.65,
     fontFamily: "Helvetica",
   },
 
-  termNumber: {
+  termParagraphNumber: {
     fontFamily: "Helvetica-Bold",
     color: "#000000",
   },
 
-  /* ---------- final page ---------- */
   lastPageTitle: {
     fontSize: 10.2,
     fontFamily: "Helvetica-Bold",
@@ -578,8 +571,7 @@ function FrontHeader({
               <Text style={styles.label}>NIF/NIE: </Text>Y4930755Y
             </Text>
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>Dirección: </Text>CARRER GALEÓN 13,
-              LOCAL 57
+              <Text style={styles.label}>Dirección: </Text>CARRER GALEÓN 13, LOCAL 57
             </Text>
 
             {customerName ? (
@@ -675,56 +667,48 @@ const englishTerms = [
   "Insurance Excess (Franchise): The rented vehicle is covered by a basic insurance policy subject to an excess of 800€. In the event of damage, accident, loss or any incident affecting the vehicle during the rental period, the renter shall be responsible for all costs up to a maximum of 800€, regardless of fault, unless otherwise provided by law. The renter expressly authorizes NEXA RENTALS to retain or charge any necessary amount from the security deposit, or by other legal means, in order to cover damages, repairs, administrative costs, or any loss caused, up to the value of the franchise. This excess shall apply in all cases, including, among others, accidents, falls, vandalism, misuse, or negligence, except where coverage is expressly provided by the insurance policy. In cases of gross negligence, breach of contract, driving under the influence of alcohol or drugs, or use by unauthorized drivers, the renter may be held liable for the full cost of damages, without limitation to the 800€ excess.",
 ];
 
-const termPairs = spanishTerms.map((spanish, index) => ({
-  number: index + 1,
-  spanish,
-  english: englishTerms[index] || "",
-}));
-
-// split terms across 2 pages
-const termChunks = [termPairs.slice(0, 17), termPairs.slice(17)];
-
-function TermsBlock({
-  rows,
-  showTitle = false,
-}: {
-  rows: typeof termPairs;
-  showTitle?: boolean;
-}) {
+function TermsBlock() {
   return (
     <>
-      {showTitle ? (
-        <View style={styles.termsTitleWrap}>
-          <Text style={styles.termsTitle}>NEXA RENTALS – TÉRMINOS Y CONDICIONES</Text>
-          <Text style={styles.termsSubtitle}>
-            Spanish version on the left · English translation on the right
-          </Text>
+      <View style={styles.termsTitleWrap}>
+        <Text style={styles.termsTitle}>
+          NEXA RENTALS – TÉRMINOS Y CONDICIONES
+        </Text>
+        <Text style={styles.termsSubtitle}>
+          Spanish version on the left · English translation on the right
+        </Text>
+      </View>
+
+      <View style={styles.termsFlowBox}>
+        <View style={styles.termsFlowHeader} fixed>
+          <View style={[styles.termsFlowHeaderCell, styles.termsFlowHeaderLeft]}>
+            <Text style={styles.termsFlowHeaderText}>Español</Text>
+          </View>
+
+          <View style={styles.termsFlowHeaderCell}>
+            <Text style={styles.termsFlowHeaderText}>English Translation</Text>
+          </View>
         </View>
-      ) : null}
 
-      <View style={styles.termsTable}>
-        <View style={styles.termsHeadRow}>
-          <View style={styles.termsHeadLeft}>
-            <Text style={styles.termsHeadText}>Español</Text>
+        <View style={styles.termsFlowBody}>
+          <View style={styles.termsFlowColumnLeft}>
+            {spanishTerms.map((term, index) => (
+              <Text key={`spanish-term-${index}`} style={styles.termParagraph}>
+                <Text style={styles.termParagraphNumber}>{index + 1}. </Text>
+                {term}
+              </Text>
+            ))}
           </View>
-          <View style={styles.termsHeadRight}>
-            <Text style={styles.termsHeadText}>English Translation</Text>
+
+          <View style={styles.termsFlowColumnRight}>
+            {englishTerms.map((term, index) => (
+              <Text key={`english-term-${index}`} style={styles.termParagraph}>
+                <Text style={styles.termParagraphNumber}>{index + 1}. </Text>
+                {term}
+              </Text>
+            ))}
           </View>
         </View>
-
-        {rows.map((row) => (
-          <View key={row.number} style={styles.termsRow}>
-            <Text style={styles.termsLeftCell}>
-              <Text style={styles.termNumber}>{row.number}. </Text>
-              {row.spanish}
-            </Text>
-
-            <Text style={styles.termsRightCell}>
-              <Text style={styles.termNumber}>{row.number}. </Text>
-              {row.english}
-            </Text>
-          </View>
-        ))}
       </View>
     </>
   );
@@ -752,13 +736,13 @@ function FinalPageContent() {
         <Text style={styles.blockTitle}>Asistencia en Carretera:</Text>
         <Text style={styles.paragraph}>
           La asistencia es gratuita dentro de un radio de 10 km únicamente en
-          caso de avería mecánica no causada por el cliente. Si la asistencia
-          se requiere fuera de esta zona, o por causa del cliente, incluyendo
-          mal uso, negligencia, batería descargada, pérdida de llaves,
-          combustible incorrecto o similar, se aplicará un coste de entre 50€
-          y 200€ según la distancia y el tipo de servicio. Los servicios pueden
-          incluir reparación en el lugar, remolque o asistencia remota. El
-          coste exacto será confirmado antes del servicio.
+          caso de avería mecánica no causada por el cliente. Si la asistencia se
+          requiere fuera de esta zona, o por causa del cliente, incluyendo mal
+          uso, negligencia, batería descargada, pérdida de llaves, combustible
+          incorrecto o similar, se aplicará un coste de entre 50€ y 200€ según
+          la distancia y el tipo de servicio. Los servicios pueden incluir
+          reparación en el lugar, remolque o asistencia remota. El coste exacto
+          será confirmado antes del servicio.
         </Text>
       </View>
 
@@ -768,14 +752,14 @@ function FinalPageContent() {
           accepted all the general and specific terms and conditions of this
           rental agreement, including those related to the use of the vehicle,
           responsibilities, insurance coverage, security deposit, additional
-          charges, and penalties, and agrees to comply strictly with them for
-          the entire duration of the contract.
+          charges, and penalties, and agrees to comply strictly with them for the
+          entire duration of the contract.
         </Text>
 
         <Text style={styles.paragraph}>
           El cliente declara haber leído, comprendido y aceptado íntegramente
-          todas las condiciones generales y particulares del presente contrato
-          de alquiler, incluyendo las relativas al uso del vehículo,
+          todas las condiciones generales y particulares del presente contrato de
+          alquiler, incluyendo las relativas al uso del vehículo,
           responsabilidades, cobertura de seguro, fianza, cargos adicionales y
           penalizaciones, obligándose a su estricto cumplimiento durante toda la
           duración del contrato.
@@ -827,8 +811,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
       creator="NEXA OS"
       producer="NEXA OS"
     >
-      {/* PAGE 1 - FRONT PAGE */}
-      <Page size="A4" style={styles.frontPage}>
+      <Page size="A4" style={styles.page}>
         <Watermark />
         <PageNumber />
 
@@ -924,10 +907,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
               <Field label="KM salida" value={data.kmSalida || "—"} />
             </View>
             <View style={styles.col}>
-              <Field
-                label="Combustible salida"
-                value={data.combustibleSalida}
-              />
+              <Field label="Combustible salida" value={data.combustibleSalida} />
             </View>
           </View>
 
@@ -981,10 +961,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
               <Field label="Nombre" value={data.nombreCliente} />
             </View>
             <View style={styles.col}>
-              <Field
-                label="Permiso de conducir"
-                value={data.permisoConducir}
-              />
+              <Field label="Permiso de conducir" value={data.permisoConducir} />
             </View>
           </View>
 
@@ -993,10 +970,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
               <Field label="País de expedición" value={data.paisExpedicion} />
             </View>
             <View style={styles.col}>
-              <Field
-                label="Fecha de caducidad"
-                value={data.fechaCaducidad}
-              />
+              <Field label="Fecha de caducidad" value={data.fechaCaducidad} />
             </View>
           </View>
 
@@ -1014,10 +988,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
               <Field label="Nombre" value={data.segundoNombre} />
             </View>
             <View style={styles.col}>
-              <Field
-                label="Permiso de conducir"
-                value={data.segundoPermiso}
-              />
+              <Field label="Permiso de conducir" value={data.segundoPermiso} />
             </View>
           </View>
 
@@ -1026,10 +997,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
               <Field label="País expedición" value={data.segundoPais} />
             </View>
             <View style={styles.col}>
-              <Field
-                label="Fecha caducidad"
-                value={data.segundoFechaCaducidad}
-              />
+              <Field label="Fecha caducidad" value={data.segundoFechaCaducidad} />
             </View>
           </View>
 
@@ -1089,21 +1057,12 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
         </View>
       </Page>
 
-      {/* PAGE 2 - TERMS START */}
-      <Page size="A4" style={styles.innerPage}>
+      <Page size="A4" style={styles.termsPage} wrap>
         <Watermark />
         <PageNumber />
-        <TermsBlock rows={termChunks[0]} showTitle />
+        <TermsBlock />
       </Page>
 
-      {/* PAGE 3 - TERMS CONTINUATION (NO BIG TITLE AGAIN) */}
-      <Page size="A4" style={styles.innerPage}>
-        <Watermark />
-        <PageNumber />
-        <TermsBlock rows={termChunks[1]} />
-      </Page>
-
-      {/* PAGE 4 - FINAL PAGE */}
       <Page size="A4" style={styles.finalPage}>
         <Watermark />
         <PageNumber />
