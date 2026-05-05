@@ -86,8 +86,8 @@ const styles = StyleSheet.create({
   },
 
   termsPage: {
-    paddingTop: 18,
-    paddingBottom: 30,
+    paddingTop: 12,
+    paddingBottom: 18,
     paddingHorizontal: 24,
     fontSize: 7.3,
     fontFamily: "Helvetica",
@@ -111,7 +111,7 @@ const styles = StyleSheet.create({
 
   pageNumber: {
     position: "absolute",
-    bottom: 10,
+    bottom: 8,
     right: 24,
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   },
 
   termsTitleWrap: {
-    marginBottom: 5,
+    marginBottom: 4,
   },
 
   termsTitle: {
@@ -334,7 +334,7 @@ const styles = StyleSheet.create({
     letterSpacing: 0.45,
     textTransform: "uppercase",
     color: "#000000",
-    marginBottom: 2,
+    marginBottom: 1,
   },
 
   termsSubtitle: {
@@ -349,6 +349,8 @@ const styles = StyleSheet.create({
     borderColor: "#000000",
     backgroundColor: "#ffffff",
     width: "100%",
+    minHeight: 705,
+    flexGrow: 1,
   },
 
   termsFlowHeader: {
@@ -379,7 +381,8 @@ const styles = StyleSheet.create({
 
   termsFlowBody: {
     flexDirection: "row",
-    alignItems: "flex-start",
+    alignItems: "stretch",
+    flexGrow: 1,
   },
 
   termsFlowColumnLeft: {
@@ -389,6 +392,7 @@ const styles = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 3,
     paddingHorizontal: 4,
+    flexGrow: 1,
   },
 
   termsFlowColumnRight: {
@@ -396,6 +400,7 @@ const styles = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 3,
     paddingHorizontal: 4,
+    flexGrow: 1,
   },
 
   termParagraph: {
@@ -527,7 +532,9 @@ function PageNumber() {
     <Text
       style={styles.pageNumber}
       fixed
-      render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
+      render={({ pageNumber, totalPages }) =>
+        `Page ${pageNumber} / ${totalPages}`
+      }
     />
   );
 }
@@ -571,7 +578,8 @@ function FrontHeader({
               <Text style={styles.label}>NIF/NIE: </Text>Y4930755Y
             </Text>
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>Dirección: </Text>CARRER GALEÓN 13, LOCAL 57
+              <Text style={styles.label}>Dirección: </Text>CARRER GALEÓN 13,
+              LOCAL 57
             </Text>
 
             {customerName ? (
@@ -680,7 +688,7 @@ function TermsBlock() {
       </View>
 
       <View style={styles.termsFlowBox}>
-        <View style={styles.termsFlowHeader} fixed>
+        <View style={styles.termsFlowHeader}>
           <View style={[styles.termsFlowHeaderCell, styles.termsFlowHeaderLeft]}>
             <Text style={styles.termsFlowHeaderText}>Español</Text>
           </View>
@@ -726,11 +734,11 @@ function FinalPageContent() {
         <Text style={styles.paragraph}>
           Free assistance is provided within 10 km only in case of mechanical
           failure not caused by the customer. If assistance is required outside
-          this area, or due to customer fault, including misuse, negligence,
-          flat battery, lost keys, wrong fuel or similar, a service fee of
-          €50–€200 will apply depending on distance and type of service.
-          Services may include on-site repair, towing, or remote assistance.
-          The exact cost will be confirmed before service.
+          this area, or due to customer fault, including misuse, negligence, flat
+          battery, lost keys, wrong fuel or similar, a service fee of €50–€200
+          will apply depending on distance and type of service. Services may
+          include on-site repair, towing, or remote assistance. The exact cost
+          will be confirmed before service.
         </Text>
 
         <Text style={styles.blockTitle}>Asistencia en Carretera:</Text>
@@ -1057,7 +1065,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
         </View>
       </Page>
 
-      <Page size="A4" style={styles.termsPage} wrap>
+      <Page size="A4" style={styles.termsPage}>
         <Watermark />
         <PageNumber />
         <TermsBlock />
