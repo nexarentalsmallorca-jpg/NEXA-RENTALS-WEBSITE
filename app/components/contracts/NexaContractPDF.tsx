@@ -70,88 +70,115 @@ const SITE_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
   "https://www.nexarentals.es";
 
+// IMPORTANT: logo from public/images
 const TOP_LOGO_URL = `${SITE_URL}/images/nexa-logo.png`;
 
 const styles = StyleSheet.create({
-  page: {
-    paddingTop: 24,
-    paddingBottom: 34,
-    paddingHorizontal: 26,
-    fontSize: 7.4,
+  /* ---------- pages ---------- */
+  frontPage: {
+    paddingTop: 22,
+    paddingBottom: 30,
+    paddingHorizontal: 24,
+    fontSize: 7.3,
     fontFamily: "Helvetica",
-    color: "#0b0b0b",
-    lineHeight: 1.22,
+    color: "#111111",
+    lineHeight: 1.2,
+    position: "relative",
+    backgroundColor: "#ffffff",
+  },
+
+  innerPage: {
+    paddingTop: 16,
+    paddingBottom: 30,
+    paddingHorizontal: 24,
+    fontSize: 7.3,
+    fontFamily: "Helvetica",
+    color: "#111111",
+    lineHeight: 1.2,
+    position: "relative",
+    backgroundColor: "#ffffff",
+  },
+
+  finalPage: {
+    paddingTop: 18,
+    paddingBottom: 30,
+    paddingHorizontal: 24,
+    fontSize: 7.3,
+    fontFamily: "Helvetica",
+    color: "#111111",
+    lineHeight: 1.2,
     position: "relative",
     backgroundColor: "#ffffff",
   },
 
   pageNumber: {
     position: "absolute",
-    bottom: 12,
-    right: 26,
+    bottom: 10,
+    right: 24,
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
-    color: "#333333",
+    color: "#2d2d2d",
   },
 
   watermarkText: {
     position: "absolute",
-    top: 380,
-    left: 80,
-    width: 460,
+    top: 370,
+    left: 76,
+    width: 470,
     textAlign: "center",
     fontSize: 26,
     fontFamily: "Helvetica-Bold",
     color: "#000000",
-    opacity: 0.035,
-    letterSpacing: 1.4,
+    opacity: 0.03,
+    letterSpacing: 1.5,
     transform: "rotate(-30deg)",
   },
 
-  premiumBorder: {
+  /* ---------- front page premium header ---------- */
+  premiumFrame: {
     borderWidth: 1.2,
-    borderColor: "#111111",
+    borderColor: "#101010",
     padding: 4,
-    marginBottom: 9,
+    marginBottom: 8,
   },
 
-  frontHeader: {
+  premiumInner: {
     borderWidth: 0.8,
-    borderColor: "#111111",
+    borderColor: "#101010",
     padding: 10,
   },
 
-  topOfficialStrip: {
+  topBar: {
     backgroundColor: "#111111",
     paddingVertical: 4,
     paddingHorizontal: 8,
     marginBottom: 9,
   },
 
-  topOfficialText: {
-    color: "#ffffff",
-    fontSize: 7.2,
-    fontFamily: "Helvetica-Bold",
-    letterSpacing: 1.25,
+  topBarText: {
     textAlign: "center",
+    color: "#ffffff",
+    fontSize: 7.1,
+    fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
+    letterSpacing: 1.2,
   },
 
-  frontHeaderRow: {
+  headerRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
 
-  logoWrap: {
-    width: 175,
+  logoBlock: {
+    width: 185,
     justifyContent: "center",
     alignItems: "flex-start",
   },
 
   logo: {
-    width: 165,
-    height: 70,
+    width: 175,
+    height: 74,
     objectFit: "contain",
   },
 
@@ -160,28 +187,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
   },
 
-  companyName: {
-    fontSize: 9.5,
+  brandTitle: {
+    fontSize: 10.2,
     fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
-    marginBottom: 4,
     letterSpacing: 0.5,
+    marginBottom: 4,
   },
 
   companyLine: {
-    fontSize: 7.25,
+    fontSize: 7.2,
     marginBottom: 2,
   },
 
   contractBox: {
-    width: 120,
-    borderWidth: 1.1,
+    width: 122,
+    borderWidth: 1,
     borderColor: "#111111",
+    backgroundColor: "#fbfbfb",
     paddingVertical: 10,
     paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center",
-    backgroundColor: "#fafafa",
   },
 
   contractLabel: {
@@ -189,7 +216,7 @@ const styles = StyleSheet.create({
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 5,
-    color: "#333333",
+    color: "#4a4a4a",
   },
 
   contractNumber: {
@@ -199,18 +226,18 @@ const styles = StyleSheet.create({
   },
 
   officialText: {
-    marginTop: 9,
-    borderTopWidth: 0.8,
-    borderTopColor: "#111111",
+    marginTop: 8,
     paddingTop: 5,
+    borderTopWidth: 0.7,
+    borderTopColor: "#111111",
     textAlign: "center",
-    fontSize: 7.3,
+    fontSize: 7.2,
     fontFamily: "Helvetica-Bold",
-    letterSpacing: 0.75,
+    letterSpacing: 0.8,
     textTransform: "uppercase",
   },
 
-  frontSummaryBox: {
+  summaryCard: {
     borderWidth: 0.8,
     borderColor: "#111111",
     backgroundColor: "#f7f7f7",
@@ -218,47 +245,48 @@ const styles = StyleSheet.create({
     marginBottom: 7,
   },
 
-  frontSummaryRow: {
+  summaryRow: {
     flexDirection: "row",
   },
 
-  frontSummaryItem: {
+  summaryItem: {
     flex: 1,
     paddingRight: 8,
   },
 
-  frontSummaryLabel: {
-    fontSize: 6.3,
+  summaryLabel: {
+    fontSize: 6.1,
     color: "#555555",
     textTransform: "uppercase",
     letterSpacing: 0.5,
     marginBottom: 2,
   },
 
-  frontSummaryValue: {
+  summaryValue: {
     fontSize: 8,
     fontFamily: "Helvetica-Bold",
     color: "#000000",
   },
 
+  /* ---------- content sections ---------- */
   section: {
-    marginBottom: 7,
     borderWidth: 0.8,
-    borderColor: "#151515",
+    borderColor: "#111111",
     padding: 7,
+    marginBottom: 7,
     backgroundColor: "#ffffff",
   },
 
   sectionTitle: {
-    fontSize: 8.1,
+    fontSize: 8.2,
     fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
-    marginBottom: 5,
-    letterSpacing: 0.45,
+    letterSpacing: 0.4,
+    marginBottom: 4,
     color: "#000000",
   },
 
-  sectionLine: {
+  sectionDivider: {
     height: 1,
     backgroundColor: "#111111",
     marginBottom: 6,
@@ -287,9 +315,9 @@ const styles = StyleSheet.create({
     marginTop: 5,
     borderWidth: 0.7,
     borderColor: "#111111",
+    backgroundColor: "#f6f6f6",
     paddingVertical: 5,
     paddingHorizontal: 6,
-    backgroundColor: "#f5f5f5",
   },
 
   importantLine: {
@@ -299,24 +327,25 @@ const styles = StyleSheet.create({
     color: "#000000",
   },
 
+  /* ---------- terms ---------- */
   termsTitleWrap: {
-    marginBottom: 6,
+    marginBottom: 5,
   },
 
   termsTitle: {
     textAlign: "center",
-    fontSize: 10.4,
+    fontSize: 10.2,
     fontFamily: "Helvetica-Bold",
     letterSpacing: 0.45,
     textTransform: "uppercase",
-    marginBottom: 2,
     color: "#000000",
+    marginBottom: 2,
   },
 
   termsSubtitle: {
     textAlign: "center",
-    fontSize: 6.8,
-    color: "#333333",
+    fontSize: 6.7,
+    color: "#3c3c3c",
     fontFamily: "Helvetica-Bold",
   },
 
@@ -333,7 +362,7 @@ const styles = StyleSheet.create({
     borderBottomColor: "#000000",
   },
 
-  termsHeadCellLeft: {
+  termsHeadLeft: {
     flex: 1,
     borderRightWidth: 0.8,
     borderRightColor: "#ffffff",
@@ -341,7 +370,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 4,
   },
 
-  termsHeadCellRight: {
+  termsHeadRight: {
     flex: 1,
     paddingVertical: 4,
     paddingHorizontal: 4,
@@ -349,7 +378,7 @@ const styles = StyleSheet.create({
 
   termsHeadText: {
     textAlign: "center",
-    fontSize: 7.1,
+    fontSize: 7,
     fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
     color: "#ffffff",
@@ -358,17 +387,17 @@ const styles = StyleSheet.create({
   termsRow: {
     flexDirection: "row",
     borderBottomWidth: 0.45,
-    borderBottomColor: "#b8b8b8",
+    borderBottomColor: "#b7b7b7",
   },
 
   termsLeftCell: {
     flex: 1,
-    borderRightWidth: 0.9,
+    borderRightWidth: 0.85,
     borderRightColor: "#111111",
     paddingVertical: 2.1,
     paddingHorizontal: 4,
-    fontSize: 5.35,
-    lineHeight: 1.17,
+    fontSize: 5.45,
+    lineHeight: 1.16,
     color: "#000000",
     fontFamily: "Helvetica",
   },
@@ -377,8 +406,8 @@ const styles = StyleSheet.create({
     flex: 1,
     paddingVertical: 2.1,
     paddingHorizontal: 4,
-    fontSize: 5.35,
-    lineHeight: 1.17,
+    fontSize: 5.45,
+    lineHeight: 1.16,
     color: "#000000",
     fontFamily: "Helvetica",
   },
@@ -388,56 +417,57 @@ const styles = StyleSheet.create({
     color: "#000000",
   },
 
+  /* ---------- final page ---------- */
   lastPageTitle: {
-    fontSize: 10.4,
+    fontSize: 10.2,
     fontFamily: "Helvetica-Bold",
     textAlign: "center",
     textTransform: "uppercase",
-    marginBottom: 8,
     letterSpacing: 0.5,
+    marginBottom: 8,
   },
 
-  simpleBlock: {
-    borderWidth: 0.9,
+  infoBlock: {
+    borderWidth: 0.8,
     borderColor: "#111111",
     padding: 8,
-    marginBottom: 8,
     backgroundColor: "#ffffff",
+    marginBottom: 8,
   },
 
   blockTitle: {
-    fontSize: 8.5,
+    fontSize: 8.3,
     fontFamily: "Helvetica-Bold",
     marginBottom: 4,
     color: "#000000",
   },
 
   paragraph: {
-    fontSize: 7.15,
+    fontSize: 7.05,
     lineHeight: 1.28,
     marginBottom: 5,
     color: "#111111",
   },
 
   signaturePanel: {
-    marginTop: 18,
+    marginTop: 16,
     borderWidth: 1,
     borderColor: "#111111",
-    padding: 10,
     backgroundColor: "#fafafa",
+    padding: 10,
   },
 
   signaturePanelTitle: {
     textAlign: "center",
-    fontSize: 8.5,
+    fontSize: 8.4,
     fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
     letterSpacing: 0.8,
-    marginBottom: 16,
+    marginBottom: 14,
     color: "#000000",
   },
 
-  signatures: {
+  signaturesRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     gap: 8,
@@ -445,12 +475,13 @@ const styles = StyleSheet.create({
 
   signatureCard: {
     flex: 1,
-    height: 54,
     borderWidth: 0.8,
     borderColor: "#111111",
     backgroundColor: "#ffffff",
+    paddingTop: 26,
+    paddingBottom: 6,
     paddingHorizontal: 6,
-    paddingTop: 28,
+    minHeight: 54,
   },
 
   signatureLine: {
@@ -463,11 +494,11 @@ const styles = StyleSheet.create({
     color: "#000000",
   },
 
-  signatureSmall: {
+  signatureSub: {
     marginTop: 2,
     textAlign: "center",
     fontSize: 5.8,
-    color: "#555555",
+    color: "#5d5d5d",
   },
 });
 
@@ -490,6 +521,14 @@ function Field({ label, value }: { label: string; value?: string }) {
   );
 }
 
+function Watermark() {
+  return (
+    <Text style={styles.watermarkText} fixed>
+      OFFICIAL NEXA RENTALS CONTRACT
+    </Text>
+  );
+}
+
 function PageNumber() {
   return (
     <Text
@@ -497,14 +536,6 @@ function PageNumber() {
       fixed
       render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
     />
-  );
-}
-
-function Watermark() {
-  return (
-    <Text style={styles.watermarkText} fixed>
-      OFFICIAL NEXA RENTALS CONTRACT
-    </Text>
   );
 }
 
@@ -518,21 +549,21 @@ function FrontHeader({
   vehicleText?: string;
 }) {
   return (
-    <View style={styles.premiumBorder}>
-      <View style={styles.frontHeader}>
-        <View style={styles.topOfficialStrip}>
-          <Text style={styles.topOfficialText}>
+    <View style={styles.premiumFrame}>
+      <View style={styles.premiumInner}>
+        <View style={styles.topBar}>
+          <Text style={styles.topBarText}>
             NEXA RENTALS · OFFICIAL VEHICLE RENTAL AGREEMENT
           </Text>
         </View>
 
-        <View style={styles.frontHeaderRow}>
-          <View style={styles.logoWrap}>
+        <View style={styles.headerRow}>
+          <View style={styles.logoBlock}>
             <Image src={TOP_LOGO_URL} style={styles.logo} />
           </View>
 
           <View style={styles.companyBlock}>
-            <Text style={styles.companyName}>NEXA RENTALS</Text>
+            <Text style={styles.brandTitle}>NEXA RENTALS</Text>
 
             <Text style={styles.companyLine}>
               <Text style={styles.label}>Arrendador: </Text>SAHILPREET SINGH
@@ -573,7 +604,7 @@ function FrontHeader({
         </View>
 
         <Text style={styles.officialText}>
-          Contrato Oficial de Alquiler de Vehículo · Official Rental Contract
+          Contrato oficial de alquiler de vehículo · Official rental contract
         </Text>
       </View>
     </View>
@@ -650,27 +681,33 @@ const termPairs = spanishTerms.map((spanish, index) => ({
   english: englishTerms[index] || "",
 }));
 
-const termChunks = [
-  termPairs.slice(0, 17),
-  termPairs.slice(17),
-];
+// split terms across 2 pages
+const termChunks = [termPairs.slice(0, 17), termPairs.slice(17)];
 
-function TermsPage({ rows }: { rows: typeof termPairs }) {
+function TermsBlock({
+  rows,
+  showTitle = false,
+}: {
+  rows: typeof termPairs;
+  showTitle?: boolean;
+}) {
   return (
     <>
-      <View style={styles.termsTitleWrap}>
-        <Text style={styles.termsTitle}>NEXA RENTALS – TÉRMINOS Y CONDICIONES</Text>
-        <Text style={styles.termsSubtitle}>
-          Spanish version on the left · English translation on the right
-        </Text>
-      </View>
+      {showTitle ? (
+        <View style={styles.termsTitleWrap}>
+          <Text style={styles.termsTitle}>NEXA RENTALS – TÉRMINOS Y CONDICIONES</Text>
+          <Text style={styles.termsSubtitle}>
+            Spanish version on the left · English translation on the right
+          </Text>
+        </View>
+      ) : null}
 
       <View style={styles.termsTable}>
         <View style={styles.termsHeadRow}>
-          <View style={styles.termsHeadCellLeft}>
+          <View style={styles.termsHeadLeft}>
             <Text style={styles.termsHeadText}>Español</Text>
           </View>
-          <View style={styles.termsHeadCellRight}>
+          <View style={styles.termsHeadRight}>
             <Text style={styles.termsHeadText}>English Translation</Text>
           </View>
         </View>
@@ -696,9 +733,11 @@ function TermsPage({ rows }: { rows: typeof termPairs }) {
 function FinalPageContent() {
   return (
     <>
-      <Text style={styles.lastPageTitle}>Additional Clauses · Cláusulas Adicionales</Text>
+      <Text style={styles.lastPageTitle}>
+        Additional Clauses · Cláusulas Adicionales
+      </Text>
 
-      <View style={styles.simpleBlock}>
+      <View style={styles.infoBlock}>
         <Text style={styles.blockTitle}>Roadside Assistance:</Text>
         <Text style={styles.paragraph}>
           Free assistance is provided within 10 km only in case of mechanical
@@ -723,7 +762,7 @@ function FinalPageContent() {
         </Text>
       </View>
 
-      <View style={styles.simpleBlock}>
+      <View style={styles.infoBlock}>
         <Text style={styles.paragraph}>
           The customer declares that they have read, understood, and fully
           accepted all the general and specific terms and conditions of this
@@ -748,25 +787,25 @@ function FinalPageContent() {
           Acceptance and Signatures · Aceptación y Firmas
         </Text>
 
-        <View style={styles.signatures}>
+        <View style={styles.signaturesRow}>
           <View style={styles.signatureCard}>
             <Text style={styles.signatureLine}>Firma Cliente</Text>
-            <Text style={styles.signatureSmall}>Customer Signature</Text>
+            <Text style={styles.signatureSub}>Customer Signature</Text>
           </View>
 
           <View style={styles.signatureCard}>
             <Text style={styles.signatureLine}>Firma Conductor</Text>
-            <Text style={styles.signatureSmall}>Driver Signature</Text>
+            <Text style={styles.signatureSub}>Driver Signature</Text>
           </View>
 
           <View style={styles.signatureCard}>
             <Text style={styles.signatureLine}>Firma 2º Conductor</Text>
-            <Text style={styles.signatureSmall}>Second Driver</Text>
+            <Text style={styles.signatureSub}>Second Driver</Text>
           </View>
 
           <View style={styles.signatureCard}>
             <Text style={styles.signatureLine}>Firma Empresa</Text>
-            <Text style={styles.signatureSmall}>Company Signature</Text>
+            <Text style={styles.signatureSub}>Company Signature</Text>
           </View>
         </View>
       </View>
@@ -788,7 +827,8 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
       creator="NEXA OS"
       producer="NEXA OS"
     >
-      <Page size="A4" style={styles.page}>
+      {/* PAGE 1 - FRONT PAGE */}
+      <Page size="A4" style={styles.frontPage}>
         <Watermark />
         <PageNumber />
 
@@ -798,19 +838,21 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
           vehicleText={vehicleText}
         />
 
-        <View style={styles.frontSummaryBox}>
-          <View style={styles.frontSummaryRow}>
-            <View style={styles.frontSummaryItem}>
-              <Text style={styles.frontSummaryLabel}>Cliente</Text>
-              <Text style={styles.frontSummaryValue}>{clean(data.nombreCliente)}</Text>
+        <View style={styles.summaryCard}>
+          <View style={styles.summaryRow}>
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Cliente</Text>
+              <Text style={styles.summaryValue}>{clean(data.nombreCliente)}</Text>
             </View>
-            <View style={styles.frontSummaryItem}>
-              <Text style={styles.frontSummaryLabel}>Vehículo</Text>
-              <Text style={styles.frontSummaryValue}>{vehicleText}</Text>
+
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Vehículo</Text>
+              <Text style={styles.summaryValue}>{vehicleText}</Text>
             </View>
-            <View style={styles.frontSummaryItem}>
-              <Text style={styles.frontSummaryLabel}>Periodo</Text>
-              <Text style={styles.frontSummaryValue}>
+
+            <View style={styles.summaryItem}>
+              <Text style={styles.summaryLabel}>Periodo</Text>
+              <Text style={styles.summaryValue}>
                 {clean(data.fechaEntrega)} → {clean(data.fechaDevolucion)}
               </Text>
             </View>
@@ -819,7 +861,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Datos del vehículo</Text>
-          <View style={styles.sectionLine} />
+          <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
@@ -854,7 +896,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Datos del alquiler</Text>
-          <View style={styles.sectionLine} />
+          <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
@@ -907,7 +949,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Datos del cliente</Text>
-          <View style={styles.sectionLine} />
+          <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
@@ -932,7 +974,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Datos del conductor / a</Text>
-          <View style={styles.sectionLine} />
+          <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
@@ -965,7 +1007,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
           <Text style={styles.sectionTitle}>
             Datos del segundo / a conductor / a si aplica
           </Text>
-          <View style={styles.sectionLine} />
+          <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
@@ -996,7 +1038,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Detalles del alquiler</Text>
-          <View style={styles.sectionLine} />
+          <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
@@ -1047,19 +1089,22 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
         </View>
       </Page>
 
-      <Page size="A4" style={styles.page}>
+      {/* PAGE 2 - TERMS START */}
+      <Page size="A4" style={styles.innerPage}>
         <Watermark />
         <PageNumber />
-        <TermsPage rows={termChunks[0]} />
+        <TermsBlock rows={termChunks[0]} showTitle />
       </Page>
 
-      <Page size="A4" style={styles.page}>
+      {/* PAGE 3 - TERMS CONTINUATION (NO BIG TITLE AGAIN) */}
+      <Page size="A4" style={styles.innerPage}>
         <Watermark />
         <PageNumber />
-        <TermsPage rows={termChunks[1]} />
+        <TermsBlock rows={termChunks[1]} />
       </Page>
 
-      <Page size="A4" style={styles.page}>
+      {/* PAGE 4 - FINAL PAGE */}
+      <Page size="A4" style={styles.finalPage}>
         <Watermark />
         <PageNumber />
         <FinalPageContent />
