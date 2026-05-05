@@ -74,305 +74,400 @@ const TOP_LOGO_URL = `${SITE_URL}/images/nexa-logo.png`;
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 20,
+    paddingTop: 24,
     paddingBottom: 34,
-    paddingHorizontal: 24,
-    fontSize: 7.2,
+    paddingHorizontal: 26,
+    fontSize: 7.4,
     fontFamily: "Helvetica",
-    color: "#111111",
-    lineHeight: 1.2,
+    color: "#0b0b0b",
+    lineHeight: 1.22,
     position: "relative",
     backgroundColor: "#ffffff",
   },
 
-  /* ---------- watermark ---------- */
-  watermarkText: {
-    position: "absolute",
-    top: 365,
-    left: 55,
-    width: 470,
-    textAlign: "center",
-    fontSize: 23,
-    fontFamily: "Helvetica-Bold",
-    color: "#000000",
-    opacity: 0.045,
-    transform: "rotate(-32deg)",
-    letterSpacing: 1.8,
-  },
-
-  /* ---------- footer ---------- */
-  footer: {
+  pageNumber: {
     position: "absolute",
     bottom: 12,
-    left: 24,
-    right: 24,
-    borderTopWidth: 0.6,
-    borderTopColor: "#c9c9c9",
-    paddingTop: 4,
+    right: 26,
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: "#333333",
+  },
+
+  watermarkText: {
+    position: "absolute",
+    top: 380,
+    left: 80,
+    width: 460,
+    textAlign: "center",
+    fontSize: 26,
+    fontFamily: "Helvetica-Bold",
+    color: "#000000",
+    opacity: 0.035,
+    letterSpacing: 1.4,
+    transform: "rotate(-30deg)",
+  },
+
+  premiumBorder: {
+    borderWidth: 1.2,
+    borderColor: "#111111",
+    padding: 4,
+    marginBottom: 9,
+  },
+
+  frontHeader: {
+    borderWidth: 0.8,
+    borderColor: "#111111",
+    padding: 10,
+  },
+
+  topOfficialStrip: {
+    backgroundColor: "#111111",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    marginBottom: 9,
+  },
+
+  topOfficialText: {
+    color: "#ffffff",
+    fontSize: 7.2,
+    fontFamily: "Helvetica-Bold",
+    letterSpacing: 1.25,
+    textAlign: "center",
+    textTransform: "uppercase",
+  },
+
+  frontHeaderRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    fontSize: 6.2,
-    color: "#5b5b5b",
   },
 
-  footerLeft: {
-    fontSize: 6.2,
-    color: "#5b5b5b",
-  },
-
-  footerRight: {
-    fontSize: 6.2,
-    color: "#5b5b5b",
-    textAlign: "right",
-  },
-
-  /* ---------- page 1 header ---------- */
-  heroHeader: {
-    borderWidth: 1,
-    borderColor: "#222222",
-    padding: 10,
-    marginBottom: 12,
-  },
-
-  heroTopRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "stretch",
-  },
-
-  logoArea: {
+  logoWrap: {
     width: 175,
     justifyContent: "center",
+    alignItems: "flex-start",
   },
 
   logo: {
-    width: 130,
-    height: 44,
+    width: 165,
+    height: 70,
     objectFit: "contain",
   },
 
-  companyArea: {
+  companyBlock: {
     flex: 1,
-    paddingLeft: 8,
-    paddingRight: 10,
+    paddingHorizontal: 10,
+  },
+
+  companyName: {
+    fontSize: 9.5,
+    fontFamily: "Helvetica-Bold",
+    textTransform: "uppercase",
+    marginBottom: 4,
+    letterSpacing: 0.5,
   },
 
   companyLine: {
-    fontSize: 7.1,
-    marginBottom: 1.6,
+    fontSize: 7.25,
+    marginBottom: 2,
   },
 
   contractBox: {
-    width: 118,
-    borderWidth: 1,
-    borderColor: "#222222",
-    alignItems: "center",
-    justifyContent: "center",
+    width: 120,
+    borderWidth: 1.1,
+    borderColor: "#111111",
     paddingVertical: 10,
     paddingHorizontal: 8,
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fafafa",
   },
 
   contractLabel: {
-    fontSize: 6.5,
+    fontSize: 6.7,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 5,
+    color: "#333333",
   },
 
   contractNumber: {
-    fontSize: 16,
+    fontSize: 17,
     fontFamily: "Helvetica-Bold",
+    color: "#000000",
   },
 
-  agreementLine: {
-    marginTop: 8,
-    paddingTop: 6,
-    borderTopWidth: 0.6,
-    borderTopColor: "#666666",
+  officialText: {
+    marginTop: 9,
+    borderTopWidth: 0.8,
+    borderTopColor: "#111111",
+    paddingTop: 5,
     textAlign: "center",
-    fontSize: 7,
+    fontSize: 7.3,
     fontFamily: "Helvetica-Bold",
-    letterSpacing: 1,
+    letterSpacing: 0.75,
     textTransform: "uppercase",
-    color: "#222222",
   },
 
-  /* ---------- front page cards ---------- */
-  row: {
+  frontSummaryBox: {
+    borderWidth: 0.8,
+    borderColor: "#111111",
+    backgroundColor: "#f7f7f7",
+    padding: 7,
+    marginBottom: 7,
+  },
+
+  frontSummaryRow: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    marginBottom: 10,
   },
 
-  cardHalf: {
-    width: "48.7%",
-    borderWidth: 1,
-    borderColor: "#d7d7d7",
-    padding: 8,
+  frontSummaryItem: {
+    flex: 1,
+    paddingRight: 8,
   },
 
-  cardFull: {
-    width: "100%",
-    borderWidth: 1,
-    borderColor: "#d7d7d7",
-    padding: 8,
-    marginBottom: 10,
-  },
-
-  cardTitle: {
-    fontSize: 8,
-    fontFamily: "Helvetica-Bold",
+  frontSummaryLabel: {
+    fontSize: 6.3,
+    color: "#555555",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginBottom: 6,
-    color: "#111111",
-    borderBottomWidth: 0.6,
-    borderBottomColor: "#d0d0d0",
-    paddingBottom: 4,
+    marginBottom: 2,
   },
 
-  fieldRow: {
-    marginBottom: 3,
+  frontSummaryValue: {
+    fontSize: 8,
+    fontFamily: "Helvetica-Bold",
+    color: "#000000",
+  },
+
+  section: {
+    marginBottom: 7,
+    borderWidth: 0.8,
+    borderColor: "#151515",
+    padding: 7,
+    backgroundColor: "#ffffff",
+  },
+
+  sectionTitle: {
+    fontSize: 8.1,
+    fontFamily: "Helvetica-Bold",
+    textTransform: "uppercase",
+    marginBottom: 5,
+    letterSpacing: 0.45,
+    color: "#000000",
+  },
+
+  sectionLine: {
+    height: 1,
+    backgroundColor: "#111111",
+    marginBottom: 6,
+  },
+
+  row: {
+    flexDirection: "row",
+    marginBottom: 3.5,
+  },
+
+  col: {
+    flex: 1,
+    paddingRight: 10,
   },
 
   label: {
     fontFamily: "Helvetica-Bold",
+    color: "#000000",
   },
 
   value: {
-    fontFamily: "Helvetica",
-  },
-
-  noteLine: {
-    marginTop: 6,
-    fontSize: 7.1,
-    fontFamily: "Helvetica-Bold",
-    textAlign: "center",
-  },
-
-  /* ---------- terms pages ---------- */
-  simplePageTitleWrap: {
-    marginBottom: 8,
-    textAlign: "center",
-  },
-
-  simplePageTitle: {
-    fontSize: 9.3,
-    fontFamily: "Helvetica-Bold",
-    textTransform: "uppercase",
-    letterSpacing: 0.6,
     color: "#111111",
   },
 
-  simplePageSubtitle: {
-    marginTop: 2,
-    fontSize: 6.4,
-    color: "#666666",
+  importantLineBox: {
+    marginTop: 5,
+    borderWidth: 0.7,
+    borderColor: "#111111",
+    paddingVertical: 5,
+    paddingHorizontal: 6,
+    backgroundColor: "#f5f5f5",
   },
 
-  termsBlock: {
+  importantLine: {
+    textAlign: "center",
+    fontSize: 7.8,
+    fontFamily: "Helvetica-Bold",
+    color: "#000000",
+  },
+
+  termsTitleWrap: {
+    marginBottom: 6,
+  },
+
+  termsTitle: {
+    textAlign: "center",
+    fontSize: 10.4,
+    fontFamily: "Helvetica-Bold",
+    letterSpacing: 0.45,
+    textTransform: "uppercase",
+    marginBottom: 2,
+    color: "#000000",
+  },
+
+  termsSubtitle: {
+    textAlign: "center",
+    fontSize: 6.8,
+    color: "#333333",
+    fontFamily: "Helvetica-Bold",
+  },
+
+  termsTable: {
     borderWidth: 1,
-    borderColor: "#222222",
-    minHeight: 690,
+    borderColor: "#000000",
+    backgroundColor: "#ffffff",
   },
 
-  termsHeaderRow: {
+  termsHeadRow: {
     flexDirection: "row",
+    backgroundColor: "#111111",
     borderBottomWidth: 0.8,
-    borderBottomColor: "#222222",
-    backgroundColor: "#f7f7f7",
+    borderBottomColor: "#000000",
   },
 
-  termsHeaderCellLeft: {
-    width: "50%",
+  termsHeadCellLeft: {
+    flex: 1,
     borderRightWidth: 0.8,
-    borderRightColor: "#222222",
+    borderRightColor: "#ffffff",
     paddingVertical: 4,
-    paddingHorizontal: 6,
-    fontSize: 6.8,
-    fontFamily: "Helvetica-Bold",
-    textTransform: "uppercase",
-    textAlign: "center",
+    paddingHorizontal: 4,
   },
 
-  termsHeaderCellRight: {
-    width: "50%",
+  termsHeadCellRight: {
+    flex: 1,
     paddingVertical: 4,
-    paddingHorizontal: 6,
-    fontSize: 6.8,
-    fontFamily: "Helvetica-Bold",
-    textTransform: "uppercase",
-    textAlign: "center",
+    paddingHorizontal: 4,
   },
 
-  termsColumns: {
+  termsHeadText: {
+    textAlign: "center",
+    fontSize: 7.1,
+    fontFamily: "Helvetica-Bold",
+    textTransform: "uppercase",
+    color: "#ffffff",
+  },
+
+  termsRow: {
     flexDirection: "row",
-    alignItems: "stretch",
+    borderBottomWidth: 0.45,
+    borderBottomColor: "#b8b8b8",
   },
 
-  termsColumnLeft: {
-    width: "50%",
-    borderRightWidth: 0.8,
-    borderRightColor: "#222222",
-    paddingTop: 6,
-    paddingBottom: 6,
-    paddingLeft: 6,
-    paddingRight: 6,
+  termsLeftCell: {
+    flex: 1,
+    borderRightWidth: 0.9,
+    borderRightColor: "#111111",
+    paddingVertical: 2.1,
+    paddingHorizontal: 4,
+    fontSize: 5.35,
+    lineHeight: 1.17,
+    color: "#000000",
+    fontFamily: "Helvetica",
   },
 
-  termsColumnRight: {
-    width: "50%",
-    paddingTop: 6,
-    paddingBottom: 6,
-    paddingLeft: 6,
-    paddingRight: 6,
-  },
-
-  termText: {
-    fontSize: 5.15,
-    lineHeight: 1.18,
-    marginBottom: 5,
-    textAlign: "left",
+  termsRightCell: {
+    flex: 1,
+    paddingVertical: 2.1,
+    paddingHorizontal: 4,
+    fontSize: 5.35,
+    lineHeight: 1.17,
+    color: "#000000",
+    fontFamily: "Helvetica",
   },
 
   termNumber: {
     fontFamily: "Helvetica-Bold",
+    color: "#000000",
   },
 
-  /* ---------- final page ---------- */
-  finalSection: {
-    borderWidth: 1,
-    borderColor: "#d7d7d7",
-    padding: 10,
-    marginBottom: 12,
-  },
-
-  finalSectionTitle: {
-    fontSize: 8.2,
+  lastPageTitle: {
+    fontSize: 10.4,
     fontFamily: "Helvetica-Bold",
+    textAlign: "center",
+    textTransform: "uppercase",
+    marginBottom: 8,
+    letterSpacing: 0.5,
+  },
+
+  simpleBlock: {
+    borderWidth: 0.9,
+    borderColor: "#111111",
+    padding: 8,
+    marginBottom: 8,
+    backgroundColor: "#ffffff",
+  },
+
+  blockTitle: {
+    fontSize: 8.5,
+    fontFamily: "Helvetica-Bold",
+    marginBottom: 4,
+    color: "#000000",
+  },
+
+  paragraph: {
+    fontSize: 7.15,
+    lineHeight: 1.28,
     marginBottom: 5,
+    color: "#111111",
   },
 
-  finalText: {
-    fontSize: 6.9,
-    lineHeight: 1.25,
-    marginBottom: 6,
-  },
-
-  signaturesRow: {
+  signaturePanel: {
     marginTop: 18,
+    borderWidth: 1,
+    borderColor: "#111111",
+    padding: 10,
+    backgroundColor: "#fafafa",
+  },
+
+  signaturePanelTitle: {
+    textAlign: "center",
+    fontSize: 8.5,
+    fontFamily: "Helvetica-Bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.8,
+    marginBottom: 16,
+    color: "#000000",
+  },
+
+  signatures: {
     flexDirection: "row",
     justifyContent: "space-between",
+    gap: 8,
   },
 
-  signatureItem: {
-    width: "23.5%",
+  signatureCard: {
+    flex: 1,
+    height: 54,
+    borderWidth: 0.8,
+    borderColor: "#111111",
+    backgroundColor: "#ffffff",
+    paddingHorizontal: 6,
+    paddingTop: 28,
+  },
+
+  signatureLine: {
     borderTopWidth: 1,
-    borderTopColor: "#222222",
+    borderTopColor: "#000000",
     paddingTop: 4,
     textAlign: "center",
-    fontSize: 6.8,
+    fontSize: 6.7,
+    fontFamily: "Helvetica-Bold",
+    color: "#000000",
+  },
+
+  signatureSmall: {
+    marginTop: 2,
+    textAlign: "center",
+    fontSize: 5.8,
+    color: "#555555",
   },
 });
 
@@ -388,10 +483,20 @@ function Money({ value }: { value?: string }) {
 
 function Field({ label, value }: { label: string; value?: string }) {
   return (
-    <Text style={styles.fieldRow}>
+    <Text>
       <Text style={styles.label}>{label}: </Text>
       <Text style={styles.value}>{clean(value)}</Text>
     </Text>
+  );
+}
+
+function PageNumber() {
+  return (
+    <Text
+      style={styles.pageNumber}
+      fixed
+      render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
+    />
   );
 }
 
@@ -400,23 +505,6 @@ function Watermark() {
     <Text style={styles.watermarkText} fixed>
       OFFICIAL NEXA RENTALS CONTRACT
     </Text>
-  );
-}
-
-function Footer({ contractNumber }: { contractNumber: string }) {
-  return (
-    <View style={styles.footer} fixed>
-      <Text style={styles.footerLeft}>
-        NEXA RENTALS · Contract {contractNumber}
-      </Text>
-
-      <Text
-        style={styles.footerRight}
-        render={({ pageNumber, totalPages }) =>
-          `Page ${pageNumber} / ${totalPages}`
-        }
-      />
-    </View>
   );
 }
 
@@ -430,55 +518,64 @@ function FrontHeader({
   vehicleText?: string;
 }) {
   return (
-    <View style={styles.heroHeader}>
-      <View style={styles.heroTopRow}>
-        <View style={styles.logoArea}>
-          <Image src={TOP_LOGO_URL} style={styles.logo} />
+    <View style={styles.premiumBorder}>
+      <View style={styles.frontHeader}>
+        <View style={styles.topOfficialStrip}>
+          <Text style={styles.topOfficialText}>
+            NEXA RENTALS · OFFICIAL VEHICLE RENTAL AGREEMENT
+          </Text>
         </View>
 
-        <View style={styles.companyArea}>
-          <Text style={styles.companyLine}>
-            <Text style={styles.label}>Arrendador: </Text>SAHILPREET SINGH
-          </Text>
-          <Text style={styles.companyLine}>
-            <Text style={styles.label}>Nombre Comercial: </Text>NEXA RENTALS
-          </Text>
-          <Text style={styles.companyLine}>
-            <Text style={styles.label}>Tel.: </Text>971 48 23 42
-          </Text>
-          <Text style={styles.companyLine}>
-            <Text style={styles.label}>NIF/NIE: </Text>Y4930755Y
-          </Text>
-          <Text style={styles.companyLine}>
-            <Text style={styles.label}>Dirección: </Text>CARRER GALEÓN 13, LOCAL
-            57
-          </Text>
+        <View style={styles.frontHeaderRow}>
+          <View style={styles.logoWrap}>
+            <Image src={TOP_LOGO_URL} style={styles.logo} />
+          </View>
 
-          {customerName ? (
+          <View style={styles.companyBlock}>
+            <Text style={styles.companyName}>NEXA RENTALS</Text>
+
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>Cliente: </Text>
-              {customerName}
+              <Text style={styles.label}>Arrendador: </Text>SAHILPREET SINGH
             </Text>
-          ) : null}
-
-          {vehicleText ? (
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>Vehículo: </Text>
-              {vehicleText}
+              <Text style={styles.label}>Nombre Comercial: </Text>NEXA RENTALS
             </Text>
-          ) : null}
+            <Text style={styles.companyLine}>
+              <Text style={styles.label}>Tel.: </Text>971 48 23 42
+            </Text>
+            <Text style={styles.companyLine}>
+              <Text style={styles.label}>NIF/NIE: </Text>Y4930755Y
+            </Text>
+            <Text style={styles.companyLine}>
+              <Text style={styles.label}>Dirección: </Text>CARRER GALEÓN 13,
+              LOCAL 57
+            </Text>
+
+            {customerName ? (
+              <Text style={styles.companyLine}>
+                <Text style={styles.label}>Cliente: </Text>
+                {customerName}
+              </Text>
+            ) : null}
+
+            {vehicleText ? (
+              <Text style={styles.companyLine}>
+                <Text style={styles.label}>Vehículo: </Text>
+                {vehicleText}
+              </Text>
+            ) : null}
+          </View>
+
+          <View style={styles.contractBox}>
+            <Text style={styles.contractLabel}>Contrato Nº</Text>
+            <Text style={styles.contractNumber}>{clean(contractNumber)}</Text>
+          </View>
         </View>
 
-        <View style={styles.contractBox}>
-          <Text style={styles.contractLabel}>Contrato Nº</Text>
-          <Text style={styles.contractNumber}>{clean(contractNumber)}</Text>
-        </View>
+        <Text style={styles.officialText}>
+          Contrato Oficial de Alquiler de Vehículo · Official Rental Contract
+        </Text>
       </View>
-
-      <Text style={styles.agreementLine}>
-        Official Vehicle Rental Agreement · Contrato Oficial de Alquiler de
-        Vehículo
-      </Text>
     </View>
   );
 }
@@ -539,65 +636,71 @@ const englishTerms = [
   "For any dispute arising from this contract, the parties expressly submit to the courts and tribunals of Palma de Mallorca.",
   "Transport of minors: The transport of minor passengers is only permitted if they are at least 12 years old and able to properly reach the footrests of the vehicle. The client declares and confirms that any minor passenger meets this minimum age requirement. The driver assumes full responsibility for transporting the passenger, including their safety throughout the entire rental period.",
   "Passenger responsibility: The driver shall be solely responsible for any person carried as a passenger on the rented vehicle. NEXA RENTALS shall not be held responsible for any damage, injury, or incident affecting the passenger during the use of the vehicle. The driver agrees to ensure that the passenger complies with all safety regulations, including the mandatory use of a helmet and proper seating on the vehicle.",
-  "The renter expressly declares, under their sole responsibility, that at the time of collecting the vehicle they are in full physical and mental condition to drive and are not under the influence of alcohol, drugs, medication, or any substance that may affect driving ability. The renter acknowledges having been informed of the absolute prohibition of driving under the influence of alcohol or drugs and undertakes not to use the vehicle under such conditions throughout the rental period. NEXA RENTALS shall be fully exempt from any liability arising from accidents, damage, injuries, or losses caused as a consequence of driving under the influence of alcohol, drugs, or similar substances, even if such events occur after the delivery of the vehicle.",
+  "The renter expressly declares, under their sole responsibility, that at the time of collecting the vehicle they are in full physical and mental condition to drive and are not under the influence of alcohol, drugs, medication, or any substance that may affect driving ability. The renter acknowledges that they have been informed of the absolute prohibition on driving under the influence of alcohol or drugs and undertakes not to use the vehicle in such conditions during the entire rental period. NEXA RENTALS is fully exonerated from any responsibility arising from accidents, damages, injuries, or losses caused as a consequence of driving under the influence of alcohol, drugs, or similar substances, even if such events occur after the delivery of the vehicle.",
   "Full responsibility for the use of the vehicle is transferred to the renter from the moment the vehicle is handed over. The renter shall be solely responsible for any use, behavior, or situation arising during the rental period. NEXA RENTALS shall not be held liable for any actions, negligence, misconduct, or violations committed by the renter after the delivery of the vehicle.",
-  "The rental company shall not be responsible for the conduct of the renter after the vehicle has been delivered, including any consumption of alcohol or drugs following the collection of the vehicle. Any accident, damage, or incident occurring after the vehicle has been handed over, regardless of the circumstances, shall be the sole responsibility of the renter.",
+  "The rental company shall not be responsible for the conduct of the renter after the vehicle has been delivered, including any consumption of alcohol or drugs following collection. Any accident, damage, or incident occurring after the vehicle has been handed over, regardless of the circumstances, shall be the sole responsibility of the renter.",
   "NEXA RENTALS performs a basic verification of the renter’s documentation and apparent condition at the time of vehicle handover. However, it cannot guarantee or control the driver's condition during the rental period. The renter acknowledges that such verification does not imply any assumption of responsibility by the rental company.",
   "The renter declares that they have read, understood, and accepted all the terms and conditions of this agreement, and fully assume the responsibilities arising from the use of the vehicle. Furthermore, the renter acknowledges that any breach of these conditions, particularly those related to the consumption of alcohol or drugs, will result in full liability towards third parties, authorities, and NEXA RENTALS.",
-  "Insurance Excess (Franchise): The rented vehicle is covered by a basic insurance policy subject to an excess of 800€. In the event of damage, accident, or loss affecting the vehicle during the rental period, the renter shall be fully responsible for all costs up to a maximum amount of 800€, regardless of fault, unless otherwise stated by law. The renter agrees that NEXA RENTALS is authorized to retain or charge any necessary amount from the security deposit, or by any other legal means, to cover damages, repairs, administrative costs, or any losses incurred, up to the value of the franchise. This excess shall apply in all cases, including but not limited to accidents, falls, vandalism, misuse, or negligence, except where coverage is expressly provided by the insurance company. In cases of gross negligence, breach of contract, driving under the influence of alcohol or drugs, or use by unauthorized drivers, the renter may be held liable for the full cost of damages, without limitation to the 800€ excess.",
+  "Insurance Excess (Franchise): The rented vehicle is covered by a basic insurance policy subject to an excess of 800€. In the event of damage, accident, loss or any incident affecting the vehicle during the rental period, the renter shall be responsible for all costs up to a maximum of 800€, regardless of fault, unless otherwise provided by law. The renter expressly authorizes NEXA RENTALS to retain or charge any necessary amount from the security deposit, or by other legal means, in order to cover damages, repairs, administrative costs, or any loss caused, up to the value of the franchise. This excess shall apply in all cases, including, among others, accidents, falls, vandalism, misuse, or negligence, except where coverage is expressly provided by the insurance policy. In cases of gross negligence, breach of contract, driving under the influence of alcohol or drugs, or use by unauthorized drivers, the renter may be held liable for the full cost of damages, without limitation to the 800€ excess.",
 ];
 
-function TermsColumns({
+const termPairs = spanishTerms.map((spanish, index) => ({
+  number: index + 1,
   spanish,
-  english,
-  startNumber,
-}: {
-  spanish: string[];
-  english: string[];
-  startNumber: number;
-}) {
+  english: englishTerms[index] || "",
+}));
+
+const termChunks = [
+  termPairs.slice(0, 17),
+  termPairs.slice(17),
+];
+
+function TermsPage({ rows }: { rows: typeof termPairs }) {
   return (
-    <View style={styles.termsBlock}>
-      <View style={styles.termsHeaderRow}>
-        <Text style={styles.termsHeaderCellLeft}>Español</Text>
-        <Text style={styles.termsHeaderCellRight}>English Translation</Text>
+    <>
+      <View style={styles.termsTitleWrap}>
+        <Text style={styles.termsTitle}>NEXA RENTALS – TÉRMINOS Y CONDICIONES</Text>
+        <Text style={styles.termsSubtitle}>
+          Spanish version on the left · English translation on the right
+        </Text>
       </View>
 
-      <View style={styles.termsColumns}>
-        <View style={styles.termsColumnLeft}>
-          {spanish.map((term, index) => (
-            <Text key={`es-${startNumber + index}`} style={styles.termText}>
-              <Text style={styles.termNumber}>{startNumber + index + 1}. </Text>
-              {term}
-            </Text>
-          ))}
+      <View style={styles.termsTable}>
+        <View style={styles.termsHeadRow}>
+          <View style={styles.termsHeadCellLeft}>
+            <Text style={styles.termsHeadText}>Español</Text>
+          </View>
+          <View style={styles.termsHeadCellRight}>
+            <Text style={styles.termsHeadText}>English Translation</Text>
+          </View>
         </View>
 
-        <View style={styles.termsColumnRight}>
-          {english.map((term, index) => (
-            <Text key={`en-${startNumber + index}`} style={styles.termText}>
-              <Text style={styles.termNumber}>{startNumber + index + 1}. </Text>
-              {term}
+        {rows.map((row) => (
+          <View key={row.number} style={styles.termsRow}>
+            <Text style={styles.termsLeftCell}>
+              <Text style={styles.termNumber}>{row.number}. </Text>
+              {row.spanish}
             </Text>
-          ))}
-        </View>
+
+            <Text style={styles.termsRightCell}>
+              <Text style={styles.termNumber}>{row.number}. </Text>
+              {row.english}
+            </Text>
+          </View>
+        ))}
       </View>
-    </View>
+    </>
   );
 }
 
 function FinalPageContent() {
   return (
     <>
-      <View style={styles.simplePageTitleWrap}>
-        <Text style={styles.simplePageTitle}>
-          Additional Conditions · Condiciones Adicionales
-        </Text>
-      </View>
+      <Text style={styles.lastPageTitle}>Additional Clauses · Cláusulas Adicionales</Text>
 
-      <View style={styles.finalSection}>
-        <Text style={styles.finalSectionTitle}>Roadside Assistance:</Text>
-        <Text style={styles.finalText}>
+      <View style={styles.simpleBlock}>
+        <Text style={styles.blockTitle}>Roadside Assistance:</Text>
+        <Text style={styles.paragraph}>
           Free assistance is provided within 10 km only in case of mechanical
           failure not caused by the customer. If assistance is required outside
           this area, or due to customer fault, including misuse, negligence,
@@ -607,8 +710,8 @@ function FinalPageContent() {
           The exact cost will be confirmed before service.
         </Text>
 
-        <Text style={styles.finalSectionTitle}>Asistencia en Carretera:</Text>
-        <Text style={styles.finalText}>
+        <Text style={styles.blockTitle}>Asistencia en Carretera:</Text>
+        <Text style={styles.paragraph}>
           La asistencia es gratuita dentro de un radio de 10 km únicamente en
           caso de avería mecánica no causada por el cliente. Si la asistencia
           se requiere fuera de esta zona, o por causa del cliente, incluyendo
@@ -620,8 +723,8 @@ function FinalPageContent() {
         </Text>
       </View>
 
-      <View style={styles.finalSection}>
-        <Text style={styles.finalText}>
+      <View style={styles.simpleBlock}>
+        <Text style={styles.paragraph}>
           The customer declares that they have read, understood, and fully
           accepted all the general and specific terms and conditions of this
           rental agreement, including those related to the use of the vehicle,
@@ -630,7 +733,7 @@ function FinalPageContent() {
           the entire duration of the contract.
         </Text>
 
-        <Text style={styles.finalText}>
+        <Text style={styles.paragraph}>
           El cliente declara haber leído, comprendido y aceptado íntegramente
           todas las condiciones generales y particulares del presente contrato
           de alquiler, incluyendo las relativas al uso del vehículo,
@@ -640,31 +743,42 @@ function FinalPageContent() {
         </Text>
       </View>
 
-      <View style={styles.signaturesRow}>
-        <Text style={styles.signatureItem}>Firma Cliente</Text>
-        <Text style={styles.signatureItem}>Firma Conductor</Text>
-        <Text style={styles.signatureItem}>Firma 2º Conductor</Text>
-        <Text style={styles.signatureItem}>Firma Empresa</Text>
+      <View style={styles.signaturePanel}>
+        <Text style={styles.signaturePanelTitle}>
+          Acceptance and Signatures · Aceptación y Firmas
+        </Text>
+
+        <View style={styles.signatures}>
+          <View style={styles.signatureCard}>
+            <Text style={styles.signatureLine}>Firma Cliente</Text>
+            <Text style={styles.signatureSmall}>Customer Signature</Text>
+          </View>
+
+          <View style={styles.signatureCard}>
+            <Text style={styles.signatureLine}>Firma Conductor</Text>
+            <Text style={styles.signatureSmall}>Driver Signature</Text>
+          </View>
+
+          <View style={styles.signatureCard}>
+            <Text style={styles.signatureLine}>Firma 2º Conductor</Text>
+            <Text style={styles.signatureSmall}>Second Driver</Text>
+          </View>
+
+          <View style={styles.signatureCard}>
+            <Text style={styles.signatureLine}>Firma Empresa</Text>
+            <Text style={styles.signatureSmall}>Company Signature</Text>
+          </View>
+        </View>
       </View>
     </>
   );
 }
 
-export default function NexaContractPDF({
-  booking,
-}: {
-  booking: BookingData;
-}) {
+export default function NexaContractPDF({ booking }: { booking: BookingData }) {
   const data = booking.contractData;
   const vehicle = booking.vehicle;
 
   const vehicleText = `${vehicle.codigo} · ${vehicle.matricula} · ${vehicle.marca} ${vehicle.modelo}`;
-
-  const page2Spanish = spanishTerms.slice(0, 16);
-  const page2English = englishTerms.slice(0, 16);
-
-  const page3Spanish = spanishTerms.slice(16);
-  const page3English = englishTerms.slice(16);
 
   return (
     <Document
@@ -674,10 +788,9 @@ export default function NexaContractPDF({
       creator="NEXA OS"
       producer="NEXA OS"
     >
-      {/* PAGE 1 */}
       <Page size="A4" style={styles.page}>
         <Watermark />
-        <Footer contractNumber={data.numeroContrato} />
+        <PageNumber />
 
         <FrontHeader
           contractNumber={data.numeroContrato}
@@ -685,99 +798,218 @@ export default function NexaContractPDF({
           vehicleText={vehicleText}
         />
 
-        <View style={styles.row}>
-          <View style={styles.cardHalf}>
-            <Text style={styles.cardTitle}>Datos del vehículo</Text>
-            <Field label="Código" value={vehicle.codigo} />
-            <Field label="Matrícula" value={vehicle.matricula} />
-            <Field
-              label="Marca / Modelo"
-              value={`${vehicle.marca} ${vehicle.modelo}`}
-            />
-            <Field label="Año" value={vehicle.ano} />
-            <Field label="Bastidor VIN" value={vehicle.bastidor} />
-            <Field label="Combustible" value={vehicle.combustible} />
-          </View>
-
-          <View style={styles.cardHalf}>
-            <Text style={styles.cardTitle}>Datos del alquiler</Text>
-            <Field
-              label="Entrega del vehículo"
-              value={data.oficinaEntrega || "OFICINA MAGALUF"}
-            />
-            <Field
-              label="Recogida del vehículo"
-              value={data.oficinaDevolucion || "OFICINA MAGALUF"}
-            />
-            <Field label="Fecha entrega" value={data.fechaEntrega} />
-            <Field label="Hora entrega" value={data.horaEntrega} />
-            <Field label="Fecha devolución" value={data.fechaDevolucion} />
-            <Field label="Hora devolución" value={data.horaDevolucion} />
-            <Field label="KM salida" value={data.kmSalida || "—"} />
-            <Field label="Combustible salida" value={data.combustibleSalida} />
-            <Field label="KM entrada" value="" />
-            <Field label="Combustible entrada" value="" />
+        <View style={styles.frontSummaryBox}>
+          <View style={styles.frontSummaryRow}>
+            <View style={styles.frontSummaryItem}>
+              <Text style={styles.frontSummaryLabel}>Cliente</Text>
+              <Text style={styles.frontSummaryValue}>{clean(data.nombreCliente)}</Text>
+            </View>
+            <View style={styles.frontSummaryItem}>
+              <Text style={styles.frontSummaryLabel}>Vehículo</Text>
+              <Text style={styles.frontSummaryValue}>{vehicleText}</Text>
+            </View>
+            <View style={styles.frontSummaryItem}>
+              <Text style={styles.frontSummaryLabel}>Periodo</Text>
+              <Text style={styles.frontSummaryValue}>
+                {clean(data.fechaEntrega)} → {clean(data.fechaDevolucion)}
+              </Text>
+            </View>
           </View>
         </View>
 
-        <View style={styles.row}>
-          <View style={styles.cardHalf}>
-            <Text style={styles.cardTitle}>Datos del cliente</Text>
-            <Field label="Nombre" value={data.nombreCliente} />
-            <Field label="DNI / Pasaporte" value={data.dniPasaporte} />
-            <Field label="Teléfono" value={data.telefono} />
-            <Field label="Email" value={data.email} />
-            <Field label="Dirección" value={data.direccion} />
-          </View>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Datos del vehículo</Text>
+          <View style={styles.sectionLine} />
 
-          <View style={styles.cardHalf}>
-            <Text style={styles.cardTitle}>Datos del conductor/a</Text>
-            <Field label="Nombre" value={data.nombreCliente} />
-            <Field label="Permiso de conducir" value={data.permisoConducir} />
-            <Field label="País de expedición" value={data.paisExpedicion} />
-            <Field label="Fecha de caducidad" value={data.fechaCaducidad} />
-            <Field label="Dirección" value={data.direccion} />
-          </View>
-        </View>
-
-        <View style={styles.cardFull}>
-          <Text style={styles.cardTitle}>
-            Datos del segundo/a conductor/a si aplica
-          </Text>
           <View style={styles.row}>
-            <View style={{ width: "48.7%" }}>
+            <View style={styles.col}>
+              <Field label="Código" value={vehicle.codigo} />
+            </View>
+            <View style={styles.col}>
+              <Field label="Matrícula" value={vehicle.matricula} />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field
+                label="Marca / Modelo"
+                value={`${vehicle.marca} ${vehicle.modelo}`}
+              />
+            </View>
+            <View style={styles.col}>
+              <Field label="Año" value={vehicle.ano} />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field label="Bastidor VIN" value={vehicle.bastidor} />
+            </View>
+            <View style={styles.col}>
+              <Field label="Combustible" value={vehicle.combustible} />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Datos del alquiler</Text>
+          <View style={styles.sectionLine} />
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field
+                label="Entrega del vehículo"
+                value={data.oficinaEntrega || "OFICINA MAGALUF"}
+              />
+            </View>
+            <View style={styles.col}>
+              <Field
+                label="Recogida del vehículo"
+                value={data.oficinaDevolucion || "OFICINA MAGALUF"}
+              />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field label="Fecha entrega" value={data.fechaEntrega} />
+            </View>
+            <View style={styles.col}>
+              <Field label="Hora entrega" value={data.horaEntrega} />
+            </View>
+            <View style={styles.col}>
+              <Field label="KM salida" value={data.kmSalida || "—"} />
+            </View>
+            <View style={styles.col}>
+              <Field
+                label="Combustible salida"
+                value={data.combustibleSalida}
+              />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field label="Fecha devolución" value={data.fechaDevolucion} />
+            </View>
+            <View style={styles.col}>
+              <Field label="Hora devolución" value={data.horaDevolucion} />
+            </View>
+            <View style={styles.col}>
+              <Field label="KM entrada" value="" />
+            </View>
+            <View style={styles.col}>
+              <Field label="Combustible entrada" value="" />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Datos del cliente</Text>
+          <View style={styles.sectionLine} />
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field label="Nombre" value={data.nombreCliente} />
+            </View>
+            <View style={styles.col}>
+              <Field label="DNI / Pasaporte" value={data.dniPasaporte} />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field label="Teléfono" value={data.telefono} />
+            </View>
+            <View style={styles.col}>
+              <Field label="Email" value={data.email} />
+            </View>
+          </View>
+
+          <Field label="Dirección" value={data.direccion} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Datos del conductor / a</Text>
+          <View style={styles.sectionLine} />
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field label="Nombre" value={data.nombreCliente} />
+            </View>
+            <View style={styles.col}>
+              <Field
+                label="Permiso de conducir"
+                value={data.permisoConducir}
+              />
+            </View>
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field label="País de expedición" value={data.paisExpedicion} />
+            </View>
+            <View style={styles.col}>
+              <Field
+                label="Fecha de caducidad"
+                value={data.fechaCaducidad}
+              />
+            </View>
+          </View>
+
+          <Field label="Dirección" value={data.direccion} />
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>
+            Datos del segundo / a conductor / a si aplica
+          </Text>
+          <View style={styles.sectionLine} />
+
+          <View style={styles.row}>
+            <View style={styles.col}>
               <Field label="Nombre" value={data.segundoNombre} />
+            </View>
+            <View style={styles.col}>
               <Field
                 label="Permiso de conducir"
                 value={data.segundoPermiso}
               />
             </View>
-            <View style={{ width: "48.7%" }}>
-              <Field label="País de expedición" value={data.segundoPais} />
+          </View>
+
+          <View style={styles.row}>
+            <View style={styles.col}>
+              <Field label="País expedición" value={data.segundoPais} />
+            </View>
+            <View style={styles.col}>
               <Field
-                label="Fecha de caducidad"
+                label="Fecha caducidad"
                 value={data.segundoFechaCaducidad}
               />
             </View>
           </View>
+
           <Field label="Dirección" value={data.segundoDireccion} />
         </View>
 
-        <View style={styles.cardFull}>
-          <Text style={styles.cardTitle}>Detalles del alquiler</Text>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Detalles del alquiler</Text>
+          <View style={styles.sectionLine} />
 
           <View style={styles.row}>
-            <View style={{ width: "31.5%" }}>
+            <View style={styles.col}>
               <Field label="Días" value={data.dias} />
             </View>
-            <View style={{ width: "31.5%" }}>
-              <Text style={styles.fieldRow}>
+            <View style={styles.col}>
+              <Text>
                 <Text style={styles.label}>Precio por día: </Text>
                 <Money value={data.precioPorDia} />
               </Text>
             </View>
-            <View style={{ width: "31.5%" }}>
-              <Text style={styles.fieldRow}>
+            <View style={styles.col}>
+              <Text>
                 <Text style={styles.label}>Total: </Text>
                 <Money value={data.total} />
               </Text>
@@ -785,17 +1017,17 @@ export default function NexaContractPDF({
           </View>
 
           <View style={styles.row}>
-            <View style={{ width: "31.5%" }}>
+            <View style={styles.col}>
               <Field label="Fianza" value={data.fianza || "150 €"} />
             </View>
-            <View style={{ width: "31.5%" }}>
-              <Text style={styles.fieldRow}>
+            <View style={styles.col}>
+              <Text>
                 <Text style={styles.label}>Pagado: </Text>
                 <Money value={data.pagado} />
               </Text>
             </View>
-            <View style={{ width: "31.5%" }}>
-              <Field label="Franquicia máxima" value={data.franquicia || "800 €"} />
+            <View style={styles.col}>
+              <Field label="Franquicia máxima" value="800 €" />
             </View>
           </View>
 
@@ -807,59 +1039,29 @@ export default function NexaContractPDF({
             }
           />
 
-          <Text style={styles.noteLine}>
-            El arrendatario asume una franquicia máxima de 800€ en caso de
-            daños.
-          </Text>
+          <View style={styles.importantLineBox}>
+            <Text style={styles.importantLine}>
+              El arrendatario asume una franquicia máxima de 800€ en caso de daños.
+            </Text>
+          </View>
         </View>
       </Page>
 
-      {/* PAGE 2 */}
       <Page size="A4" style={styles.page}>
         <Watermark />
-        <Footer contractNumber={data.numeroContrato} />
-
-        <View style={styles.simplePageTitleWrap}>
-          <Text style={styles.simplePageTitle}>
-            NEXA RENTALS – TÉRMINOS Y CONDICIONES
-          </Text>
-          <Text style={styles.simplePageSubtitle}>
-            Spanish version on the left · English translation on the right
-          </Text>
-        </View>
-
-        <TermsColumns
-          spanish={page2Spanish}
-          english={page2English}
-          startNumber={0}
-        />
+        <PageNumber />
+        <TermsPage rows={termChunks[0]} />
       </Page>
 
-      {/* PAGE 3 */}
       <Page size="A4" style={styles.page}>
         <Watermark />
-        <Footer contractNumber={data.numeroContrato} />
-
-        <View style={styles.simplePageTitleWrap}>
-          <Text style={styles.simplePageTitle}>
-            NEXA RENTALS – TÉRMINOS Y CONDICIONES
-          </Text>
-          <Text style={styles.simplePageSubtitle}>
-            Spanish version on the left · English translation on the right
-          </Text>
-        </View>
-
-        <TermsColumns
-          spanish={page3Spanish}
-          english={page3English}
-          startNumber={16}
-        />
+        <PageNumber />
+        <TermsPage rows={termChunks[1]} />
       </Page>
 
-      {/* PAGE 4 */}
       <Page size="A4" style={styles.page}>
         <Watermark />
-        <Footer contractNumber={data.numeroContrato} />
+        <PageNumber />
         <FinalPageContent />
       </Page>
     </Document>
