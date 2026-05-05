@@ -74,13 +74,13 @@ const TOP_LOGO_URL = `${SITE_URL}/images/nexa-logo.png`;
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 22,
-    paddingBottom: 42,
+    paddingTop: 20,
+    paddingBottom: 40,
     paddingHorizontal: 24,
-    fontSize: 7.3,
+    fontSize: 7.2,
     fontFamily: "Helvetica",
     color: "#111111",
-    lineHeight: 1.2,
+    lineHeight: 1.17,
     position: "relative",
     backgroundColor: "#ffffff",
   },
@@ -99,7 +99,7 @@ const styles = StyleSheet.create({
 
   finalPage: {
     paddingTop: 26,
-    paddingBottom: 42,
+    paddingBottom: 40,
     paddingHorizontal: 24,
     fontSize: 7.3,
     fontFamily: "Helvetica",
@@ -154,26 +154,26 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
     borderColor: "#101010",
     padding: 4,
-    marginBottom: 8,
+    marginBottom: 7,
   },
 
   premiumInner: {
     borderWidth: 0.8,
     borderColor: "#101010",
-    padding: 10,
+    padding: 9,
   },
 
   topBar: {
     backgroundColor: "#111111",
     paddingVertical: 4,
     paddingHorizontal: 8,
-    marginBottom: 9,
+    marginBottom: 8,
   },
 
   topBarText: {
     textAlign: "center",
     color: "#ffffff",
-    fontSize: 7.1,
+    fontSize: 7,
     fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
     letterSpacing: 1.2,
@@ -186,14 +186,14 @@ const styles = StyleSheet.create({
   },
 
   logoBlock: {
-    width: 195,
+    width: 190,
     justifyContent: "center",
     alignItems: "flex-start",
   },
 
   logo: {
-    width: 185,
-    height: 80,
+    width: 180,
+    height: 76,
     objectFit: "contain",
   },
 
@@ -203,31 +203,31 @@ const styles = StyleSheet.create({
   },
 
   brandTitle: {
-    fontSize: 10.2,
+    fontSize: 10,
     fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
     letterSpacing: 0.5,
-    marginBottom: 4,
+    marginBottom: 3,
   },
 
   companyLine: {
-    fontSize: 7.2,
-    marginBottom: 2,
+    fontSize: 7,
+    marginBottom: 1.6,
   },
 
   contractBox: {
-    width: 122,
+    width: 120,
     borderWidth: 1,
     borderColor: "#111111",
     backgroundColor: "#fbfbfb",
-    paddingVertical: 10,
+    paddingVertical: 9,
     paddingHorizontal: 8,
     alignItems: "center",
     justifyContent: "center",
   },
 
   contractLabel: {
-    fontSize: 6.7,
+    fontSize: 6.6,
     textTransform: "uppercase",
     letterSpacing: 0.8,
     marginBottom: 5,
@@ -241,12 +241,12 @@ const styles = StyleSheet.create({
   },
 
   officialText: {
-    marginTop: 8,
+    marginTop: 7,
     paddingTop: 5,
     borderTopWidth: 0.7,
     borderTopColor: "#111111",
     textAlign: "center",
-    fontSize: 7.2,
+    fontSize: 7,
     fontFamily: "Helvetica-Bold",
     letterSpacing: 0.8,
     textTransform: "uppercase",
@@ -256,8 +256,8 @@ const styles = StyleSheet.create({
     borderWidth: 0.8,
     borderColor: "#111111",
     backgroundColor: "#f7f7f7",
-    padding: 7,
-    marginBottom: 7,
+    padding: 6.5,
+    marginBottom: 6,
   },
 
   summaryRow: {
@@ -270,7 +270,7 @@ const styles = StyleSheet.create({
   },
 
   summaryLabel: {
-    fontSize: 6.1,
+    fontSize: 6,
     color: "#555555",
     textTransform: "uppercase",
     letterSpacing: 0.5,
@@ -278,7 +278,7 @@ const styles = StyleSheet.create({
   },
 
   summaryValue: {
-    fontSize: 8,
+    fontSize: 7.8,
     fontFamily: "Helvetica-Bold",
     color: "#000000",
   },
@@ -286,13 +286,13 @@ const styles = StyleSheet.create({
   section: {
     borderWidth: 0.8,
     borderColor: "#111111",
-    padding: 7,
-    marginBottom: 7,
+    padding: 6.5,
+    marginBottom: 6,
     backgroundColor: "#ffffff",
   },
 
   sectionTitle: {
-    fontSize: 8.2,
+    fontSize: 8,
     fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
     letterSpacing: 0.4,
@@ -303,12 +303,12 @@ const styles = StyleSheet.create({
   sectionDivider: {
     height: 1,
     backgroundColor: "#111111",
-    marginBottom: 6,
+    marginBottom: 5,
   },
 
   row: {
     flexDirection: "row",
-    marginBottom: 3.5,
+    marginBottom: 3,
   },
 
   col: {
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
 
   importantLine: {
     textAlign: "center",
-    fontSize: 7.8,
+    fontSize: 7.7,
     fontFamily: "Helvetica-Bold",
     color: "#000000",
   },
@@ -542,19 +542,14 @@ function Watermark() {
   );
 }
 
-function PremiumFooter() {
+function PremiumFooter({ page }: { page: string }) {
   return (
     <View style={styles.premiumFooter}>
       <Text style={styles.premiumFooterLeft}>
         Official NEXA RENTALS contract · Generated using NEXA OS
       </Text>
 
-      <Text
-        style={styles.premiumFooterRight}
-        render={({ pageNumber, totalPages }) =>
-          `Page ${pageNumber} / ${totalPages}`
-        }
-      />
+      <Text style={styles.premiumFooterRight}>{page}</Text>
     </View>
   );
 }
@@ -569,7 +564,7 @@ function FrontHeader({
   vehicleText?: string;
 }) {
   return (
-    <View style={styles.premiumFrame}>
+    <View style={styles.premiumFrame} wrap={false}>
       <View style={styles.premiumInner}>
         <View style={styles.topBar}>
           <Text style={styles.topBarText}>
@@ -1082,19 +1077,19 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
           </View>
         </View>
 
-        <PremiumFooter />
+        <PremiumFooter page="Page 1 / 3" />
       </Page>
 
       <Page size="A4" style={styles.termsPage} wrap={false}>
         <Watermark />
         <TermsBlock />
-        <PremiumFooter />
+        <PremiumFooter page="Page 2 / 3" />
       </Page>
 
       <Page size="A4" style={styles.finalPage}>
         <Watermark />
         <FinalPageContent />
-        <PremiumFooter />
+        <PremiumFooter page="Page 3 / 3" />
       </Page>
     </Document>
   );
