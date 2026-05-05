@@ -86,13 +86,13 @@ const styles = StyleSheet.create({
   },
 
   termsPage: {
-    paddingTop: 12,
-    paddingBottom: 18,
-    paddingHorizontal: 24,
+    paddingTop: 9,
+    paddingBottom: 14,
+    paddingHorizontal: 18,
     fontSize: 7.3,
     fontFamily: "Helvetica",
     color: "#000000",
-    lineHeight: 1.15,
+    lineHeight: 1.12,
     position: "relative",
     backgroundColor: "#ffffff",
   },
@@ -109,13 +109,30 @@ const styles = StyleSheet.create({
     backgroundColor: "#ffffff",
   },
 
-  pageNumber: {
+  premiumFooter: {
     position: "absolute",
     bottom: 8,
-    right: 24,
-    fontSize: 8,
+    left: 18,
+    right: 18,
+    borderTopWidth: 0.65,
+    borderTopColor: "#111111",
+    paddingTop: 3.5,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+
+  premiumFooterLeft: {
+    fontSize: 6.4,
     fontFamily: "Helvetica-Bold",
-    color: "#222222",
+    color: "#333333",
+    letterSpacing: 0.25,
+  },
+
+  premiumFooterRight: {
+    fontSize: 7.2,
+    fontFamily: "Helvetica-Bold",
+    color: "#111111",
   },
 
   watermarkText: {
@@ -324,14 +341,14 @@ const styles = StyleSheet.create({
   },
 
   termsTitleWrap: {
-    marginBottom: 4,
+    marginBottom: 3,
   },
 
   termsTitle: {
     textAlign: "center",
-    fontSize: 10.2,
+    fontSize: 9.6,
     fontFamily: "Helvetica-Bold",
-    letterSpacing: 0.45,
+    letterSpacing: 0.35,
     textTransform: "uppercase",
     color: "#000000",
     marginBottom: 1,
@@ -339,7 +356,7 @@ const styles = StyleSheet.create({
 
   termsSubtitle: {
     textAlign: "center",
-    fontSize: 6.7,
+    fontSize: 6.4,
     color: "#222222",
     fontFamily: "Helvetica-Bold",
   },
@@ -349,8 +366,7 @@ const styles = StyleSheet.create({
     borderColor: "#000000",
     backgroundColor: "#ffffff",
     width: "100%",
-    minHeight: 705,
-    flexGrow: 1,
+    minHeight: 760,
   },
 
   termsFlowHeader: {
@@ -362,7 +378,7 @@ const styles = StyleSheet.create({
 
   termsFlowHeaderCell: {
     flex: 1,
-    paddingVertical: 4,
+    paddingVertical: 3.6,
     paddingHorizontal: 4,
   },
 
@@ -373,7 +389,7 @@ const styles = StyleSheet.create({
 
   termsFlowHeaderText: {
     textAlign: "center",
-    fontSize: 7,
+    fontSize: 6.8,
     fontFamily: "Helvetica-Bold",
     textTransform: "uppercase",
     color: "#ffffff",
@@ -382,7 +398,7 @@ const styles = StyleSheet.create({
   termsFlowBody: {
     flexDirection: "row",
     alignItems: "stretch",
-    flexGrow: 1,
+    minHeight: 735,
   },
 
   termsFlowColumnLeft: {
@@ -392,7 +408,6 @@ const styles = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 3,
     paddingHorizontal: 4,
-    flexGrow: 1,
   },
 
   termsFlowColumnRight: {
@@ -400,14 +415,13 @@ const styles = StyleSheet.create({
     paddingTop: 3,
     paddingBottom: 3,
     paddingHorizontal: 4,
-    flexGrow: 1,
   },
 
   termParagraph: {
-    fontSize: 4.65,
-    lineHeight: 1.06,
+    fontSize: 5.18,
+    lineHeight: 1.075,
     color: "#000000",
-    marginBottom: 1.65,
+    marginBottom: 1.75,
     fontFamily: "Helvetica",
   },
 
@@ -527,15 +541,18 @@ function Watermark() {
   );
 }
 
-function PageNumber() {
+function PremiumFooter() {
   return (
-    <Text
-      style={styles.pageNumber}
-      fixed
-      render={({ pageNumber, totalPages }) =>
-        `Page ${pageNumber} / ${totalPages}`
-      }
-    />
+    <View style={styles.premiumFooter} fixed>
+      <Text style={styles.premiumFooterLeft}>
+        This contract has been officially generated using NEXA OS · Platform NEXA OS
+      </Text>
+
+      <Text
+        style={styles.premiumFooterRight}
+        render={({ pageNumber, totalPages }) => `Page ${pageNumber} / ${totalPages}`}
+      />
+    </View>
   );
 }
 
@@ -578,8 +595,7 @@ function FrontHeader({
               <Text style={styles.label}>NIF/NIE: </Text>Y4930755Y
             </Text>
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>Dirección: </Text>CARRER GALEÓN 13,
-              LOCAL 57
+              <Text style={styles.label}>Dirección: </Text>CARRER GALEÓN 13, LOCAL 57
             </Text>
 
             {customerName ? (
@@ -687,7 +703,7 @@ function TermsBlock() {
         </Text>
       </View>
 
-      <View style={styles.termsFlowBox}>
+      <View style={styles.termsFlowBox} wrap={false}>
         <View style={styles.termsFlowHeader}>
           <View style={[styles.termsFlowHeaderCell, styles.termsFlowHeaderLeft]}>
             <Text style={styles.termsFlowHeaderText}>Español</Text>
@@ -734,11 +750,11 @@ function FinalPageContent() {
         <Text style={styles.paragraph}>
           Free assistance is provided within 10 km only in case of mechanical
           failure not caused by the customer. If assistance is required outside
-          this area, or due to customer fault, including misuse, negligence, flat
-          battery, lost keys, wrong fuel or similar, a service fee of €50–€200
-          will apply depending on distance and type of service. Services may
-          include on-site repair, towing, or remote assistance. The exact cost
-          will be confirmed before service.
+          this area, or due to customer fault, including misuse, negligence,
+          flat battery, lost keys, wrong fuel or similar, a service fee of
+          €50–€200 will apply depending on distance and type of service.
+          Services may include on-site repair, towing, or remote assistance.
+          The exact cost will be confirmed before service.
         </Text>
 
         <Text style={styles.blockTitle}>Asistencia en Carretera:</Text>
@@ -821,7 +837,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
     >
       <Page size="A4" style={styles.page}>
         <Watermark />
-        <PageNumber />
+        <PremiumFooter />
 
         <FrontHeader
           contractNumber={data.numeroContrato}
@@ -1065,15 +1081,15 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
         </View>
       </Page>
 
-      <Page size="A4" style={styles.termsPage}>
+      <Page size="A4" style={styles.termsPage} wrap={false}>
         <Watermark />
-        <PageNumber />
+        <PremiumFooter />
         <TermsBlock />
       </Page>
 
       <Page size="A4" style={styles.finalPage}>
         <Watermark />
-        <PageNumber />
+        <PremiumFooter />
         <FinalPageContent />
       </Page>
     </Document>
