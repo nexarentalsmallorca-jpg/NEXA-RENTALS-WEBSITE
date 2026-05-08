@@ -32,6 +32,17 @@ type UploadedDocumentPaths = {
   idBackName: string;
 };
 
+type AvailabilityResult = {
+  ok: boolean;
+  available: boolean;
+  vehicleName?: string;
+  totalFleet?: number;
+  bookedCount?: number;
+  availableCount?: number;
+  message?: string;
+  nextAvailableText?: string;
+};
+
 /* ---------------- fleet ---------------- */
 const VEHICLES: Vehicle[] = [
   {
@@ -177,6 +188,50 @@ function eurFromCents(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
+async function checkCheckoutAvailability({
+  vehicleId,
+  vehicleName,
+  plan,
+  from,
+  to,
+  pickupTime,
+  dropoffTime,
+}: {
+  vehicleId: string;
+  vehicleName: string;
+  plan: string;
+  from?: Date;
+  to?: Date;
+  pickupTime: string;
+  dropoffTime: string;
+}): Promise<AvailabilityResult | null> {
+  if (!from || !to) return null;
+
+  const params = new URLSearchParams({
+    vehicleId: String(vehicleId),
+    vehicleName: String(vehicleName),
+    plan: String(plan),
+    from: from.toLocaleDateString("en-CA"),
+    to: to.toLocaleDateString("en-CA"),
+    pickupTime: String(pickupTime),
+    dropoffTime: String(dropoffTime),
+  });
+
+  try {
+    const res = await fetch(`/api/bookings/availability?${params}`, {
+      method: "GET",
+      cache: "no-store",
+    });
+
+    if (res.status === 404) return null;
+
+    const data = (await res.json()) as AvailabilityResult;
+    return data;
+  } catch {
+    return null;
+  }
+}
+
 /* ---------------- compression ---------------- */
 const MAX_IMAGE_WIDTH = 1600;
 const JPEG_QUALITY = 0.72;
@@ -266,6 +321,8 @@ export default function CheckoutClient() {
   const pickupTime = safeParam(sp, "pickupTime") ?? "10:00";
   const dropoffTime = safeParam(sp, "dropoffTime") ?? "10:00";
   const plan = safeParam(sp, "plan") ?? "full";
+  const availabilityCheckedFromPanel = safeParam(sp, "availabilityChecked");
+  const availableCountFromPanel = safeParam(sp, "availableCount");
 
   const vehicleId = safeParam(sp, "vehicleId") ?? "s2";
 
@@ -428,6 +485,23 @@ export default function CheckoutClient() {
       setPayError(null);
       setPayLoading(true);
 
+      const liveAvailability = await checkCheckoutAvailability({
+        vehicleId: vehicle.id,
+        vehicleName: vehicle.name,
+        plan,
+        from,
+        to,
+        pickupTime,
+        dropoffTime,
+      });
+
+      if (liveAvailability?.ok && liveAvailability.available === false) {
+        throw new Error(
+          liveAvailability.message ||
+            "Sorry, this scooter is no longer available for the selected date/time. Please choose another date or time."
+        );
+      }
+
       const bookingId = `bk_${vehicle.id}_${Date.now()}`;
       const customerName = `${firstName.trim()} ${surname.trim()}`.trim();
 
@@ -452,6 +526,13 @@ export default function CheckoutClient() {
           vehicleId: vehicle.id,
           plan,
           ratePerDay: discountedPerDayEur,
+          availabilityChecked: liveAvailability?.ok
+            ? "checkout-live"
+            : availabilityCheckedFromPanel || "pending-api",
+          availableCount:
+            typeof liveAvailability?.availableCount === "number"
+              ? String(liveAvailability.availableCount)
+              : availableCountFromPanel || "",
           notes: notes.trim(),
           dlFrontName: uploadedDocs.dlFrontName,
           dlBackName: uploadedDocs.dlBackName,
@@ -661,7 +742,7 @@ export default function CheckoutClient() {
           </section>
         </div>
 
-        {/* ---------------- DESKTOP CHECKOUT - KEPT SAME ---------------- */}
+        {/* ---------------- DESKTOP CHECKOUT ---------------- */}
         <div className="hidden grid-cols-1 gap-6 lg:grid lg:grid-cols-[1.02fr_0.98fr] xl:grid-cols-[1.05fr_0.95fr]">
           <section className="space-y-6">
             <VehicleCard
@@ -1562,7 +1643,7 @@ function CheckoutDetailsSide({
         >
           <span className="relative z-10 flex items-center justify-center">
             {payLoading
-              ? "Preparing secure checkout..."
+              ? "Checking availability and preparing checkout..."
               : "Pay 50% reservation now"}
           </span>
 

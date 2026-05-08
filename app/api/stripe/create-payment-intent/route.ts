@@ -1,6 +1,9 @@
 import { NextResponse } from "next/server";
 import Stripe from "stripe";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 // Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
@@ -9,33 +12,57 @@ function calcDeposit(totalAmount: number) {
   return Math.round(totalAmount * 0.5);
 }
 
+function cleanMetadataValue(value: unknown, maxLength = 500) {
+  if (value === null || value === undefined) return "";
+  return String(value).slice(0, maxLength);
+}
+
 export async function POST(req: Request) {
   try {
+    if (!process.env.STRIPE_SECRET_KEY) {
+      return NextResponse.json(
+        { error: "Stripe secret key is not configured." },
+        { status: 500 }
+      );
+    }
+
     const body = await req.json();
 
     const {
       bookingId,
       totalAmount,
       currency = "eur",
+
       customerEmail,
       customerName,
       phone,
+
       pickupDateISO,
       returnDateISO,
       pickupTime,
       dropoffTime,
       pickupLocation,
+
       bikeName,
       vehicleId,
+      plan,
+      ratePerDay,
+
+      availabilityChecked,
+      availableCount,
+
       notes,
+
       dlFrontName,
       dlBackName,
       idFrontName,
       idBackName,
+
       dlFrontPath,
       dlBackPath,
       idFrontPath,
       idBackPath,
+
       marketingOptIn,
     } = body;
 
@@ -54,51 +81,99 @@ export async function POST(req: Request) {
       );
     }
 
+    if (!customerEmail) {
+      return NextResponse.json(
+        { error: "Missing customer email" },
+        { status: 400 }
+      );
+    }
+
+    if (!customerName) {
+      return NextResponse.json(
+        { error: "Missing customer name" },
+        { status: 400 }
+      );
+    }
+
+    if (!phone) {
+      return NextResponse.json(
+        { error: "Missing customer phone" },
+        { status: 400 }
+      );
+    }
+
+    if (!vehicleId || !bikeName) {
+      return NextResponse.json(
+        { error: "Missing vehicle details" },
+        { status: 400 }
+      );
+    }
+
+    if (!pickupDateISO || !returnDateISO || !pickupTime || !dropoffTime) {
+      return NextResponse.json(
+        { error: "Missing rental date or time details" },
+        { status: 400 }
+      );
+    }
+
     const depositAmount = calcDeposit(totalAmount);
+    const remainingAmount = totalAmount - depositAmount;
 
     // Create PaymentIntent (CUSTOM CHECKOUT)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: depositAmount,
-      currency: currency.toLowerCase(),
+      currency: String(currency).toLowerCase(),
 
       automatic_payment_methods: {
         enabled: true,
       },
 
-      receipt_email: customerEmail,
+      receipt_email: cleanMetadataValue(customerEmail, 250),
 
       metadata: {
-        bookingId: String(bookingId),
+        bookingId: cleanMetadataValue(bookingId, 120),
+
         totalAmount: String(totalAmount),
         depositAmount: String(depositAmount),
-        remainingAmount: String(totalAmount - depositAmount),
+        remainingAmount: String(remainingAmount),
 
         paymentType: "pay_50_percent",
+        booking_source: "website",
+        booking_status: "payment_pending",
 
-        customer_email: customerEmail ? String(customerEmail) : "",
-        customer_name: customerName ? String(customerName) : "",
-        phone: phone ? String(phone) : "",
+        customer_email: cleanMetadataValue(customerEmail, 250),
+        customer_name: cleanMetadataValue(customerName, 250),
+        phone: cleanMetadataValue(phone, 80),
 
-        vehicle_id: vehicleId ? String(vehicleId) : "",
-        vehicle_name: bikeName ? String(bikeName) : "",
+        vehicle_id: cleanMetadataValue(vehicleId, 80),
+        vehicle_name: cleanMetadataValue(bikeName, 160),
 
-        pickup_date: pickupDateISO ? String(pickupDateISO) : "",
-        dropoff_date: returnDateISO ? String(returnDateISO) : "",
-        pickup_time: pickupTime ? String(pickupTime) : "",
-        dropoff_time: dropoffTime ? String(dropoffTime) : "",
-        pickup_location: pickupLocation ? String(pickupLocation) : "",
+        plan: cleanMetadataValue(plan || "full", 40),
+        rate_per_day: ratePerDay !== undefined ? String(ratePerDay) : "",
 
-        notes: notes ? String(notes).slice(0, 500) : "",
+        pickup_date: cleanMetadataValue(pickupDateISO, 40),
+        dropoff_date: cleanMetadataValue(returnDateISO, 40),
+        pickup_time: cleanMetadataValue(pickupTime, 40),
+        dropoff_time: cleanMetadataValue(dropoffTime, 40),
+        pickup_location: cleanMetadataValue(pickupLocation, 250),
 
-        dl_front_name: dlFrontName ? String(dlFrontName) : "",
-        dl_back_name: dlBackName ? String(dlBackName) : "",
-        id_front_name: idFrontName ? String(idFrontName) : "",
-        id_back_name: idBackName ? String(idBackName) : "",
+        availability_checked: cleanMetadataValue(
+          availabilityChecked || "pending-api",
+          80
+        ),
+        available_count: cleanMetadataValue(availableCount, 40),
 
-        dl_front_path: dlFrontPath ? String(dlFrontPath) : "",
-        dl_back_path: dlBackPath ? String(dlBackPath) : "",
-        id_front_path: idFrontPath ? String(idFrontPath) : "",
-        id_back_path: idBackPath ? String(idBackPath) : "",
+        notes: cleanMetadataValue(notes, 500),
+
+        dl_front_name: cleanMetadataValue(dlFrontName, 180),
+        dl_back_name: cleanMetadataValue(dlBackName, 180),
+        id_front_name: cleanMetadataValue(idFrontName, 180),
+        id_back_name: cleanMetadataValue(idBackName, 180),
+
+        dl_front_path: cleanMetadataValue(dlFrontPath, 250),
+        dl_back_path: cleanMetadataValue(dlBackPath, 250),
+        id_front_path: cleanMetadataValue(idFrontPath, 250),
+        id_back_path: cleanMetadataValue(idBackPath, 250),
 
         marketing_opt_in: marketingOptIn ? "yes" : "no",
       },
@@ -106,7 +181,11 @@ export async function POST(req: Request) {
 
     return NextResponse.json({
       clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      bookingId,
       depositAmount,
+      remainingAmount,
+      totalAmount,
       currency,
     });
   } catch (error: any) {

@@ -21,6 +21,19 @@ type BookingPanelV2Props = {
   onPricingChange?: (pricing: SeasonalPricing) => void;
 };
 
+type AvailabilityResult = {
+  ok: boolean;
+  available: boolean;
+  vehicleName?: string;
+  totalFleet?: number;
+  bookedCount?: number;
+  availableCount?: number;
+  message?: string;
+  nextAvailableText?: string;
+  bufferMinutes?: number;
+  fleetGroup?: string;
+};
+
 function getSeasonalPricing(date = new Date()): SeasonalPricing {
   const month = date.getMonth();
 
@@ -207,7 +220,7 @@ function normalizeVehicleName(name: string) {
   return name.trim().toLowerCase().replace(/\s+/g, " ");
 }
 
-function resolveVehicleId(vehicleName: string) {
+function resolveCheckoutVehicleId(vehicleName: string) {
   const normalized = normalizeVehicleName(vehicleName);
 
   if (normalized.includes("piaggio liberty 125")) return "s2";
@@ -215,6 +228,14 @@ function resolveVehicleId(vehicleName: string) {
   if (normalized.includes("zontes 125e")) return "s1";
 
   return "s2";
+}
+
+function resolveAvailabilityVehicleId(vehicleName: string) {
+  const normalized = normalizeVehicleName(vehicleName);
+
+  if (normalized.includes("sym symphony 125")) return "N8";
+
+  return resolveCheckoutVehicleId(vehicleName);
 }
 
 function buildWhatsAppAvailabilityLink(
@@ -633,6 +654,9 @@ export default function BookingPanelV2({
   const [showPriceDetails, setShowPriceDetails] = useState(false);
   const [enableAiCopilot, setEnableAiCopilot] = useState(false);
 
+  const [availability, setAvailability] = useState<AvailabilityResult | null>(null);
+  const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
+
   const [calendarOpen, setCalendarOpen] = useState(false);
   const [activeField, setActiveField] = useState<ActiveField>("pickup");
 
@@ -644,9 +668,7 @@ export default function BookingPanelV2({
   const pickupDropdownRef = useRef<HTMLDivElement | null>(null);
   const returnDropdownRef = useRef<HTMLDivElement | null>(null);
 
-  const [scrollStartMonth, setScrollStartMonth] = useState(
-    startOfMonth(minBookableDate)
-  );
+  const [scrollStartMonth, setScrollStartMonth] = useState(startOfMonth(minBookableDate));
   const [viewMonth, setViewMonth] = useState(startOfMonth(minBookableDate));
   const [monthsAhead, setMonthsAhead] = useState(12);
   const monthsScrollRef = useRef<HTMLDivElement | null>(null);
@@ -673,7 +695,16 @@ export default function BookingPanelV2({
     return () => mq.removeEventListener("change", update);
   }, []);
 
-  const vehicleId = useMemo(() => resolveVehicleId(vehicleName), [vehicleName]);
+  const checkoutVehicleId = useMemo(
+    () => resolveCheckoutVehicleId(vehicleName),
+    [vehicleName]
+  );
+
+  const availabilityVehicleId = useMemo(
+    () => resolveAvailabilityVehicleId(vehicleName),
+    [vehicleName]
+  );
+
   const pickupOptions = plan === "half" ? pickupHalfOptions : pickupFullOptions;
 
   const activePricing = useMemo(() => {
@@ -752,7 +783,7 @@ export default function BookingPanelV2({
     activePricing,
   ]);
 
-  const canCheckout = useMemo(() => {
+  const hasCompleteRentalSelection = useMemo(() => {
     if (plan === "half") {
       return !!range.from && !!pickupTime && !!halfReturnTime;
     }
@@ -763,6 +794,122 @@ export default function BookingPanelV2({
 
     return false;
   }, [plan, range.from, range.to, fullDayCount, pickupTime, halfReturnTime]);
+
+  const availabilityConfirmed =
+    availability?.ok === true && availability.available === true;
+
+  const isUnavailable =
+    availability?.ok === true && availability.available === false;
+
+  const canCheckout = useMemo(() => {
+    if (!hasCompleteRentalSelection) return false;
+    if (isCheckingAvailability) return false;
+    if (!availabilityConfirmed) return false;
+    if (isUnavailable) return false;
+
+    return true;
+  }, [
+    hasCompleteRentalSelection,
+    isCheckingAvailability,
+    availabilityConfirmed,
+    isUnavailable,
+  ]);
+
+  useEffect(() => {
+    setAvailability(null);
+    setNotice("");
+  }, [vehicleName, plan, range.from, range.to, pickupTime, halfReturnTime]);
+
+  useEffect(() => {
+    if (!hasCompleteRentalSelection || !plan || !range.from || !returnDate) {
+      setIsCheckingAvailability(false);
+      return;
+    }
+
+    let cancelled = false;
+
+    async function checkAvailability() {
+      setIsCheckingAvailability(true);
+
+      try {
+        const selectedFrom = range.from;
+        const selectedTo = returnDate;
+
+        if (!selectedFrom || !selectedTo || !plan) {
+          if (!cancelled) {
+            setAvailability(null);
+            setIsCheckingAvailability(false);
+          }
+          return;
+        }
+
+        const params = new URLSearchParams({
+          vehicleId: String(availabilityVehicleId),
+          vehicleName: String(vehicleName),
+          plan: String(plan),
+          from: toISODate(selectedFrom),
+          to: toISODate(selectedTo),
+          pickupTime: String(pickupTime),
+          dropoffTime: String(returnTime),
+        });
+
+        const response = await fetch(
+          `/api/admin/bookings/availability?${params.toString()}`,
+          {
+            method: "GET",
+            cache: "no-store",
+          }
+        );
+
+        if (!response.ok) {
+          if (!cancelled) {
+            setAvailability({
+              ok: false,
+              available: false,
+              message:
+                "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
+            });
+          }
+          return;
+        }
+
+        const data = (await response.json()) as AvailabilityResult;
+
+        if (!cancelled) {
+          setAvailability(data);
+        }
+      } catch {
+        if (!cancelled) {
+          setAvailability({
+            ok: false,
+            available: false,
+            message:
+              "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
+          });
+        }
+      } finally {
+        if (!cancelled) {
+          setIsCheckingAvailability(false);
+        }
+      }
+    }
+
+    const timeout = window.setTimeout(checkAvailability, 350);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timeout);
+    };
+  }, [
+    hasCompleteRentalSelection,
+    availabilityVehicleId,
+    vehicleName,
+    plan,
+    range.from,
+    returnDate,
+    pickupTime,
+    returnTime,
+  ]);
 
   function openCalendar(which: ActiveField) {
     if (!plan) {
@@ -797,10 +944,12 @@ export default function BookingPanelV2({
     setRange({});
     setNotice("");
     setShowPriceDetails(false);
+    setAvailability(null);
     setPickupTime("10:00");
     setHalfReturnTime("20:00");
     setPickupTimeOpen(false);
     setReturnTimeOpen(false);
+    setIsCheckingAvailability(false);
 
     window.setTimeout(() => {
       setActiveField("pickup");
@@ -813,6 +962,9 @@ export default function BookingPanelV2({
 
   function onPickDate(day: Date) {
     if (startOfDay(day) < minBookableDate || !plan) return;
+
+    setAvailability(null);
+    setIsCheckingAvailability(false);
 
     if (plan === "half") {
       setRange({ from: day, to: day });
@@ -862,6 +1014,27 @@ export default function BookingPanelV2({
   }
 
   function onProceed() {
+    if (isCheckingAvailability) {
+      setNotice("Checking vehicle availability. Please wait a moment.");
+      return;
+    }
+
+    if (isUnavailable) {
+      setNotice(
+        availability?.message ||
+          "This vehicle is not available for the selected date/time. Please choose another date or time."
+      );
+      return;
+    }
+
+    if (!availabilityConfirmed) {
+      setNotice(
+        availability?.message ||
+          "Live availability must be confirmed before checkout. Please wait a moment."
+      );
+      return;
+    }
+
     if (!canCheckout || !range.from) {
       setNotice("Please complete your booking details first.");
       return;
@@ -873,7 +1046,7 @@ export default function BookingPanelV2({
       plan === "half" ? activePricing.halfDayPrice : fullDayRate;
 
     const params = new URLSearchParams({
-      vehicleId,
+      vehicleId: checkoutVehicleId,
       vehicle: vehicleName,
       pickupLocation: DEFAULT_PICKUP_LOCATION,
       from: toISODate(range.from),
@@ -884,6 +1057,12 @@ export default function BookingPanelV2({
       total: String(finalTotal),
       days: String(resolvedDays),
       rate: String(resolvedRate),
+      availabilityChecked: "true",
+      availabilityVehicleId,
+      availableCount:
+        typeof availability?.availableCount === "number"
+          ? String(availability.availableCount)
+          : "",
       onlineFleetNotice:
         "For more than one scooter, we recommend booking via WhatsApp so our team can confirm availability first.",
     });
@@ -1462,6 +1641,51 @@ export default function BookingPanelV2({
         />
       </div>
 
+      {hasCompleteRentalSelection ? (
+        <div
+          className="mt-2.5 rounded-[15px] border px-3 py-2.5 text-[11px] font-bold leading-5"
+          style={{
+            background: isUnavailable
+              ? "#FFF1F1"
+              : isCheckingAvailability
+              ? "#EFF8FF"
+              : availabilityConfirmed
+              ? "#ECFDF3"
+              : "#FFF7ED",
+            borderColor: isUnavailable
+              ? "rgba(239,68,68,0.24)"
+              : isCheckingAvailability
+              ? "rgba(14,165,233,0.22)"
+              : availabilityConfirmed
+              ? "rgba(34,197,94,0.22)"
+              : "rgba(255,106,0,0.22)",
+            color: isUnavailable
+              ? "#991B1B"
+              : isCheckingAvailability
+              ? "#075985"
+              : availabilityConfirmed
+              ? "#166534"
+              : "#9C4300",
+          }}
+        >
+          {isCheckingAvailability
+            ? "Checking live scooter availability..."
+            : isUnavailable
+            ? availability?.message ||
+              "This scooter is not available for the selected date/time. Please choose another date or time."
+            : availabilityConfirmed
+            ? typeof availability?.availableCount === "number" &&
+              typeof availability?.totalFleet === "number"
+              ? `${availability.availableCount}/${availability.totalFleet} scooter(s) available for this date/time.${
+                  availability.bufferMinutes
+                    ? ` ${availability.bufferMinutes} minutes buffer included.`
+                    : ""
+                }`
+              : "Scooter available for this date/time."
+            : availability?.message || "Waiting for live availability confirmation..."}
+        </div>
+      ) : null}
+
       <div
         className="nexa-summary-box mt-2.5 rounded-[18px] p-[clamp(10px,0.9vw,12px)]"
         style={{ background: DARK }}
@@ -1492,7 +1716,7 @@ export default function BookingPanelV2({
               Total
             </div>
             <div className="nexa-total-value mt-0.5 text-[clamp(19px,1.6vw,22px)] font-black text-white">
-              {canCheckout ? `€${finalTotal}` : "--"}
+              {hasCompleteRentalSelection ? `€${finalTotal}` : "--"}
             </div>
           </div>
         </div>
@@ -1594,7 +1818,13 @@ export default function BookingPanelV2({
           background: "linear-gradient(135deg,#FF6A00 0%,#FF8A2B 100%)",
         }}
       >
-        Proceed to Checkout
+        {isCheckingAvailability
+          ? "Checking availability..."
+          : isUnavailable
+          ? "Not available"
+          : availabilityConfirmed
+          ? "Proceed to Checkout"
+          : "Confirming availability..."}
       </button>
 
       {notice ? (
@@ -1727,7 +1957,9 @@ export default function BookingPanelV2({
                 type="button"
                 onClick={() => {
                   setRange({});
+                  setAvailability(null);
                   setNotice("");
+                  setIsCheckingAvailability(false);
                 }}
                 className="text-[13px] font-black text-black/55 transition hover:text-black"
               >

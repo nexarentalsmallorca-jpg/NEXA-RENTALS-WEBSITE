@@ -752,7 +752,7 @@ export default function HomeClientV2() {
                                     4 Hours
                                   </span>
                                   <span className="text-[22px] font-black text-[#111]">
-                                    24€
+                                    25€
                                   </span>
                                 </div>
                                 <div className="flex items-center justify-between text-[#111]">
