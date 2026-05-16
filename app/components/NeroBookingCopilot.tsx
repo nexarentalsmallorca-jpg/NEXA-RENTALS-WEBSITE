@@ -3,6 +3,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { createPortal } from "react-dom";
+import { useLocale } from "next-intl";
+
+type Locale = "en" | "es" | "de" | "fr" | "it" | "pt" | "sv";
 
 type Tip = {
   title: string;
@@ -17,25 +20,325 @@ declare global {
   }
 }
 
-const WELCOME_TIP: Tip = {
-  title: "Need help booking?",
-  text: "Choose your scooter, then select Half Day or Full Day to start your reservation.",
+const COPY: Record<
+  Locale,
+  {
+    welcome: Tip;
+    mobileWelcome: Tip;
+    defaultTip: Tip;
+    languageMaintenance: Tip;
+    halfHover: Tip;
+    fullHover: Tip;
+    halfClick: Tip;
+    fullClick: Tip;
+    askNero: Tip;
+    copilotLabel: string;
+    chatButton: string;
+    closePopup: string;
+    chatWithNeroAria: string;
+  }
+> = {
+  en: {
+    welcome: {
+      title: "Need help booking?",
+      text: "Choose your scooter, then select Half Day or Full Day to start your reservation.",
+    },
+    mobileWelcome: {
+      title: "Nero AI Assistant",
+      text: "Created by Nexa Rentals. If you need any help with prices, license, deposit, insurance or booking, I’m here.",
+    },
+    defaultTip: {
+      title: "Nero AI Assistant",
+      text: "Created by Nexa Rentals. I can help you with prices, license, deposit, insurance and booking.",
+    },
+    languageMaintenance: {
+      title: "Languages under maintenance",
+      text: "Other languages are temporarily unavailable while we finish the website update. You can still use the website in English.",
+    },
+    halfHover: {
+      title: "Half Day Plan",
+      text: "Great value option. Half Day is the most popular choice for a shorter same-day ride.",
+    },
+    fullHover: {
+      title: "Full Day Plan",
+      text: "Full Day gives you more freedom with 24-hour rental blocks and up to 6 days online.",
+    },
+    halfClick: {
+      title: "Great Choice",
+      text: "Half Day selected. Now choose your pickup date. The return is automatically the same day.",
+    },
+    fullClick: {
+      title: "Great Choice",
+      text: "Full Day selected. Now choose your preferred pickup date.",
+    },
+    askNero: {
+      title: "Ask Nero Anything",
+      text: "I can answer questions about prices, license, deposit, insurance, location and booking.",
+    },
+    copilotLabel: "NEXA AI COPILOT",
+    chatButton: "Chat with Nero",
+    closePopup: "Close Nero popup",
+    chatWithNeroAria: "Chat with Nero",
+  },
+  es: {
+    welcome: {
+      title: "¿Necesitas ayuda para reservar?",
+      text: "Elige tu scooter y después selecciona Medio día o Día completo para empezar tu reserva.",
+    },
+    mobileWelcome: {
+      title: "Nero Asistente AI",
+      text: "Creado por Nexa Rentals. Si necesitas ayuda con precios, licencia, depósito, seguro o reserva, estoy aquí.",
+    },
+    defaultTip: {
+      title: "Nero Asistente AI",
+      text: "Creado por Nexa Rentals. Puedo ayudarte con precios, licencia, depósito, seguro y reserva.",
+    },
+    languageMaintenance: {
+      title: "Idiomas en mantenimiento",
+      text: "Otros idiomas no están disponibles temporalmente mientras terminamos la actualización web. Puedes seguir usando la web en inglés.",
+    },
+    halfHover: {
+      title: "Plan Medio día",
+      text: "Opción con gran valor. Medio día es la opción más popular para una ruta corta el mismo día.",
+    },
+    fullHover: {
+      title: "Plan Día completo",
+      text: "Día completo te da más libertad con bloques de alquiler de 24 horas y hasta 6 días online.",
+    },
+    halfClick: {
+      title: "Buena elección",
+      text: "Medio día seleccionado. Ahora elige la fecha de recogida. La devolución será automáticamente el mismo día.",
+    },
+    fullClick: {
+      title: "Buena elección",
+      text: "Día completo seleccionado. Ahora elige tu fecha de recogida preferida.",
+    },
+    askNero: {
+      title: "Pregunta lo que quieras a Nero",
+      text: "Puedo responder sobre precios, licencia, depósito, seguro, ubicación y reserva.",
+    },
+    copilotLabel: "NEXA AI COPILOT",
+    chatButton: "Chatear con Nero",
+    closePopup: "Cerrar popup de Nero",
+    chatWithNeroAria: "Chatear con Nero",
+  },
+  de: {
+    welcome: {
+      title: "Brauchst du Hilfe beim Buchen?",
+      text: "Wähle deinen Scooter und danach Halber Tag oder Ganzer Tag, um deine Reservierung zu starten.",
+    },
+    mobileWelcome: {
+      title: "Nero AI Assistent",
+      text: "Erstellt von Nexa Rentals. Wenn du Hilfe mit Preisen, Führerschein, Kaution, Versicherung oder Buchung brauchst, bin ich hier.",
+    },
+    defaultTip: {
+      title: "Nero AI Assistent",
+      text: "Erstellt von Nexa Rentals. Ich kann dir mit Preisen, Führerschein, Kaution, Versicherung und Buchung helfen.",
+    },
+    languageMaintenance: {
+      title: "Sprachen in Wartung",
+      text: "Andere Sprachen sind vorübergehend nicht verfügbar, während wir das Website-Update abschließen. Du kannst die Website weiterhin auf Englisch nutzen.",
+    },
+    halfHover: {
+      title: "Halber Tag",
+      text: "Sehr gute Option. Halber Tag ist die beliebteste Wahl für eine kürzere Fahrt am selben Tag.",
+    },
+    fullHover: {
+      title: "Ganzer Tag",
+      text: "Ganzer Tag gibt dir mehr Freiheit mit 24-Stunden-Mietblöcken und bis zu 6 Tagen online.",
+    },
+    halfClick: {
+      title: "Gute Wahl",
+      text: "Halber Tag ausgewählt. Wähle jetzt dein Abholdatum. Die Rückgabe ist automatisch am selben Tag.",
+    },
+    fullClick: {
+      title: "Gute Wahl",
+      text: "Ganzer Tag ausgewählt. Wähle jetzt dein bevorzugtes Abholdatum.",
+    },
+    askNero: {
+      title: "Frag Nero alles",
+      text: "Ich kann Fragen zu Preisen, Führerschein, Kaution, Versicherung, Standort und Buchung beantworten.",
+    },
+    copilotLabel: "NEXA AI COPILOT",
+    chatButton: "Mit Nero chatten",
+    closePopup: "Nero-Popup schließen",
+    chatWithNeroAria: "Mit Nero chatten",
+  },
+  fr: {
+    welcome: {
+      title: "Besoin d’aide pour réserver ?",
+      text: "Choisissez votre scooter, puis sélectionnez Demi-journée ou Journée complète pour commencer votre réservation.",
+    },
+    mobileWelcome: {
+      title: "Assistant IA Nero",
+      text: "Créé par Nexa Rentals. Si vous avez besoin d’aide avec les prix, permis, caution, assurance ou réservation, je suis là.",
+    },
+    defaultTip: {
+      title: "Assistant IA Nero",
+      text: "Créé par Nexa Rentals. Je peux vous aider avec les prix, permis, caution, assurance et réservation.",
+    },
+    languageMaintenance: {
+      title: "Langues en maintenance",
+      text: "Les autres langues sont temporairement indisponibles pendant la mise à jour du site. Vous pouvez toujours utiliser le site en anglais.",
+    },
+    halfHover: {
+      title: "Formule Demi-journée",
+      text: "Très bon choix. La Demi-journée est l’option la plus populaire pour une courte sortie le même jour.",
+    },
+    fullHover: {
+      title: "Formule Journée complète",
+      text: "La Journée complète offre plus de liberté avec des blocs de location de 24 heures et jusqu’à 6 jours en ligne.",
+    },
+    halfClick: {
+      title: "Bon choix",
+      text: "Demi-journée sélectionnée. Choisissez maintenant votre date de retrait. Le retour est automatiquement le même jour.",
+    },
+    fullClick: {
+      title: "Bon choix",
+      text: "Journée complète sélectionnée. Choisissez maintenant votre date de retrait préférée.",
+    },
+    askNero: {
+      title: "Demandez tout à Nero",
+      text: "Je peux répondre aux questions sur les prix, permis, caution, assurance, localisation et réservation.",
+    },
+    copilotLabel: "NEXA AI COPILOT",
+    chatButton: "Chat avec Nero",
+    closePopup: "Fermer le popup Nero",
+    chatWithNeroAria: "Chat avec Nero",
+  },
+  it: {
+    welcome: {
+      title: "Hai bisogno di aiuto per prenotare?",
+      text: "Scegli il tuo scooter, poi seleziona Mezza giornata o Giornata intera per iniziare la prenotazione.",
+    },
+    mobileWelcome: {
+      title: "Assistente AI Nero",
+      text: "Creato da Nexa Rentals. Se hai bisogno di aiuto con prezzi, patente, deposito, assicurazione o prenotazione, sono qui.",
+    },
+    defaultTip: {
+      title: "Assistente AI Nero",
+      text: "Creato da Nexa Rentals. Posso aiutarti con prezzi, patente, deposito, assicurazione e prenotazione.",
+    },
+    languageMaintenance: {
+      title: "Lingue in manutenzione",
+      text: "Le altre lingue sono temporaneamente non disponibili mentre terminiamo l’aggiornamento del sito. Puoi ancora usare il sito in inglese.",
+    },
+    halfHover: {
+      title: "Piano Mezza giornata",
+      text: "Ottima opzione. Mezza giornata è la scelta più popolare per un giro breve nello stesso giorno.",
+    },
+    fullHover: {
+      title: "Piano Giornata intera",
+      text: "Giornata intera ti dà più libertà con blocchi di noleggio da 24 ore e fino a 6 giorni online.",
+    },
+    halfClick: {
+      title: "Ottima scelta",
+      text: "Mezza giornata selezionata. Ora scegli la data di ritiro. La riconsegna è automaticamente lo stesso giorno.",
+    },
+    fullClick: {
+      title: "Ottima scelta",
+      text: "Giornata intera selezionata. Ora scegli la data di ritiro preferita.",
+    },
+    askNero: {
+      title: "Chiedi qualsiasi cosa a Nero",
+      text: "Posso rispondere su prezzi, patente, deposito, assicurazione, posizione e prenotazione.",
+    },
+    copilotLabel: "NEXA AI COPILOT",
+    chatButton: "Chatta con Nero",
+    closePopup: "Chiudi popup Nero",
+    chatWithNeroAria: "Chatta con Nero",
+  },
+  pt: {
+    welcome: {
+      title: "Precisa de ajuda para reservar?",
+      text: "Escolha a sua scooter e depois selecione Meio dia ou Dia inteiro para iniciar a reserva.",
+    },
+    mobileWelcome: {
+      title: "Assistente AI Nero",
+      text: "Criado pela Nexa Rentals. Se precisar de ajuda com preços, carta, depósito, seguro ou reserva, estou aqui.",
+    },
+    defaultTip: {
+      title: "Assistente AI Nero",
+      text: "Criado pela Nexa Rentals. Posso ajudar com preços, carta, depósito, seguro e reserva.",
+    },
+    languageMaintenance: {
+      title: "Idiomas em manutenção",
+      text: "Outros idiomas estão temporariamente indisponíveis enquanto terminamos a atualização do site. Pode continuar a usar o site em inglês.",
+    },
+    halfHover: {
+      title: "Plano Meio dia",
+      text: "Ótima opção. Meio dia é a escolha mais popular para um passeio curto no mesmo dia.",
+    },
+    fullHover: {
+      title: "Plano Dia inteiro",
+      text: "Dia inteiro dá mais liberdade com blocos de aluguer de 24 horas e até 6 dias online.",
+    },
+    halfClick: {
+      title: "Boa escolha",
+      text: "Meio dia selecionado. Agora escolha a data de levantamento. A devolução é automaticamente no mesmo dia.",
+    },
+    fullClick: {
+      title: "Boa escolha",
+      text: "Dia inteiro selecionado. Agora escolha a sua data de levantamento preferida.",
+    },
+    askNero: {
+      title: "Pergunte tudo ao Nero",
+      text: "Posso responder sobre preços, carta, depósito, seguro, localização e reserva.",
+    },
+    copilotLabel: "NEXA AI COPILOT",
+    chatButton: "Falar com Nero",
+    closePopup: "Fechar popup do Nero",
+    chatWithNeroAria: "Falar com Nero",
+  },
+  sv: {
+    welcome: {
+      title: "Behöver du hjälp att boka?",
+      text: "Välj din scooter och välj sedan Halvdag eller Heldag för att starta din reservation.",
+    },
+    mobileWelcome: {
+      title: "Nero AI-assistent",
+      text: "Skapad av Nexa Rentals. Om du behöver hjälp med priser, körkort, deposition, försäkring eller bokning är jag här.",
+    },
+    defaultTip: {
+      title: "Nero AI-assistent",
+      text: "Skapad av Nexa Rentals. Jag kan hjälpa dig med priser, körkort, deposition, försäkring och bokning.",
+    },
+    languageMaintenance: {
+      title: "Språk under underhåll",
+      text: "Andra språk är tillfälligt otillgängliga medan vi slutför webbplatsuppdateringen. Du kan fortfarande använda webbplatsen på engelska.",
+    },
+    halfHover: {
+      title: "Halvdagsplan",
+      text: "Ett bra val. Halvdag är det mest populära valet för en kortare tur samma dag.",
+    },
+    fullHover: {
+      title: "Heldagsplan",
+      text: "Heldag ger mer frihet med 24-timmars hyresblock och upp till 6 dagar online.",
+    },
+    halfClick: {
+      title: "Bra val",
+      text: "Halvdag vald. Välj nu ditt uthämtningsdatum. Återlämningen är automatiskt samma dag.",
+    },
+    fullClick: {
+      title: "Bra val",
+      text: "Heldag vald. Välj nu ditt önskade uthämtningsdatum.",
+    },
+    askNero: {
+      title: "Fråga Nero vad som helst",
+      text: "Jag kan svara på frågor om priser, körkort, deposition, försäkring, plats och bokning.",
+    },
+    copilotLabel: "NEXA AI COPILOT",
+    chatButton: "Chatta med Nero",
+    closePopup: "Stäng Nero-popup",
+    chatWithNeroAria: "Chatta med Nero",
+  },
 };
 
-const MOBILE_WELCOME_TIP: Tip = {
-  title: "Nero AI Assistant",
-  text: "Created by Nexa Rentals. If you need any help with prices, license, deposit, insurance or booking, I’m here.",
-};
-
-const DEFAULT_TIP: Tip = {
-  title: "Nero AI Assistant",
-  text: "Created by Nexa Rentals. I can help you with prices, license, deposit, insurance and booking.",
-};
-
-const LANGUAGE_MAINTENANCE_TIP: Tip = {
-  title: "Languages under maintenance",
-  text: "Other languages are temporarily unavailable while we finish the website update. You can still use the website in English.",
-};
+function getSafeLocale(locale: string): Locale {
+  return ["en", "es", "de", "fr", "it", "pt", "sv"].includes(locale)
+    ? (locale as Locale)
+    : "en";
+}
 
 function isMobileLikeNow() {
   if (typeof window === "undefined") return false;
@@ -81,7 +384,13 @@ function isPlanButton(element: HTMLElement | null, plan: "half" | "full") {
           text.includes("best value") ||
           text.includes("pickup 09:30") ||
           text.includes("return 19:00") ||
-          text.includes("€")))
+          text.includes("€"))) ||
+      text.includes("medio día") ||
+      text.includes("halber tag") ||
+      text.includes("demi-journée") ||
+      text.includes("mezza giornata") ||
+      text.includes("meio dia") ||
+      text.includes("halvdag")
     );
   }
 
@@ -92,55 +401,48 @@ function isPlanButton(element: HTMLElement | null, plan: "half" | "full") {
       (text.includes("flexible rental") ||
         text.includes("24h") ||
         text.includes("max 6 days") ||
-        text.includes("€")))
+        text.includes("€"))) ||
+    text.includes("día completo") ||
+    text.includes("ganzer tag") ||
+    text.includes("journée complète") ||
+    text.includes("giornata intera") ||
+    text.includes("dia inteiro") ||
+    text.includes("heldag")
   );
 }
 
-function detectStepFromElement(element: HTMLElement | null): Tip | null {
+function detectStepFromElement(
+  element: HTMLElement | null,
+  copy: (typeof COPY)["en"]
+): Tip | null {
   if (!element) return null;
 
-  if (isPlanButton(element, "half")) {
-    return {
-      title: "Half Day Plan",
-      text: "Great value option. Half Day is the most popular choice for a shorter same-day ride.",
-    };
-  }
-
-  if (isPlanButton(element, "full")) {
-    return {
-      title: "Full Day Plan",
-      text: "Full Day gives you more freedom with 24-hour rental blocks and up to 6 days online.",
-    };
-  }
+  if (isPlanButton(element, "half")) return copy.halfHover;
+  if (isPlanButton(element, "full")) return copy.fullHover;
 
   return null;
 }
 
-function detectClickStep(element: HTMLElement | null): Tip | null {
+function detectClickStep(
+  element: HTMLElement | null,
+  copy: (typeof COPY)["en"]
+): Tip | null {
   if (!element) return null;
 
-  if (isPlanButton(element, "half")) {
-    return {
-      title: "Great Choice",
-      text: "Half Day selected. Now choose your pickup date. The return is automatically the same day.",
-    };
-  }
-
-  if (isPlanButton(element, "full")) {
-    return {
-      title: "Great Choice",
-      text: "Full Day selected. Now choose your preferred pickup date.",
-    };
-  }
+  if (isPlanButton(element, "half")) return copy.halfClick;
+  if (isPlanButton(element, "full")) return copy.fullClick;
 
   return null;
 }
 
 export default function NeroBookingCopilot() {
+  const locale = getSafeLocale(useLocale());
+  const copy = COPY[locale];
+
   const [mounted, setMounted] = useState(false);
   const [allowRender, setAllowRender] = useState(false);
   const [open, setOpen] = useState(false);
-  const [tip, setTip] = useState<Tip>(DEFAULT_TIP);
+  const [tip, setTip] = useState<Tip>(copy.defaultTip);
   const [mouse, setMouse] = useState({ x: 0, y: 0 });
   const [selectedPlan, setSelectedPlan] = useState<PlanType>(null);
   const [isMobileLike, setIsMobileLike] = useState(false);
@@ -153,6 +455,10 @@ export default function NeroBookingCopilot() {
   const activeHoverTargetRef = useRef<HTMLElement | null>(null);
   const ownsCopilotRef = useRef(false);
   const mobileIntroShownRef = useRef(false);
+
+  useEffect(() => {
+    setTip(copy.defaultTip);
+  }, [copy.defaultTip]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -305,7 +611,7 @@ export default function NeroBookingCopilot() {
 
     mobileIntroShownRef.current = true;
 
-    setTip(MOBILE_WELCOME_TIP);
+    setTip(copy.mobileWelcome);
     setMobileIntroActive(true);
     setOpen(true);
 
@@ -345,25 +651,19 @@ export default function NeroBookingCopilot() {
       });
 
       if (!isMobileLikeNow()) {
-        showTip(
-          {
-            title: "Ask Nero Anything",
-            text: "I can answer questions about prices, license, deposit, insurance, location and booking.",
-          },
-          3200
-        );
+        showTip(copy.askNero, 3200);
       }
 
       return;
     }
 
-    const locale = getCurrentLocale();
-    window.location.href = `/${locale}/#nero-ai-assistant`;
+    const currentLocale = getCurrentLocale();
+    window.location.href = `/${currentLocale}/#nero-ai-assistant`;
   }
 
   function handleCopilotMouseEnter() {
     if (isMobileLike || isMobileLikeNow()) return;
-    if (tip.title === WELCOME_TIP.title) return;
+    if (tip.title === copy.welcome.title) return;
 
     clearHideTimer();
   }
@@ -393,8 +693,8 @@ export default function NeroBookingCopilot() {
 
       showTip(
         {
-          title: customEvent.detail?.title || LANGUAGE_MAINTENANCE_TIP.title,
-          text: customEvent.detail?.text || LANGUAGE_MAINTENANCE_TIP.text,
+          title: customEvent.detail?.title || copy.languageMaintenance.title,
+          text: customEvent.detail?.text || copy.languageMaintenance.text,
         },
         6500
       );
@@ -411,7 +711,7 @@ export default function NeroBookingCopilot() {
         handleLanguageMaintenance
       );
     };
-  }, [allowRender]);
+  }, [allowRender, copy.languageMaintenance.title, copy.languageMaintenance.text]);
 
   useEffect(() => {
     if (!allowRender) return;
@@ -422,33 +722,28 @@ export default function NeroBookingCopilot() {
         return;
       }
 
-      showTip(WELCOME_TIP, 2400);
+      showTip(copy.welcome, 2400);
     }, 900);
 
     return () => window.clearTimeout(welcomeTimer);
-  }, [allowRender]);
+  }, [allowRender, copy.welcome]);
 
   useEffect(() => {
     if (!allowRender) return;
 
     function onMove(e: MouseEvent) {
-      if (isMobileLikeNow()) {
-        return;
-      }
-
+      if (isMobileLikeNow()) return;
       setMouse({ x: e.clientX, y: e.clientY });
     }
 
     function onMouseOver(e: MouseEvent) {
-      if (isMobileLikeNow()) {
-        return;
-      }
+      if (isMobileLikeNow()) return;
 
       const rawElement = e.target as HTMLElement;
       const target = getTargetElement(rawElement);
       if (!target) return;
 
-      const detected = detectStepFromElement(target);
+      const detected = detectStepFromElement(target, copy);
 
       if (detected) {
         showHoverTip(detected, target);
@@ -456,9 +751,7 @@ export default function NeroBookingCopilot() {
     }
 
     function onMouseOut(e: MouseEvent) {
-      if (isMobileLikeNow()) {
-        return;
-      }
+      if (isMobileLikeNow()) return;
 
       const rawElement = e.target as HTMLElement;
       const target = getTargetElement(rawElement);
@@ -502,7 +795,7 @@ export default function NeroBookingCopilot() {
         return;
       }
 
-      const detected = detectClickStep(element);
+      const detected = detectClickStep(element, copy);
 
       if (detected) {
         showTip(detected, 3200);
@@ -521,7 +814,7 @@ export default function NeroBookingCopilot() {
       window.removeEventListener("click", onClick);
       clearHideTimer();
     };
-  }, [allowRender]);
+  }, [allowRender, copy]);
 
   const shouldShowPopup = open && (!isMobileLike || mobileIntroActive);
 
@@ -556,7 +849,7 @@ export default function NeroBookingCopilot() {
               closeTipImmediately();
             }}
             className="absolute right-3 top-3 z-20 flex h-7 w-7 items-center justify-center rounded-full border border-white/10 bg-white/8 text-[15px] font-black leading-none text-white/70 transition hover:bg-white/14 hover:text-white active:scale-95"
-            aria-label="Close Nero popup"
+            aria-label={copy.closePopup}
           >
             ×
           </button>
@@ -574,7 +867,7 @@ export default function NeroBookingCopilot() {
 
               <div className="min-w-0">
                 <div className="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.18em] text-white/60">
-                  NEXA AI COPILOT
+                  {copy.copilotLabel}
                 </div>
 
                 <p className="mt-2 bg-gradient-to-r from-[#fdba74] via-[#c084fc] to-[#7dd3fc] bg-clip-text text-[15px] font-black text-transparent">
@@ -592,7 +885,7 @@ export default function NeroBookingCopilot() {
               onClick={chatWithNero}
               className="mt-4 w-full rounded-[18px] border border-white/10 bg-[linear-gradient(135deg,#f97316_0%,#c084fc_50%,#60a5fa_100%)] px-4 py-2.5 text-[14px] font-black text-white shadow-[0_12px_30px_rgba(124,58,237,0.28)] transition hover:scale-[1.01] hover:brightness-105 active:scale-[0.985]"
             >
-              Chat with Nero
+              {copy.chatButton}
             </button>
           </div>
         </div>
@@ -603,7 +896,9 @@ export default function NeroBookingCopilot() {
         type="button"
         onClick={chatWithNero}
         onMouseEnter={() => {
-          if (!isMobileLike && !isMobileLikeNow()) showTip(DEFAULT_TIP, null);
+          if (!isMobileLike && !isMobileLikeNow()) {
+            showTip(copy.defaultTip, null);
+          }
         }}
         className={[
           "group relative overflow-hidden rounded-full border border-white/12 bg-[#06070c] shadow-[0_0_24px_rgba(59,130,246,0.22),0_0_44px_rgba(124,58,237,0.24),0_0_60px_rgba(249,115,22,0.18)] transition duration-300 hover:scale-110 active:scale-95",
@@ -611,7 +906,7 @@ export default function NeroBookingCopilot() {
             ? "h-[62px] w-[62px] nero-mobile-idle"
             : "h-[clamp(64px,5vw,72px)] w-[clamp(64px,5vw,72px)]",
         ].join(" ")}
-        aria-label="Chat with Nero"
+        aria-label={copy.chatWithNeroAria}
       >
         <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_50%,rgba(96,165,250,0.85),rgba(124,58,237,0.95),rgba(249,115,22,0.92),rgba(96,165,250,0.85))]" />
         <div className="absolute inset-[3px] rounded-full bg-[radial-gradient(circle_at_30%_25%,rgba(255,255,255,0.16),transparent_22%),radial-gradient(circle_at_50%_18%,rgba(96,165,250,0.22),transparent_30%),radial-gradient(circle_at_72%_28%,rgba(249,115,22,0.18),transparent_25%),linear-gradient(180deg,rgba(18,18,26,0.98),rgba(7,8,14,0.96))]" />

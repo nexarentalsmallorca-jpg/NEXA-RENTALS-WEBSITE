@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AdminShell from "../../components/dashboard/AdminShell";
 
 type BookingCustomer = {
   id?: string;
@@ -213,7 +214,9 @@ function getBookingDate(booking: BookingCustomer) {
 }
 
 function getCreatedAt(booking: BookingCustomer) {
-  return cleanText(booking.createdAt || booking.created_at || getBookingDate(booking));
+  return cleanText(
+    booking.createdAt || booking.created_at || getBookingDate(booking)
+  );
 }
 
 function getContractNumber(booking: BookingCustomer) {
@@ -227,6 +230,7 @@ function getContractNumber(booking: BookingCustomer) {
 
 function getTotalCents(booking: BookingCustomer) {
   if (typeof booking.amount === "number") return booking.amount;
+
   if (typeof booking.amount_eur === "number") {
     return Math.round(booking.amount_eur * 100);
   }
@@ -346,12 +350,15 @@ function buildCustomers(bookings: BookingCustomer[]) {
     if (!existing.email) existing.email = getCustomerEmail(booking);
     if (!existing.document) existing.document = getCustomerDocument(booking);
     if (!existing.address) existing.address = getCustomerAddress(booking);
+
     if (!existing.license) {
       existing.license = cleanText(booking.contractData?.permisoConducir);
     }
+
     if (!existing.licenseCountry) {
       existing.licenseCountry = cleanText(booking.contractData?.paisExpedicion);
     }
+
     if (!existing.licenseExpiry) {
       existing.licenseExpiry = cleanText(booking.contractData?.fechaCaducidad);
     }
@@ -475,252 +482,259 @@ export default function CustomersPage() {
   }, [customers]);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[34px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_25px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-300">
-              Customer Database
-            </p>
-            <h2 className="mt-2 text-4xl font-black tracking-tight text-white">
-              Customers
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/55">
-              Real customer profiles from manual and website bookings. This page
-              groups repeated customers and shows phone, email, ID/passport,
-              license details, rental history, total spent, and cash/card sales.
-            </p>
-          </div>
+    <AdminShell>
+      <div className="space-y-6">
+        <section className="rounded-[34px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_25px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-300">
+                Customer Database
+              </p>
+              <h2 className="mt-2 text-4xl font-black tracking-tight text-white">
+                Customers
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/55">
+                Real customer profiles from manual and website bookings. This
+                page groups repeated customers and shows phone, email,
+                ID/passport, license details, rental history, total spent, and
+                cash/card sales.
+              </p>
+            </div>
 
-          <button
-            type="button"
-            onClick={loadCustomers}
-            className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-black text-white/70 transition hover:border-orange-400/30 hover:text-white"
-          >
-            Refresh
-          </button>
-        </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-[26px] border border-orange-400/20 bg-orange-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">
-            Customers
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {summary.totalCustomers}
-          </p>
-        </div>
-
-        <div className="rounded-[26px] border border-purple-400/20 bg-purple-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-300">
-            Rentals
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {summary.totalRentals}
-          </p>
-        </div>
-
-        <div className="rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-            Total spent
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {formatMoneyFromCents(summary.totalSpentCents)}
-          </p>
-        </div>
-
-        <div className="rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-            Cash
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {formatMoneyFromCents(summary.cashCents)}
-          </p>
-        </div>
-
-        <div className="rounded-[26px] border border-sky-400/20 bg-sky-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-300">
-            Card
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {formatMoneyFromCents(summary.cardCents)}
-          </p>
-        </div>
-      </section>
-
-      <section className="rounded-[28px] border border-white/10 bg-[#080A10]/80 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-          placeholder="Search by customer, phone, email, passport, license, vehicle, contract..."
-        />
-
-        {error ? (
-          <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-500/10 px-4 py-3 text-sm font-bold text-yellow-300">
-            {error}
-          </div>
-        ) : null}
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-2">
-        {isLoading ? (
-          <div className="rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 text-sm font-bold text-white/45">
-            Loading customers...
-          </div>
-        ) : null}
-
-        {!isLoading && filteredCustomers.length === 0 ? (
-          <div className="rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 text-sm font-bold text-white/45">
-            No customers found yet. Create a manual booking or receive a website
-            booking first.
-          </div>
-        ) : null}
-
-        {filteredCustomers.map((customer) => {
-          const latestBooking = customer.bookings
-            .slice()
-            .sort((a, b) => {
-              const dateA = new Date(getCreatedAt(a)).getTime() || 0;
-              const dateB = new Date(getCreatedAt(b)).getTime() || 0;
-
-              return dateB - dateA;
-            })[0];
-
-          return (
-            <div
-              key={customer.key}
-              className="rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 shadow-[0_25px_90px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+            <button
+              type="button"
+              onClick={loadCustomers}
+              className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-black text-white/70 transition hover:border-orange-400/30 hover:text-white"
             >
-              <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-300">
-                    Customer
-                  </p>
-                  <h3 className="mt-3 text-2xl font-black text-white">
-                    {customer.name}
-                  </h3>
-                  <p className="mt-2 text-sm font-bold text-white/50">
-                    {customer.phone || "No phone"}
-                  </p>
-                  <p className="mt-1 text-sm font-bold text-white/50">
-                    {customer.email || "No email"}
-                  </p>
-                </div>
+              Refresh
+            </button>
+          </div>
+        </section>
 
-                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-right">
-                  <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
-                    Total spent
-                  </p>
-                  <p className="mt-1 text-xl font-black text-white">
-                    {formatMoneyFromCents(customer.totalSpentCents)}
-                  </p>
-                </div>
-              </div>
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-[26px] border border-orange-400/20 bg-orange-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">
+              Customers
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {summary.totalCustomers}
+            </p>
+          </div>
 
-              <div className="mt-5 grid gap-3 md:grid-cols-2">
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
-                    ID / Passport
-                  </p>
-                  <p className="mt-1 font-black text-white">
-                    {customer.document || "Not saved"}
-                  </p>
-                </div>
+          <div className="rounded-[26px] border border-purple-400/20 bg-purple-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-300">
+              Rentals
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {summary.totalRentals}
+            </p>
+          </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
-                    Rentals
-                  </p>
-                  <p className="mt-1 font-black text-white">
-                    {customer.rentalCount}
-                  </p>
-                </div>
+          <div className="rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+              Total spent
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {formatMoneyFromCents(summary.totalSpentCents)}
+            </p>
+          </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
-                    License
-                  </p>
-                  <p className="mt-1 font-black text-white">
-                    {customer.license || "Not saved"}
-                  </p>
-                  <p className="mt-1 text-xs font-bold text-white/35">
-                    {customer.licenseCountry || "No country"} · Exp:{" "}
-                    {customer.licenseExpiry || "No expiry"}
-                  </p>
-                </div>
+          <div className="rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+              Cash
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {formatMoneyFromCents(summary.cashCents)}
+            </p>
+          </div>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
-                    Payment history
-                  </p>
-                  <p className="mt-1 font-black text-emerald-300">
-                    Cash: {formatMoneyFromCents(customer.cashSpentCents)}
-                  </p>
-                  <p className="mt-1 font-black text-sky-300">
-                    Card: {formatMoneyFromCents(customer.cardSpentCents)}
-                  </p>
-                </div>
+          <div className="rounded-[26px] border border-sky-400/20 bg-sky-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-300">
+              Card
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {formatMoneyFromCents(summary.cardCents)}
+            </p>
+          </div>
+        </section>
 
-                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 md:col-span-2">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
-                    Address
-                  </p>
-                  <p className="mt-1 font-black text-white">
-                    {customer.address || "Not saved"}
-                  </p>
-                </div>
-              </div>
+        <section className="rounded-[28px] border border-white/10 bg-[#080A10]/80 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+            placeholder="Search by customer, phone, email, passport, license, vehicle, contract..."
+          />
 
-              <div className="mt-5 rounded-2xl border border-orange-400/20 bg-orange-500/10 p-4">
-                <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-300">
-                  Last Rental
-                </p>
-                <p className="mt-1 font-black text-white">
-                  {customer.lastVehicle || "Vehicle"}
-                </p>
-                <p className="mt-1 text-sm font-bold text-white/50">
-                  {formatDate(customer.lastRentalDate)} ·{" "}
-                  {customer.lastContract}
-                </p>
-              </div>
+          {error ? (
+            <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-500/10 px-4 py-3 text-sm font-bold text-yellow-300">
+              {error}
+            </div>
+          ) : null}
+        </section>
 
-              {latestBooking ? (
-                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
-                    Latest booking details
-                  </p>
-                  <div className="mt-3 grid gap-2 text-sm font-bold text-white/55 md:grid-cols-2">
-                    <p>
-                      Pickup:{" "}
-                      {latestBooking.pickup_date ||
-                        latestBooking.contractData?.fechaEntrega ||
-                        "--"}{" "}
-                      {latestBooking.pickup_time ||
-                        latestBooking.contractData?.horaEntrega ||
-                        "--"}
+        <section className="grid gap-4 xl:grid-cols-2">
+          {isLoading ? (
+            <div className="rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 text-sm font-bold text-white/45">
+              Loading customers...
+            </div>
+          ) : null}
+
+          {!isLoading && filteredCustomers.length === 0 ? (
+            <div className="rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 text-sm font-bold text-white/45">
+              No customers found yet. Create a manual booking or receive a
+              website booking first.
+            </div>
+          ) : null}
+
+          {filteredCustomers.map((customer) => {
+            const latestBooking = customer.bookings
+              .slice()
+              .sort((a, b) => {
+                const dateA = new Date(getCreatedAt(a)).getTime() || 0;
+                const dateB = new Date(getCreatedAt(b)).getTime() || 0;
+
+                return dateB - dateA;
+              })[0];
+
+            return (
+              <div
+                key={customer.key}
+                className="rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 shadow-[0_25px_90px_rgba(0,0,0,0.4)] backdrop-blur-xl"
+              >
+                <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
+                  <div>
+                    <p className="text-xs font-black uppercase tracking-[0.22em] text-orange-300">
+                      Customer
                     </p>
-                    <p>
-                      Dropoff:{" "}
-                      {latestBooking.dropoff_date ||
-                        latestBooking.contractData?.fechaDevolucion ||
-                        "--"}{" "}
-                      {latestBooking.dropoff_time ||
-                        latestBooking.contractData?.horaDevolucion ||
-                        "--"}
+                    <h3 className="mt-3 text-2xl font-black text-white">
+                      {customer.name}
+                    </h3>
+                    <p className="mt-2 text-sm font-bold text-white/50">
+                      {customer.phone || "No phone"}
                     </p>
-                    <p>
-                      Payment: {paymentMethodLabel(getPaymentMethod(latestBooking))}
+                    <p className="mt-1 text-sm font-bold text-white/50">
+                      {customer.email || "No email"}
                     </p>
-                    <p>Total: {formatMoneyFromCents(getTotalCents(latestBooking))}</p>
+                  </div>
+
+                  <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-right">
+                    <p className="text-xs font-black uppercase tracking-[0.18em] text-emerald-300">
+                      Total spent
+                    </p>
+                    <p className="mt-1 text-xl font-black text-white">
+                      {formatMoneyFromCents(customer.totalSpentCents)}
+                    </p>
                   </div>
                 </div>
-              ) : null}
-            </div>
-          );
-        })}
-      </section>
-    </div>
+
+                <div className="mt-5 grid gap-3 md:grid-cols-2">
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+                      ID / Passport
+                    </p>
+                    <p className="mt-1 font-black text-white">
+                      {customer.document || "Not saved"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+                      Rentals
+                    </p>
+                    <p className="mt-1 font-black text-white">
+                      {customer.rentalCount}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+                      License
+                    </p>
+                    <p className="mt-1 font-black text-white">
+                      {customer.license || "Not saved"}
+                    </p>
+                    <p className="mt-1 text-xs font-bold text-white/35">
+                      {customer.licenseCountry || "No country"} · Exp:{" "}
+                      {customer.licenseExpiry || "No expiry"}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+                      Payment history
+                    </p>
+                    <p className="mt-1 font-black text-emerald-300">
+                      Cash: {formatMoneyFromCents(customer.cashSpentCents)}
+                    </p>
+                    <p className="mt-1 font-black text-sky-300">
+                      Card: {formatMoneyFromCents(customer.cardSpentCents)}
+                    </p>
+                  </div>
+
+                  <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-4 md:col-span-2">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+                      Address
+                    </p>
+                    <p className="mt-1 font-black text-white">
+                      {customer.address || "Not saved"}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-orange-400/20 bg-orange-500/10 p-4">
+                  <p className="text-xs font-bold uppercase tracking-[0.18em] text-orange-300">
+                    Last Rental
+                  </p>
+                  <p className="mt-1 font-black text-white">
+                    {customer.lastVehicle || "Vehicle"}
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-white/50">
+                    {formatDate(customer.lastRentalDate)} ·{" "}
+                    {customer.lastContract}
+                  </p>
+                </div>
+
+                {latestBooking ? (
+                  <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                    <p className="text-xs font-bold uppercase tracking-[0.18em] text-white/35">
+                      Latest booking details
+                    </p>
+                    <div className="mt-3 grid gap-2 text-sm font-bold text-white/55 md:grid-cols-2">
+                      <p>
+                        Pickup:{" "}
+                        {latestBooking.pickup_date ||
+                          latestBooking.contractData?.fechaEntrega ||
+                          "--"}{" "}
+                        {latestBooking.pickup_time ||
+                          latestBooking.contractData?.horaEntrega ||
+                          "--"}
+                      </p>
+                      <p>
+                        Dropoff:{" "}
+                        {latestBooking.dropoff_date ||
+                          latestBooking.contractData?.fechaDevolucion ||
+                          "--"}{" "}
+                        {latestBooking.dropoff_time ||
+                          latestBooking.contractData?.horaDevolucion ||
+                          "--"}
+                      </p>
+                      <p>
+                        Payment:{" "}
+                        {paymentMethodLabel(getPaymentMethod(latestBooking))}
+                      </p>
+                      <p>
+                        Total:{" "}
+                        {formatMoneyFromCents(getTotalCents(latestBooking))}
+                      </p>
+                    </div>
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+        </section>
+      </div>
+    </AdminShell>
   );
 }

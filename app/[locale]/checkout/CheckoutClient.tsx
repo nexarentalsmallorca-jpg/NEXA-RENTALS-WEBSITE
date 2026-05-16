@@ -41,6 +41,14 @@ type AvailabilityResult = {
   availableCount?: number;
   message?: string;
   nextAvailableText?: string;
+  bufferMinutes?: number;
+  fleetGroup?: string;
+  bookedVehicleCodes?: string[];
+  availableVehicleCodes?: string[];
+  assignedVehicleCode?: string | null;
+  assignedVehicleName?: string | null;
+  assignedVehicleMatricula?: string | null;
+  assignedVehicleDisplayName?: string | null;
 };
 
 /* ---------------- fleet ---------------- */
@@ -188,9 +196,25 @@ function eurFromCents(cents: number) {
   return (cents / 100).toFixed(2);
 }
 
+function resolveFleetGroupFromVehicle(vehicleId: string, vehicleName: string) {
+  const cleanId = vehicleId.trim().toLowerCase();
+  const cleanName = vehicleName.trim().toLowerCase();
+
+  if (
+    cleanId === "s3" ||
+    cleanName.includes("sym") ||
+    cleanName.includes("symphony")
+  ) {
+    return "sym_symphony_125";
+  }
+
+  return "piaggio_liberty_125";
+}
+
 async function checkCheckoutAvailability({
   vehicleId,
   vehicleName,
+  fleetGroup,
   plan,
   from,
   to,
@@ -199,6 +223,7 @@ async function checkCheckoutAvailability({
 }: {
   vehicleId: string;
   vehicleName: string;
+  fleetGroup: string;
   plan: string;
   from?: Date;
   to?: Date;
@@ -210,6 +235,7 @@ async function checkCheckoutAvailability({
   const params = new URLSearchParams({
     vehicleId: String(vehicleId),
     vehicleName: String(vehicleName),
+    fleetGroup: String(fleetGroup),
     plan: String(plan),
     from: from.toLocaleDateString("en-CA"),
     to: to.toLocaleDateString("en-CA"),
@@ -218,12 +244,10 @@ async function checkCheckoutAvailability({
   });
 
   try {
-    const res = await fetch(`/api/bookings/availability?${params}`, {
+    const res = await fetch(`/api/admin/availability?${params.toString()}`, {
       method: "GET",
       cache: "no-store",
     });
-
-    if (res.status === 404) return null;
 
     const data = (await res.json()) as AvailabilityResult;
     return data;
@@ -323,13 +347,30 @@ export default function CheckoutClient() {
   const plan = safeParam(sp, "plan") ?? "full";
   const availabilityCheckedFromPanel = safeParam(sp, "availabilityChecked");
   const availableCountFromPanel = safeParam(sp, "availableCount");
+  const totalFleetFromPanel = safeParam(sp, "totalFleet");
 
   const vehicleId = safeParam(sp, "vehicleId") ?? "s2";
+  const urlVehicleName = safeParam(sp, "vehicleName") || safeParam(sp, "vehicle");
+
+  const assignedVehicleCodeFromPanel =
+    safeParam(sp, "assignedVehicleCode") || "";
+  const assignedVehicleNameFromPanel =
+    safeParam(sp, "assignedVehicleName") || "";
+  const assignedVehicleMatriculaFromPanel =
+    safeParam(sp, "assignedVehicleMatricula") || "";
+  const assignedVehicleDisplayNameFromPanel =
+    safeParam(sp, "assignedVehicleDisplayName") || "";
+  const fleetGroupFromPanel = safeParam(sp, "fleetGroup") || "";
 
   const vehicle = useMemo(
     () => VEHICLES.find((v) => v.id === vehicleId) ?? VEHICLES[1],
     [vehicleId]
   );
+
+  const publicVehicleName = urlVehicleName || vehicle.name;
+
+  const resolvedFleetGroup =
+    fleetGroupFromPanel || resolveFleetGroupFromVehicle(vehicle.id, publicVehicleName);
 
   const rentalDaysFromParams = Number(safeParam(sp, "days") ?? "");
   const rateFromParams = Number(safeParam(sp, "rate") ?? "");
@@ -487,7 +528,8 @@ export default function CheckoutClient() {
 
       const liveAvailability = await checkCheckoutAvailability({
         vehicleId: vehicle.id,
-        vehicleName: vehicle.name,
+        vehicleName: publicVehicleName,
+        fleetGroup: resolvedFleetGroup,
         plan,
         from,
         to,
@@ -502,7 +544,43 @@ export default function CheckoutClient() {
         );
       }
 
-      const bookingId = `bk_${vehicle.id}_${Date.now()}`;
+      if (liveAvailability?.ok === false) {
+        throw new Error(
+          liveAvailability.message ||
+            "Live availability could not be confirmed. Please try again or contact us on WhatsApp."
+        );
+      }
+
+      const finalAssignedVehicleCode =
+        liveAvailability?.assignedVehicleCode ||
+        assignedVehicleCodeFromPanel ||
+        "";
+
+      const finalAssignedVehicleName =
+        liveAvailability?.assignedVehicleName ||
+        assignedVehicleNameFromPanel ||
+        publicVehicleName;
+
+      const finalAssignedVehicleMatricula =
+        liveAvailability?.assignedVehicleMatricula ||
+        assignedVehicleMatriculaFromPanel ||
+        "";
+
+      const finalAssignedVehicleDisplayName =
+        liveAvailability?.assignedVehicleDisplayName ||
+        assignedVehicleDisplayNameFromPanel ||
+        finalAssignedVehicleName;
+
+      const finalFleetGroup =
+        liveAvailability?.fleetGroup || resolvedFleetGroup || "";
+
+      if (!finalAssignedVehicleCode) {
+        throw new Error(
+          "Live scooter assignment could not be confirmed. Please try again or contact us on WhatsApp."
+        );
+      }
+
+      const bookingId = `bk_${finalAssignedVehicleCode || vehicle.id}_${Date.now()}`;
       const customerName = `${firstName.trim()} ${surname.trim()}`.trim();
 
       const uploadedDocs = await uploadBookingDocuments(bookingId);
@@ -517,15 +595,29 @@ export default function CheckoutClient() {
           customerEmail: email.trim(),
           customerName,
           phone: phone.trim(),
+
           pickupDateISO: from ? from.toLocaleDateString("en-CA") : "",
           returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
           pickupTime,
           dropoffTime,
           pickupLocation,
-          bikeName: vehicle.name,
+
+          bikeName: finalAssignedVehicleDisplayName || publicVehicleName,
+          vehicle: publicVehicleName,
+          vehicleName: publicVehicleName,
           vehicleId: vehicle.id,
+          vehicleCode: finalAssignedVehicleCode,
+          assignedVehicleCode: finalAssignedVehicleCode,
+          assignedVehicleName: finalAssignedVehicleName,
+          assignedVehicleMatricula: finalAssignedVehicleMatricula,
+          assignedVehicleDisplayName: finalAssignedVehicleDisplayName,
+          fleetGroup: finalFleetGroup,
+
           plan,
           ratePerDay: discountedPerDayEur,
+          days: rentalDays,
+          total: totalEur,
+
           availabilityChecked: liveAvailability?.ok
             ? "checkout-live"
             : availabilityCheckedFromPanel || "pending-api",
@@ -533,7 +625,13 @@ export default function CheckoutClient() {
             typeof liveAvailability?.availableCount === "number"
               ? String(liveAvailability.availableCount)
               : availableCountFromPanel || "",
+          totalFleet:
+            typeof liveAvailability?.totalFleet === "number"
+              ? String(liveAvailability.totalFleet)
+              : totalFleetFromPanel || "",
+
           notes: notes.trim(),
+
           dlFrontName: uploadedDocs.dlFrontName,
           dlBackName: uploadedDocs.dlBackName,
           idFrontName: uploadedDocs.idFrontName,
@@ -542,6 +640,7 @@ export default function CheckoutClient() {
           dlBackPath: uploadedDocs.dlBackPath,
           idFrontPath: uploadedDocs.idFrontPath,
           idBackPath: uploadedDocs.idBackPath,
+
           marketingOptIn,
         }),
       });

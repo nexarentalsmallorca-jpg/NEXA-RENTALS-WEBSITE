@@ -1,35 +1,174 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
+import { useLocale } from "next-intl";
+
+type Locale = "en" | "es" | "de" | "fr" | "it" | "pt" | "sv";
 
 type Props = {
-  phone?: string; // example: 34612345678 (no +, no spaces)
-  message?: string; // message sent when user clicks WhatsApp
-  messages?: string[]; // 4 messages shown in sequence
-  firstDelayMs?: number; // delay before the first bubble
-  visibleMs?: number; // how long bubble stays visible
-  gapMs?: number; // time between bubbles
+  phone?: string;
+  message?: string;
+  messages?: string[];
+  firstDelayMs?: number;
+  visibleMs?: number;
+  gapMs?: number;
 };
+
+const DEFAULT_EN_MESSAGE =
+  "Hi Nexa Rentals, I want to book a scooter in Magaluf. Is it available?";
+
+const DEFAULT_EN_BUBBLES = [
+  "Hey! Need any help?",
+  "Want the best scooter for your trip?",
+  "Booking takes only 60 seconds ⚡",
+  "Message us — we reply fast 🙂",
+];
+
+const COPY: Record<
+  Locale,
+  {
+    message: string;
+    bubbles: string[];
+    openChat: string;
+    whatsappSupport: string;
+    whatsappAlt: string;
+  }
+> = {
+  en: {
+    message:
+      "Hi Nexa Rentals, I want to book a scooter in Magaluf. Is it available?",
+    bubbles: [
+      "Hey! Need any help?",
+      "Want the best scooter for your trip?",
+      "Booking takes only 60 seconds ⚡",
+      "Message us — we reply fast 🙂",
+    ],
+    openChat: "Open WhatsApp chat",
+    whatsappSupport: "WhatsApp Support",
+    whatsappAlt: "WhatsApp",
+  },
+  es: {
+    message:
+      "Hola NEXA Rentals, quiero reservar un scooter en Magaluf. ¿Está disponible?",
+    bubbles: [
+      "¡Hola! ¿Necesitas ayuda?",
+      "¿Quieres el mejor scooter para tu viaje?",
+      "Reservar toma solo 60 segundos ⚡",
+      "Escríbenos — respondemos rápido 🙂",
+    ],
+    openChat: "Abrir chat de WhatsApp",
+    whatsappSupport: "Soporte por WhatsApp",
+    whatsappAlt: "WhatsApp",
+  },
+  de: {
+    message:
+      "Hallo NEXA Rentals, ich möchte einen Scooter in Magaluf buchen. Ist er verfügbar?",
+    bubbles: [
+      "Hey! Brauchst du Hilfe?",
+      "Möchtest du den besten Scooter für deine Reise?",
+      "Buchen dauert nur 60 Sekunden ⚡",
+      "Schreib uns — wir antworten schnell 🙂",
+    ],
+    openChat: "WhatsApp-Chat öffnen",
+    whatsappSupport: "WhatsApp Support",
+    whatsappAlt: "WhatsApp",
+  },
+  fr: {
+    message:
+      "Bonjour NEXA Rentals, je souhaite réserver un scooter à Magaluf. Est-il disponible ?",
+    bubbles: [
+      "Salut ! Besoin d’aide ?",
+      "Tu veux le meilleur scooter pour ton voyage ?",
+      "La réservation prend seulement 60 secondes ⚡",
+      "Écris-nous — on répond vite 🙂",
+    ],
+    openChat: "Ouvrir le chat WhatsApp",
+    whatsappSupport: "Support WhatsApp",
+    whatsappAlt: "WhatsApp",
+  },
+  it: {
+    message:
+      "Ciao NEXA Rentals, vorrei prenotare uno scooter a Magaluf. È disponibile?",
+    bubbles: [
+      "Ciao! Hai bisogno di aiuto?",
+      "Vuoi il miglior scooter per il tuo viaggio?",
+      "Prenotare richiede solo 60 secondi ⚡",
+      "Scrivici — rispondiamo velocemente 🙂",
+    ],
+    openChat: "Apri chat WhatsApp",
+    whatsappSupport: "Supporto WhatsApp",
+    whatsappAlt: "WhatsApp",
+  },
+  pt: {
+    message:
+      "Olá NEXA Rentals, quero reservar uma scooter em Magaluf. Está disponível?",
+    bubbles: [
+      "Olá! Precisa de ajuda?",
+      "Quer a melhor scooter para a sua viagem?",
+      "Reservar demora só 60 segundos ⚡",
+      "Envie mensagem — respondemos rápido 🙂",
+    ],
+    openChat: "Abrir chat WhatsApp",
+    whatsappSupport: "Suporte WhatsApp",
+    whatsappAlt: "WhatsApp",
+  },
+  sv: {
+    message:
+      "Hej NEXA Rentals, jag vill boka en scooter i Magaluf. Är den tillgänglig?",
+    bubbles: [
+      "Hej! Behöver du hjälp?",
+      "Vill du ha bästa scootern för din resa?",
+      "Bokning tar bara 60 sekunder ⚡",
+      "Skriv till oss — vi svarar snabbt 🙂",
+    ],
+    openChat: "Öppna WhatsApp-chatt",
+    whatsappSupport: "WhatsApp-support",
+    whatsappAlt: "WhatsApp",
+  },
+};
+
+function getSafeLocale(locale: string): Locale {
+  return ["en", "es", "de", "fr", "it", "pt", "sv"].includes(locale)
+    ? (locale as Locale)
+    : "en";
+}
+
+function isDefaultEnglishBubbles(messages?: string[]) {
+  if (!messages || messages.length === 0) return true;
+
+  const normalizedIncoming = messages.map((item) => item.trim());
+  const normalizedDefault = DEFAULT_EN_BUBBLES.map((item) => item.trim());
+
+  return (
+    normalizedIncoming.length === normalizedDefault.length &&
+    normalizedIncoming.every((item, index) => item === normalizedDefault[index])
+  );
+}
 
 export default function WhatsAppSupport({
   phone = "34971482342",
-  message = "Hi Nexa Rentals, I want to book a scooter in Magaluf. Is it available?",
-  messages = [
-    "Hey! Need any help?",
-    "Want the best scooter for your trip?",
-    "Booking takes only 60 seconds ⚡",
-    "Message us — we reply fast 🙂",
-  ],
+  message,
+  messages,
   firstDelayMs = 3000,
   visibleMs = 4200,
   gapMs = 1600,
 }: Props) {
+  const locale = getSafeLocale(useLocale());
+  const copy = COPY[locale];
+
+  const finalMessage =
+    !message || message.trim() === DEFAULT_EN_MESSAGE ? copy.message : message;
+
+  const finalMessages = useMemo(() => {
+    if (isDefaultEnglishBubbles(messages)) return copy.bubbles;
+    return messages?.slice(0, 4) || copy.bubbles;
+  }, [messages, copy.bubbles]);
+
   const [mounted, setMounted] = useState(false);
   const [showBubble, setShowBubble] = useState(false);
-  const [bubbleText, setBubbleText] = useState(messages[0] ?? "");
+  const [bubbleText, setBubbleText] = useState(finalMessages[0] ?? "");
 
-  // Keep timers so we can clear them safely
   const timers = useRef<number[]>([]);
 
   useEffect(() => {
@@ -37,46 +176,44 @@ export default function WhatsAppSupport({
   }, []);
 
   useEffect(() => {
+    setBubbleText(finalMessages[0] ?? "");
+  }, [finalMessages]);
+
+  useEffect(() => {
     if (!mounted) return;
 
-    // Clear any old timers (safety)
-    timers.current.forEach((t) => window.clearTimeout(t));
+    timers.current.forEach((timer) => window.clearTimeout(timer));
     timers.current = [];
 
-    const msgs = messages.slice(0, 4); // ensure max 4
-    if (msgs.length === 0) return;
+    const bubbles = finalMessages.slice(0, 4);
+    if (bubbles.length === 0) return;
 
-    let t = firstDelayMs;
+    let delay = firstDelayMs;
 
-    msgs.forEach((txt) => {
-      // Show
+    bubbles.forEach((text) => {
       timers.current.push(
         window.setTimeout(() => {
-          setBubbleText(txt);
+          setBubbleText(text);
           setShowBubble(true);
-        }, t)
+        }, delay)
       );
 
-      // Hide
       timers.current.push(
         window.setTimeout(() => {
           setShowBubble(false);
-        }, t + visibleMs)
+        }, delay + visibleMs)
       );
 
-      // Next message time
-      t += visibleMs + gapMs;
+      delay += visibleMs + gapMs;
     });
 
-    // After 4 messages, it stops (no interval)
-
     return () => {
-      timers.current.forEach((x) => window.clearTimeout(x));
+      timers.current.forEach((timer) => window.clearTimeout(timer));
       timers.current = [];
     };
-  }, [mounted, messages, firstDelayMs, visibleMs, gapMs]);
+  }, [mounted, finalMessages, firstDelayMs, visibleMs, gapMs]);
 
-  const href = `https://wa.me/${phone}?text=${encodeURIComponent(message)}`;
+  const href = `https://wa.me/${phone}?text=${encodeURIComponent(finalMessage)}`;
 
   const ui = (
     <div
@@ -91,12 +228,11 @@ export default function WhatsAppSupport({
         pointerEvents: "none",
       }}
     >
-      {/* 💬 Premium Bubble */}
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="Open WhatsApp chat"
+        aria-label={copy.openChat}
         style={{
           pointerEvents: showBubble ? "auto" : "none",
           transform: showBubble ? "translateX(0px)" : "translateX(18px)",
@@ -123,12 +259,11 @@ export default function WhatsAppSupport({
         {bubbleText}
       </a>
 
-      {/* 🟢 WhatsApp Icon (always visible) */}
       <a
         href={href}
         target="_blank"
         rel="noopener noreferrer"
-        aria-label="WhatsApp Support"
+        aria-label={copy.whatsappSupport}
         style={{
           pointerEvents: "auto",
           width: 72,
@@ -141,7 +276,7 @@ export default function WhatsAppSupport({
       >
         <img
           src="/images/whatsapp.png"
-          alt="WhatsApp"
+          alt={copy.whatsappAlt}
           style={{
             width: "100%",
             height: "100%",
@@ -155,6 +290,5 @@ export default function WhatsAppSupport({
 
   if (!mounted) return null;
 
-  // ✅ Portal keeps it fixed even if your page uses transforms/filters
   return createPortal(ui, document.body);
 }

@@ -1,12 +1,66 @@
 "use client";
 
 import Image from "next/image";
+import { useLocale } from "next-intl";
+
+type Locale = "en" | "es" | "de" | "fr" | "it" | "pt" | "sv";
 
 type ReviewImage = {
   id: number;
   src: string;
   alt: string;
 };
+
+const COPY: Record<
+  Locale,
+  {
+    reviewBadge: string;
+    title: string;
+    altPrefix: string;
+  }
+> = {
+  en: {
+    reviewBadge: "27 Google Reviews",
+    title: "Customer Feedback",
+    altPrefix: "Google review",
+  },
+  es: {
+    reviewBadge: "27 reseñas de Google",
+    title: "Opiniones de clientes",
+    altPrefix: "Reseña de Google",
+  },
+  de: {
+    reviewBadge: "27 Google-Bewertungen",
+    title: "Kundenfeedback",
+    altPrefix: "Google-Bewertung",
+  },
+  fr: {
+    reviewBadge: "27 avis Google",
+    title: "Avis des clients",
+    altPrefix: "Avis Google",
+  },
+  it: {
+    reviewBadge: "27 recensioni Google",
+    title: "Feedback dei clienti",
+    altPrefix: "Recensione Google",
+  },
+  pt: {
+    reviewBadge: "27 avaliações Google",
+    title: "Feedback dos clientes",
+    altPrefix: "Avaliação Google",
+  },
+  sv: {
+    reviewBadge: "27 Google-recensioner",
+    title: "Kundfeedback",
+    altPrefix: "Google-recension",
+  },
+};
+
+function getSafeLocale(locale: string): Locale {
+  return ["en", "es", "de", "fr", "it", "pt", "sv"].includes(locale)
+    ? (locale as Locale)
+    : "en";
+}
 
 const reviews: ReviewImage[] = [
   { id: 1, src: "/images/ReviewPNG1.png", alt: "Google review 1" },
@@ -29,13 +83,19 @@ const reviews: ReviewImage[] = [
 const topRow = reviews.slice(0, 8);
 const bottomRow = reviews.slice(8, 15);
 
-function ReviewCard({ review }: { review: ReviewImage }) {
+function ReviewCard({
+  review,
+  altPrefix,
+}: {
+  review: ReviewImage;
+  altPrefix: string;
+}) {
   return (
     <div className="review-card group/card relative shrink-0 overflow-hidden rounded-[clamp(12px,1.15vw,18px)] border border-white/15 bg-white p-[3px] shadow-[0_16px_45px_rgba(0,0,0,0.35)] transition-all duration-300 hover:-translate-y-1 hover:scale-[1.025] hover:border-[#FF7A00]/50 sm:p-[4px]">
       <div className="relative h-full w-full overflow-hidden rounded-[clamp(9px,0.9vw,14px)] bg-black">
         <Image
           src={review.src}
-          alt={review.alt}
+          alt={`${altPrefix} ${review.id}`}
           fill
           sizes="(max-width: 640px) 220px, (max-width: 1024px) 310px, (max-width: 1440px) 365px, 395px"
           className="object-cover transition-transform duration-500 group-hover/card:scale-[1.03]"
@@ -51,11 +111,13 @@ function ReviewStrip({
   direction = "left",
   mobileOnly = false,
   desktopOnly = false,
+  altPrefix,
 }: {
   items: ReviewImage[];
   direction?: "left" | "right";
   mobileOnly?: boolean;
   desktopOnly?: boolean;
+  altPrefix: string;
 }) {
   const repeated = [...items, ...items, ...items];
 
@@ -76,7 +138,11 @@ function ReviewStrip({
         ].join(" ")}
       >
         {repeated.map((review, index) => (
-          <ReviewCard key={`${review.id}-${index}`} review={review} />
+          <ReviewCard
+            key={`${review.id}-${index}`}
+            review={review}
+            altPrefix={altPrefix}
+          />
         ))}
       </div>
     </div>
@@ -84,6 +150,9 @@ function ReviewStrip({
 }
 
 export default function GoogleReviews3D() {
+  const locale = getSafeLocale(useLocale());
+  const copy = COPY[locale];
+
   return (
     <section className="relative isolate overflow-hidden bg-[#090a0d] py-7 sm:py-[clamp(34px,4vw,56px)]">
       <div className="absolute inset-0 -z-10 bg-[radial-gradient(circle_at_18%_0%,rgba(255,255,255,0.12),transparent_26%),radial-gradient(circle_at_82%_100%,rgba(255,122,0,0.13),transparent_28%),linear-gradient(135deg,#15171d_0%,#090a0d_48%,#1b1d22_100%)]" />
@@ -93,11 +162,11 @@ export default function GoogleReviews3D() {
       <div className="mx-auto mb-4 max-w-4xl px-4 text-center sm:mb-[clamp(18px,2.4vw,28px)]">
         <div className="mb-2 inline-flex items-center gap-1.5 rounded-full border border-white/15 bg-white/10 px-3 py-1 text-[10px] font-black text-white backdrop-blur-xl sm:mb-3 sm:gap-2 sm:px-4 sm:py-1.5 sm:text-[clamp(10px,0.85vw,12px)]">
           <span className="text-[#FF7A00]">★★★★★</span>
-          27 Google Reviews
+          {copy.reviewBadge}
         </div>
 
         <h2 className="text-[28px] font-black leading-none tracking-[-0.04em] text-white sm:text-[clamp(34px,3.5vw,54px)]">
-          Customer Feedback
+          {copy.title}
         </h2>
       </div>
 
@@ -105,12 +174,25 @@ export default function GoogleReviews3D() {
         <div className="pointer-events-none absolute inset-y-0 left-0 z-20 w-10 bg-gradient-to-r from-[#090a0d] to-transparent sm:w-[clamp(50px,7vw,140px)]" />
         <div className="pointer-events-none absolute inset-y-0 right-0 z-20 w-10 bg-gradient-to-l from-[#090a0d] to-transparent sm:w-[clamp(50px,7vw,140px)]" />
 
-        {/* Mobile: only one compact row to keep the page shorter */}
-        <ReviewStrip items={reviews} direction="left" mobileOnly />
+        <ReviewStrip
+          items={reviews}
+          direction="left"
+          mobileOnly
+          altPrefix={copy.altPrefix}
+        />
 
-        {/* Desktop/tablet: original two-row premium layout */}
-        <ReviewStrip items={topRow} direction="left" desktopOnly />
-        <ReviewStrip items={bottomRow} direction="right" desktopOnly />
+        <ReviewStrip
+          items={topRow}
+          direction="left"
+          desktopOnly
+          altPrefix={copy.altPrefix}
+        />
+        <ReviewStrip
+          items={bottomRow}
+          direction="right"
+          desktopOnly
+          altPrefix={copy.altPrefix}
+        />
       </div>
 
       <style jsx global>{`

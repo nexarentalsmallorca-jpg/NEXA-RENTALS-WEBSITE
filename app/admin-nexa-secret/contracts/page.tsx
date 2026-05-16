@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import AdminShell from "../../components/dashboard/AdminShell";
 
 type ContractBooking = {
   id?: string;
@@ -118,6 +119,7 @@ function normalizePaymentMethod(value?: string) {
   const clean = String(value || "").toLowerCase();
 
   if (clean.includes("cash") || clean.includes("efectivo")) return "cash";
+
   if (
     clean.includes("card") ||
     clean.includes("tarjeta") ||
@@ -193,7 +195,10 @@ function getVehicleName(booking: ContractBooking) {
 
 function getTotalCents(booking: ContractBooking) {
   if (typeof booking.amount === "number") return booking.amount;
-  if (typeof booking.amount_eur === "number") return Math.round(booking.amount_eur * 100);
+
+  if (typeof booking.amount_eur === "number") {
+    return Math.round(booking.amount_eur * 100);
+  }
 
   const total = moneyTextToNumber(booking.contractData?.total);
 
@@ -483,220 +488,222 @@ export default function ContractsPage() {
   }, [contracts]);
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[34px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_25px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-        <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-300">
-              PDF Archive
-            </p>
-            <h2 className="mt-2 text-4xl font-black tracking-tight text-white">
-              Contracts
-            </h2>
-            <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/55">
-              Real generated contracts from manual bookings and Supabase
-              bookings. When Google Drive is connected, uploaded Drive PDFs also
-              appear here.
-            </p>
-          </div>
+    <AdminShell>
+      <div className="space-y-6">
+        <section className="rounded-[34px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_25px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+          <div className="flex flex-col justify-between gap-5 lg:flex-row lg:items-end">
+            <div>
+              <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-300">
+                PDF Archive
+              </p>
+              <h2 className="mt-2 text-4xl font-black tracking-tight text-white">
+                Contracts
+              </h2>
+              <p className="mt-3 max-w-2xl text-sm font-medium leading-6 text-white/55">
+                Real generated contracts from manual bookings and Supabase
+                bookings. When Google Drive is connected, uploaded Drive PDFs
+                also appear here.
+              </p>
+            </div>
 
-          <button
-            type="button"
-            onClick={loadContracts}
-            className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-black text-white/70 transition hover:border-orange-400/30 hover:text-white"
-          >
-            Refresh
-          </button>
-        </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
-        <div className="rounded-[26px] border border-orange-400/20 bg-orange-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">
-            Contracts
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {summary.count}
-          </p>
-        </div>
-
-        <div className="rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-            Total sales
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {formatMoneyFromCents(summary.totalCents)}
-          </p>
-        </div>
-
-        <div className="rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
-            Cash
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {formatMoneyFromCents(summary.cashCents)}
-          </p>
-        </div>
-
-        <div className="rounded-[26px] border border-sky-400/20 bg-sky-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-300">
-            Card
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {formatMoneyFromCents(summary.cardCents)}
-          </p>
-        </div>
-
-        <div className="rounded-[26px] border border-purple-400/20 bg-purple-500/10 p-5">
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-300">
-            Drive PDFs
-          </p>
-          <p className="mt-2 text-3xl font-black text-white">
-            {summary.driveCount}/{summary.pdfCount}
-          </p>
-        </div>
-      </section>
-
-      <section className="rounded-[28px] border border-white/10 bg-[#080A10]/80 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
-        <input
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-          placeholder="Search by customer, contract, phone, vehicle, payment method..."
-        />
-
-        {error ? (
-          <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-500/10 px-4 py-3 text-sm font-bold text-yellow-300">
-            {error}
-          </div>
-        ) : null}
-      </section>
-
-      <section className="space-y-4">
-        {isLoading ? (
-          <div className="rounded-[28px] border border-white/10 bg-[#080A10]/80 p-6 text-sm font-bold text-white/45">
-            Loading contracts...
-          </div>
-        ) : null}
-
-        {!isLoading && filteredContracts.length === 0 ? (
-          <div className="rounded-[28px] border border-white/10 bg-[#080A10]/80 p-6 text-sm font-bold text-white/45">
-            No contracts found yet. Create a manual booking and generate the PDF
-            first.
-          </div>
-        ) : null}
-
-        {filteredContracts.map((booking) => {
-          const contractNumber = getContractNumber(booking);
-          const customerName = getCustomerName(booking);
-          const vehicleName = getVehicleName(booking);
-          const totalCents = getTotalCents(booking);
-          const paymentMethod = getPaymentMethod(booking);
-          const fileName = getContractFileName(booking);
-          const createdAt = getCreatedAt(booking);
-          const phone = getCustomerPhone(booking);
-
-          return (
-            <div
-              key={`${contractNumber}-${fileName}`}
-              className="flex flex-col justify-between gap-5 rounded-[28px] border border-white/10 bg-[#080A10]/80 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl xl:flex-row xl:items-center"
+            <button
+              type="button"
+              onClick={loadContracts}
+              className="rounded-2xl border border-white/10 bg-white/[0.05] px-5 py-3 text-sm font-black text-white/70 transition hover:border-orange-400/30 hover:text-white"
             >
-              <div className="min-w-0 flex-1">
-                <div className="flex flex-wrap items-center gap-2">
-                  <p className="text-xl font-black text-white">
-                    {customerName}
+              Refresh
+            </button>
+          </div>
+        </section>
+
+        <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+          <div className="rounded-[26px] border border-orange-400/20 bg-orange-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">
+              Contracts
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {summary.count}
+            </p>
+          </div>
+
+          <div className="rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+              Total sales
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {formatMoneyFromCents(summary.totalCents)}
+            </p>
+          </div>
+
+          <div className="rounded-[26px] border border-emerald-400/20 bg-emerald-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-emerald-300">
+              Cash
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {formatMoneyFromCents(summary.cashCents)}
+            </p>
+          </div>
+
+          <div className="rounded-[26px] border border-sky-400/20 bg-sky-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-sky-300">
+              Card
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {formatMoneyFromCents(summary.cardCents)}
+            </p>
+          </div>
+
+          <div className="rounded-[26px] border border-purple-400/20 bg-purple-500/10 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.2em] text-purple-300">
+              Drive PDFs
+            </p>
+            <p className="mt-2 text-3xl font-black text-white">
+              {summary.driveCount}/{summary.pdfCount}
+            </p>
+          </div>
+        </section>
+
+        <section className="rounded-[28px] border border-white/10 bg-[#080A10]/80 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+          <input
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="w-full rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-sm font-bold text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+            placeholder="Search by customer, contract, phone, vehicle, payment method..."
+          />
+
+          {error ? (
+            <div className="mt-4 rounded-2xl border border-yellow-400/20 bg-yellow-500/10 px-4 py-3 text-sm font-bold text-yellow-300">
+              {error}
+            </div>
+          ) : null}
+        </section>
+
+        <section className="space-y-4">
+          {isLoading ? (
+            <div className="rounded-[28px] border border-white/10 bg-[#080A10]/80 p-6 text-sm font-bold text-white/45">
+              Loading contracts...
+            </div>
+          ) : null}
+
+          {!isLoading && filteredContracts.length === 0 ? (
+            <div className="rounded-[28px] border border-white/10 bg-[#080A10]/80 p-6 text-sm font-bold text-white/45">
+              No contracts found yet. Create a manual booking and generate the
+              PDF first.
+            </div>
+          ) : null}
+
+          {filteredContracts.map((booking) => {
+            const contractNumber = getContractNumber(booking);
+            const customerName = getCustomerName(booking);
+            const vehicleName = getVehicleName(booking);
+            const totalCents = getTotalCents(booking);
+            const paymentMethod = getPaymentMethod(booking);
+            const fileName = getContractFileName(booking);
+            const createdAt = getCreatedAt(booking);
+            const phone = getCustomerPhone(booking);
+
+            return (
+              <div
+                key={`${contractNumber}-${fileName}`}
+                className="flex flex-col justify-between gap-5 rounded-[28px] border border-white/10 bg-[#080A10]/80 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.35)] backdrop-blur-xl xl:flex-row xl:items-center"
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xl font-black text-white">
+                      {customerName}
+                    </p>
+
+                    <span className="rounded-full border border-orange-400/20 bg-orange-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">
+                      {contractNumber}
+                    </span>
+
+                    <span
+                      className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${paymentMethodClasses(
+                        paymentMethod
+                      )}`}
+                    >
+                      {paymentMethodLabel(paymentMethod)}
+                    </span>
+
+                    {isDriveUploaded(booking) ? (
+                      <span className="rounded-full border border-purple-400/20 bg-purple-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-purple-300">
+                        Drive
+                      </span>
+                    ) : hasPdf(booking) ? (
+                      <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-sky-300">
+                        Local PDF
+                      </span>
+                    ) : (
+                      <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/35">
+                        No PDF
+                      </span>
+                    )}
+                  </div>
+
+                  <p className="mt-2 break-all text-sm font-bold text-white/45">
+                    {fileName}
                   </p>
 
-                  <span className="rounded-full border border-orange-400/20 bg-orange-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">
-                    {contractNumber}
-                  </span>
-
-                  <span
-                    className={`rounded-full border px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] ${paymentMethodClasses(
-                      paymentMethod
-                    )}`}
-                  >
-                    {paymentMethodLabel(paymentMethod)}
-                  </span>
-
-                  {isDriveUploaded(booking) ? (
-                    <span className="rounded-full border border-purple-400/20 bg-purple-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-purple-300">
-                      Drive
-                    </span>
-                  ) : hasPdf(booking) ? (
-                    <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-sky-300">
-                      Local PDF
-                    </span>
-                  ) : (
-                    <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-white/35">
-                      No PDF
-                    </span>
-                  )}
+                  <div className="mt-3 grid gap-2 text-sm font-bold text-white/55 md:grid-cols-2 xl:grid-cols-4">
+                    <p>
+                      <span className="text-white/35">Date:</span>{" "}
+                      {formatDate(createdAt)}
+                    </p>
+                    <p>
+                      <span className="text-white/35">Vehicle:</span>{" "}
+                      {vehicleName || "Vehicle"}
+                    </p>
+                    <p>
+                      <span className="text-white/35">Phone:</span>{" "}
+                      {phone || "No phone"}
+                    </p>
+                    <p>
+                      <span className="text-white/35">Total:</span>{" "}
+                      <span className="text-emerald-300">
+                        {formatMoneyFromCents(totalCents)}
+                      </span>
+                    </p>
+                  </div>
                 </div>
 
-                <p className="mt-2 break-all text-sm font-bold text-white/45">
-                  {fileName}
-                </p>
+                <div className="flex flex-wrap gap-3 xl:justify-end">
+                  {booking.contractPdf?.drive?.webViewLink ? (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.open(
+                          booking.contractPdf?.drive?.webViewLink,
+                          "_blank",
+                          "noopener,noreferrer"
+                        )
+                      }
+                      className="rounded-2xl border border-purple-400/20 bg-purple-500/10 px-4 py-3 text-sm font-black text-purple-200 transition hover:border-purple-300/40"
+                    >
+                      Open Drive
+                    </button>
+                  ) : null}
 
-                <div className="mt-3 grid gap-2 text-sm font-bold text-white/55 md:grid-cols-2 xl:grid-cols-4">
-                  <p>
-                    <span className="text-white/35">Date:</span>{" "}
-                    {formatDate(createdAt)}
-                  </p>
-                  <p>
-                    <span className="text-white/35">Vehicle:</span>{" "}
-                    {vehicleName || "Vehicle"}
-                  </p>
-                  <p>
-                    <span className="text-white/35">Phone:</span>{" "}
-                    {phone || "No phone"}
-                  </p>
-                  <p>
-                    <span className="text-white/35">Total:</span>{" "}
-                    <span className="text-emerald-300">
-                      {formatMoneyFromCents(totalCents)}
-                    </span>
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex flex-wrap gap-3 xl:justify-end">
-                {booking.contractPdf?.drive?.webViewLink ? (
                   <button
                     type="button"
-                    onClick={() =>
-                      window.open(
-                        booking.contractPdf?.drive?.webViewLink,
-                        "_blank",
-                        "noopener,noreferrer"
-                      )
-                    }
-                    className="rounded-2xl border border-purple-400/20 bg-purple-500/10 px-4 py-3 text-sm font-black text-purple-200 transition hover:border-purple-300/40"
+                    onClick={() => handleDownload(booking)}
+                    className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-black text-white/70 transition hover:border-orange-400/30 hover:text-white"
                   >
-                    Open Drive
+                    Download
                   </button>
-                ) : null}
 
-                <button
-                  type="button"
-                  onClick={() => handleDownload(booking)}
-                  className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-black text-white/70 transition hover:border-orange-400/30 hover:text-white"
-                >
-                  Download
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handlePrint(booking)}
-                  className="rounded-2xl bg-gradient-to-r from-orange-500 via-purple-500 to-sky-500 px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5"
-                >
-                  Print
-                </button>
+                  <button
+                    type="button"
+                    onClick={() => handlePrint(booking)}
+                    className="rounded-2xl bg-gradient-to-r from-orange-500 via-purple-500 to-sky-500 px-4 py-3 text-sm font-black text-white transition hover:-translate-y-0.5"
+                  >
+                    Print
+                  </button>
+                </div>
               </div>
-            </div>
-          );
-        })}
-      </section>
-    </div>
+            );
+          })}
+        </section>
+      </div>
+    </AdminShell>
   );
 }

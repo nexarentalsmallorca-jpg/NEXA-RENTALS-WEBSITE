@@ -33,22 +33,42 @@ const FROM_EMAIL =
 type BookingRow = {
   id?: string | number;
   stripe_payment_intent_id?: string;
-  status?: string;
-  pickup_date?: string;
-  pickup_time?: string;
-  dropoff_date?: string;
-  dropoff_time?: string;
-  vehicle_name?: string;
+  status?: string | null;
+
+  pickup_date?: string | null;
+  pickup_time?: string | null;
+  dropoff_date?: string | null;
+  dropoff_time?: string | null;
+
+  vehicle_name?: string | null;
+  vehicle_code?: string | null;
+  assigned_vehicle_code?: string | null;
+  scooter_code?: string | null;
+
+  source?: string | null;
+
+  vehicle?: {
+    codigo?: string | null;
+    code?: string | null;
+    matricula?: string | null;
+    marca?: string | null;
+    modelo?: string | null;
+  } | null;
 };
 
 type AssignedVehicleResult = {
   assignedVehicleName: string;
   assignedVehicleCode: string;
+  assignedVehicleMatricula: string;
   assignedVehicleShortName: string;
+  assignedVehicleDisplayName: string;
+  fleetGroup: string;
+  publicVehicleName: string;
   totalFleet: number;
   bookedCount: number;
   availableCount: number;
   assignmentStatus: "assigned" | "unassigned";
+  assignmentSource: "metadata" | "auto_fallback" | "failed";
 };
 
 function formatDate(dateString?: string) {
@@ -88,6 +108,18 @@ function cleanCurrency(value?: string | null) {
   return String(value || "eur").toUpperCase();
 }
 
+function cleanText(value?: string | number | null) {
+  return String(value || "").trim();
+}
+
+function normalizeText(value?: string | number | null) {
+  return cleanText(value).toLowerCase().replace(/\s+/g, " ");
+}
+
+function normalizeVehicleCode(value?: string | number | null) {
+  return cleanText(value).toUpperCase().replace(/\s+/g, "");
+}
+
 function buildDateTime(date?: string | null, time?: string | null) {
   if (!date || !time) return null;
 
@@ -112,14 +144,20 @@ function isOverlapping(
 }
 
 function isInactiveStatus(status?: string | null) {
-  const clean = String(status || "").toLowerCase();
+  const clean = normalizeText(status);
 
   return (
     clean.includes("cancel") ||
+    clean.includes("cancelada") ||
+    clean.includes("canceled") ||
+    clean.includes("cancelled") ||
+    clean.includes("failed") ||
+    clean.includes("refunded") ||
+    clean.includes("returned") ||
     clean.includes("finalizada") ||
     clean.includes("completed") ||
     clean.includes("finished") ||
-    clean.includes("refunded")
+    clean.includes("closed")
   );
 }
 
@@ -147,6 +185,110 @@ function bookingRowOverlapsRequest(
   );
 }
 
+function getBookingVehicleCode(row: BookingRow) {
+  return normalizeVehicleCode(
+    row.assigned_vehicle_code ||
+      row.vehicle_code ||
+      row.scooter_code ||
+      row.vehicle?.codigo ||
+      row.vehicle?.code ||
+      extractVehicleCodeFromText(row.vehicle_name || "")
+  );
+}
+
+function resolveFleetFromMetadata(md: Stripe.Metadata) {
+  const explicitFleetGroup = cleanText(md.fleet_group);
+
+  if (explicitFleetGroup) {
+    const cleanFleetGroup = normalizeText(explicitFleetGroup);
+
+    if (cleanFleetGroup === "sym_symphony_125") {
+      return resolveFleetGroupFromWebsiteVehicle({
+        vehicleId: "s3",
+        vehicleName: "SYM Symphony 125",
+      });
+    }
+
+    if (cleanFleetGroup === "piaggio_liberty_125") {
+      return resolveFleetGroupFromWebsiteVehicle({
+        vehicleId: "s2",
+        vehicleName: "Piaggio Liberty 125",
+      });
+    }
+  }
+
+  return resolveFleetGroupFromWebsiteVehicle({
+    vehicleId: md.vehicle_id || "",
+    vehicleName:
+      md.public_vehicle_name ||
+      md.vehicle_name ||
+      md.assigned_vehicle_display_name ||
+      "",
+  });
+}
+
+function getVehicleNameForCustomer(md: Stripe.Metadata) {
+  return (
+    md.public_vehicle_name ||
+    md.vehicle_name ||
+    md.assigned_vehicle_display_name ||
+    md.assigned_vehicle_name ||
+    "Selected vehicle"
+  );
+}
+
+async function getOverlappingBookings({
+  requestedStart,
+  requestedEnd,
+  currentPaymentIntentId,
+}: {
+  requestedStart: Date;
+  requestedEnd: Date;
+  currentPaymentIntentId: string;
+}) {
+  const { data, error } = await supabase
+    .from("bookings")
+    .select(
+      `
+      id,
+      stripe_payment_intent_id,
+      status,
+      source,
+      pickup_date,
+      pickup_time,
+      dropoff_date,
+      dropoff_time,
+      vehicle_name,
+      vehicle_code,
+      assigned_vehicle_code,
+      scooter_code,
+      vehicle:vehicles (
+        codigo,
+        code,
+        matricula,
+        marca,
+        modelo
+      )
+    `
+    )
+    .limit(1000);
+
+  if (error) {
+    console.error("ASSIGN VEHICLE SUPABASE ERROR:", error);
+    throw error;
+  }
+
+  const rows = (data || []) as BookingRow[];
+
+  return rows.filter((row) => {
+    if (!row) return false;
+    if (row.stripe_payment_intent_id === currentPaymentIntentId) return false;
+    if (isInactiveStatus(row.status)) return false;
+
+    return bookingRowOverlapsRequest(row, requestedStart, requestedEnd);
+  });
+}
+
 async function assignFirstAvailableVehicle(
   pi: Stripe.PaymentIntent
 ): Promise<AssignedVehicleResult> {
@@ -155,60 +297,68 @@ async function assignFirstAvailableVehicle(
   const requestedStart = buildDateTime(md.pickup_date, md.pickup_time);
   const requestedEnd = buildDateTime(md.dropoff_date, md.dropoff_time);
 
-  const fleetGroup = resolveFleetGroupFromWebsiteVehicle({
-    vehicleId: md.vehicle_id || "",
-    vehicleName: md.vehicle_name || "",
-  });
-
+  const fleetGroup = resolveFleetFromMetadata(md);
   const fleet = fleetGroup.vehicles;
+  const publicVehicleName = getVehicleNameForCustomer(md);
+
+  const metadataAssignedCode = normalizeVehicleCode(
+    md.assigned_vehicle_code || md.vehicle_code || ""
+  );
+  const metadataVehicle = findVehicleByCodigo(metadataAssignedCode);
 
   if (!requestedStart || !requestedEnd || fleet.length === 0) {
     return {
-      assignedVehicleName: md.vehicle_name || "UNASSIGNED · Vehicle",
+      assignedVehicleName:
+        md.assigned_vehicle_display_name ||
+        md.vehicle_name ||
+        "UNASSIGNED · Vehicle",
       assignedVehicleCode: "",
-      assignedVehicleShortName: md.vehicle_name || "UNASSIGNED",
-      totalFleet: fleet.length,
-      bookedCount: 0,
-      availableCount: fleet.length,
-      assignmentStatus: "unassigned",
-    };
-  }
-
-  const { data, error } = await supabase
-    .from("bookings")
-    .select(
-      "id,stripe_payment_intent_id,status,pickup_date,pickup_time,dropoff_date,dropoff_time,vehicle_name"
-    )
-    .in("status", ["paid", "manual"])
-    .limit(1000);
-
-  if (error) {
-    console.error("ASSIGN VEHICLE SUPABASE ERROR:", error);
-
-    return {
-      assignedVehicleName: `UNASSIGNED · ${md.vehicle_name || "Vehicle"}`,
-      assignedVehicleCode: "",
+      assignedVehicleMatricula: "",
       assignedVehicleShortName: "UNASSIGNED",
+      assignedVehicleDisplayName:
+        md.assigned_vehicle_display_name ||
+        md.vehicle_name ||
+        "UNASSIGNED · Vehicle",
+      fleetGroup: md.fleet_group || fleetGroup.group,
+      publicVehicleName,
       totalFleet: fleet.length,
       bookedCount: 0,
       availableCount: fleet.length,
       assignmentStatus: "unassigned",
+      assignmentSource: "failed",
     };
   }
 
-  const overlappingBookings = (data || []).filter((row: BookingRow) => {
-    if (!row) return false;
-    if (row.stripe_payment_intent_id === pi.id) return false;
-    if (isInactiveStatus(row.status)) return false;
+  let overlappingBookings: BookingRow[] = [];
 
-    return bookingRowOverlapsRequest(row, requestedStart, requestedEnd);
-  });
+  try {
+    overlappingBookings = await getOverlappingBookings({
+      requestedStart,
+      requestedEnd,
+      currentPaymentIntentId: pi.id,
+    });
+  } catch {
+    return {
+      assignedVehicleName: `UNASSIGNED · ${publicVehicleName}`,
+      assignedVehicleCode: "",
+      assignedVehicleMatricula: "",
+      assignedVehicleShortName: "UNASSIGNED",
+      assignedVehicleDisplayName: `UNASSIGNED · ${publicVehicleName}`,
+      fleetGroup: md.fleet_group || fleetGroup.group,
+      publicVehicleName,
+      totalFleet: fleet.length,
+      bookedCount: 0,
+      availableCount: fleet.length,
+      assignmentStatus: "unassigned",
+      assignmentSource: "failed",
+    };
+  }
 
   const bookedCodes = new Set<string>();
   let unknownFleetBookings = 0;
 
-  overlappingBookings.forEach((row: BookingRow) => {
-    const code = extractVehicleCodeFromText(row.vehicle_name || "");
+  overlappingBookings.forEach((row) => {
+    const code = getBookingVehicleCode(row);
     const vehicle = findVehicleByCodigo(code);
 
     if (vehicle) {
@@ -226,13 +376,6 @@ async function assignFirstAvailableVehicle(
     }
   });
 
-  const availableVehicles = fleet.filter(
-    (vehicle) => !bookedCodes.has(vehicle.codigo)
-  );
-
-  const finalAvailableVehicles = availableVehicles.slice(unknownFleetBookings);
-  const assignedVehicle = finalAvailableVehicles[0];
-
   const bookedCount = Math.min(
     fleet.length,
     bookedCodes.size + unknownFleetBookings
@@ -240,26 +383,64 @@ async function assignFirstAvailableVehicle(
 
   const availableCount = Math.max(0, fleet.length - bookedCount);
 
+  if (
+    metadataVehicle &&
+    fleet.some((vehicle) => vehicle.codigo === metadataVehicle.codigo) &&
+    !bookedCodes.has(metadataVehicle.codigo)
+  ) {
+    return {
+      assignedVehicleName: vehicleDisplayName(metadataVehicle),
+      assignedVehicleCode: metadataVehicle.codigo,
+      assignedVehicleMatricula: metadataVehicle.matricula,
+      assignedVehicleShortName: vehicleShortName(metadataVehicle),
+      assignedVehicleDisplayName: vehicleDisplayName(metadataVehicle),
+      fleetGroup: md.fleet_group || fleetGroup.group,
+      publicVehicleName,
+      totalFleet: fleet.length,
+      bookedCount,
+      availableCount,
+      assignmentStatus: "assigned",
+      assignmentSource: "metadata",
+    };
+  }
+
+  const availableVehicles = fleet.filter(
+    (vehicle) => !bookedCodes.has(vehicle.codigo)
+  );
+
+  const finalAvailableVehicles = availableVehicles.slice(unknownFleetBookings);
+  const assignedVehicle = finalAvailableVehicles[0];
+
   if (!assignedVehicle) {
     return {
-      assignedVehicleName: `UNASSIGNED · ${md.vehicle_name || fleetGroup.group}`,
+      assignedVehicleName: `UNASSIGNED · ${publicVehicleName}`,
       assignedVehicleCode: "",
+      assignedVehicleMatricula: "",
       assignedVehicleShortName: "UNASSIGNED",
+      assignedVehicleDisplayName: `UNASSIGNED · ${publicVehicleName}`,
+      fleetGroup: md.fleet_group || fleetGroup.group,
+      publicVehicleName,
       totalFleet: fleet.length,
       bookedCount,
       availableCount,
       assignmentStatus: "unassigned",
+      assignmentSource: "failed",
     };
   }
 
   return {
     assignedVehicleName: vehicleDisplayName(assignedVehicle),
     assignedVehicleCode: assignedVehicle.codigo,
+    assignedVehicleMatricula: assignedVehicle.matricula,
     assignedVehicleShortName: vehicleShortName(assignedVehicle),
+    assignedVehicleDisplayName: vehicleDisplayName(assignedVehicle),
+    fleetGroup: md.fleet_group || fleetGroup.group,
+    publicVehicleName,
     totalFleet: fleet.length,
     bookedCount,
     availableCount,
     assignmentStatus: "assigned",
+    assignmentSource: "auto_fallback",
   };
 }
 
@@ -273,6 +454,9 @@ function buildBookingPayload(
   return {
     stripe_payment_intent_id: pi.id,
     status: "paid",
+    booking_action: "reserve_now",
+
+    source: "website",
 
     customer_name: md.customer_name || "",
     customer_email: md.customer_email || "",
@@ -283,7 +467,40 @@ function buildBookingPayload(
     dropoff_date: md.dropoff_date || "",
     dropoff_time: md.dropoff_time || "",
 
-    vehicle_name: assignment.assignedVehicleName || md.vehicle_name || "",
+    vehicle_name:
+      assignment.assignedVehicleDisplayName ||
+      assignment.assignedVehicleName ||
+      md.assigned_vehicle_display_name ||
+      md.vehicle_name ||
+      "",
+    vehicle_code:
+      assignment.assignedVehicleCode ||
+      md.assigned_vehicle_code ||
+      md.vehicle_code ||
+      "",
+
+    assigned_vehicle_code:
+      assignment.assignedVehicleCode ||
+      md.assigned_vehicle_code ||
+      md.vehicle_code ||
+      "",
+    scooter_code:
+      assignment.assignedVehicleCode ||
+      md.assigned_vehicle_code ||
+      md.vehicle_code ||
+      "",
+
+    fleet_group: assignment.fleetGroup || md.fleet_group || "",
+    public_vehicle_name:
+      assignment.publicVehicleName ||
+      md.public_vehicle_name ||
+      md.vehicle_name ||
+      "",
+
+    payment_method: "card",
+    payment_status: "paid",
+
+    contract_number: md.bookingId || pi.id,
 
     dl_front_path: md.dl_front_path || "",
     dl_back_path: md.dl_back_path || "",
@@ -295,6 +512,48 @@ function buildBookingPayload(
   };
 }
 
+function fallbackPayloadWithoutModernColumns(payload: any) {
+  const {
+    booking_action,
+    assigned_vehicle_code,
+    scooter_code,
+    fleet_group,
+    public_vehicle_name,
+    payment_method,
+    payment_status,
+    contract_number,
+    ...rest
+  } = payload;
+
+  return rest;
+}
+
+function fallbackPayloadForOldBookingsTable(payload: any) {
+  return {
+    stripe_payment_intent_id: payload.stripe_payment_intent_id,
+    status: payload.status,
+
+    customer_name: payload.customer_name,
+    customer_email: payload.customer_email,
+    phone: payload.phone,
+
+    pickup_date: payload.pickup_date,
+    pickup_time: payload.pickup_time,
+    dropoff_date: payload.dropoff_date,
+    dropoff_time: payload.dropoff_time,
+
+    vehicle_name: payload.vehicle_name,
+
+    dl_front_path: payload.dl_front_path,
+    dl_back_path: payload.dl_back_path,
+    id_front_path: payload.id_front_path,
+    id_back_path: payload.id_back_path,
+
+    amount: payload.amount,
+    currency: payload.currency,
+  };
+}
+
 async function savePaidBookingToSupabase(
   pi: Stripe.PaymentIntent,
   assignment: AssignedVehicleResult
@@ -303,10 +562,44 @@ async function savePaidBookingToSupabase(
 
   console.log("SUPABASE BOOKING PAYLOAD:", payload);
 
-  const { data, error } = await supabase
+  let { data, error } = await supabase
     .from("bookings")
     .upsert(payload, { onConflict: "stripe_payment_intent_id" })
     .select();
+
+  if (error) {
+    console.warn(
+      "SUPABASE FULL BOOKING UPSERT FAILED, TRYING MODERN FALLBACK:",
+      error.message
+    );
+
+    const fallbackPayload = fallbackPayloadWithoutModernColumns(payload);
+
+    const secondTry = await supabase
+      .from("bookings")
+      .upsert(fallbackPayload, { onConflict: "stripe_payment_intent_id" })
+      .select();
+
+    data = secondTry.data;
+    error = secondTry.error;
+  }
+
+  if (error) {
+    console.warn(
+      "SUPABASE MODERN FALLBACK FAILED, TRYING OLD TABLE FALLBACK:",
+      error.message
+    );
+
+    const oldPayload = fallbackPayloadForOldBookingsTable(payload);
+
+    const thirdTry = await supabase
+      .from("bookings")
+      .upsert(oldPayload, { onConflict: "stripe_payment_intent_id" })
+      .select();
+
+    data = thirdTry.data;
+    error = thirdTry.error;
+  }
 
   if (error) {
     console.error("SUPABASE BOOKING UPSERT ERROR:", error);
@@ -356,15 +649,27 @@ async function sendOwnerEmail(
 
         <hr/>
 
-        <p><b>Requested vehicle:</b> ${safeText(md.vehicle_name || "-")}</p>
+        <p><b>Customer selected:</b> ${safeText(
+          assignment.publicVehicleName || md.public_vehicle_name || md.vehicle_name || "-"
+        )}</p>
         <p><b>Assigned vehicle:</b> ${safeText(
           assignment.assignedVehicleName || "-"
         )}</p>
         <p><b>Assigned code:</b> ${safeText(
           assignment.assignedVehicleCode || "-"
         )}</p>
+        <p><b>Assigned matrícula:</b> ${safeText(
+          assignment.assignedVehicleMatricula || "-"
+        )}</p>
+        <p><b>Fleet group:</b> ${safeText(
+          assignment.fleetGroup || md.fleet_group || "-"
+        )}</p>
+        <p><b>Assignment source:</b> ${safeText(
+          assignment.assignmentSource || "-"
+        )}</p>
         <p><b>Vehicle ID:</b> ${safeText(md.vehicle_id || "-")}</p>
         <p><b>Plan:</b> ${safeText(md.plan || "-")}</p>
+        <p><b>Days:</b> ${safeText(md.days || "-")}</p>
         <p><b>Rate per day:</b> ${safeText(md.rate_per_day || "-")}</p>
 
         <p><b>Pickup Date & Time:</b> ${safeText(
@@ -385,6 +690,9 @@ async function sendOwnerEmail(
         )}</p>
         <p><b>Available count at checkout:</b> ${safeText(
           md.available_count || "-"
+        )}</p>
+        <p><b>Total fleet at checkout:</b> ${safeText(
+          md.total_fleet || "-"
         )}</p>
 
         <p><b>Notes:</b> ${safeText(md.notes || "-")}</p>
@@ -450,6 +758,12 @@ async function sendCustomerEmail(
     return;
   }
 
+  const customerVehicleName =
+    assignment.publicVehicleName ||
+    md.public_vehicle_name ||
+    md.vehicle_name ||
+    "Selected vehicle";
+
   const customerEmailResult = await resend.emails.send({
     from: `Nexa Rentals <${FROM_EMAIL}>`,
     to: customerEmail,
@@ -465,7 +779,7 @@ async function sendCustomerEmail(
 
         <h3>Booking Details</h3>
         <p><b>Booking ID:</b> ${safeText(md.bookingId || "-")}</p>
-        <p><b>Vehicle:</b> ${safeText(md.vehicle_name || "-")}</p>
+        <p><b>Vehicle:</b> ${safeText(customerVehicleName)}</p>
         <p><b>Plan:</b> ${safeText(md.plan || "-")}</p>
         <p><b>Pickup Date & Time:</b> ${safeText(
           formatDate(md.pickup_date)

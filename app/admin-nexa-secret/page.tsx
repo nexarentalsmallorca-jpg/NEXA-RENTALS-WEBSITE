@@ -2,94 +2,99 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+import {
+  AlertTriangle,
+  ArrowRight,
+  Bell,
+  CalendarClock,
+  CheckCircle2,
+  Clock3,
+  RefreshCw,
+  Sparkles,
+  Wrench,
+} from "lucide-react";
+import AdminShell from "../components/dashboard/AdminShell";
 import { nexaFleet } from "../../lib/nexaFleet";
 
-type PaymentMethod = "cash" | "card" | "unpaid";
+type BookingAction = "rent_now" | "reserve_now";
+type BookingStatus = "rented" | "reserved" | "finished" | "cancelled" | "wanted";
+type NoticeTone = "red" | "yellow" | "sky" | "emerald" | "white";
 
 type SavedBooking = {
-  id: string;
-  createdAt: string;
+  id?: string | number;
+  createdAt?: string;
   created_at?: string;
-  status: string;
-  source: string;
-
+  status?: string;
+  source?: string;
+  booking_action?: string;
+  bookingAction?: string;
   stripe_payment_intent_id?: string;
   amount?: number;
   amount_eur?: number;
-  currency?: string;
   payment_method?: string;
-  payment_status?: string;
   contract_number?: string;
   customer_name?: string;
   customer_email?: string;
   phone?: string;
-  customer_dni?: string;
-  customer_address?: string;
   pickup_date?: string;
   pickup_time?: string;
   dropoff_date?: string;
   dropoff_time?: string;
   vehicle_name?: string;
   vehicle_code?: string;
+  assigned_vehicle_code?: string;
+  scooter_code?: string;
+  vehicle?: {
+    codigo?: string;
+    matricula?: string;
+    marca?: string;
+    modelo?: string;
+    imageUrl?: string;
+  };
+  contractData?: {
+    numeroContrato?: string;
+    fechaEntrega?: string;
+    horaEntrega?: string;
+    fechaDevolucion?: string;
+    horaDevolucion?: string;
+    nombreCliente?: string;
+    telefono?: string;
+    email?: string;
+    total?: string;
+    pagado?: string;
+    metodoPago?: string;
+    paymentMethod?: string;
+    bookingAction?: string;
+  };
+};
 
+type NormalizedBooking = {
+  id: string;
+  key: string;
+  createdAt: string;
+  status: string;
+  computedStatus: BookingStatus;
+  source: string;
+  bookingAction: BookingAction;
+  amountCents: number;
+  paymentMethod: "cash" | "card" | "unpaid";
+  customerName: string;
+  phone: string;
+  email: string;
+  contractNumber: string;
+  start: Date | null;
+  end: Date | null;
+  pickupDate: string;
+  pickupTime: string;
+  dropoffDate: string;
+  dropoffTime: string;
   vehicle: {
     codigo: string;
     matricula: string;
     marca: string;
     modelo: string;
-    ano?: string;
-    bastidor?: string;
-    combustible?: string;
-    tipo?: string;
+    imageUrl: string;
   };
-
-  contractData: {
-    numeroContrato?: string;
-    fechaEntrega: string;
-    horaEntrega: string;
-    fechaDevolucion: string;
-    horaDevolucion: string;
-    nombreCliente: string;
-    dniPasaporte?: string;
-    telefono?: string;
-    email?: string;
-    direccion?: string;
-    dias?: string;
-    precioPorDia?: string;
-    total: string;
-    pagado?: string;
-    metodoPago?: string;
-    paymentMethod?: string;
-    kmSalida?: string;
-    combustibleSalida?: string;
-  };
-};
-
-type ApiBookingRow = Partial<SavedBooking> & {
-  id?: string | number;
-  created_at?: string;
-  stripe_payment_intent_id?: string;
-  status?: string;
-  source?: string;
-  customer_name?: string;
-  customer_email?: string;
-  phone?: string;
-  pickup_date?: string;
-  pickup_time?: string;
-  dropoff_date?: string;
-  dropoff_time?: string;
-  vehicle_name?: string;
-  vehicle_code?: string;
-  amount?: number;
-  amount_eur?: number;
-  currency?: string;
-  payment_method?: string;
-  payment_status?: string;
-  contract_number?: string;
-  customer_dni?: string;
-  customer_address?: string;
-  rental_days?: string;
-  price_per_day?: string;
 };
 
 type FleetRow = {
@@ -98,45 +103,55 @@ type FleetRow = {
   marca: string;
   modelo: string;
   imageUrl: string;
-  status: "available" | "rented" | "reserved" | "pickup_pending" | "wanted";
+  status: "available" | "rented" | "reserved" | "wanted";
   label: string;
-  sub: string;
-  booking?: SavedBooking;
+  detail: string;
+  booking?: NormalizedBooking;
 };
 
-function cleanText(value: any) {
+type MaintenanceRecord = {
+  vehicleCode: string;
+  currentKm: string;
+  nextOilKm: string;
+  lastCleaningDate: string;
+  lastTirePressureDate: string;
+  lastLightsCheckDate: string;
+  lastBrakeCheckDate: string;
+};
+
+type DashboardNotice = {
+  id: string;
+  title: string;
+  detail: string;
+  meta: string;
+  tone: NoticeTone;
+  icon: "bell" | "clock" | "alert" | "check" | "wrench";
+  href?: string;
+};
+
+const MAINTENANCE_STORAGE_KEY = "nexa_vehicle_maintenance";
+
+function cleanText(value: unknown) {
   return String(value || "").trim();
 }
 
+function normalizeStatusText(value?: string) {
+  return cleanText(value).toLowerCase();
+}
+
+function extractVehicleCode(value?: string | null) {
+  const match = cleanText(value).match(/\bN\d+\b/i);
+  return match?.[0]?.toUpperCase() || "";
+}
+
 function safeDateTime(date?: string, time?: string) {
-  if (!date) return null;
+  const cleanDate = cleanText(date);
+  if (!cleanDate) return null;
 
-  const cleanTime = time && time.trim() ? time : "00:00";
-  const value = new Date(`${date}T${cleanTime}`);
+  const cleanTime = cleanText(time) || "00:00";
+  const value = new Date(`${cleanDate}T${cleanTime}`);
 
-  if (Number.isNaN(value.getTime())) return null;
-
-  return value;
-}
-
-function formatDisplayDate(date?: Date | null) {
-  if (!date) return "No date";
-
-  return date.toLocaleDateString("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
-
-function formatDisplayTime(date?: Date | null) {
-  if (!date) return "--:--";
-
-  return date.toLocaleTimeString("en-GB", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return Number.isNaN(value.getTime()) ? null : value;
 }
 
 function isSameCalendarDay(a?: Date | null, b?: Date | null) {
@@ -150,7 +165,6 @@ function isSameCalendarDay(a?: Date | null, b?: Date | null) {
 }
 
 function isToday(date?: Date | null) {
-  if (!date) return false;
   return isSameCalendarDay(date, new Date());
 }
 
@@ -159,153 +173,48 @@ function isTomorrow(date?: Date | null) {
 
   const tomorrow = new Date();
   tomorrow.setDate(tomorrow.getDate() + 1);
-
   return isSameCalendarDay(date, tomorrow);
 }
 
-function normalizeStatusText(status?: string) {
-  return String(status || "").trim().toLowerCase();
+function isWithinHours(date: Date | null, hours: number) {
+  if (!date) return false;
+  const diff = date.getTime() - Date.now();
+  return diff >= 0 && diff <= hours * 60 * 60 * 1000;
 }
 
-function isCancelledStatus(status?: string) {
-  const clean = normalizeStatusText(status);
-
-  return (
-    clean.includes("cancel") ||
-    clean.includes("cancelada") ||
-    clean.includes("cancelled") ||
-    clean.includes("canceled") ||
-    clean.includes("failed") ||
-    clean.includes("refunded")
-  );
+function isFutureDateTime(date?: Date | null) {
+  return Boolean(date && date.getTime() > Date.now());
 }
 
-function isPickedUpStatus(status?: string) {
-  const clean = normalizeStatusText(status);
-
-  return (
-    clean === "en alquiler" ||
-    clean === "rented" ||
-    clean === "picked_up" ||
-    clean === "picked up"
-  );
+function isPastDateTime(date?: Date | null) {
+  return Boolean(date && date.getTime() <= Date.now());
 }
 
-function isReturnedStatus(status?: string) {
-  const clean = normalizeStatusText(status);
+function formatDisplayDate(date?: Date | null) {
+  if (!date) return "No date";
 
-  return (
-    clean.includes("returned") ||
-    clean.includes("finalizada") ||
-    clean.includes("completed") ||
-    clean.includes("finished")
-  );
+  return date.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+  });
 }
 
-function isWantedVehicleStatus(status?: string) {
-  const clean = normalizeStatusText(status);
+function formatDisplayTime(date?: Date | null) {
+  if (!date) return "--:--";
 
-  return (
-    clean.includes("wanted") ||
-    clean.includes("problem") ||
-    clean.includes("maintenance") ||
-    clean.includes("blocked") ||
-    clean.includes("taller") ||
-    clean.includes("averia") ||
-    clean.includes("avería")
-  );
+  return date.toLocaleTimeString("en-GB", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  });
 }
 
-function getBookingTiming(booking: SavedBooking) {
-  const start = safeDateTime(
-    booking.contractData.fechaEntrega,
-    booking.contractData.horaEntrega
-  );
-
-  const end = safeDateTime(
-    booking.contractData.fechaDevolucion,
-    booking.contractData.horaDevolucion
-  );
-
-  return { start, end };
-}
-
-function getBookingStatus(booking: SavedBooking) {
-  const rawStatus = booking.status || "";
-
-  if (isCancelledStatus(rawStatus)) return "Cancelada";
-  if (isReturnedStatus(rawStatus)) return "Finalizada";
-  if (isPickedUpStatus(rawStatus)) return "En alquiler";
-
-  const now = new Date();
-  const { start, end } = getBookingTiming(booking);
-
-  if (!start || !end) return rawStatus || "Activa";
-
-  if (now < start) return "Confirmada";
-
-  if (now >= start && now <= end) {
-    return "Pendiente pickup";
-  }
-
-  return "Finalizada";
-}
-
-function getPickupLabel(booking: SavedBooking) {
-  const { start } = getBookingTiming(booking);
-
-  if (!start) return "Pickup date not available";
-
-  if (isToday(start)) {
-    return `Pickup today at ${formatDisplayTime(start)}`;
-  }
-
-  if (isTomorrow(start)) {
-    return `Pickup tomorrow at ${formatDisplayTime(start)}`;
-  }
-
-  return `Pickup on ${formatDisplayDate(start)} at ${formatDisplayTime(start)}`;
-}
-
-function getReturnLabel(booking: SavedBooking) {
-  const { end } = getBookingTiming(booking);
-
-  if (!end) return "Return date not available";
-
-  if (isToday(end)) {
-    return `Returns today at ${formatDisplayTime(end)}`;
-  }
-
-  if (isTomorrow(end)) {
-    return `Returns tomorrow at ${formatDisplayTime(end)}`;
-  }
-
-  return `Returns on ${formatDisplayDate(end)} at ${formatDisplayTime(end)}`;
-}
-
-function formatBookingWindow(booking: SavedBooking) {
-  const { start, end } = getBookingTiming(booking);
-
-  if (!start || !end) {
-    return `${booking.contractData.fechaEntrega || "--"} ${
-      booking.contractData.horaEntrega || "--"
-    } - ${booking.contractData.fechaDevolucion || "--"} ${
-      booking.contractData.horaDevolucion || "--"
-    }`;
-  }
-
-  return `${formatDisplayDate(start)} ${formatDisplayTime(
-    start
-  )} - ${formatDisplayDate(end)} ${formatDisplayTime(end)}`;
-}
-
-function formatMoneyFromCents(cents?: number) {
-  const value = Number(cents || 0);
-
+function formatMoney(cents?: number) {
   return new Intl.NumberFormat("es-ES", {
     style: "currency",
     currency: "EUR",
-  }).format(value / 100);
+    maximumFractionDigits: 0,
+  }).format(Number(cents || 0) / 100);
 }
 
 function moneyTextToNumber(value?: string) {
@@ -318,67 +227,88 @@ function moneyTextToNumber(value?: string) {
     .replace(/[^\d.]/g, "");
 
   const amount = Number(clean);
-
   return Number.isFinite(amount) ? amount : 0;
 }
 
-function getTotalCents(booking: SavedBooking) {
+function getAmountCents(booking: SavedBooking) {
   if (typeof booking.amount === "number") return booking.amount;
-  if (typeof booking.amount_eur === "number") {
-    return Math.round(booking.amount_eur * 100);
-  }
-
-  const total = moneyTextToNumber(booking.contractData?.total);
-
-  return Math.round(total * 100);
+  if (typeof booking.amount_eur === "number") return Math.round(booking.amount_eur * 100);
+  return Math.round(moneyTextToNumber(booking.contractData?.total) * 100);
 }
 
-function normalizePaymentMethod(value?: string): PaymentMethod {
-  const clean = String(value || "").toLowerCase();
-
-  if (clean.includes("cash") || clean.includes("efectivo")) return "cash";
+function normalizeBookingAction(value?: string): BookingAction {
+  const clean = normalizeStatusText(value);
 
   if (
-    clean.includes("card") ||
-    clean.includes("tarjeta") ||
-    clean.includes("stripe")
+    clean === "rent_now" ||
+    clean === "rented_out" ||
+    clean === "rented" ||
+    clean === "picked_up" ||
+    clean.includes("rent now") ||
+    clean.includes("rented") ||
+    clean.includes("picked") ||
+    clean.includes("alquilado") ||
+    clean.includes("en alquiler")
   ) {
-    return "card";
+    return "rent_now";
   }
 
-  return "unpaid";
+  return "reserve_now";
 }
 
-function getPaymentMethod(booking: SavedBooking): PaymentMethod {
+function isCancelledStatus(status?: string) {
+  const clean = normalizeStatusText(status);
+  return clean.includes("cancel") || clean.includes("failed") || clean.includes("refunded");
+}
+
+function isReturnedStatus(status?: string) {
+  const clean = normalizeStatusText(status);
   return (
-    normalizePaymentMethod(booking.payment_method) ||
-    normalizePaymentMethod(booking.contractData?.metodoPago) ||
-    normalizePaymentMethod(booking.contractData?.paymentMethod) ||
-    normalizePaymentMethod(booking.contractData?.pagado) ||
-    "unpaid"
+    clean.includes("returned") ||
+    clean.includes("finalizada") ||
+    clean.includes("completed") ||
+    clean.includes("finished")
   );
 }
 
-function paymentMethodLabel(value?: string) {
-  const method = normalizePaymentMethod(value);
-
-  if (method === "cash") return "Cash";
-  if (method === "card") return "Card";
-
-  return "Unpaid";
+function isWantedStatus(status?: string) {
+  const clean = normalizeStatusText(status);
+  return (
+    clean.includes("wanted") ||
+    clean.includes("problem") ||
+    clean.includes("maintenance") ||
+    clean.includes("blocked") ||
+    clean.includes("taller") ||
+    clean.includes("averia")
+  );
 }
 
-function extractVehicleCode(value?: string | null) {
-  if (!value) return "";
+function normalizePaymentMethod(value?: string): "cash" | "card" | "unpaid" {
+  const clean = normalizeStatusText(value);
 
-  const match = value.match(/\bN\d+\b/i);
-
-  return match?.[0]?.toUpperCase() || "";
+  if (clean.includes("cash") || clean.includes("efectivo")) return "cash";
+  if (clean.includes("card") || clean.includes("tarjeta") || clean.includes("stripe")) return "card";
+  return "unpaid";
 }
 
-function parseVehicleName(vehicleName?: string | null, vehicleCode?: string) {
-  const raw = String(vehicleName || "").trim();
-  const code = cleanText(vehicleCode) || extractVehicleCode(raw);
+function getVehicleImage(vehicle?: { codigo?: string; marca?: string; modelo?: string; imageUrl?: string }) {
+  if (vehicle?.imageUrl) return vehicle.imageUrl;
+
+  const text = `${vehicle?.codigo || ""} ${vehicle?.marca || ""} ${vehicle?.modelo || ""}`.toLowerCase();
+
+  if (text.includes("sym") || text.includes("n8")) return "/images/sym1.png";
+  if (text.includes("zonte")) return "/images/zontes125.png";
+  if (text.includes("e-bike") || text.includes("engwe")) return "/images/e20.png";
+  return "/images/liberty125.png";
+}
+
+function parseVehicle(booking: SavedBooking) {
+  const code =
+    cleanText(booking.vehicle?.codigo) ||
+    cleanText(booking.assigned_vehicle_code) ||
+    cleanText(booking.vehicle_code) ||
+    cleanText(booking.scooter_code) ||
+    extractVehicleCode(booking.vehicle_name);
 
   const fleetVehicle = code
     ? nexaFleet.find((vehicle) => vehicle.codigo === code)
@@ -390,175 +320,175 @@ function parseVehicleName(vehicleName?: string | null, vehicleCode?: string) {
       matricula: fleetVehicle.matricula,
       marca: fleetVehicle.marca,
       modelo: fleetVehicle.modelo,
-      ano: fleetVehicle.ano,
-      bastidor: fleetVehicle.bastidor,
-      combustible: fleetVehicle.combustible,
-      tipo: fleetVehicle.tipo,
+      imageUrl: getVehicleImage(fleetVehicle),
     };
   }
 
-  const clean = raw.toLowerCase();
-  const isSym = clean.includes("sym");
-  const isPiaggio = clean.includes("piaggio");
+  const vehicleName = cleanText(booking.vehicle_name);
+  const text = `${vehicleName} ${booking.vehicle?.marca || ""} ${booking.vehicle?.modelo || ""}`.toLowerCase();
+
+  const vehicle = {
+    codigo: code || cleanText(booking.vehicle?.codigo) || "ONLINE",
+    matricula: cleanText(booking.vehicle?.matricula) || "-",
+    marca:
+      cleanText(booking.vehicle?.marca) ||
+      (text.includes("sym") ? "SYM" : text.includes("piaggio") ? "Piaggio" : "Vehicle"),
+    modelo:
+      cleanText(booking.vehicle?.modelo) ||
+      (text.includes("sym") ? "Symphony 125" : text.includes("piaggio") ? "Liberty 125" : vehicleName),
+  };
 
   return {
-    codigo: code || raw || "ONLINE",
-    matricula: "-",
-    marca: isSym ? "SYM" : isPiaggio ? "Piaggio" : raw || "Vehicle",
-    modelo: isSym ? "Symphony 125" : isPiaggio ? "Liberty 125" : "",
-    ano: "",
-    bastidor: "",
-    combustible: "Gasolina",
-    tipo: "Scooter 125cc",
+    ...vehicle,
+    imageUrl: getVehicleImage(vehicle),
   };
 }
 
-function getVehicleImage(vehicle?: {
-  codigo?: string;
-  marca?: string;
-  modelo?: string;
-}) {
-  const text = `${vehicle?.codigo || ""} ${vehicle?.marca || ""} ${
-    vehicle?.modelo || ""
-  }`.toLowerCase();
-
-  if (text.includes("sym") || text.includes("n8")) return "/images/sym1.png";
-  if (text.includes("zonte")) return "/images/zontes125.png";
-  if (text.includes("e-bike") || text.includes("engwe")) return "/images/e20.png";
-
-  return "/images/liberty125.png";
+function getBookingKey(booking: SavedBooking) {
+  return (
+    cleanText(booking.stripe_payment_intent_id) ||
+    cleanText(booking.contract_number) ||
+    cleanText(booking.contractData?.numeroContrato) ||
+    cleanText(booking.id)
+  );
 }
 
-function normalizeApiBooking(row: ApiBookingRow): SavedBooking {
-  if (row.vehicle && row.contractData) {
-    return {
-      ...(row as SavedBooking),
-      id: String(
-        row.stripe_payment_intent_id ||
-          row.contract_number ||
-          row.contractData.numeroContrato ||
-          row.id ||
-          Date.now()
-      ),
-      createdAt: cleanText(
-        row.createdAt || row.created_at || new Date().toISOString()
-      ),
-      status: cleanText(row.status || "Activa"),
-      source: cleanText(row.source || "Online"),
-      vehicle: row.vehicle,
-      contractData: {
-        ...row.contractData,
-        metodoPago:
-          row.payment_method ||
-          row.contractData.metodoPago ||
-          row.contractData.paymentMethod ||
-          "unpaid",
-        paymentMethod:
-          row.payment_method ||
-          row.contractData.paymentMethod ||
-          row.contractData.metodoPago ||
-          "unpaid",
-      },
-    };
-  }
+function getComputedStatus({
+  rawStatus,
+  bookingAction,
+  end,
+}: {
+  rawStatus: string;
+  bookingAction: BookingAction;
+  end: Date | null;
+}): BookingStatus {
+  if (isCancelledStatus(rawStatus)) return "cancelled";
+  if (isReturnedStatus(rawStatus)) return "finished";
+  if (isWantedStatus(rawStatus)) return "wanted";
+  if (end && Date.now() > end.getTime()) return "finished";
+  return bookingAction === "rent_now" ? "rented" : "reserved";
+}
 
-  const paymentId =
-    row.stripe_payment_intent_id || `online_${row.id || Date.now()}`;
-
-  const totalAmount =
-    typeof row.amount === "number"
-      ? row.amount / 100
-      : typeof row.amount_eur === "number"
-      ? row.amount_eur
-      : 0;
-
-  const parsedVehicle = parseVehicleName(row.vehicle_name, row.vehicle_code);
-  const paymentMethod = normalizePaymentMethod(row.payment_method);
+function normalizeBooking(booking: SavedBooking): NormalizedBooking {
+  const contractData = booking.contractData || {};
+  const pickupDate = cleanText(booking.pickup_date || contractData.fechaEntrega);
+  const pickupTime = cleanText(booking.pickup_time || contractData.horaEntrega);
+  const dropoffDate = cleanText(booking.dropoff_date || contractData.fechaDevolucion);
+  const dropoffTime = cleanText(booking.dropoff_time || contractData.horaDevolucion);
+  const start = safeDateTime(pickupDate, pickupTime);
+  const end = safeDateTime(dropoffDate, dropoffTime);
+  const rawStatus = cleanText(booking.status || "reserved");
+  const bookingAction = normalizeBookingAction(
+    booking.booking_action ||
+      booking.bookingAction ||
+      contractData.bookingAction ||
+      rawStatus
+  );
 
   return {
-    id: String(paymentId),
-    createdAt: row.created_at || new Date().toISOString(),
-    created_at: row.created_at,
-    stripe_payment_intent_id: row.stripe_payment_intent_id,
-    amount: row.amount,
-    amount_eur: row.amount_eur,
-    currency: row.currency || "eur",
-    payment_method: paymentMethod,
-    payment_status:
-      row.payment_status || (paymentMethod === "unpaid" ? "unpaid" : "paid"),
-    contract_number: row.contract_number,
-    customer_name: row.customer_name,
-    customer_email: row.customer_email,
-    phone: row.phone,
-    customer_dni: row.customer_dni,
-    customer_address: row.customer_address,
-    pickup_date: row.pickup_date,
-    pickup_time: row.pickup_time,
-    dropoff_date: row.dropoff_date,
-    dropoff_time: row.dropoff_time,
-    vehicle_name: row.vehicle_name,
-    vehicle_code: row.vehicle_code,
-    status: row.status === "paid" ? "Activa" : row.status || "Activa",
-    source: row.source || "Online",
-    vehicle: parsedVehicle,
-    contractData: {
-      numeroContrato: row.contract_number || String(paymentId),
-      fechaEntrega: row.pickup_date || "",
-      horaEntrega: row.pickup_time || "",
-      fechaDevolucion: row.dropoff_date || "",
-      horaDevolucion: row.dropoff_time || "",
-      nombreCliente: row.customer_name || "Online customer",
-      dniPasaporte: row.customer_dni || "-",
-      telefono: row.phone || "",
-      email: row.customer_email || "",
-      direccion: row.customer_address || "-",
-      dias: row.rental_days || "-",
-      precioPorDia: row.price_per_day || "-",
-      total: totalAmount ? totalAmount.toFixed(2) : "0",
-      pagado: totalAmount ? totalAmount.toFixed(2) : "0",
-      metodoPago: paymentMethod,
-      paymentMethod,
-      kmSalida: "",
-      combustibleSalida: "",
-    },
+    id: cleanText(booking.id) || getBookingKey(booking),
+    key: getBookingKey(booking),
+    createdAt: cleanText(booking.createdAt || booking.created_at) || new Date().toISOString(),
+    status: rawStatus,
+    computedStatus: getComputedStatus({ rawStatus, bookingAction, end }),
+    source: cleanText(booking.source || "Manual"),
+    bookingAction,
+    amountCents: getAmountCents(booking),
+    paymentMethod: normalizePaymentMethod(
+      booking.payment_method ||
+        contractData.metodoPago ||
+        contractData.paymentMethod ||
+        contractData.pagado
+    ),
+    customerName: cleanText(booking.customer_name || contractData.nombreCliente) || "Customer",
+    phone: cleanText(booking.phone || contractData.telefono) || "-",
+    email: cleanText(booking.customer_email || contractData.email) || "-",
+    contractNumber: cleanText(booking.contract_number || contractData.numeroContrato || booking.id) || "-",
+    pickupDate,
+    pickupTime,
+    dropoffDate,
+    dropoffTime,
+    start,
+    end,
+    vehicle: parseVehicle(booking),
   };
+}
+
+function dedupeBookings(bookings: NormalizedBooking[]) {
+  const map = new Map<string, NormalizedBooking>();
+
+  bookings.forEach((booking) => {
+    if (!booking.key) return;
+
+    const existing = map.get(booking.key);
+    if (!existing) {
+      map.set(booking.key, booking);
+      return;
+    }
+
+    if (
+      existing.computedStatus === "cancelled" ||
+      existing.computedStatus === "finished" ||
+      booking.computedStatus === "cancelled" ||
+      booking.computedStatus === "finished"
+    ) {
+      const statusWinner =
+        booking.computedStatus === "cancelled" ||
+        booking.computedStatus === "finished"
+          ? booking
+          : existing;
+
+      map.set(booking.key, {
+        ...statusWinner,
+        amountCents: existing.amountCents || booking.amountCents,
+      });
+      return;
+    }
+
+    if (existing.source !== "Manual" && booking.source === "Manual") {
+      map.set(booking.key, {
+        ...booking,
+        amountCents: existing.amountCents || booking.amountCents,
+      });
+      return;
+    }
+
+    if (booking.amountCents > existing.amountCents) map.set(booking.key, booking);
+  });
+
+  return Array.from(map.values());
+}
+
+function sortNewest(bookings: NormalizedBooking[]) {
+  return [...bookings].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+}
+
+function sortByPickup(bookings: NormalizedBooking[]) {
+  return [...bookings].sort((a, b) => (a.start?.getTime() || 0) - (b.start?.getTime() || 0));
+}
+
+function getPickupLabel(booking: NormalizedBooking) {
+  if (!booking.start) return "Pickup date not available";
+  if (isToday(booking.start)) return `Today at ${formatDisplayTime(booking.start)}`;
+  if (isTomorrow(booking.start)) return `Tomorrow at ${formatDisplayTime(booking.start)}`;
+  return `${formatDisplayDate(booking.start)} at ${formatDisplayTime(booking.start)}`;
+}
+
+function getReturnLabel(booking: NormalizedBooking) {
+  if (!booking.end) return "Return date not available";
+  if (isToday(booking.end)) return `Returns today at ${formatDisplayTime(booking.end)}`;
+  if (isTomorrow(booking.end)) return `Returns tomorrow at ${formatDisplayTime(booking.end)}`;
+  return `Returns ${formatDisplayDate(booking.end)} at ${formatDisplayTime(booking.end)}`;
 }
 
 function getStoredManualBookings(): SavedBooking[] {
   if (typeof window === "undefined") return [];
 
   try {
-    const savedBookings = JSON.parse(
-      localStorage.getItem("nexa_manual_bookings") || "[]"
-    );
-
-    if (!Array.isArray(savedBookings)) return [];
-
-    return savedBookings.map((booking) => ({
-      ...booking,
-      createdAt:
-        booking.createdAt || booking.created_at || new Date().toISOString(),
-      source: booking.source || "Manual",
-      status: booking.status || "Activa",
-      payment_method:
-        booking.payment_method ||
-        booking.contractData?.metodoPago ||
-        booking.contractData?.paymentMethod ||
-        "unpaid",
-      contractData: {
-        ...booking.contractData,
-        metodoPago:
-          booking.contractData?.metodoPago ||
-          booking.contractData?.paymentMethod ||
-          booking.payment_method ||
-          "unpaid",
-        paymentMethod:
-          booking.contractData?.paymentMethod ||
-          booking.contractData?.metodoPago ||
-          booking.payment_method ||
-          "unpaid",
-      },
-    }));
+    const savedBookings = JSON.parse(localStorage.getItem("nexa_manual_bookings") || "[]");
+    return Array.isArray(savedBookings) ? savedBookings : [];
   } catch {
     return [];
   }
@@ -572,181 +502,254 @@ async function fetchApiBookings(): Promise<SavedBooking[]> {
     });
 
     if (!response.ok) return [];
-
     const data = await response.json();
-    const rows = Array.isArray(data?.bookings) ? data.bookings : [];
-
-    return rows.map((row: ApiBookingRow) => normalizeApiBooking(row));
+    return Array.isArray(data?.bookings) ? data.bookings : [];
   } catch {
     return [];
   }
 }
 
-function getBookingKey(booking: SavedBooking) {
-  return (
-    cleanText(booking.stripe_payment_intent_id) ||
-    cleanText(booking.contractData?.numeroContrato) ||
-    cleanText(booking.contract_number) ||
-    cleanText(booking.id)
-  );
+function numberValue(value?: string) {
+  const parsed = Number(String(value || "").replace(/[^\d]/g, ""));
+  return Number.isFinite(parsed) ? parsed : 0;
 }
 
-function dedupeBookings(bookings: SavedBooking[]) {
-  const map = new Map<string, SavedBooking>();
+function daysSince(dateValue?: string) {
+  if (!dateValue) return 9999;
+  const date = new Date(`${dateValue}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return 9999;
+  return Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
+}
 
-  bookings.forEach((booking) => {
-    const key = getBookingKey(booking);
-    const existing = map.get(key);
+function loadMaintenanceRecords(): MaintenanceRecord[] {
+  if (typeof window === "undefined") return [];
 
-    if (!existing) {
-      map.set(key, booking);
-      return;
+  try {
+    const saved = JSON.parse(localStorage.getItem(MAINTENANCE_STORAGE_KEY) || "[]");
+    return Array.isArray(saved) ? saved : [];
+  } catch {
+    return [];
+  }
+}
+
+function buildMaintenanceNotices(records: MaintenanceRecord[]): DashboardNotice[] {
+  const notices: DashboardNotice[] = [];
+
+  records.forEach((record) => {
+    const currentKm = numberValue(record.currentKm);
+    const nextOilKm = numberValue(record.nextOilKm);
+    const cleaningDays = daysSince(record.lastCleaningDate);
+    const tireDays = daysSince(record.lastTirePressureDate);
+    const lightsDays = daysSince(record.lastLightsCheckDate);
+    const brakeDays = daysSince(record.lastBrakeCheckDate);
+
+    if (nextOilKm && currentKm && nextOilKm - currentKm <= 0) {
+      notices.push({
+        id: `${record.vehicleCode}-oil`,
+        title: `${record.vehicleCode} oil service due`,
+        detail: `Reached ${currentKm} km.`,
+        meta: "Maintenance",
+        tone: "red",
+        icon: "wrench",
+        href: "/admin-nexa-secret/maintenance",
+      });
+    } else if (nextOilKm && currentKm && nextOilKm - currentKm <= 250) {
+      notices.push({
+        id: `${record.vehicleCode}-oil-soon`,
+        title: `${record.vehicleCode} oil service soon`,
+        detail: `${nextOilKm - currentKm} km remaining.`,
+        meta: "Maintenance",
+        tone: "yellow",
+        icon: "wrench",
+        href: "/admin-nexa-secret/maintenance",
+      });
     }
 
-    if (!existing.contractData?.telefono && booking.contractData?.telefono) {
-      map.set(key, booking);
-      return;
+    if (cleaningDays > 7) {
+      notices.push({
+        id: `${record.vehicleCode}-cleaning`,
+        title: `${record.vehicleCode} cleaning overdue`,
+        detail: `${cleaningDays} days since last cleaning.`,
+        meta: "Maintenance",
+        tone: "yellow",
+        icon: "wrench",
+        href: "/admin-nexa-secret/maintenance",
+      });
     }
 
-    if (existing.source !== "Manual" && booking.source === "Manual") {
-      map.set(key, {
-        ...booking,
-        amount: existing.amount || booking.amount,
-        payment_method: booking.payment_method || existing.payment_method,
+    if (tireDays > 7 || lightsDays > 14 || brakeDays > 14) {
+      notices.push({
+        id: `${record.vehicleCode}-checks`,
+        title: `${record.vehicleCode} safety checks needed`,
+        detail: "Tires, lights or brakes need attention.",
+        meta: "Maintenance",
+        tone: "yellow",
+        icon: "wrench",
+        href: "/admin-nexa-secret/maintenance",
       });
     }
   });
 
-  return Array.from(map.values());
+  return notices;
 }
 
-function sortBookingsNewestFirst(bookings: SavedBooking[]) {
-  return [...bookings].sort((a, b) => {
-    const dateA = new Date(a.createdAt || a.created_at || 0).getTime();
-    const dateB = new Date(b.createdAt || b.created_at || 0).getTime();
+function buildBookingNotices(bookings: NormalizedBooking[]): DashboardNotice[] {
+  const notices: DashboardNotice[] = [];
 
-    return dateB - dateA;
+  bookings.forEach((booking) => {
+    if (booking.computedStatus === "cancelled" || booking.computedStatus === "finished") return;
+
+    const source = booking.source.toLowerCase();
+    const isOfficialWebsite =
+      !source.includes("manual") &&
+      !booking.key.toLowerCase().startsWith("nx-") &&
+      (source.includes("website") ||
+        source.includes("online") ||
+        source.includes("stripe"));
+
+    if (isOfficialWebsite) {
+      notices.push({
+        id: `${booking.key}-online`,
+        title: "Online booking received",
+        detail: `${booking.customerName} booked ${booking.vehicle.codigo}.`,
+        meta: getPickupLabel(booking),
+        tone: "sky",
+        icon: "bell",
+        href: "/admin-nexa-secret/bookings",
+      });
+    }
+
+    if (isToday(booking.start) && isFutureDateTime(booking.start)) {
+      notices.push({
+        id: `${booking.key}-pickup`,
+        title: `${booking.vehicle.codigo} pickup today`,
+        detail: `${booking.customerName} is scheduled for ${formatDisplayTime(booking.start)}.`,
+        meta: `Contract ${booking.contractNumber}`,
+        tone: "yellow",
+        icon: "clock",
+        href: "/admin-nexa-secret/bookings",
+      });
+    } else if (
+      booking.computedStatus === "reserved" &&
+      isToday(booking.start) &&
+      isPastDateTime(booking.start)
+    ) {
+      notices.push({
+        id: `${booking.key}-missed-pickup`,
+        title: `${booking.vehicle.codigo} pickup time passed`,
+        detail: `${booking.customerName} was scheduled for ${formatDisplayTime(
+          booking.start
+        )}.`,
+        meta: "Check booking",
+        tone: "red",
+        icon: "alert",
+        href: "/admin-nexa-secret/bookings",
+      });
+    } else if (
+      isFutureDateTime(booking.start) &&
+      (isTomorrow(booking.start) || isWithinHours(booking.start, 72))
+    ) {
+      notices.push({
+        id: `${booking.key}-upcoming`,
+        title: `${booking.vehicle.codigo} reservation coming`,
+        detail: `${booking.customerName} picks up ${getPickupLabel(booking)}.`,
+        meta: "Upcoming",
+        tone: "white",
+        icon: "bell",
+        href: "/admin-nexa-secret/bookings",
+      });
+    }
+
+    if (isToday(booking.end) && booking.computedStatus === "rented") {
+      notices.push({
+        id: `${booking.key}-return`,
+        title: `${booking.vehicle.codigo} return today`,
+        detail: `${booking.customerName} should return at ${formatDisplayTime(booking.end)}.`,
+        meta: "Return",
+        tone: "emerald",
+        icon: "check",
+        href: "/admin-nexa-secret/bookings",
+      });
+    }
+
+    if (booking.computedStatus === "wanted") {
+      notices.push({
+        id: `${booking.key}-wanted`,
+        title: `${booking.vehicle.codigo} needs attention`,
+        detail: booking.status || "Vehicle marked as problem.",
+        meta: "Alert",
+        tone: "red",
+        icon: "alert",
+        href: "/admin-nexa-secret/maintenance",
+      });
+    }
   });
+
+  return notices;
 }
 
-function sortBookingsByPickup(bookings: SavedBooking[]) {
-  return [...bookings].sort((a, b) => {
-    const aStart = getBookingTiming(a).start?.getTime() || 0;
-    const bStart = getBookingTiming(b).start?.getTime() || 0;
-
-    return aStart - bStart;
-  });
+function toneClasses(tone: NoticeTone) {
+  if (tone === "red") return "border-red-400/25 bg-red-500/10 text-red-300";
+  if (tone === "yellow") return "border-amber-400/25 bg-amber-500/10 text-amber-300";
+  if (tone === "sky") return "border-sky-400/25 bg-sky-500/10 text-sky-300";
+  if (tone === "emerald") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-300";
+  return "border-white/10 bg-white/[0.055] text-white/65";
 }
 
-function getCurrentVehicleBooking(vehicleCode: string, bookings: SavedBooking[]) {
-  return bookings.find((booking) => {
-    if (booking.vehicle.codigo !== vehicleCode) return false;
-    return getBookingStatus(booking) === "En alquiler";
-  });
+function vehicleStatusClasses(status: FleetRow["status"]) {
+  if (status === "available") return "border-emerald-400/25 bg-emerald-500/10 text-emerald-300";
+  if (status === "rented") return "border-orange-400/25 bg-orange-500/10 text-orange-300";
+  if (status === "reserved") return "border-sky-400/25 bg-sky-500/10 text-sky-300";
+  return "border-red-400/25 bg-red-500/10 text-red-300";
 }
 
-function getPendingPickupVehicleBooking(
-  vehicleCode: string,
-  bookings: SavedBooking[]
-) {
-  return bookings.find((booking) => {
-    if (booking.vehicle.codigo !== vehicleCode) return false;
-    return getBookingStatus(booking) === "Pendiente pickup";
-  });
-}
-
-function getNextVehicleBooking(vehicleCode: string, bookings: SavedBooking[]) {
-  return sortBookingsByPickup(
-    bookings.filter((booking) => {
-      if (booking.vehicle.codigo !== vehicleCode) return false;
-      return getBookingStatus(booking) === "Confirmada";
-    })
-  )[0];
-}
-
-function getStatusClasses(status: FleetRow["status"]) {
-  if (status === "available") {
-    return "border-emerald-400/20 bg-emerald-500/10 text-emerald-300";
-  }
-
-  if (status === "rented") {
-    return "border-orange-400/20 bg-orange-500/10 text-orange-300";
-  }
-
-  if (status === "pickup_pending") {
-    return "border-yellow-400/20 bg-yellow-500/10 text-yellow-300";
-  }
-
-  if (status === "reserved") {
-    return "border-sky-400/20 bg-sky-500/10 text-sky-300";
-  }
-
-  return "border-red-400/20 bg-red-500/10 text-red-300";
+function NoticeIcon({ icon }: { icon: DashboardNotice["icon"] }) {
+  if (icon === "clock") return <Clock3 size={17} />;
+  if (icon === "alert") return <AlertTriangle size={17} />;
+  if (icon === "check") return <CheckCircle2 size={17} />;
+  if (icon === "wrench") return <Wrench size={17} />;
+  return <Bell size={17} />;
 }
 
 export default function AdminDashboardPage() {
-  const [bookings, setBookings] = useState<SavedBooking[]>([]);
-  const [isLoadingOnline, setIsLoadingOnline] = useState(true);
-  const [onlineLoaded, setOnlineLoaded] = useState(false);
+  const [rawBookings, setRawBookings] = useState<SavedBooking[]>([]);
+  const [maintenanceRecords, setMaintenanceRecords] = useState<MaintenanceRecord[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  async function loadBookings() {
+  async function loadDashboard() {
+    setLoading(true);
     const manualBookings = getStoredManualBookings();
-
-    setIsLoadingOnline(true);
     const apiBookings = await fetchApiBookings();
-    setIsLoadingOnline(false);
-    setOnlineLoaded(true);
-
-    const mergedBookings = sortBookingsNewestFirst(
-      dedupeBookings([...apiBookings, ...manualBookings])
-    );
-
-    setBookings(mergedBookings);
+    setRawBookings([...apiBookings, ...manualBookings]);
+    setMaintenanceRecords(loadMaintenanceRecords());
+    setLoading(false);
   }
 
   useEffect(() => {
-    loadBookings();
+    loadDashboard();
 
-    function refreshFromStorage() {
-      loadBookings();
-    }
+    const interval = window.setInterval(loadDashboard, 60_000);
+    const refreshFromStorage = () => loadDashboard();
 
     window.addEventListener("storage", refreshFromStorage);
 
     return () => {
+      window.clearInterval(interval);
       window.removeEventListener("storage", refreshFromStorage);
     };
   }, []);
 
-  const activeBookings = useMemo(() => {
-    return sortBookingsByPickup(
-      bookings.filter((booking) => getBookingStatus(booking) === "En alquiler")
-    );
-  }, [bookings]);
+  const dashboard = useMemo(() => {
+    const bookings = sortNewest(dedupeBookings(rawBookings.map(normalizeBooking)));
+    const activeBookings = sortByPickup(bookings.filter((booking) => booking.computedStatus === "rented"));
+    const upcomingBookings = sortByPickup(bookings.filter((booking) => booking.computedStatus === "reserved"));
+    const wantedBookings = bookings.filter((booking) => booking.computedStatus === "wanted");
 
-  const pendingPickupBookings = useMemo(() => {
-    return sortBookingsByPickup(
-      bookings.filter(
-        (booking) => getBookingStatus(booking) === "Pendiente pickup"
-      )
-    );
-  }, [bookings]);
-
-  const upcomingBookings = useMemo(() => {
-    return sortBookingsByPickup(
-      bookings.filter((booking) => getBookingStatus(booking) === "Confirmada")
-    );
-  }, [bookings]);
-
-  const wantedBookings = useMemo(() => {
-    return bookings.filter((booking) => isWantedVehicleStatus(booking.status));
-  }, [bookings]);
-
-  const fleetRows = useMemo<FleetRow[]>(() => {
-    return nexaFleet.map((vehicle) => {
-      const wantedBooking = wantedBookings.find(
-        (booking) => booking.vehicle.codigo === vehicle.codigo
-      );
+    const fleetRows: FleetRow[] = nexaFleet.map((vehicle) => {
+      const wantedBooking = wantedBookings.find((booking) => booking.vehicle.codigo === vehicle.codigo);
+      const activeBooking = activeBookings.find((booking) => booking.vehicle.codigo === vehicle.codigo);
+      const nextBooking = upcomingBookings.find((booking) => booking.vehicle.codigo === vehicle.codigo);
+      const imageUrl = getVehicleImage(vehicle);
 
       if (wantedBooking) {
         return {
@@ -754,54 +757,27 @@ export default function AdminDashboardPage() {
           matricula: vehicle.matricula,
           marca: vehicle.marca,
           modelo: vehicle.modelo,
-          imageUrl: getVehicleImage(vehicle),
+          imageUrl,
           status: "wanted",
-          label: "Wanted / Problem",
-          sub: wantedBooking.status || "Needs attention",
+          label: "Attention",
+          detail: wantedBooking.status || "Needs action",
           booking: wantedBooking,
         };
       }
 
-      const currentBooking = getCurrentVehicleBooking(vehicle.codigo, bookings);
-
-      if (currentBooking) {
+      if (activeBooking) {
         return {
           codigo: vehicle.codigo,
           matricula: vehicle.matricula,
           marca: vehicle.marca,
           modelo: vehicle.modelo,
-          imageUrl: getVehicleImage(vehicle),
+          imageUrl,
           status: "rented",
-          label: "Rented out",
-          sub: `${currentBooking.contractData.nombreCliente} · ${getReturnLabel(
-            currentBooking
-          )}`,
-          booking: currentBooking,
+          label: "Rented",
+          detail: `${activeBooking.customerName} - ${getReturnLabel(activeBooking)}`,
+          booking: activeBooking,
         };
       }
-
-      const pendingPickup = getPendingPickupVehicleBooking(
-        vehicle.codigo,
-        bookings
-      );
-
-      if (pendingPickup) {
-        return {
-          codigo: vehicle.codigo,
-          matricula: vehicle.matricula,
-          marca: vehicle.marca,
-          modelo: vehicle.modelo,
-          imageUrl: getVehicleImage(vehicle),
-          status: "pickup_pending",
-          label: "Pickup pending",
-          sub: `${pendingPickup.contractData.nombreCliente} · ${getPickupLabel(
-            pendingPickup
-          )}`,
-          booking: pendingPickup,
-        };
-      }
-
-      const nextBooking = getNextVehicleBooking(vehicle.codigo, bookings);
 
       if (nextBooking) {
         return {
@@ -809,12 +785,10 @@ export default function AdminDashboardPage() {
           matricula: vehicle.matricula,
           marca: vehicle.marca,
           modelo: vehicle.modelo,
-          imageUrl: getVehicleImage(vehicle),
+          imageUrl,
           status: "reserved",
           label: "Reserved",
-          sub: `${nextBooking.contractData.nombreCliente} · ${getPickupLabel(
-            nextBooking
-          )}`,
+          detail: `${nextBooking.customerName} - ${getPickupLabel(nextBooking)}`,
           booking: nextBooking,
         };
       }
@@ -824,429 +798,288 @@ export default function AdminDashboardPage() {
         matricula: vehicle.matricula,
         marca: vehicle.marca,
         modelo: vehicle.modelo,
-        imageUrl: getVehicleImage(vehicle),
+        imageUrl,
         status: "available",
         label: "Available",
-        sub: "Ready to rent now.",
+        detail: "Ready to rent",
       };
     });
-  }, [bookings, wantedBookings]);
 
-  const availableVehicles = useMemo(() => {
-    return fleetRows.filter((vehicle) => vehicle.status === "available");
-  }, [fleetRows]);
-
-  const rentedVehicles = useMemo(() => {
-    return fleetRows.filter((vehicle) => vehicle.status === "rented");
-  }, [fleetRows]);
-
-  const wantedVehicles = useMemo(() => {
-    return fleetRows.filter((vehicle) => vehicle.status === "wanted");
-  }, [fleetRows]);
-
-  const todayPickups = useMemo(() => {
-    return sortBookingsByPickup(
-      bookings.filter((booking) => {
-        const status = getBookingStatus(booking);
-        const { start } = getBookingTiming(booking);
-
-        return status !== "Cancelada" && status !== "Finalizada" && isToday(start);
-      })
-    );
-  }, [bookings]);
-
-  const todayReturns = useMemo(() => {
-    return sortBookingsByPickup(
-      bookings.filter((booking) => {
-        const status = getBookingStatus(booking);
-        const { end } = getBookingTiming(booking);
-
-        return status !== "Cancelada" && status !== "Finalizada" && isToday(end);
-      })
-    );
-  }, [bookings]);
-
-  const summary = useMemo(() => {
-    const validBookings = bookings.filter((booking) => {
-      const status = getBookingStatus(booking);
-      return status !== "Cancelada";
-    });
-
-    const totalCents = validBookings.reduce(
-      (sum, booking) => sum + getTotalCents(booking),
-      0
+    const todayPickups = sortByPickup(
+      bookings.filter(
+        (booking) =>
+          booking.computedStatus !== "cancelled" &&
+          booking.computedStatus !== "finished" &&
+          isToday(booking.start) &&
+          isFutureDateTime(booking.start)
+      )
     );
 
-    const cashCents = validBookings
-      .filter((booking) => getPaymentMethod(booking) === "cash")
-      .reduce((sum, booking) => sum + getTotalCents(booking), 0);
+    const todayReturns = sortByPickup(
+      bookings.filter(
+        (booking) =>
+          booking.computedStatus === "rented" &&
+          isToday(booking.end)
+      )
+    );
 
-    const cardCents = validBookings
-      .filter((booking) => getPaymentMethod(booking) === "card")
-      .reduce((sum, booking) => sum + getTotalCents(booking), 0);
+    const validBookings = bookings.filter((booking) => booking.computedStatus !== "cancelled");
+    const totalCents = validBookings.reduce((sum, booking) => sum + booking.amountCents, 0);
+    const todayCents = validBookings
+      .filter((booking) => isToday(new Date(booking.createdAt)))
+      .reduce((sum, booking) => sum + booking.amountCents, 0);
+
+    const notices = [
+      ...buildBookingNotices(bookings),
+      ...buildMaintenanceNotices(maintenanceRecords),
+    ].slice(0, 14);
 
     return {
+      bookings,
+      activeBookings,
+      upcomingBookings,
+      fleetRows,
+      todayPickups,
+      todayReturns,
+      notices,
       totalCents,
-      cashCents,
-      cardCents,
+      todayCents,
+      availableCount: fleetRows.filter((vehicle) => vehicle.status === "available").length,
+      rentedCount: fleetRows.filter((vehicle) => vehicle.status === "rented").length,
+      reservedCount: fleetRows.filter((vehicle) => vehicle.status === "reserved").length,
+      alertCount: notices.filter((notice) => notice.tone === "red" || notice.tone === "yellow").length,
     };
-  }, [bookings]);
+  }, [rawBookings, maintenanceRecords]);
+
+  const heroVehicle =
+    dashboard.fleetRows.find((vehicle) => vehicle.status === "rented") ||
+    dashboard.fleetRows.find((vehicle) => vehicle.status === "reserved") ||
+    dashboard.fleetRows[0];
 
   return (
-    <div className="space-y-8">
-      <section className="relative overflow-hidden rounded-[34px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_25px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl lg:p-8">
-        <div className="pointer-events-none absolute -right-24 -top-24 h-72 w-72 rounded-full bg-orange-500/10 blur-[90px]" />
-        <div className="pointer-events-none absolute -bottom-24 left-20 h-72 w-72 rounded-full bg-sky-500/10 blur-[90px]" />
-
-        <div className="relative flex flex-col justify-between gap-6 lg:flex-row lg:items-end">
-          <div>
-            <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-300">
-              Private Operating System
-            </p>
-
-            <h2 className="mt-3 max-w-4xl text-4xl font-black tracking-tight text-white md:text-5xl">
-              NEXA OS Control Center
-            </h2>
-
-            <p className="mt-4 max-w-3xl text-base font-medium leading-7 text-white/55">
-              Main dashboard focused only on fleet control: total fleet,
-              available vehicles, rented out vehicles, wanted/problem vehicles,
-              and the real customers currently renting your vehicles.
-            </p>
-
-            <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
-              <span
-                className={`rounded-full border px-3 py-2 ${
-                  onlineLoaded
-                    ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-300"
-                    : "border-sky-400/20 bg-sky-500/10 text-sky-300"
-                }`}
-              >
-                {isLoadingOnline
-                  ? "Loading Supabase bookings..."
-                  : "Supabase bookings loaded"}
-              </span>
-
-              <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-white/50">
-                Total sales: {formatMoneyFromCents(summary.totalCents)}
-              </span>
-
-              <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-emerald-300">
-                Cash: {formatMoneyFromCents(summary.cashCents)}
-              </span>
-
-              <span className="rounded-full border border-sky-400/20 bg-sky-500/10 px-3 py-2 text-sky-300">
-                Card: {formatMoneyFromCents(summary.cardCents)}
-              </span>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-3 sm:flex-row lg:flex-col">
-            <button
-              onClick={loadBookings}
-              className="rounded-2xl border border-white/10 bg-white/[0.06] px-5 py-3 text-sm font-black text-white/70 transition hover:bg-white/[0.1]"
-            >
-              Refresh System
-            </button>
-
-            <Link
-              href="/admin-nexa-secret/create-booking"
-              className="rounded-2xl bg-gradient-to-r from-orange-500 via-purple-500 to-sky-500 px-5 py-3 text-center text-sm font-black text-white shadow-[0_15px_45px_rgba(255,128,0,0.25)] transition hover:-translate-y-0.5"
-            >
-              + Create Booking
-            </Link>
-          </div>
-        </div>
-      </section>
-
-      <section className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-        <MainStatCard
-          title="Total Fleet"
-          value={nexaFleet.length}
-          subtitle="All registered NEXA vehicles"
-          tone="purple"
-        />
-
-        <MainStatCard
-          title="Available Vehicles"
-          value={availableVehicles.length}
-          subtitle="Ready to rent right now"
-          tone="emerald"
-        />
-
-        <MainStatCard
-          title="Rented Out"
-          value={rentedVehicles.length}
-          subtitle="Marked as picked up / in rental"
-          tone="orange"
-        />
-
-        <MainStatCard
-          title="Wanted Vehicles"
-          value={wantedVehicles.length}
-          subtitle="Problem, blocked or maintenance"
-          tone="red"
-        />
-      </section>
-
-      <section className="grid gap-4 xl:grid-cols-3">
-        <SimpleAlertBox
-          title="Pickups Today"
-          tone="yellow"
-          emptyText="No pickups scheduled for today."
-          bookings={todayPickups}
-          labelFn={getPickupLabel}
-        />
-
-        <SimpleAlertBox
-          title="Returns Today"
-          tone="orange"
-          emptyText="No returns expected today."
-          bookings={todayReturns}
-          labelFn={getReturnLabel}
-        />
-
-        <SimpleAlertBox
-          title="Upcoming Reservations"
-          tone="sky"
-          emptyText="No future reservations found."
-          bookings={upcomingBookings.slice(0, 8)}
-          labelFn={getPickupLabel}
-        />
-      </section>
-
-      <section className="grid gap-6 xl:grid-cols-[1.15fr_0.85fr]">
-        <div className="rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 shadow-[0_25px_90px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-300">
-                Rented Vehicles
-              </p>
-
-              <h3 className="mt-1 text-2xl font-black text-white">
-                Currently Rented Out
-              </h3>
-
-              <p className="mt-2 text-sm font-bold text-white/45">
-                These are the vehicles that are currently with customers.
-              </p>
-            </div>
-
-            <Link
-              href="/admin-nexa-secret/bookings"
-              className="rounded-full border border-orange-400/20 bg-orange-500/10 px-4 py-2 text-xs font-black text-orange-300 transition hover:bg-orange-500/15"
-            >
-              Open Bookings
-            </Link>
-          </div>
-
-          <div className="mt-6 space-y-3">
-            {activeBookings.length === 0 ? (
-              <div className="rounded-3xl border border-emerald-400/20 bg-emerald-500/10 p-8 text-center">
-                <p className="text-xl font-black text-white">
-                  No vehicles rented out right now
-                </p>
-
-                <p className="mt-2 text-sm font-bold text-emerald-300">
-                  All active vehicles are available unless reserved or pending
-                  pickup.
-                </p>
-              </div>
-            ) : (
-              activeBookings.map((booking) => (
-                <Link
-                  href="/admin-nexa-secret/bookings"
-                  key={`${booking.source}-${getBookingKey(booking)}`}
-                  className="block rounded-3xl border border-orange-400/20 bg-orange-500/10 p-5 transition hover:bg-orange-500/15"
-                >
-                  <div className="flex flex-col justify-between gap-4 md:flex-row md:items-start">
-                    <div>
-                      <p className="text-xl font-black text-white">
-                        {booking.vehicle.codigo} · {booking.vehicle.matricula}
-                      </p>
-
-                      <p className="mt-1 text-sm font-bold text-white/55">
-                        {booking.vehicle.marca} {booking.vehicle.modelo}
-                      </p>
-
-                      <p className="mt-3 text-lg font-black text-white">
-                        {booking.contractData.nombreCliente}
-                      </p>
-
-                      <p className="mt-1 text-sm font-bold text-white/50">
-                        Phone: {booking.contractData.telefono || "-"}
-                      </p>
-
-                      <p className="mt-1 text-sm font-bold text-white/50">
-                        Contract: {booking.contractData.numeroContrato || booking.id}
-                      </p>
-                    </div>
-
-                    <div className="text-left md:text-right">
-                      <span className="rounded-full border border-orange-400/30 bg-orange-500/15 px-3 py-1 text-xs font-black uppercase tracking-[0.12em] text-orange-300">
-                        Rented out
-                      </span>
-
-                      <p className="mt-3 text-sm font-black text-white">
-                        {getReturnLabel(booking)}
-                      </p>
-
-                      <p className="mt-2 text-xs font-bold text-white/45">
-                        {formatBookingWindow(booking)}
-                      </p>
-
-                      <p className="mt-2 text-sm font-black text-emerald-300">
-                        {formatMoneyFromCents(getTotalCents(booking))} ·{" "}
-                        {paymentMethodLabel(getPaymentMethod(booking))}
-                      </p>
-                    </div>
-                  </div>
-                </Link>
-              ))
-            )}
-          </div>
-        </div>
-
-        <div className="rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 shadow-[0_25px_90px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-          <div className="flex flex-col justify-between gap-4 md:flex-row md:items-center">
-            <div>
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-white/40">
-                Fleet Board
-              </p>
-
-              <h3 className="mt-1 text-2xl font-black text-white">
-                Vehicles Now
-              </h3>
-            </div>
-
-            <Link
-              href="/admin-nexa-secret/vehicles"
-              className="rounded-full border border-sky-400/20 bg-sky-500/10 px-4 py-2 text-xs font-black text-sky-300 transition hover:bg-sky-500/15"
-            >
-              Fleet Page
-            </Link>
-          </div>
-
-          <div className="mt-5 space-y-2">
-            {fleetRows.map((item) => (
-              <Link
-                href="/admin-nexa-secret/bookings"
-                key={item.codigo}
-                className="block rounded-2xl border border-white/10 bg-white/[0.035] p-3 transition hover:bg-white/[0.06]"
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <p className="text-sm font-black text-white">
-                      {item.codigo} · {item.matricula}
-                    </p>
-
-                    <p className="mt-1 text-xs font-bold text-white/45">
-                      {item.marca} {item.modelo}
-                    </p>
+    <AdminShell>
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_390px]">
+        <main className="space-y-5">
+          <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B0D12]/90 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+            <div className="grid min-h-[310px] gap-0 lg:grid-cols-[1.05fr_0.95fr]">
+              <div className="flex flex-col justify-between p-6 lg:p-8">
+                <div>
+                  <div className="inline-flex items-center gap-2 rounded-full border border-emerald-400/20 bg-emerald-500/10 px-3 py-2 text-xs font-black uppercase tracking-[0.16em] text-emerald-300">
+                    <Sparkles size={14} />
+                    Live operations
                   </div>
 
-                  <span
-                    className={`shrink-0 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.1em] ${getStatusClasses(
-                      item.status
-                    )}`}
-                  >
-                    {item.label}
-                  </span>
+                  <h2 className="mt-5 max-w-2xl text-4xl font-black tracking-tight text-white md:text-5xl">
+                    Today’s fleet, bookings and alerts in one place.
+                  </h2>
+
+                  <p className="mt-4 max-w-2xl text-sm font-semibold leading-6 text-white/50">
+                    Vehicles release automatically after return time. Cancel or return a booking and the scooter becomes available again across the system.
+                  </p>
                 </div>
 
-                <p className="mt-2 text-xs font-bold text-white/40">
-                  {item.sub}
+                <div className="mt-7 grid gap-3 sm:grid-cols-4">
+                  <HeroMetric label="Free" value={dashboard.availableCount} />
+                  <HeroMetric label="Rented" value={dashboard.rentedCount} />
+                  <HeroMetric label="Reserved" value={dashboard.reservedCount} />
+                  <HeroMetric label="Alerts" value={dashboard.alertCount} />
+                </div>
+              </div>
+
+              <div className="relative border-t border-white/10 bg-[radial-gradient(circle_at_55%_30%,rgba(255,122,24,0.22),transparent_38%),linear-gradient(140deg,rgba(255,255,255,0.07),rgba(255,255,255,0.015))] p-6 lg:border-l lg:border-t-0">
+                <div className="absolute right-5 top-5 rounded-full border border-white/10 bg-black/25 px-3 py-2 text-xs font-black text-white/65">
+                  {loading ? "Refreshing..." : "Live"}
+                </div>
+
+                <div className="flex h-full flex-col justify-end">
+                  {heroVehicle ? (
+                    <>
+                      <img
+                        src={heroVehicle.imageUrl}
+                        alt={heroVehicle.codigo}
+                        className="mx-auto h-44 w-full object-contain drop-shadow-[0_35px_45px_rgba(0,0,0,0.55)] md:h-56"
+                      />
+                      <div className="rounded-2xl border border-white/10 bg-black/30 p-4 backdrop-blur-xl">
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-3xl font-black text-white">{heroVehicle.codigo}</p>
+                            <p className="mt-1 text-sm font-bold text-white/50">
+                              {heroVehicle.matricula} - {heroVehicle.marca} {heroVehicle.modelo}
+                            </p>
+                          </div>
+
+                          <span className={`rounded-full border px-3 py-1 text-xs font-black ${vehicleStatusClasses(heroVehicle.status)}`}>
+                            {heroVehicle.label}
+                          </span>
+                        </div>
+                        <p className="mt-3 text-sm font-bold text-white/55">{heroVehicle.detail}</p>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          </section>
+
+          <section>
+            <div className="rounded-2xl border border-white/10 bg-[#0B0D12]/88 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">
+                    Fleet board
+                  </p>
+                  <h3 className="mt-1 text-2xl font-black text-white">Vehicles</h3>
+                </div>
+
+                <Link
+                  href="/admin-nexa-secret/vehicles"
+                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-black text-white/70 transition hover:bg-white/[0.09] hover:text-white"
+                >
+                  Open fleet
+                  <ArrowRight size={15} />
+                </Link>
+              </div>
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+                {dashboard.fleetRows.map((vehicle) => (
+                  <Link
+                    href="/admin-nexa-secret/bookings"
+                    key={vehicle.codigo}
+                    className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] transition hover:-translate-y-0.5 hover:bg-white/[0.06]"
+                  >
+                    <div className="relative h-28 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.11),transparent_50%)] p-3">
+                      <img
+                        src={vehicle.imageUrl}
+                        alt={vehicle.codigo}
+                        className="h-full w-full object-contain drop-shadow-[0_20px_28px_rgba(0,0,0,0.45)]"
+                      />
+                      <span className={`absolute right-3 top-3 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${vehicleStatusClasses(vehicle.status)}`}>
+                        {vehicle.label}
+                      </span>
+                    </div>
+
+                    <div className="p-4">
+                      <p className="text-2xl font-black text-white">{vehicle.codigo}</p>
+                      <p className="mt-1 text-xs font-bold text-white/45">
+                        {vehicle.matricula} - {vehicle.marca} {vehicle.modelo}
+                      </p>
+                      <p className="mt-3 min-h-[38px] text-xs font-bold leading-5 text-white/55">
+                        {vehicle.detail}
+                      </p>
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        </main>
+
+        <aside className="space-y-5">
+          <section className="sticky top-[92px] rounded-2xl border border-white/10 bg-[#0B0D12]/92 p-5 shadow-[0_24px_80px_rgba(0,0,0,0.32)] backdrop-blur-xl">
+            <div className="flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">
+                  Notification center
                 </p>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
+                <h3 className="mt-1 text-2xl font-black text-white">Today & next</h3>
+              </div>
+
+              <button
+                onClick={loadDashboard}
+                className="inline-flex h-11 w-11 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-white/65 transition hover:bg-white/[0.09] hover:text-white"
+                aria-label="Refresh dashboard"
+              >
+                <RefreshCw size={17} />
+              </button>
+            </div>
+
+            <div className="mt-5 space-y-3">
+              {dashboard.notices.length === 0 ? (
+                <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 p-5">
+                  <div className="flex items-center gap-3 text-emerald-300">
+                    <CheckCircle2 size={20} />
+                    <p className="text-sm font-black text-white">All clear</p>
+                  </div>
+                  <p className="mt-2 text-sm font-bold text-emerald-300">
+                    No urgent bookings, returns or maintenance alerts right now.
+                  </p>
+                </div>
+              ) : (
+                dashboard.notices.map((notice) => {
+                  const content = (
+                    <div className={`rounded-2xl border p-4 ${toneClasses(notice.tone)}`}>
+                      <div className="flex gap-3">
+                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-black/20 text-current">
+                          <NoticeIcon icon={notice.icon} />
+                        </div>
+                        <div className="min-w-0">
+                          <p className="text-sm font-black text-white">{notice.title}</p>
+                          <p className="mt-1 text-xs font-bold leading-5 text-white/58">{notice.detail}</p>
+                          <p className="mt-2 text-[10px] font-black uppercase tracking-[0.16em] text-current">
+                            {notice.meta}
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+
+                  return notice.href ? (
+                    <Link key={notice.id} href={notice.href} className="block">
+                      {content}
+                    </Link>
+                  ) : (
+                    <div key={notice.id}>{content}</div>
+                  );
+                })
+              )}
+            </div>
+
+            <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-1">
+              <MiniMovement
+                icon={<CalendarClock size={17} />}
+                title="Pickups today"
+                value={dashboard.todayPickups.length}
+              />
+              <MiniMovement
+                icon={<CheckCircle2 size={17} />}
+                title="Returns today"
+                value={dashboard.todayReturns.length}
+              />
+            </div>
+          </section>
+        </aside>
+      </div>
+    </AdminShell>
+  );
+}
+
+function HeroMetric({ label, value }: { label: string; value: number }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+      <p className="text-[10px] font-black uppercase tracking-[0.16em] text-white/35">{label}</p>
+      <p className="mt-1 text-3xl font-black text-white">{value}</p>
     </div>
   );
 }
 
-function MainStatCard({
+function MiniMovement({
+  icon,
   title,
   value,
-  subtitle,
-  tone,
 }: {
+  icon: React.ReactNode;
   title: string;
   value: number;
-  subtitle: string;
-  tone: "purple" | "emerald" | "orange" | "red";
 }) {
-  const styles = {
-    purple: "border-purple-400/20 bg-purple-500/10 text-purple-300",
-    emerald: "border-emerald-400/20 bg-emerald-500/10 text-emerald-300",
-    orange: "border-orange-400/20 bg-orange-500/10 text-orange-300",
-    red: "border-red-400/20 bg-red-500/10 text-red-300",
-  };
-
   return (
-    <div className={`rounded-[30px] border p-6 ${styles[tone]}`}>
-      <p className="text-xs font-black uppercase tracking-[0.22em]">{title}</p>
-      <p className="mt-3 text-5xl font-black text-white">{value}</p>
-      <p className="mt-2 text-sm font-bold text-white/45">{subtitle}</p>
-    </div>
-  );
-}
-
-function SimpleAlertBox({
-  title,
-  tone,
-  emptyText,
-  bookings,
-  labelFn,
-}: {
-  title: string;
-  tone: "yellow" | "orange" | "sky";
-  emptyText: string;
-  bookings: SavedBooking[];
-  labelFn: (booking: SavedBooking) => string;
-}) {
-  const styles = {
-    yellow: "border-yellow-400/20 bg-yellow-400/10 text-yellow-300",
-    orange: "border-orange-400/20 bg-orange-400/10 text-orange-300",
-    sky: "border-sky-400/20 bg-sky-400/10 text-sky-300",
-  };
-
-  return (
-    <div className={`rounded-[30px] border p-5 ${styles[tone]}`}>
-      <div className="flex items-center justify-between gap-3">
-        <p className="text-xs font-black uppercase tracking-[0.22em]">{title}</p>
-
-        <span className="rounded-full border border-white/10 bg-black/20 px-3 py-1 text-xs font-black text-white">
-          {bookings.length}
+    <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.045] p-4">
+      <div className="flex items-center gap-3">
+        <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-white/[0.06] text-white/60">
+          {icon}
         </span>
+        <p className="text-sm font-black text-white/65">{title}</p>
       </div>
-
-      <div className="mt-4 space-y-3">
-        {bookings.length === 0 ? (
-          <p className="text-sm font-bold text-white/45">{emptyText}</p>
-        ) : (
-          bookings.slice(0, 5).map((booking) => (
-            <Link
-              href="/admin-nexa-secret/bookings"
-              key={`${title}-${getBookingKey(booking)}`}
-              className="block rounded-2xl border border-white/10 bg-white/[0.05] p-3 transition hover:bg-white/[0.08]"
-            >
-              <p className="text-sm font-black text-white">
-                {booking.vehicle.codigo} · {booking.contractData.nombreCliente}
-              </p>
-
-              <p className="mt-1 text-xs font-bold text-white/70">
-                {labelFn(booking)}
-              </p>
-
-              <p className="mt-1 text-[10px] font-black uppercase tracking-[0.14em] text-white/35">
-                {booking.source}
-              </p>
-            </Link>
-          ))
-        )}
-      </div>
+      <p className="text-2xl font-black text-white">{value}</p>
     </div>
   );
 }

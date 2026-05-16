@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import AdminShell from "../../components/dashboard/AdminShell";
 import { nexaFleet } from "../../../lib/nexaFleet";
 
 type PaymentMethod = "cash" | "card" | "";
+type BookingAction = "rent_now" | "reserve_now";
 
 type BookingForm = {
   numeroContrato: string;
@@ -48,6 +50,7 @@ type ManualBooking = {
   createdAt?: string;
   status?: string;
   source?: string;
+  bookingAction?: BookingAction;
   vehicle?: {
     codigo?: string;
     matricula?: string;
@@ -66,6 +69,7 @@ type ManualBooking = {
     franquicia?: string;
     extras?: string;
     paymentMethod?: PaymentMethod;
+    bookingAction?: BookingAction;
   };
   contractPdf?: {
     fileName?: string;
@@ -155,7 +159,6 @@ const requiredFields: Array<keyof BookingForm> = [
   "nombreCliente",
   "dniPasaporte",
   "telefono",
-  "email",
   "direccion",
   "permisoConducir",
   "paisExpedicion",
@@ -364,6 +367,16 @@ function paymentMethodLabel(value?: string) {
   return "No seleccionado";
 }
 
+function bookingActionLabel(value: BookingAction) {
+  if (value === "rent_now") return "Rent Now / En alquiler";
+  return "Reserve Now / Reservada";
+}
+
+function getStatusFromBookingAction(value: BookingAction) {
+  if (value === "rent_now") return "rented_out";
+  return "reserved";
+}
+
 function getStoredBookings(): ManualBooking[] {
   if (typeof window === "undefined") return [];
 
@@ -380,6 +393,12 @@ function getStoredBookings(): ManualBooking[] {
 
 function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
   if (row.contractData) {
+    const cleanStatus = String(row.status || "").toLowerCase();
+    const bookingAction: BookingAction =
+      cleanStatus.includes("rented") || cleanStatus.includes("alquil")
+        ? "rent_now"
+        : "reserve_now";
+
     return {
       id: String(
         row.stripe_payment_intent_id ||
@@ -389,8 +408,9 @@ function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
           Date.now()
       ),
       createdAt: row.createdAt || row.created_at || new Date().toISOString(),
-      status: row.status || "Activa",
+      status: row.status || "reserved",
       source: row.source || "Online",
+      bookingAction,
       vehicle: row.vehicle || {
         codigo:
           row.vehicle_code ||
@@ -406,6 +426,7 @@ function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
       },
       contractData: {
         ...row.contractData,
+        bookingAction,
         metodoPago:
           normalizePaymentMethod(row.payment_method) ||
           normalizePaymentMethod(row.contractData.metodoPago) ||
@@ -433,11 +454,18 @@ function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
 
   const method = normalizePaymentMethod(row.payment_method);
 
+  const cleanStatus = String(row.status || "").toLowerCase();
+  const bookingAction: BookingAction =
+    cleanStatus.includes("rented") || cleanStatus.includes("alquil")
+      ? "rent_now"
+      : "reserve_now";
+
   return {
     id: String(paymentId),
     createdAt: row.created_at || new Date().toISOString(),
-    status: row.status === "paid" ? "Activa" : row.status || "Activa",
+    status: row.status === "paid" ? "reserved" : row.status || "reserved",
     source: row.source || "Online",
+    bookingAction,
     vehicle: {
       codigo: vehicleCode || row.vehicle_name || "ONLINE",
       matricula: "-",
@@ -465,6 +493,7 @@ function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
       pagado: totalAmount ? `${totalAmount.toFixed(2)} €` : "0 €",
       metodoPago: method || "card",
       paymentMethod: method || "card",
+      bookingAction,
       kmSalida: "",
       combustibleSalida: "",
     },
@@ -620,6 +649,58 @@ function EuroInput({
   );
 }
 
+function BookingActionSelector({
+  value,
+  onChange,
+}: {
+  value: BookingAction;
+  onChange: (value: BookingAction) => void;
+}) {
+  return (
+    <div className="rounded-[24px] border border-white/10 bg-white/[0.035] p-4">
+      <p className="text-[11px] font-black uppercase tracking-[0.22em] text-orange-300">
+        Tipo de operación *
+      </p>
+      <p className="mt-1 text-xs font-bold text-white/40">
+        Selecciona si el cliente se lleva el vehículo ahora o si solo quieres
+        reservarlo para una fecha futura.
+      </p>
+
+      <div className="mt-4 grid grid-cols-2 gap-3">
+        <button
+          type="button"
+          onClick={() => onChange("rent_now")}
+          className={`rounded-2xl border px-4 py-4 text-left transition ${
+            value === "rent_now"
+              ? "border-orange-400/70 bg-orange-500/20 text-orange-100 shadow-[0_15px_45px_rgba(249,115,22,0.2)]"
+              : "border-white/10 bg-white/[0.04] text-white/45 hover:border-orange-400/35 hover:text-orange-200"
+          }`}
+        >
+          <span className="block text-sm font-black">Rent Now</span>
+          <span className="mt-1 block text-[10px] font-black uppercase tracking-[0.16em] opacity-70">
+            Sale ahora
+          </span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => onChange("reserve_now")}
+          className={`rounded-2xl border px-4 py-4 text-left transition ${
+            value === "reserve_now"
+              ? "border-sky-400/70 bg-sky-500/20 text-sky-100 shadow-[0_15px_45px_rgba(14,165,233,0.2)]"
+              : "border-white/10 bg-white/[0.04] text-white/45 hover:border-sky-400/35 hover:text-sky-200"
+          }`}
+        >
+          <span className="block text-sm font-black">Reserve Now</span>
+          <span className="mt-1 block text-[10px] font-black uppercase tracking-[0.16em] opacity-70">
+            Fecha futura
+          </span>
+        </button>
+      </div>
+    </div>
+  );
+}
+
 function PaymentMethodSelector({
   value,
   onChange,
@@ -673,6 +754,8 @@ function PaymentMethodSelector({
 
 export default function CreateBookingPage() {
   const [form, setForm] = useState<BookingForm>(initialForm);
+  const [bookingAction, setBookingAction] =
+    useState<BookingAction>("rent_now");
   const [manualBookings, setManualBookings] = useState<ManualBooking[]>([]);
   const [onlineBookings, setOnlineBookings] = useState<ManualBooking[]>([]);
   const [error, setError] = useState("");
@@ -1010,15 +1093,18 @@ export default function CreateBookingPage() {
     const numeroContratoAutomatico = createContractNumber();
     const totalPagado = normalizeMoneyForContract(form.total);
     const paymentMethod = form.metodoPago;
+    const finalStatus = getStatusFromBookingAction(bookingAction);
 
     const newBooking: ManualBooking = {
       id: numeroContratoAutomatico,
       createdAt: new Date().toISOString(),
-      status: "Activa",
+      status: finalStatus,
       source: "Manual",
+      bookingAction,
       vehicle: selectedVehicle,
       contractData: {
         ...form,
+        email: form.email.trim(),
         numeroContrato: numeroContratoAutomatico,
         oficinaEntrega: "OFICINA MAGALUF",
         oficinaDevolucion: "OFICINA MAGALUF",
@@ -1027,6 +1113,7 @@ export default function CreateBookingPage() {
         pagado: totalPagado,
         metodoPago: paymentMethod,
         paymentMethod,
+        bookingAction,
         fianza: "150 €",
         franquicia: "800 €",
         extras:
@@ -1040,10 +1127,14 @@ export default function CreateBookingPage() {
 
     setSuccess(
       sharedSave.ok
-        ? `Reserva creada correctamente con contrato ${numeroContratoAutomatico} para ${form.nombreCliente}. Pago guardado como ${paymentMethodLabel(
+        ? `Reserva creada correctamente con contrato ${numeroContratoAutomatico} para ${form.nombreCliente}. Estado: ${bookingActionLabel(
+            bookingAction
+          )}. Pago guardado como ${paymentMethodLabel(
             paymentMethod
           )}. Vehículo ${selectedVehicle.codigo} bloqueado en el sistema compartido con ${BUFFER_MINUTES_AFTER_BOOKING} minutos extra de margen.`
-        : `Reserva creada correctamente con contrato ${numeroContratoAutomatico} para ${form.nombreCliente}. Pago guardado como ${paymentMethodLabel(
+        : `Reserva creada correctamente con contrato ${numeroContratoAutomatico} para ${form.nombreCliente}. Estado: ${bookingActionLabel(
+            bookingAction
+          )}. Pago guardado como ${paymentMethodLabel(
             paymentMethod
           )}. Vehículo ${selectedVehicle.codigo} bloqueado en localStorage con ${BUFFER_MINUTES_AFTER_BOOKING} minutos extra de margen. Cuando /api/admin/bookings guarde en Supabase, también bloqueará la web.`
     );
@@ -1058,6 +1149,8 @@ export default function CreateBookingPage() {
       numeroContrato: "",
     });
 
+    setBookingAction("rent_now");
+
     window.setTimeout(() => {
       window.scrollTo({
         top: 0,
@@ -1067,453 +1160,473 @@ export default function CreateBookingPage() {
   }
 
   return (
-    <div className="space-y-6">
-      <section className="rounded-[34px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_25px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl">
-        <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-300">
-          Reserva Manual
-        </p>
-        <h2 className="mt-2 text-4xl font-black tracking-tight text-white">
-          Crear Contrato de Alquiler
-        </h2>
-        <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-white/55">
-          Rellena los datos del cliente, conductor, vehículo y alquiler. El
-          sistema guardará la reserva, bloqueará el vehículo, generará el PDF del
-          contrato y lo subirá a Google Drive cuando estén configuradas las ENV
-          vars.
-        </p>
+    <AdminShell>
+      <div className="space-y-6">
+        <section className="rounded-[34px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_25px_100px_rgba(0,0,0,0.45)] backdrop-blur-xl">
+          <p className="text-sm font-black uppercase tracking-[0.28em] text-orange-300">
+            Reserva Manual
+          </p>
+          <h2 className="mt-2 text-4xl font-black tracking-tight text-white">
+            Crear Contrato de Alquiler
+          </h2>
+          <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-white/55">
+            Rellena los datos del cliente, conductor, vehículo y alquiler. El
+            sistema guardará la reserva, bloqueará el vehículo, generará el PDF
+            del contrato y lo subirá a Google Drive cuando estén configuradas las
+            ENV vars.
+          </p>
 
-        <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
-          <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-white/50">
-            Manual local: {manualBookings.length}
-          </span>
-          <span
-            className={`rounded-full border px-3 py-2 ${
-              isLoadingOnlineBookings
-                ? "border-sky-400/20 bg-sky-500/10 text-sky-300"
-                : "border-emerald-400/20 bg-emerald-500/10 text-emerald-300"
-            }`}
-          >
-            {isLoadingOnlineBookings
-              ? "Cargando online..."
-              : `Online detectadas: ${onlineBookings.length}`}
-          </span>
-          <span className="rounded-full border border-orange-400/20 bg-orange-500/10 px-3 py-2 text-orange-300">
-            Margen extra: {BUFFER_MINUTES_AFTER_BOOKING} min
-          </span>
-        </div>
-      </section>
-
-      <form
-        onSubmit={handleSubmit}
-        className="grid gap-6 xl:grid-cols-[1fr_0.72fr]"
-      >
-        <section className="space-y-6 rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 shadow-[0_25px_90px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-          <div>
-            <h3 className="text-2xl font-black text-white">
-              Datos del Vehículo
-            </h3>
-            <p className="mt-1 text-sm text-white/45">
-              Al seleccionar N1, N2, N3, etc., se rellenan matrícula, marca,
-              modelo y bastidor automáticamente. El sistema aplica 1 hora extra
-              de margen después de cada reserva.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 px-4 py-4">
-              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-300">
-                Número de contrato automático
-              </p>
-              <p className="mt-1 text-base font-black text-white">
-                {form.numeroContrato || nextContractNumber}
-              </p>
-            </div>
-
-            <select
-              value={form.codigoVehiculo}
-              onChange={(e) => updateField("codigoVehiculo", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-[#11131A] px-4 py-4 text-white outline-none focus:border-orange-400/50"
+          <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
+            <span className="rounded-full border border-white/10 bg-white/[0.05] px-3 py-2 text-white/50">
+              Manual local: {manualBookings.length}
+            </span>
+            <span
+              className={`rounded-full border px-3 py-2 ${
+                isLoadingOnlineBookings
+                  ? "border-sky-400/20 bg-sky-500/10 text-sky-300"
+                  : "border-emerald-400/20 bg-emerald-500/10 text-emerald-300"
+              }`}
             >
-              <option value="">Seleccionar vehículo *</option>
-              {nexaFleet.map((vehicle) => {
-                const availability = vehicleAvailabilityMap.get(vehicle.codigo);
-
-                const statusText = availability?.isBlockedForSelectedDates
-                  ? "NO DISPONIBLE EN ESTAS FECHAS"
-                  : availability?.isActiveNow && availability.activeEnd
-                  ? getReturnLabel(availability.activeEnd)
-                  : "Disponible";
-
-                return (
-                  <option
-                    key={vehicle.codigo}
-                    value={vehicle.codigo}
-                    disabled={availability?.isBlockedForSelectedDates}
-                  >
-                    {vehicle.codigo} · {vehicle.matricula} · {vehicle.marca}{" "}
-                    {vehicle.modelo} · {statusText}
-                  </option>
-                );
-              })}
-            </select>
-
-            {selectedVehicleAvailability?.isActiveNow &&
-            selectedVehicleAvailability.activeEnd ? (
-              <div className="rounded-2xl border border-yellow-400/20 bg-yellow-500/10 px-4 py-4 md:col-span-2">
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-yellow-300">
-                  Vehículo actualmente alquilado
-                </p>
-                <p className="mt-1 text-sm font-bold text-white/75">
-                  {selectedVehicle?.codigo} · {selectedVehicle?.matricula} ·{" "}
-                  {getReturnLabel(selectedVehicleAvailability.activeEnd)}
-                </p>
-              </div>
-            ) : null}
-
-            {selectedVehicleAvailability?.isBlockedForSelectedDates &&
-            selectedVehicleAvailability.selectedConflictBlockedEnd ? (
-              <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 md:col-span-2">
-                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-300">
-                  No disponible para estas fechas
-                </p>
-                <p className="mt-1 text-sm font-bold text-white/75">
-                  Este vehículo ya tiene una reserva cruzada.{" "}
-                  {getBlockedUntilLabel(
-                    selectedVehicleAvailability.selectedConflictBlockedEnd
-                  )}
-                  .
-                </p>
-              </div>
-            ) : null}
-
-            <input
-              readOnly
-              value={selectedVehicle?.matricula || ""}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-white/70 outline-none placeholder:text-white/30"
-              placeholder="Matrícula"
-            />
-
-            <input
-              readOnly
-              value={
-                selectedVehicle
-                  ? `${selectedVehicle.marca} ${selectedVehicle.modelo}`
-                  : ""
-              }
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-white/70 outline-none placeholder:text-white/30"
-              placeholder="Marca / Modelo"
-            />
-
-            <input
-              readOnly
-              value={selectedVehicle?.bastidor || ""}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-white/70 outline-none placeholder:text-white/30"
-              placeholder="Bastidor / VIN"
-            />
-
-            <input
-              readOnly
-              value={selectedVehicle?.combustible || "Gasolina"}
-              className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-white/70 outline-none placeholder:text-white/30"
-              placeholder="Combustible"
-            />
-
-            <input
-              value={form.kmSalida}
-              onChange={(e) => updateField("kmSalida", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="KM salida opcional"
-            />
-
-            <input
-              value={form.combustibleSalida}
-              onChange={(e) => updateField("combustibleSalida", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="Combustible salida: 7/7, 6/7... *"
-            />
-          </div>
-
-          <div>
-            <h3 className="text-2xl font-black text-white">
-              Datos del Alquiler
-            </h3>
-            <p className="mt-1 text-sm text-white/45">
-              La oficina se rellenará automáticamente como OFICINA MAGALUF.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <ModernDateInput
-              value={form.fechaEntrega}
-              onChange={(value) => updateField("fechaEntrega", value)}
-              placeholder="Fecha entrega *"
-            />
-
-            <ModernTimeSelect
-              value={form.horaEntrega}
-              onChange={(value) => updateField("horaEntrega", value)}
-              placeholder="Hora entrega *"
-              timeOptions={timeOptions}
-            />
-
-            <ModernDateInput
-              value={form.fechaDevolucion}
-              onChange={(value) => updateField("fechaDevolucion", value)}
-              placeholder="Fecha devolución *"
-            />
-
-            <ModernTimeSelect
-              value={form.horaDevolucion}
-              onChange={(value) => updateField("horaDevolucion", value)}
-              placeholder="Hora devolución *"
-              timeOptions={timeOptions}
-            />
-          </div>
-
-          <div>
-            <h3 className="text-2xl font-black text-white">
-              Datos del Cliente
-            </h3>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <input
-              value={form.nombreCliente}
-              onChange={(e) => updateField("nombreCliente", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="Nombre completo *"
-            />
-
-            <input
-              value={form.dniPasaporte}
-              onChange={(e) => updateField("dniPasaporte", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="DNI / Pasaporte *"
-            />
-
-            <input
-              value={form.telefono}
-              onChange={(e) => updateField("telefono", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="Teléfono *"
-            />
-
-            <input
-              type="email"
-              value={form.email}
-              onChange={(e) => updateField("email", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="Email *"
-            />
-
-            <input
-              value={form.direccion}
-              onChange={(e) => updateField("direccion", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50 md:col-span-2"
-              placeholder="Dirección *"
-            />
-          </div>
-
-          <div>
-            <h3 className="text-2xl font-black text-white">
-              Datos del Conductor/a
-            </h3>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <input
-              value={form.permisoConducir}
-              onChange={(e) => updateField("permisoConducir", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="Permiso de conducir *"
-            />
-
-            <input
-              value={form.paisExpedicion}
-              onChange={(e) => updateField("paisExpedicion", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="País de expedición *"
-            />
-
-            <ModernDateInput
-              value={form.fechaCaducidad}
-              onChange={(value) => updateField("fechaCaducidad", value)}
-              placeholder="Fecha caducidad permiso *"
-            />
-          </div>
-
-          <div>
-            <h3 className="text-2xl font-black text-white">
-              Segundo/a Conductor/a
-            </h3>
-            <p className="mt-1 text-sm text-white/45">
-              Opcional. Solo rellenar si aplica.
-            </p>
-          </div>
-
-          <div className="grid gap-4 md:grid-cols-2">
-            <input
-              value={form.segundoNombre}
-              onChange={(e) => updateField("segundoNombre", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="2º Nombre"
-            />
-
-            <input
-              value={form.segundoPermiso}
-              onChange={(e) => updateField("segundoPermiso", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="2º Permiso de conducir"
-            />
-
-            <input
-              value={form.segundoPais}
-              onChange={(e) => updateField("segundoPais", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="2º País expedición"
-            />
-
-            <ModernDateInput
-              value={form.segundoFechaCaducidad}
-              onChange={(value) =>
-                updateField("segundoFechaCaducidad", value)
-              }
-              placeholder="2º Fecha caducidad"
-            />
-
-            <input
-              value={form.segundoDireccion}
-              onChange={(e) => updateField("segundoDireccion", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50 md:col-span-2"
-              placeholder="2º Dirección"
-            />
+              {isLoadingOnlineBookings
+                ? "Cargando online..."
+                : `Online detectadas: ${onlineBookings.length}`}
+            </span>
+            <span className="rounded-full border border-orange-400/20 bg-orange-500/10 px-3 py-2 text-orange-300">
+              Margen extra: {BUFFER_MINUTES_AFTER_BOOKING} min
+            </span>
           </div>
         </section>
 
-        <section className="space-y-6 rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 shadow-[0_25px_90px_rgba(0,0,0,0.4)] backdrop-blur-xl">
-          <div>
-            <h3 className="text-2xl font-black text-white">
-              Detalles del Alquiler
-            </h3>
-            <p className="mt-1 text-sm text-white/45">
-              Precio, fianza, forma de pago y resumen del contrato.
-            </p>
-          </div>
-
-          <div className="grid gap-4">
-            <input
-              value={form.dias}
-              onChange={(e) => updateField("dias", e.target.value)}
-              className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="Días *"
-            />
-
-            <EuroInput
-              value={form.precioPorDia}
-              onChange={(value) => updateField("precioPorDia", value)}
-              placeholder="Precio por día *"
-            />
-
-            <EuroInput
-              value={form.total}
-              onChange={(value) => updateField("total", value)}
-              placeholder="Total *"
-            />
-
-            <PaymentMethodSelector
-              value={form.metodoPago}
-              onChange={(value) =>
-                setForm((prev) => ({
-                  ...prev,
-                  metodoPago: value,
-                  pagado: prev.total,
-                }))
-              }
-            />
-
-            <textarea
-              value={form.notas}
-              onChange={(e) => updateField("notas", e.target.value)}
-              className="min-h-[120px] rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
-              placeholder="Notas internas opcionales"
-            />
-          </div>
-
-          <div className="rounded-[26px] border border-white/10 bg-white/[0.035] p-5">
-            <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">
-              Vista rápida del contrato
-            </p>
-
-            <div className="mt-4 space-y-2 text-sm text-white/60">
-              <p>
-                <span className="font-black text-white">Contrato:</span>{" "}
-                {form.numeroContrato || nextContractNumber}
-              </p>
-              <p>
-                <span className="font-black text-white">Vehículo:</span>{" "}
-                {selectedVehicle
-                  ? `${selectedVehicle.codigo} · ${selectedVehicle.matricula} · ${selectedVehicle.marca} ${selectedVehicle.modelo}`
-                  : "Sin seleccionar"}
-              </p>
-              <p>
-                <span className="font-black text-white">Cliente:</span>{" "}
-                {form.nombreCliente || "Sin rellenar"}
-              </p>
-              <p>
-                <span className="font-black text-white">Entrega:</span>{" "}
-                {form.fechaEntrega || "--"} {form.horaEntrega || "--"}
-              </p>
-              <p>
-                <span className="font-black text-white">Devolución:</span>{" "}
-                {form.fechaDevolucion || "--"} {form.horaDevolucion || "--"}
-              </p>
-              <p>
-                <span className="font-black text-white">Total:</span> €{" "}
-                {form.total || "0"}
-              </p>
-              <p>
-                <span className="font-black text-white">Pagado:</span>{" "}
-                {form.total ? `${form.total} €` : "0 €"} ·{" "}
-                {paymentMethodLabel(form.metodoPago)}
-              </p>
-              <p>
-                <span className="font-black text-white">Fianza:</span> 150 €
-              </p>
-              <p>
-                <span className="font-black text-white">Franquicia:</span> 800 €
+        <form
+          onSubmit={handleSubmit}
+          className="grid gap-6 xl:grid-cols-[1fr_0.72fr]"
+        >
+          <section className="space-y-6 rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 shadow-[0_25px_90px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+            <div>
+              <h3 className="text-2xl font-black text-white">
+                Datos del Vehículo
+              </h3>
+              <p className="mt-1 text-sm text-white/45">
+                Al seleccionar N1, N2, N3, etc., se rellenan matrícula, marca,
+                modelo y bastidor automáticamente. El sistema aplica 1 hora
+                extra de margen después de cada reserva.
               </p>
             </div>
-          </div>
 
-          {error ? (
-            <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300">
-              {error}
+            <div className="grid gap-4 md:grid-cols-2">
+              <div className="rounded-2xl border border-orange-400/20 bg-orange-400/10 px-4 py-4">
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-orange-300">
+                  Número de contrato automático
+                </p>
+                <p className="mt-1 text-base font-black text-white">
+                  {form.numeroContrato || nextContractNumber}
+                </p>
+              </div>
+
+              <select
+                value={form.codigoVehiculo}
+                onChange={(e) => updateField("codigoVehiculo", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-[#11131A] px-4 py-4 text-white outline-none focus:border-orange-400/50"
+              >
+                <option value="">Seleccionar vehículo *</option>
+                {nexaFleet.map((vehicle) => {
+                  const availability = vehicleAvailabilityMap.get(
+                    vehicle.codigo
+                  );
+
+                  const statusText = availability?.isBlockedForSelectedDates
+                    ? "NO DISPONIBLE EN ESTAS FECHAS"
+                    : availability?.isActiveNow && availability.activeEnd
+                    ? getReturnLabel(availability.activeEnd)
+                    : "Disponible";
+
+                  return (
+                    <option
+                      key={vehicle.codigo}
+                      value={vehicle.codigo}
+                      disabled={availability?.isBlockedForSelectedDates}
+                    >
+                      {vehicle.codigo} · {vehicle.matricula} · {vehicle.marca}{" "}
+                      {vehicle.modelo} · {statusText}
+                    </option>
+                  );
+                })}
+              </select>
+
+              {selectedVehicleAvailability?.isActiveNow &&
+              selectedVehicleAvailability.activeEnd ? (
+                <div className="rounded-2xl border border-yellow-400/20 bg-yellow-500/10 px-4 py-4 md:col-span-2">
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-yellow-300">
+                    Vehículo actualmente alquilado
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-white/75">
+                    {selectedVehicle?.codigo} · {selectedVehicle?.matricula} ·{" "}
+                    {getReturnLabel(selectedVehicleAvailability.activeEnd)}
+                  </p>
+                </div>
+              ) : null}
+
+              {selectedVehicleAvailability?.isBlockedForSelectedDates &&
+              selectedVehicleAvailability.selectedConflictBlockedEnd ? (
+                <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 md:col-span-2">
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-300">
+                    No disponible para estas fechas
+                  </p>
+                  <p className="mt-1 text-sm font-bold text-white/75">
+                    Este vehículo ya tiene una reserva cruzada.{" "}
+                    {getBlockedUntilLabel(
+                      selectedVehicleAvailability.selectedConflictBlockedEnd
+                    )}
+                    .
+                  </p>
+                </div>
+              ) : null}
+
+              <input
+                readOnly
+                value={selectedVehicle?.matricula || ""}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-white/70 outline-none placeholder:text-white/30"
+                placeholder="Matrícula"
+              />
+
+              <input
+                readOnly
+                value={
+                  selectedVehicle
+                    ? `${selectedVehicle.marca} ${selectedVehicle.modelo}`
+                    : ""
+                }
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-white/70 outline-none placeholder:text-white/30"
+                placeholder="Marca / Modelo"
+              />
+
+              <input
+                readOnly
+                value={selectedVehicle?.bastidor || ""}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-white/70 outline-none placeholder:text-white/30"
+                placeholder="Bastidor / VIN"
+              />
+
+              <input
+                readOnly
+                value={selectedVehicle?.combustible || "Gasolina"}
+                className="rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-4 text-white/70 outline-none placeholder:text-white/30"
+                placeholder="Combustible"
+              />
+
+              <input
+                value={form.kmSalida}
+                onChange={(e) => updateField("kmSalida", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="KM salida opcional"
+              />
+
+              <input
+                value={form.combustibleSalida}
+                onChange={(e) =>
+                  updateField("combustibleSalida", e.target.value)
+                }
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="Combustible salida: 7/7, 6/7... *"
+              />
             </div>
-          ) : null}
 
-          {success ? (
-            <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-300">
-              {success}
+            <div>
+              <h3 className="text-2xl font-black text-white">
+                Datos del Alquiler
+              </h3>
+              <p className="mt-1 text-sm text-white/45">
+                La oficina se rellenará automáticamente como OFICINA MAGALUF.
+              </p>
             </div>
-          ) : null}
 
-          {contractStatus ? (
-            <div className="rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm font-bold text-sky-300">
-              {contractStatus}
+            <div className="grid gap-4 md:grid-cols-2">
+              <ModernDateInput
+                value={form.fechaEntrega}
+                onChange={(value) => updateField("fechaEntrega", value)}
+                placeholder="Fecha entrega *"
+              />
+
+              <ModernTimeSelect
+                value={form.horaEntrega}
+                onChange={(value) => updateField("horaEntrega", value)}
+                placeholder="Hora entrega *"
+                timeOptions={timeOptions}
+              />
+
+              <ModernDateInput
+                value={form.fechaDevolucion}
+                onChange={(value) => updateField("fechaDevolucion", value)}
+                placeholder="Fecha devolución *"
+              />
+
+              <ModernTimeSelect
+                value={form.horaDevolucion}
+                onChange={(value) => updateField("horaDevolucion", value)}
+                placeholder="Hora devolución *"
+                timeOptions={timeOptions}
+              />
             </div>
-          ) : null}
 
-          <button
-            type="submit"
-            disabled={isGeneratingContract}
-            className="w-full rounded-2xl bg-gradient-to-r from-orange-500 via-purple-500 to-sky-500 px-5 py-4 text-sm font-black text-white shadow-[0_15px_45px_rgba(255,128,0,0.25)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
-          >
-            {isGeneratingContract
-              ? "Generando contrato PDF..."
-              : "Crear reserva + generar contrato"}
-          </button>
-        </section>
-      </form>
-    </div>
+            <div>
+              <h3 className="text-2xl font-black text-white">
+                Datos del Cliente
+              </h3>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <input
+                value={form.nombreCliente}
+                onChange={(e) => updateField("nombreCliente", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="Nombre completo *"
+              />
+
+              <input
+                value={form.dniPasaporte}
+                onChange={(e) => updateField("dniPasaporte", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="DNI / Pasaporte *"
+              />
+
+              <input
+                value={form.telefono}
+                onChange={(e) => updateField("telefono", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="Teléfono *"
+              />
+
+              <input
+                type="email"
+                value={form.email}
+                onChange={(e) => updateField("email", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="Email opcional"
+              />
+
+              <input
+                value={form.direccion}
+                onChange={(e) => updateField("direccion", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50 md:col-span-2"
+                placeholder="Dirección *"
+              />
+            </div>
+
+            <div>
+              <h3 className="text-2xl font-black text-white">
+                Datos del Conductor/a
+              </h3>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <input
+                value={form.permisoConducir}
+                onChange={(e) => updateField("permisoConducir", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="Permiso de conducir *"
+              />
+
+              <input
+                value={form.paisExpedicion}
+                onChange={(e) => updateField("paisExpedicion", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="País de expedición *"
+              />
+
+              <ModernDateInput
+                value={form.fechaCaducidad}
+                onChange={(value) => updateField("fechaCaducidad", value)}
+                placeholder="Fecha caducidad permiso *"
+              />
+            </div>
+
+            <div>
+              <h3 className="text-2xl font-black text-white">
+                Segundo/a Conductor/a
+              </h3>
+              <p className="mt-1 text-sm text-white/45">
+                Opcional. Solo rellenar si aplica.
+              </p>
+            </div>
+
+            <div className="grid gap-4 md:grid-cols-2">
+              <input
+                value={form.segundoNombre}
+                onChange={(e) => updateField("segundoNombre", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="2º Nombre"
+              />
+
+              <input
+                value={form.segundoPermiso}
+                onChange={(e) => updateField("segundoPermiso", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="2º Permiso de conducir"
+              />
+
+              <input
+                value={form.segundoPais}
+                onChange={(e) => updateField("segundoPais", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="2º País expedición"
+              />
+
+              <ModernDateInput
+                value={form.segundoFechaCaducidad}
+                onChange={(value) =>
+                  updateField("segundoFechaCaducidad", value)
+                }
+                placeholder="2º Fecha caducidad"
+              />
+
+              <input
+                value={form.segundoDireccion}
+                onChange={(e) =>
+                  updateField("segundoDireccion", e.target.value)
+                }
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50 md:col-span-2"
+                placeholder="2º Dirección"
+              />
+            </div>
+          </section>
+
+          <section className="space-y-6 rounded-[32px] border border-white/10 bg-[#080A10]/80 p-6 shadow-[0_25px_90px_rgba(0,0,0,0.4)] backdrop-blur-xl">
+            <div>
+              <h3 className="text-2xl font-black text-white">
+                Detalles del Alquiler
+              </h3>
+              <p className="mt-1 text-sm text-white/45">
+                Precio, fianza, forma de pago, estado y resumen del contrato.
+              </p>
+            </div>
+
+            <BookingActionSelector
+              value={bookingAction}
+              onChange={setBookingAction}
+            />
+
+            <div className="grid gap-4">
+              <input
+                value={form.dias}
+                onChange={(e) => updateField("dias", e.target.value)}
+                className="rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="Días *"
+              />
+
+              <EuroInput
+                value={form.precioPorDia}
+                onChange={(value) => updateField("precioPorDia", value)}
+                placeholder="Precio por día *"
+              />
+
+              <EuroInput
+                value={form.total}
+                onChange={(value) => updateField("total", value)}
+                placeholder="Total *"
+              />
+
+              <PaymentMethodSelector
+                value={form.metodoPago}
+                onChange={(value) =>
+                  setForm((prev) => ({
+                    ...prev,
+                    metodoPago: value,
+                    pagado: prev.total,
+                  }))
+                }
+              />
+
+              <textarea
+                value={form.notas}
+                onChange={(e) => updateField("notas", e.target.value)}
+                className="min-h-[120px] rounded-2xl border border-white/10 bg-white/[0.05] px-4 py-4 text-white outline-none placeholder:text-white/30 focus:border-orange-400/50"
+                placeholder="Notas internas opcionales"
+              />
+            </div>
+
+            <div className="rounded-[26px] border border-white/10 bg-white/[0.035] p-5">
+              <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">
+                Vista rápida del contrato
+              </p>
+
+              <div className="mt-4 space-y-2 text-sm text-white/60">
+                <p>
+                  <span className="font-black text-white">Contrato:</span>{" "}
+                  {form.numeroContrato || nextContractNumber}
+                </p>
+                <p>
+                  <span className="font-black text-white">Estado:</span>{" "}
+                  {bookingActionLabel(bookingAction)}
+                </p>
+                <p>
+                  <span className="font-black text-white">Vehículo:</span>{" "}
+                  {selectedVehicle
+                    ? `${selectedVehicle.codigo} · ${selectedVehicle.matricula} · ${selectedVehicle.marca} ${selectedVehicle.modelo}`
+                    : "Sin seleccionar"}
+                </p>
+                <p>
+                  <span className="font-black text-white">Cliente:</span>{" "}
+                  {form.nombreCliente || "Sin rellenar"}
+                </p>
+                <p>
+                  <span className="font-black text-white">Entrega:</span>{" "}
+                  {form.fechaEntrega || "--"} {form.horaEntrega || "--"}
+                </p>
+                <p>
+                  <span className="font-black text-white">Devolución:</span>{" "}
+                  {form.fechaDevolucion || "--"} {form.horaDevolucion || "--"}
+                </p>
+                <p>
+                  <span className="font-black text-white">Total:</span> €{" "}
+                  {form.total || "0"}
+                </p>
+                <p>
+                  <span className="font-black text-white">Pagado:</span>{" "}
+                  {form.total ? `${form.total} €` : "0 €"} ·{" "}
+                  {paymentMethodLabel(form.metodoPago)}
+                </p>
+                <p>
+                  <span className="font-black text-white">Fianza:</span> 150 €
+                </p>
+                <p>
+                  <span className="font-black text-white">Franquicia:</span>{" "}
+                  800 €
+                </p>
+              </div>
+            </div>
+
+            {error ? (
+              <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300">
+                {error}
+              </div>
+            ) : null}
+
+            {success ? (
+              <div className="rounded-2xl border border-emerald-400/20 bg-emerald-500/10 px-4 py-3 text-sm font-bold text-emerald-300">
+                {success}
+              </div>
+            ) : null}
+
+            {contractStatus ? (
+              <div className="rounded-2xl border border-sky-400/20 bg-sky-500/10 px-4 py-3 text-sm font-bold text-sky-300">
+                {contractStatus}
+              </div>
+            ) : null}
+
+            <button
+              type="submit"
+              disabled={isGeneratingContract}
+              className="w-full rounded-2xl bg-gradient-to-r from-orange-500 via-purple-500 to-sky-500 px-5 py-4 text-sm font-black text-white shadow-[0_15px_45px_rgba(255,128,0,0.25)] transition hover:-translate-y-0.5 disabled:cursor-not-allowed disabled:opacity-60 disabled:hover:translate-y-0"
+            >
+              {isGeneratingContract
+                ? "Generando contrato PDF..."
+                : bookingAction === "rent_now"
+                ? "Rent Now + generar contrato"
+                : "Reserve Now + generar contrato"}
+            </button>
+          </section>
+        </form>
+      </div>
+    </AdminShell>
   );
 }

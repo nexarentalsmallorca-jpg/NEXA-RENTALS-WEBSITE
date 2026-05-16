@@ -6,8 +6,90 @@
     "contact": "Contatto",
     "about": "Su NEXA"
   },
+  "home": {
+    "hero": {
+      "badges": {
+        "includedLabel": "Incluso",
+        "includedValue": "2 caschi + lucchetto",
+        "freedomLabel": "Libertà",
+        "freedomValue": "KM illimitati"
+      },
+      "plans": {
+        "mostPopular": "Più popolare",
+        "halfDay": "Mezza giornata",
+        "fullDay": "Giornata intera"
+      },
+      "slider": {
+        "previous": "Scooter precedente",
+        "next": "Scooter successivo"
+      },
+      "ebike": {
+        "vehicle": "Veicolo",
+        "whatsappBookingOnly": "Prenotazione solo WhatsApp",
+        "reserveTitle": "Prenota tramite WhatsApp",
+        "reserveDescription": "Le e-bike vengono prenotate manualmente tramite messaggio così possiamo confermare subito la disponibilità.",
+        "sendWhatsapp": "Invia messaggio su WhatsApp",
+        "whatsappMessage": "Ciao Nexa Rentals, questa e-bike è disponibile ({vehicle})?",
+        "prices": {
+          "oneHour": "1 ora",
+          "twoHours": "2 ore",
+          "threeHours": "3 ore",
+          "fourHours": "4 ore",
+          "oneDay": "1 giorno"
+        }
+      }
+    },
+    "slides": {
+      "piaggio": {
+        "features": {
+          "0": "Scooter automatico 125cc",
+          "1": "Fluido e facile da guidare",
+          "2": "Perfetto per città e strade costiere",
+          "3": "2 caschi inclusi gratis",
+          "4": "Supporto telefono gratuito per la navigazione",
+          "5": "Lucchetto di sicurezza incluso gratis",
+          "6": "Comodo ed efficiente nei consumi",
+          "7": "Ideale per esplorare Maiorca"
+        }
+      },
+      "sym": {
+        "features": {
+          "0": "Scooter automatico 125cc",
+          "1": "Design urbano elegante con comfort premium",
+          "2": "Guida fluida per città e strade vicino alla spiaggia",
+          "3": "2 caschi inclusi gratis",
+          "4": "Supporto telefono gratuito per la navigazione",
+          "5": "Lucchetto di sicurezza incluso gratis",
+          "6": "Seduta spaziosa e posizione di guida comoda",
+          "7": "Perfetto per esplorare Magaluf e Maiorca"
+        }
+      },
+      "moma": {
+        "features": {
+          "0": "Bici elettrica",
+          "1": "Facile da guidare",
+          "2": "Perfetta per la città",
+          "3": "Lunga autonomia FINO A 100KM"
+        }
+      },
+      "cecotec": {
+        "features": {
+          "0": "Bici elettrica",
+          "1": "Perfetta per percorsi e sentieri",
+          "2": "Facile da maneggiare",
+          "3": "Autonomia FINO A 60KM"
+        }
+      }
+    },
+    "seo": {
+      "title": "Noleggio scooter a Maiorca per turisti",
+      "beforeLink": "Cerchi il miglior noleggio scooter a Magaluf, Maiorca?",
+      "linkText": "Il servizio di noleggio scooter di Nexa Rentals",
+      "afterLink": "offre scooter premium ed e-bike con un’esperienza di prenotazione semplice e veloce."
+    }
+  },
   "hero": {
-    "title": "Noleggia Scooter e Bicicletta elettrica\na Maiorca",
+    "title": "Noleggia uno scooter e una bici elettrica\na Maiorca",
     "subtitle": "Noleggia online in pochi secondi"
   },
   "booking": {
@@ -41,28 +123,20 @@
     "instantConfirmation": "Conferma immediata",
     "localSupport": "Supporto locale"
   },
-
   "checkout": {
     "defaultPickupLocation": "Magaluf (Carrer Galeón 13)",
-
     "step2of2": "Passo 2 di 2",
     "confirmAndPay": "Conferma e paga",
     "in60Seconds": "in 60 secondi",
-
     "backToVehicles": "← Torna ai veicoli",
-
     "daysSingular": "giorno",
     "daysPlural": "giorni",
-
     "savePct": "Risparmia {pct}%",
     "save": "Risparmia",
-
     "perDayShort": "/giorno",
     "perDay": "/giorno",
-
     "total": "Totale",
     "totalLabel": "Totale",
-
     "included": "Incluso",
     "includedBadge": "Incluso",
     "noExtraFees": "Nessun costo extra",
@@ -70,37 +144,30 @@
     "lock": "Lucchetto",
     "cargoBox": "Baule",
     "free": "Gratis",
-
     "contractReadyTitle": "Ritiro con contratto pronto (meno di 5 minuti)",
     "contractReadyDesc": "Carica i documenti ora (opzionale) così il contratto è pronto all’arrivo — firmi e parti.",
-
     "yourDetails": "I tuoi dati",
     "detailsHint": "Obbligatorio per prenotazione + contratto. Carica i documenti per un ritiro più veloce.",
     "required": "Obbligatorio",
-
     "nameLabel": "Nome *",
     "surnameLabel": "Cognome *",
     "phoneLabel": "Telefono (WhatsApp) *",
     "emailLabel": "Email *",
     "notesLabel": "Note (opzionale)",
-
     "namePlaceholder": "Marco",
     "surnamePlaceholder": "Rossi",
     "phonePlaceholder": "+34 600 000 000",
     "emailPlaceholder": "tu@email.com",
     "notesPlaceholder": "Preferenze di ritiro, richieste, ecc.",
-
     "documentsOptional": "Documenti (opzionale)",
     "fasterPickup": "Ritiro più veloce",
     "documentsDesc": "Carica ora per avere il contratto pronto all’arrivo — firma e ritira il veicolo in meno di 5 minuti.",
     "chooseFilesHint": "Scegli file per ritiro rapido (opzionale).",
     "remove": "Rimuovi",
-
     "dlFront": "Patente (fronte) — opzionale",
     "dlBack": "Patente (retro) — opzionale",
     "idFront": "ID / Passaporto (fronte) — opzionale",
     "idBack": "ID / Passaporto (retro) — opzionale",
-
     "payment": "Pagamento",
     "pay": "Paga",
     "now": "ora",
@@ -111,33 +178,25 @@
     "payNow50": "Paga ora (50%)",
     "payPickup50": "Paga al ritiro (50%)",
     "rentalTotal": "Totale noleggio",
-
     "checkContractReady": "I miei dati sono corretti e possono essere usati per preparare il contratto di noleggio.",
     "checkAgreeTerms": "Accetto i termini di noleggio e confermo che i dettagli della prenotazione sono corretti.",
     "checkMarketing": "Inviami aggiornamenti, offerte e notizie da NEXA Rentals (opzionale).",
-
     "pay50NowAndBook": "Paga 50% ora e prenota",
-
     "depositImportantTitle": "IMPORTANTE — Deposito al ritiro",
     "depositTextBefore": "Richiediamo un deposito di",
     "depositTextAfter": "al ritiro (Contanti / Carta). Rimborsabile dopo la restituzione (secondo termini).",
-
     "toContinue": "Per continuare: inserisci Nome + Cognome + Telefono + Email, poi conferma contratto e accetta i termini.",
-
     "secureCheckout": "Pagamento sicuro",
     "localSupport": "Supporto locale",
     "noHiddenFees": "Nessun costo nascosto",
-
     "stripeReady": "Pronto per Stripe.",
     "payAtPickup": "Paga al ritiro",
     "depositAtPickup": "Deposito al ritiro",
     "cashCard": "Contanti/Carta",
     "contractReadySaved": "Dati salvati per il contratto.",
-
     "step": "Passo 2 di 2",
     "title": "Conferma e paga",
     "titleAccent": "in 60 secondi",
-
     "includedGroup": {
       "title": "Incluso",
       "noExtraFees": "Nessun costo extra",
@@ -292,7 +351,6 @@
       "missingDates": "Seleziona le date di ritiro e riconsegna."
     }
   },
-  
   "shopSection": {
     "imageAlt": "Negozio NEXA",
     "titleLine1": "Preferisci noleggiare di persona?",
@@ -302,7 +360,7 @@
       "pickupLocationTitle": "Luogo di ritiro",
       "pickupLocationValue": "Magaluf (Carrer Galeón 13)",
       "openingHoursTitle": "Orari di apertura",
-      "openingHoursValue": "Tutti i giorni • 10:00 – 22:00"
+      "openingHoursValue": "Tutti i giorni • 09:00 – 20:00"
     },
     "bring": {
       "title": "Cosa portare",
@@ -316,21 +374,21 @@
     }
   },
   "footer": {
-  "pickup": "Ritiro a Magaluf",
-  "address": "Carrer Galeón 13, Magaluf",
-  "hours": "Tutti i giorni · 09:00 – 20:00",
-  "getUpdates": "Ricevi aggiornamenti",
-  "dealsText": "Offerte, sconti e promozioni stagionali.",
-  "yourEmail": "La tua email",
-  "join": "Iscriviti",
-  "noSpam": "Niente spam. Disiscriviti in qualsiasi momento.",
-  "follow": "Segui",
-  "allRightsReserved": "Tutti i diritti riservati.",
-  "terms": "Termini e Condizioni",
-  "privacy": "Informativa sulla Privacy",
-  "depositPolicy": "Politica sul Deposito",
-  "refundPolicy": "Politica di Rimborso",
-  "cookies": "Cookie",
-  "aboutNexa": "Su NEXA"
-}
+    "pickup": "Ritiro a Magaluf",
+    "address": "Carrer Galeón 13, Magaluf",
+    "hours": "Tutti i giorni · 09:00 – 20:00",
+    "getUpdates": "Ricevi aggiornamenti",
+    "dealsText": "Offerte, sconti e promozioni stagionali.",
+    "yourEmail": "La tua email",
+    "join": "Iscriviti",
+    "noSpam": "Niente spam. Disiscriviti in qualsiasi momento.",
+    "follow": "Segui",
+    "allRightsReserved": "Tutti i diritti riservati.",
+    "terms": "Termini e Condizioni",
+    "privacy": "Informativa sulla Privacy",
+    "depositPolicy": "Politica sul Deposito",
+    "refundPolicy": "Politica di Rimborso",
+    "cookies": "Cookie",
+    "aboutNexa": "Su NEXA"
+  }
 }

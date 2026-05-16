@@ -1,12 +1,19 @@
 // app/[locale]/layout.tsx
 import type { Metadata } from "next";
 import { Inter, Playfair_Display, Poppins } from "next/font/google";
+import { NextIntlClientProvider } from "next-intl";
+import { getMessages, setRequestLocale } from "next-intl/server";
+
 import NexaFooter from "../components/NexaFooter";
 import WhatsAppSupport from "../components/WhatsAppSupport";
 import NeroBookingCopilot from "../components/NeroBookingCopilot";
-import { NextIntlClientProvider } from "next-intl";
-import { getMessages, setRequestLocale } from "next-intl/server";
-import { locales } from "../../i18n/routing";
+
+import {
+  defaultLocale,
+  isValidLocale,
+  locales,
+  type Locale,
+} from "../../i18n/routing";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -43,6 +50,19 @@ export const metadata: Metadata = {
     shortcut: "/icon.png",
     apple: "/icon.png",
   },
+
+  alternates: {
+    canonical: "/en",
+    languages: {
+      en: "/en",
+      es: "/es",
+      de: "/de",
+      fr: "/fr",
+      it: "/it",
+      pt: "/pt",
+      sv: "/sv",
+    },
+  },
 };
 
 export function generateStaticParams() {
@@ -55,22 +75,24 @@ type Props = {
 };
 
 export default async function RootLayout({ children, params }: Props) {
-  const { locale } = await params;
+  const { locale: requestedLocale } = await params;
 
-  const safeLocale = locales.includes(locale as any) ? locale : "en";
+  const locale: Locale = isValidLocale(requestedLocale)
+    ? requestedLocale
+    : defaultLocale;
 
-  setRequestLocale(safeLocale);
+  setRequestLocale(locale);
 
   const messages = await getMessages();
 
   return (
     <html
-      lang={safeLocale}
+      lang={locale}
       className={`${inter.variable} ${playfair.variable} ${poppins.variable}`}
       suppressHydrationWarning
     >
       <body suppressHydrationWarning>
-        <NextIntlClientProvider locale={safeLocale} messages={messages}>
+        <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
 
           <NeroBookingCopilot />
@@ -80,7 +102,7 @@ export default async function RootLayout({ children, params }: Props) {
             messages={[
               "Hey! Need any help?",
               "Want the best scooter for your trip?",
-              "Booking takes only Few seconds ⚡",
+              "Booking takes only few seconds ⚡",
               "Message us, we reply fast 🙂",
             ]}
           />

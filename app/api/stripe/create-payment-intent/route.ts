@@ -4,10 +4,8 @@ import Stripe from "stripe";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-// Initialize Stripe
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
-// 50% deposit calculator
 function calcDeposit(totalAmount: number) {
   return Math.round(totalAmount * 0.5);
 }
@@ -44,12 +42,24 @@ export async function POST(req: Request) {
       pickupLocation,
 
       bikeName,
+      vehicle,
+      vehicleName,
       vehicleId,
+      vehicleCode,
+      assignedVehicleCode,
+      assignedVehicleName,
+      assignedVehicleMatricula,
+      assignedVehicleDisplayName,
+      fleetGroup,
+
       plan,
       ratePerDay,
+      days,
+      total,
 
       availabilityChecked,
       availableCount,
+      totalFleet,
 
       notes,
 
@@ -66,7 +76,19 @@ export async function POST(req: Request) {
       marketingOptIn,
     } = body;
 
-    // Basic validation
+    const finalVehicleName =
+      assignedVehicleDisplayName ||
+      bikeName ||
+      vehicleName ||
+      vehicle ||
+      assignedVehicleName ||
+      "";
+
+    const finalPublicVehicleName =
+      vehicleName || vehicle || bikeName || assignedVehicleName || "";
+
+    const finalVehicleCode = assignedVehicleCode || vehicleCode || "";
+
     if (!bookingId) {
       return NextResponse.json(
         { error: "Missing bookingId" },
@@ -102,9 +124,29 @@ export async function POST(req: Request) {
       );
     }
 
-    if (!vehicleId || !bikeName) {
+    if (!vehicleId || !finalVehicleName) {
       return NextResponse.json(
         { error: "Missing vehicle details" },
+        { status: 400 }
+      );
+    }
+
+    if (!finalVehicleCode) {
+      return NextResponse.json(
+        {
+          error:
+            "Missing assigned scooter code. Please go back and select the dates again.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (!fleetGroup) {
+      return NextResponse.json(
+        {
+          error:
+            "Missing fleet group. Please go back and select the vehicle again.",
+        },
         { status: 400 }
       );
     }
@@ -119,7 +161,6 @@ export async function POST(req: Request) {
     const depositAmount = calcDeposit(totalAmount);
     const remainingAmount = totalAmount - depositAmount;
 
-    // Create PaymentIntent (CUSTOM CHECKOUT)
     const paymentIntent = await stripe.paymentIntents.create({
       amount: depositAmount,
       currency: String(currency).toLowerCase(),
@@ -146,10 +187,26 @@ export async function POST(req: Request) {
         phone: cleanMetadataValue(phone, 80),
 
         vehicle_id: cleanMetadataValue(vehicleId, 80),
-        vehicle_name: cleanMetadataValue(bikeName, 160),
+        vehicle_name: cleanMetadataValue(finalVehicleName, 220),
+        public_vehicle_name: cleanMetadataValue(finalPublicVehicleName, 180),
+
+        vehicle_code: cleanMetadataValue(finalVehicleCode, 40),
+        assigned_vehicle_code: cleanMetadataValue(finalVehicleCode, 40),
+        assigned_vehicle_name: cleanMetadataValue(assignedVehicleName, 160),
+        assigned_vehicle_matricula: cleanMetadataValue(
+          assignedVehicleMatricula,
+          80
+        ),
+        assigned_vehicle_display_name: cleanMetadataValue(
+          finalVehicleName,
+          220
+        ),
+        fleet_group: cleanMetadataValue(fleetGroup, 80),
 
         plan: cleanMetadataValue(plan || "full", 40),
         rate_per_day: ratePerDay !== undefined ? String(ratePerDay) : "",
+        days: days !== undefined ? String(days) : "",
+        rental_total_eur: total !== undefined ? String(total) : "",
 
         pickup_date: cleanMetadataValue(pickupDateISO, 40),
         dropoff_date: cleanMetadataValue(returnDateISO, 40),
@@ -162,6 +219,7 @@ export async function POST(req: Request) {
           80
         ),
         available_count: cleanMetadataValue(availableCount, 40),
+        total_fleet: cleanMetadataValue(totalFleet, 40),
 
         notes: cleanMetadataValue(notes, 500),
 
@@ -187,6 +245,8 @@ export async function POST(req: Request) {
       remainingAmount,
       totalAmount,
       currency,
+      assignedVehicleCode: finalVehicleCode,
+      fleetGroup,
     });
   } catch (error: any) {
     console.error("Stripe PaymentIntent Error:", error);

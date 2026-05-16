@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import HomeClient from "../HomeClientV2";
+import { setRequestLocale } from "next-intl/server";
+
 import HomeClientV2 from "../HomeClientV2";
+import { defaultLocale, isValidLocale, type Locale } from "../../i18n/routing";
 
 type PageProps = {
   params: Promise<{ locale: string }>;
@@ -14,7 +16,13 @@ export const metadata: Metadata = {
 };
 
 export default async function Page({ params }: PageProps) {
-  const { locale } = await params;
+  const { locale: requestedLocale } = await params;
+
+  const locale: Locale = isValidLocale(requestedLocale)
+    ? requestedLocale
+    : defaultLocale;
+
+  setRequestLocale(locale);
 
   return (
     <Suspense fallback={null}>

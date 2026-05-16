@@ -1,11 +1,14 @@
 "use client";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 
 type RentalPlan = "half" | "full" | null;
 type ActiveField = "pickup" | "dropoff";
 type DateRange = { from?: Date; to?: Date };
+type Locale = "en" | "es" | "de" | "fr" | "it" | "pt" | "sv";
+type AvailabilityFleetGroup = "piaggio_liberty_125" | "sym_symphony_125";
 
 type SeasonalPricing = {
   seasonName: string;
@@ -32,7 +35,561 @@ type AvailabilityResult = {
   nextAvailableText?: string;
   bufferMinutes?: number;
   fleetGroup?: string;
+  bookedVehicleCodes?: string[];
+  availableVehicleCodes?: string[];
+  assignedVehicleCode?: string | null;
+  assignedVehicleName?: string | null;
+  assignedVehicleMatricula?: string | null;
+  assignedVehicleDisplayName?: string | null;
 };
+
+const I18N = {
+  en: {
+    vehicle: "Vehicle",
+    locked: "Locked",
+    auto: "Auto",
+    select: "Select",
+    rentalCalendar: "Rental calendar",
+    fromTomorrow: "From tomorrow",
+    halfDay: "Half Day",
+    fullDay: "Full Day",
+    mostPopular: "Most Popular",
+    fullDayBadge: "Full Day",
+    pickupWindow: "Pickup 09:30–14:00",
+    returnWindow: "Return 19:00–20:00",
+    fullBlocks: "24h / 48h / 72h",
+    max6Days: "Max 6 days",
+    bestValueToday: "Best value today",
+    flexibleRental: "Flexible rental",
+    moreThanOneTitle: "Need more than one scooter?",
+    moreThanOneText:
+      "If you are looking to rent multiple scooters, we recommend booking via WhatsApp so our team can confirm availability instantly.",
+    bookWhatsapp: "Book via WhatsApp",
+    pickupDate: "Pickup Date",
+    pickupTime: "Pickup Time",
+    returnTime: "Return Time",
+    dropoffDate: "Drop-off Date",
+    selectDate: "Select date",
+    choosePlanFirst: "Please choose Half Day or Full Day first.",
+    halfDropoffSame: "For Half Day, drop-off date is the same as pickup date.",
+    chooseDateFirst: "Please choose your date first.",
+    nowSelectDropoff:
+      "Now select your drop-off date. Maximum rental is 6 days.",
+    fullMin24: "Full Day booking must be at least 24 hours.",
+    maxOnline6: "Maximum online rental is 6 days.",
+    checkingWait: "Checking vehicle availability. Please wait a moment.",
+    unavailableNotice:
+      "This vehicle is not available for the selected date/time. Please change the dates or choose another vehicle.",
+    availabilityRequired:
+      "Live availability must be confirmed before checkout. Please wait a moment.",
+    completeDetails: "Please complete your booking details first.",
+    availabilityError:
+      "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
+    checkingLive: "Checking live scooter availability...",
+    scooterAvailable: "Scooter available for this date/time.",
+    waitingAvailability: "Waiting for live availability confirmation...",
+    scooterAvailableCount:
+      "{available} scooter(s) available for this date/time.",
+    bufferIncluded: "{minutes} minutes buffer included.",
+    summary: "Summary",
+    choosePlanBegin: "Choose plan to begin",
+    day: "Day",
+    days: "Days",
+    sameDay: "Same day",
+    total: "Total",
+    before: "Before",
+    after: "After",
+    length: "Length",
+    save: "Save",
+    hidePriceDetails: "Hide price details",
+    viewPriceDetails: "View price details",
+    checkingAvailability: "Checking availability...",
+    notAvailable: "Not available",
+    proceedCheckout: "Proceed to Checkout",
+    confirmingAvailability: "Confirming availability...",
+    halfNote:
+      "Half Day rentals: pickup 09:30–14:00, return 19:00–20:00. For more than one scooter, we recommend booking via WhatsApp.",
+    fullNote:
+      "Full Day bookings follow 24h blocks. For more than one scooter, we recommend booking via WhatsApp.",
+    selectRentalDate: "Select rental date",
+    selectPickupDate: "Select pickup date",
+    selectDropoffDate: "Select drop-off date",
+    scrollMonths: "Scroll months",
+    clearDates: "Clear dates",
+    done: "Done",
+    whatsappText:
+      "Hi NEXA Rentals, I would like to rent more than one scooter{plan}{date}. Can you please confirm availability for {vehicle}?",
+  },
+  es: {
+    vehicle: "Vehículo",
+    locked: "Bloqueado",
+    auto: "Auto",
+    select: "Seleccionar",
+    rentalCalendar: "Calendario de alquiler",
+    fromTomorrow: "Desde mañana",
+    halfDay: "Medio día",
+    fullDay: "Día completo",
+    mostPopular: "Más popular",
+    fullDayBadge: "Día completo",
+    pickupWindow: "Recogida 09:30–14:00",
+    returnWindow: "Devolución 19:00–20:00",
+    fullBlocks: "24h / 48h / 72h",
+    max6Days: "Máx. 6 días",
+    bestValueToday: "Mejor precio hoy",
+    flexibleRental: "Alquiler flexible",
+    moreThanOneTitle: "¿Necesitas más de un scooter?",
+    moreThanOneText:
+      "Si quieres alquilar varios scooters, recomendamos reservar por WhatsApp para que nuestro equipo confirme la disponibilidad al instante.",
+    bookWhatsapp: "Reservar por WhatsApp",
+    pickupDate: "Fecha de recogida",
+    pickupTime: "Hora de recogida",
+    returnTime: "Hora de devolución",
+    dropoffDate: "Fecha de devolución",
+    selectDate: "Seleccionar fecha",
+    choosePlanFirst: "Por favor elige Medio día o Día completo primero.",
+    halfDropoffSame:
+      "Para Medio día, la fecha de devolución es la misma que la fecha de recogida.",
+    chooseDateFirst: "Por favor elige tu fecha primero.",
+    nowSelectDropoff:
+      "Ahora selecciona la fecha de devolución. El alquiler máximo es de 6 días.",
+    fullMin24: "La reserva de Día completo debe ser de al menos 24 horas.",
+    maxOnline6: "El alquiler online máximo es de 6 días.",
+    checkingWait:
+      "Comprobando disponibilidad del vehículo. Espera un momento.",
+    unavailableNotice:
+      "Este vehículo no está disponible para la fecha/hora seleccionada. Cambia las fechas o elige otro vehículo.",
+    availabilityRequired:
+      "La disponibilidad en vivo debe confirmarse antes del checkout. Espera un momento.",
+    completeDetails: "Por favor completa los datos de tu reserva primero.",
+    availabilityError:
+      "No se pudo confirmar la disponibilidad en vivo. Inténtalo de nuevo o contáctanos por WhatsApp.",
+    checkingLive: "Comprobando disponibilidad en vivo del scooter...",
+    scooterAvailable: "Scooter disponible para esta fecha/hora.",
+    waitingAvailability: "Esperando confirmación de disponibilidad en vivo...",
+    scooterAvailableCount:
+      "{available} scooter(s) disponibles para esta fecha/hora.",
+    bufferIncluded: "{minutes} minutos de margen incluidos.",
+    summary: "Resumen",
+    choosePlanBegin: "Elige un plan para empezar",
+    day: "Día",
+    days: "Días",
+    sameDay: "Mismo día",
+    total: "Total",
+    before: "Antes",
+    after: "Después",
+    length: "Duración",
+    save: "Ahorro",
+    hidePriceDetails: "Ocultar detalles del precio",
+    viewPriceDetails: "Ver detalles del precio",
+    checkingAvailability: "Comprobando disponibilidad...",
+    notAvailable: "No disponible",
+    proceedCheckout: "Ir al checkout",
+    confirmingAvailability: "Confirmando disponibilidad...",
+    halfNote:
+      "Alquiler Medio día: recogida 09:30–14:00, devolución 19:00–20:00. Para más de un scooter, recomendamos reservar por WhatsApp.",
+    fullNote:
+      "Las reservas de Día completo funcionan por bloques de 24h. Para más de un scooter, recomendamos reservar por WhatsApp.",
+    selectRentalDate: "Seleccionar fecha de alquiler",
+    selectPickupDate: "Seleccionar fecha de recogida",
+    selectDropoffDate: "Seleccionar fecha de devolución",
+    scrollMonths: "Desplazar meses",
+    clearDates: "Borrar fechas",
+    done: "Listo",
+    whatsappText:
+      "Hola NEXA Rentals, quiero alquilar más de un scooter{plan}{date}. ¿Podéis confirmar la disponibilidad para {vehicle}?",
+  },
+  de: {
+    vehicle: "Fahrzeug",
+    locked: "Gesperrt",
+    auto: "Auto",
+    select: "Auswählen",
+    rentalCalendar: "Mietkalender",
+    fromTomorrow: "Ab morgen",
+    halfDay: "Halber Tag",
+    fullDay: "Ganzer Tag",
+    mostPopular: "Am beliebtesten",
+    fullDayBadge: "Ganzer Tag",
+    pickupWindow: "Abholung 09:30–14:00",
+    returnWindow: "Rückgabe 19:00–20:00",
+    fullBlocks: "24h / 48h / 72h",
+    max6Days: "Max. 6 Tage",
+    bestValueToday: "Bester Preis heute",
+    flexibleRental: "Flexible Miete",
+    moreThanOneTitle: "Mehr als einen Scooter benötigt?",
+    moreThanOneText:
+      "Wenn du mehrere Scooter mieten möchtest, empfehlen wir die Buchung per WhatsApp, damit unser Team die Verfügbarkeit sofort bestätigen kann.",
+    bookWhatsapp: "Per WhatsApp buchen",
+    pickupDate: "Abholdatum",
+    pickupTime: "Abholzeit",
+    returnTime: "Rückgabezeit",
+    dropoffDate: "Rückgabedatum",
+    selectDate: "Datum wählen",
+    choosePlanFirst: "Bitte wähle zuerst Halber Tag oder Ganzer Tag.",
+    halfDropoffSame:
+      "Bei Halber Tag ist das Rückgabedatum dasselbe wie das Abholdatum.",
+    chooseDateFirst: "Bitte wähle zuerst dein Datum.",
+    nowSelectDropoff:
+      "Wähle jetzt dein Rückgabedatum. Die maximale Mietdauer beträgt 6 Tage.",
+    fullMin24: "Eine Ganzer-Tag-Buchung muss mindestens 24 Stunden sein.",
+    maxOnline6: "Die maximale Online-Mietdauer beträgt 6 Tage.",
+    checkingWait:
+      "Fahrzeugverfügbarkeit wird geprüft. Bitte warte einen Moment.",
+    unavailableNotice:
+      "Dieses Fahrzeug ist für das gewählte Datum/die Uhrzeit nicht verfügbar. Bitte ändere die Daten oder wähle ein anderes Fahrzeug.",
+    availabilityRequired:
+      "Die Live-Verfügbarkeit muss vor dem Checkout bestätigt werden. Bitte warte einen Moment.",
+    completeDetails: "Bitte vervollständige zuerst deine Buchungsdetails.",
+    availabilityError:
+      "Die Live-Verfügbarkeit konnte nicht bestätigt werden. Bitte versuche es erneut oder kontaktiere uns per WhatsApp.",
+    checkingLive: "Live-Verfügbarkeit des Scooters wird geprüft...",
+    scooterAvailable: "Scooter für dieses Datum/diese Uhrzeit verfügbar.",
+    waitingAvailability: "Warten auf Live-Verfügbarkeitsbestätigung...",
+    scooterAvailableCount:
+      "{available} Scooter für dieses Datum/diese Uhrzeit verfügbar.",
+    bufferIncluded: "{minutes} Minuten Puffer inklusive.",
+    summary: "Zusammenfassung",
+    choosePlanBegin: "Wähle einen Plan, um zu beginnen",
+    day: "Tag",
+    days: "Tage",
+    sameDay: "Gleicher Tag",
+    total: "Gesamt",
+    before: "Vorher",
+    after: "Nachher",
+    length: "Dauer",
+    save: "Sparen",
+    hidePriceDetails: "Preisdetails ausblenden",
+    viewPriceDetails: "Preisdetails anzeigen",
+    checkingAvailability: "Verfügbarkeit wird geprüft...",
+    notAvailable: "Nicht verfügbar",
+    proceedCheckout: "Weiter zum Checkout",
+    confirmingAvailability: "Verfügbarkeit wird bestätigt...",
+    halfNote:
+      "Halber Tag: Abholung 09:30–14:00, Rückgabe 19:00–20:00. Für mehr als einen Scooter empfehlen wir die Buchung per WhatsApp.",
+    fullNote:
+      "Ganzer-Tag-Buchungen folgen 24h-Blöcken. Für mehr als einen Scooter empfehlen wir die Buchung per WhatsApp.",
+    selectRentalDate: "Mietdatum auswählen",
+    selectPickupDate: "Abholdatum auswählen",
+    selectDropoffDate: "Rückgabedatum auswählen",
+    scrollMonths: "Monate scrollen",
+    clearDates: "Daten löschen",
+    done: "Fertig",
+    whatsappText:
+      "Hallo NEXA Rentals, ich möchte mehr als einen Scooter mieten{plan}{date}. Könnt ihr bitte die Verfügbarkeit für {vehicle} bestätigen?",
+  },
+  fr: {
+    vehicle: "Véhicule",
+    locked: "Bloqué",
+    auto: "Auto",
+    select: "Sélectionner",
+    rentalCalendar: "Calendrier de location",
+    fromTomorrow: "À partir de demain",
+    halfDay: "Demi-journée",
+    fullDay: "Journée complète",
+    mostPopular: "Le plus populaire",
+    fullDayBadge: "Journée complète",
+    pickupWindow: "Retrait 09:30–14:00",
+    returnWindow: "Retour 19:00–20:00",
+    fullBlocks: "24h / 48h / 72h",
+    max6Days: "Max 6 jours",
+    bestValueToday: "Meilleur prix aujourd’hui",
+    flexibleRental: "Location flexible",
+    moreThanOneTitle: "Besoin de plus d’un scooter ?",
+    moreThanOneText:
+      "Si vous souhaitez louer plusieurs scooters, nous recommandons de réserver par WhatsApp afin que notre équipe confirme la disponibilité instantanément.",
+    bookWhatsapp: "Réserver par WhatsApp",
+    pickupDate: "Date de retrait",
+    pickupTime: "Heure de retrait",
+    returnTime: "Heure de retour",
+    dropoffDate: "Date de retour",
+    selectDate: "Sélectionner une date",
+    choosePlanFirst: "Veuillez d’abord choisir Demi-journée ou Journée complète.",
+    halfDropoffSame:
+      "Pour la Demi-journée, la date de retour est la même que la date de retrait.",
+    chooseDateFirst: "Veuillez d’abord choisir votre date.",
+    nowSelectDropoff:
+      "Sélectionnez maintenant votre date de retour. La location maximale est de 6 jours.",
+    fullMin24: "Une réservation Journée complète doit durer au moins 24 heures.",
+    maxOnline6: "La location en ligne maximale est de 6 jours.",
+    checkingWait:
+      "Vérification de la disponibilité du véhicule. Veuillez patienter un instant.",
+    unavailableNotice:
+      "Ce véhicule n’est pas disponible pour la date/heure sélectionnée. Veuillez changer les dates ou choisir un autre véhicule.",
+    availabilityRequired:
+      "La disponibilité en direct doit être confirmée avant le paiement. Veuillez patienter un instant.",
+    completeDetails: "Veuillez compléter les détails de votre réservation.",
+    availabilityError:
+      "La disponibilité en direct n’a pas pu être confirmée. Réessayez ou contactez-nous sur WhatsApp.",
+    checkingLive: "Vérification de la disponibilité du scooter en direct...",
+    scooterAvailable: "Scooter disponible pour cette date/heure.",
+    waitingAvailability:
+      "En attente de confirmation de disponibilité en direct...",
+    scooterAvailableCount:
+      "{available} scooter(s) disponible(s) pour cette date/heure.",
+    bufferIncluded: "{minutes} minutes de marge incluses.",
+    summary: "Résumé",
+    choosePlanBegin: "Choisissez un plan pour commencer",
+    day: "Jour",
+    days: "Jours",
+    sameDay: "Même jour",
+    total: "Total",
+    before: "Avant",
+    after: "Après",
+    length: "Durée",
+    save: "Économie",
+    hidePriceDetails: "Masquer les détails du prix",
+    viewPriceDetails: "Voir les détails du prix",
+    checkingAvailability: "Vérification de la disponibilité...",
+    notAvailable: "Non disponible",
+    proceedCheckout: "Passer au paiement",
+    confirmingAvailability: "Confirmation de la disponibilité...",
+    halfNote:
+      "Location Demi-journée : retrait 09:30–14:00, retour 19:00–20:00. Pour plus d’un scooter, nous recommandons de réserver par WhatsApp.",
+    fullNote:
+      "Les réservations Journée complète suivent des blocs de 24h. Pour plus d’un scooter, nous recommandons de réserver par WhatsApp.",
+    selectRentalDate: "Sélectionner la date de location",
+    selectPickupDate: "Sélectionner la date de retrait",
+    selectDropoffDate: "Sélectionner la date de retour",
+    scrollMonths: "Faire défiler les mois",
+    clearDates: "Effacer les dates",
+    done: "Terminé",
+    whatsappText:
+      "Bonjour NEXA Rentals, je souhaite louer plus d’un scooter{plan}{date}. Pouvez-vous confirmer la disponibilité pour {vehicle} ?",
+  },
+  it: {
+    vehicle: "Veicolo",
+    locked: "Bloccato",
+    auto: "Auto",
+    select: "Seleziona",
+    rentalCalendar: "Calendario noleggio",
+    fromTomorrow: "Da domani",
+    halfDay: "Mezza giornata",
+    fullDay: "Giornata intera",
+    mostPopular: "Più popolare",
+    fullDayBadge: "Giornata intera",
+    pickupWindow: "Ritiro 09:30–14:00",
+    returnWindow: "Riconsegna 19:00–20:00",
+    fullBlocks: "24h / 48h / 72h",
+    max6Days: "Max 6 giorni",
+    bestValueToday: "Miglior prezzo oggi",
+    flexibleRental: "Noleggio flessibile",
+    moreThanOneTitle: "Ti serve più di uno scooter?",
+    moreThanOneText:
+      "Se vuoi noleggiare più scooter, consigliamo di prenotare tramite WhatsApp così il nostro team può confermare subito la disponibilità.",
+    bookWhatsapp: "Prenota su WhatsApp",
+    pickupDate: "Data ritiro",
+    pickupTime: "Orario ritiro",
+    returnTime: "Orario riconsegna",
+    dropoffDate: "Data riconsegna",
+    selectDate: "Seleziona data",
+    choosePlanFirst: "Scegli prima Mezza giornata o Giornata intera.",
+    halfDropoffSame:
+      "Per Mezza giornata, la data di riconsegna è la stessa del ritiro.",
+    chooseDateFirst: "Scegli prima la data.",
+    nowSelectDropoff:
+      "Ora seleziona la data di riconsegna. Il noleggio massimo è di 6 giorni.",
+    fullMin24: "La prenotazione Giornata intera deve essere di almeno 24 ore.",
+    maxOnline6: "Il noleggio online massimo è di 6 giorni.",
+    checkingWait: "Controllo disponibilità del veicolo. Attendi un momento.",
+    unavailableNotice:
+      "Questo veicolo non è disponibile per la data/orario selezionato. Cambia le date o scegli un altro veicolo.",
+    availabilityRequired:
+      "La disponibilità live deve essere confermata prima del checkout. Attendi un momento.",
+    completeDetails: "Completa prima i dettagli della prenotazione.",
+    availabilityError:
+      "Non è stato possibile confermare la disponibilità live. Riprova o contattaci su WhatsApp.",
+    checkingLive: "Controllo disponibilità live dello scooter...",
+    scooterAvailable: "Scooter disponibile per questa data/orario.",
+    waitingAvailability: "In attesa della conferma disponibilità live...",
+    scooterAvailableCount:
+      "{available} scooter disponibili per questa data/orario.",
+    bufferIncluded: "{minutes} minuti di margine inclusi.",
+    summary: "Riepilogo",
+    choosePlanBegin: "Scegli un piano per iniziare",
+    day: "Giorno",
+    days: "Giorni",
+    sameDay: "Stesso giorno",
+    total: "Totale",
+    before: "Prima",
+    after: "Dopo",
+    length: "Durata",
+    save: "Risparmio",
+    hidePriceDetails: "Nascondi dettagli prezzo",
+    viewPriceDetails: "Vedi dettagli prezzo",
+    checkingAvailability: "Controllo disponibilità...",
+    notAvailable: "Non disponibile",
+    proceedCheckout: "Vai al checkout",
+    confirmingAvailability: "Conferma disponibilità...",
+    halfNote:
+      "Noleggio Mezza giornata: ritiro 09:30–14:00, riconsegna 19:00–20:00. Per più di uno scooter, consigliamo di prenotare tramite WhatsApp.",
+    fullNote:
+      "Le prenotazioni Giornata intera seguono blocchi da 24h. Per più di uno scooter, consigliamo di prenotare tramite WhatsApp.",
+    selectRentalDate: "Seleziona data noleggio",
+    selectPickupDate: "Seleziona data ritiro",
+    selectDropoffDate: "Seleziona data riconsegna",
+    scrollMonths: "Scorri mesi",
+    clearDates: "Cancella date",
+    done: "Fatto",
+    whatsappText:
+      "Ciao NEXA Rentals, vorrei noleggiare più di uno scooter{plan}{date}. Potete confermare la disponibilità per {vehicle}?",
+  },
+  pt: {
+    vehicle: "Veículo",
+    locked: "Bloqueado",
+    auto: "Auto",
+    select: "Selecionar",
+    rentalCalendar: "Calendário de aluguer",
+    fromTomorrow: "A partir de amanhã",
+    halfDay: "Meio dia",
+    fullDay: "Dia inteiro",
+    mostPopular: "Mais popular",
+    fullDayBadge: "Dia inteiro",
+    pickupWindow: "Levantamento 09:30–14:00",
+    returnWindow: "Devolução 19:00–20:00",
+    fullBlocks: "24h / 48h / 72h",
+    max6Days: "Máx. 6 dias",
+    bestValueToday: "Melhor preço hoje",
+    flexibleRental: "Aluguer flexível",
+    moreThanOneTitle: "Precisa de mais de uma scooter?",
+    moreThanOneText:
+      "Se pretende alugar várias scooters, recomendamos reservar por WhatsApp para a nossa equipa confirmar a disponibilidade de imediato.",
+    bookWhatsapp: "Reservar por WhatsApp",
+    pickupDate: "Data de levantamento",
+    pickupTime: "Hora de levantamento",
+    returnTime: "Hora de devolução",
+    dropoffDate: "Data de devolução",
+    selectDate: "Selecionar data",
+    choosePlanFirst: "Escolha primeiro Meio dia ou Dia inteiro.",
+    halfDropoffSame:
+      "Para Meio dia, a data de devolução é a mesma da data de levantamento.",
+    chooseDateFirst: "Escolha primeiro a sua data.",
+    nowSelectDropoff:
+      "Agora selecione a data de devolução. O aluguer máximo é de 6 dias.",
+    fullMin24: "A reserva de Dia inteiro deve ter pelo menos 24 horas.",
+    maxOnline6: "O aluguer online máximo é de 6 dias.",
+    checkingWait: "A verificar disponibilidade do veículo. Aguarde um momento.",
+    unavailableNotice:
+      "Este veículo não está disponível para a data/hora selecionada. Altere as datas ou escolha outro veículo.",
+    availabilityRequired:
+      "A disponibilidade em tempo real deve ser confirmada antes do checkout. Aguarde um momento.",
+    completeDetails: "Complete primeiro os detalhes da reserva.",
+    availabilityError:
+      "Não foi possível confirmar a disponibilidade em tempo real. Tente novamente ou contacte-nos no WhatsApp.",
+    checkingLive: "A verificar disponibilidade da scooter em tempo real...",
+    scooterAvailable: "Scooter disponível para esta data/hora.",
+    waitingAvailability:
+      "A aguardar confirmação de disponibilidade em tempo real...",
+    scooterAvailableCount:
+      "{available} scooter(s) disponíveis para esta data/hora.",
+    bufferIncluded: "{minutes} minutos de margem incluídos.",
+    summary: "Resumo",
+    choosePlanBegin: "Escolha um plano para começar",
+    day: "Dia",
+    days: "Dias",
+    sameDay: "Mesmo dia",
+    total: "Total",
+    before: "Antes",
+    after: "Depois",
+    length: "Duração",
+    save: "Poupança",
+    hidePriceDetails: "Ocultar detalhes do preço",
+    viewPriceDetails: "Ver detalhes do preço",
+    checkingAvailability: "A verificar disponibilidade...",
+    notAvailable: "Não disponível",
+    proceedCheckout: "Ir para checkout",
+    confirmingAvailability: "A confirmar disponibilidade...",
+    halfNote:
+      "Aluguer Meio dia: levantamento 09:30–14:00, devolução 19:00–20:00. Para mais de uma scooter, recomendamos reservar por WhatsApp.",
+    fullNote:
+      "Reservas de Dia inteiro seguem blocos de 24h. Para mais de uma scooter, recomendamos reservar por WhatsApp.",
+    selectRentalDate: "Selecionar data de aluguer",
+    selectPickupDate: "Selecionar data de levantamento",
+    selectDropoffDate: "Selecionar data de devolução",
+    scrollMonths: "Deslocar meses",
+    clearDates: "Limpar datas",
+    done: "Concluir",
+    whatsappText:
+      "Olá NEXA Rentals, gostaria de alugar mais de uma scooter{plan}{date}. Podem confirmar a disponibilidade para {vehicle}?",
+  },
+  sv: {
+    vehicle: "Fordon",
+    locked: "Låst",
+    auto: "Auto",
+    select: "Välj",
+    rentalCalendar: "Hyreskalender",
+    fromTomorrow: "Från imorgon",
+    halfDay: "Halvdag",
+    fullDay: "Heldag",
+    mostPopular: "Mest populär",
+    fullDayBadge: "Heldag",
+    pickupWindow: "Uthämtning 09:30–14:00",
+    returnWindow: "Återlämning 19:00–20:00",
+    fullBlocks: "24h / 48h / 72h",
+    max6Days: "Max 6 dagar",
+    bestValueToday: "Bästa pris idag",
+    flexibleRental: "Flexibel hyra",
+    moreThanOneTitle: "Behöver du mer än en scooter?",
+    moreThanOneText:
+      "Om du vill hyra flera scootrar rekommenderar vi bokning via WhatsApp så att vårt team kan bekräfta tillgänglighet direkt.",
+    bookWhatsapp: "Boka via WhatsApp",
+    pickupDate: "Uthämtningsdatum",
+    pickupTime: "Uthämtningstid",
+    returnTime: "Återlämningstid",
+    dropoffDate: "Återlämningsdatum",
+    selectDate: "Välj datum",
+    choosePlanFirst: "Välj först Halvdag eller Heldag.",
+    halfDropoffSame:
+      "För Halvdag är återlämningsdatumet samma som uthämtningsdatumet.",
+    chooseDateFirst: "Välj ditt datum först.",
+    nowSelectDropoff:
+      "Välj nu återlämningsdatum. Maximal hyrestid är 6 dagar.",
+    fullMin24: "En Heldag-bokning måste vara minst 24 timmar.",
+    maxOnline6: "Maximal onlinehyra är 6 dagar.",
+    checkingWait: "Kontrollerar fordonstillgänglighet. Vänta en stund.",
+    unavailableNotice:
+      "Detta fordon är inte tillgängligt för valt datum/tid. Ändra datumen eller välj ett annat fordon.",
+    availabilityRequired:
+      "Live-tillgänglighet måste bekräftas före checkout. Vänta en stund.",
+    completeDetails: "Slutför dina bokningsuppgifter först.",
+    availabilityError:
+      "Live-tillgänglighet kunde inte bekräftas. Försök igen eller kontakta oss på WhatsApp.",
+    checkingLive: "Kontrollerar live-tillgänglighet för scooter...",
+    scooterAvailable: "Scooter tillgänglig för detta datum/tid.",
+    waitingAvailability: "Väntar på bekräftelse av live-tillgänglighet...",
+    scooterAvailableCount:
+      "{available} scooter(s) tillgängliga för detta datum/tid.",
+    bufferIncluded: "{minutes} minuters marginal ingår.",
+    summary: "Sammanfattning",
+    choosePlanBegin: "Välj en plan för att börja",
+    day: "Dag",
+    days: "Dagar",
+    sameDay: "Samma dag",
+    total: "Totalt",
+    before: "Före",
+    after: "Efter",
+    length: "Längd",
+    save: "Spara",
+    hidePriceDetails: "Dölj prisdetaljer",
+    viewPriceDetails: "Visa prisdetaljer",
+    checkingAvailability: "Kontrollerar tillgänglighet...",
+    notAvailable: "Inte tillgänglig",
+    proceedCheckout: "Gå till checkout",
+    confirmingAvailability: "Bekräftar tillgänglighet...",
+    halfNote:
+      "Halvdagshyra: uthämtning 09:30–14:00, återlämning 19:00–20:00. För mer än en scooter rekommenderar vi bokning via WhatsApp.",
+    fullNote:
+      "Heldagsbokningar följer 24h-block. För mer än en scooter rekommenderar vi bokning via WhatsApp.",
+    selectRentalDate: "Välj hyresdatum",
+    selectPickupDate: "Välj uthämtningsdatum",
+    selectDropoffDate: "Välj återlämningsdatum",
+    scrollMonths: "Bläddra månader",
+    clearDates: "Rensa datum",
+    done: "Klar",
+    whatsappText:
+      "Hej NEXA Rentals, jag vill hyra mer än en scooter{plan}{date}. Kan ni bekräfta tillgänglighet för {vehicle}?",
+  },
+} as const;
+
+type BookingPanelCopy = Record<keyof typeof I18N.en, string>;
 
 function getSeasonalPricing(date = new Date()): SeasonalPricing {
   const month = date.getMonth();
@@ -43,14 +600,7 @@ function getSeasonalPricing(date = new Date()): SeasonalPricing {
       halfDayPrice: 34,
       halfDayOldPrice: 45,
       fullDayOldPrice: 55,
-      fullDayPricing: {
-        1: 42,
-        2: 40,
-        3: 39,
-        4: 38,
-        5: 37,
-        6: 36,
-      },
+      fullDayPricing: { 1: 42, 2: 40, 3: 39, 4: 38, 5: 37, 6: 36 },
     };
   }
 
@@ -60,14 +610,7 @@ function getSeasonalPricing(date = new Date()): SeasonalPricing {
       halfDayPrice: 39,
       halfDayOldPrice: 45,
       fullDayOldPrice: 55,
-      fullDayPricing: {
-        1: 49,
-        2: 47,
-        3: 46,
-        4: 45,
-        5: 44,
-        6: 43,
-      },
+      fullDayPricing: { 1: 49, 2: 47, 3: 46, 4: 45, 5: 44, 6: 43 },
     };
   }
 
@@ -77,14 +620,7 @@ function getSeasonalPricing(date = new Date()): SeasonalPricing {
       halfDayPrice: 36,
       halfDayOldPrice: 45,
       fullDayOldPrice: 55,
-      fullDayPricing: {
-        1: 45,
-        2: 43,
-        3: 42,
-        4: 41,
-        5: 40,
-        6: 39,
-      },
+      fullDayPricing: { 1: 45, 2: 43, 3: 42, 4: 41, 5: 40, 6: 39 },
     };
   }
 
@@ -93,14 +629,7 @@ function getSeasonalPricing(date = new Date()): SeasonalPricing {
     halfDayPrice: 32,
     halfDayOldPrice: 45,
     fullDayOldPrice: 55,
-    fullDayPricing: {
-      1: 39,
-      2: 37,
-      3: 36,
-      4: 35,
-      5: 34,
-      6: 33,
-    },
+    fullDayPricing: { 1: 39, 2: 37, 3: 36, 4: 35, 5: 34, 6: 33 },
   };
 }
 
@@ -114,6 +643,19 @@ const MUTED = "rgba(17,17,17,0.55)";
 const DARK = "#0E1117";
 const DEFAULT_PICKUP_LOCATION = "Magaluf (Carrer Galeón 13)";
 const WHATSAPP_NUMBER = "34971482342";
+
+function replaceTokens(text: string, values: Record<string, string | number>) {
+  return Object.entries(values).reduce(
+    (acc, [key, value]) => acc.replaceAll(`{${key}}`, String(value)),
+    text
+  );
+}
+
+function getSafeLocale(locale: string): Locale {
+  return ["en", "es", "de", "fr", "it", "pt", "sv"].includes(locale)
+    ? (locale as Locale)
+    : "en";
+}
 
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
@@ -149,9 +691,9 @@ function dayDiff(from: Date, to: Date) {
   return Math.round(ms / 86400000);
 }
 
-function fmtDate(d?: Date) {
-  if (!d) return "Select date";
-  return d.toLocaleDateString("en-GB", {
+function fmtDate(d: Date | undefined, locale: Locale, fallback: string) {
+  if (!d) return fallback;
+  return d.toLocaleDateString(locale === "en" ? "en-GB" : locale, {
     day: "2-digit",
     month: "short",
     year: "numeric",
@@ -165,11 +707,11 @@ function toISODate(d: Date) {
   return `${y}-${m}-${day}`;
 }
 
-function formatTimeLabel(t: string) {
+function formatTimeLabel(t: string, locale: Locale) {
   const [hh, mm] = t.split(":").map(Number);
   const date = new Date();
   date.setHours(hh, mm, 0, 0);
-  return new Intl.DateTimeFormat("en", {
+  return new Intl.DateTimeFormat(locale === "en" ? "en" : locale, {
     hour: "numeric",
     minute: "2-digit",
   }).format(date);
@@ -230,26 +772,61 @@ function resolveCheckoutVehicleId(vehicleName: string) {
   return "s2";
 }
 
-function resolveAvailabilityVehicleId(vehicleName: string) {
+function resolveAvailabilityFleetGroup(
+  vehicleName: string
+): AvailabilityFleetGroup {
   const normalized = normalizeVehicleName(vehicleName);
 
-  if (normalized.includes("sym symphony 125")) return "N8";
+  if (normalized.includes("sym") || normalized.includes("symphony")) {
+    return "sym_symphony_125";
+  }
 
-  return resolveCheckoutVehicleId(vehicleName);
+  return "piaggio_liberty_125";
 }
 
 function buildWhatsAppAvailabilityLink(
   vehicleName: string,
   plan: RentalPlan,
-  from?: Date
+  from: Date | undefined,
+  locale: Locale,
+  tt: BookingPanelCopy
 ) {
-  const text = `Hi NEXA Rentals, I would like to rent more than one scooter${
-    plan ? ` (${plan === "half" ? "Half Day" : "Full Day"})` : ""
-  }${
-    from ? ` on ${fmtDate(from)}` : ""
-  }. Can you please confirm availability for ${vehicleName}?`;
+  const planText = plan ? ` (${plan === "half" ? tt.halfDay : tt.fullDay})` : "";
+  const dateText = from ? ` ${fmtDate(from, locale, tt.selectDate)}` : "";
+
+  const text = replaceTokens(tt.whatsappText, {
+    plan: planText,
+    date: dateText,
+    vehicle: vehicleName,
+  });
 
   return `https://wa.me/${WHATSAPP_NUMBER}?text=${encodeURIComponent(text)}`;
+}
+
+function getLocalizedCheckoutBasePath(
+  checkoutBasePath: string,
+  locale: Locale
+) {
+  if (checkoutBasePath !== "/checkout") return checkoutBasePath;
+  return `/${locale}/checkout`;
+}
+
+function buildCleanAvailabilityText({
+  availability,
+  tt,
+}: {
+  availability: AvailabilityResult | null;
+  tt: BookingPanelCopy;
+}) {
+  if (availability?.message) return availability.message;
+
+  if (typeof availability?.availableCount === "number") {
+    return replaceTokens(tt.scooterAvailableCount, {
+      available: availability.availableCount,
+    });
+  }
+
+  return tt.scooterAvailable;
 }
 
 function CalendarIcon() {
@@ -286,6 +863,9 @@ function FieldCard({
   icon,
   buttonRef,
   highlight,
+  statusLocked,
+  statusAuto,
+  statusSelect,
 }: {
   label: string;
   value: string;
@@ -295,6 +875,9 @@ function FieldCard({
   icon: React.ReactNode;
   buttonRef?: React.RefObject<HTMLButtonElement | null>;
   highlight?: boolean;
+  statusLocked: string;
+  statusAuto: string;
+  statusSelect: string;
 }) {
   return (
     <button
@@ -330,7 +913,7 @@ function FieldCard({
       </div>
 
       <span className="nexa-field-status shrink-0 pl-2 text-[clamp(9px,0.75vw,11px)] font-bold text-black/45">
-        {disabled && !muted ? "Locked" : muted ? "Auto" : "Select"}
+        {disabled && !muted ? statusLocked : muted ? statusAuto : statusSelect}
       </span>
     </button>
   );
@@ -341,11 +924,13 @@ function DropdownCard({
   options,
   activeValue,
   onSelect,
+  locale,
 }: {
   title: string;
   options: string[];
   activeValue: string;
   onSelect: (value: string) => void;
+  locale: Locale;
 }) {
   return (
     <div className="absolute left-0 top-[calc(100%+8px)] z-[999] w-full overflow-hidden rounded-[16px] border bg-white shadow-[0_18px_45px_rgba(0,0,0,0.16)]">
@@ -367,10 +952,12 @@ function DropdownCard({
                   ? "linear-gradient(135deg,#FF6A00 0%,#FF8A2B 100%)"
                   : "#F3F3F4",
                 color: active ? "#FFFFFF" : "#111111",
-                boxShadow: active ? "0 10px 24px rgba(255,106,0,0.22)" : "none",
+                boxShadow: active
+                  ? "0 10px 24px rgba(255,106,0,0.22)"
+                  : "none",
               }}
             >
-              {formatTimeLabel(option)}
+              {formatTimeLabel(option, locale)}
             </button>
           );
         })}
@@ -386,6 +973,8 @@ function MiniMonth({
   activeField,
   minBookableDate,
   onPick,
+  locale,
+  tt,
 }: {
   month: Date;
   range: DateRange;
@@ -393,13 +982,17 @@ function MiniMonth({
   activeField: ActiveField;
   minBookableDate: Date;
   onPick: (day: Date) => void;
+  locale: Locale;
+  tt: BookingPanelCopy;
 }) {
   const cells = useMemo(() => buildMonthGrid(month), [month]);
 
   const weekdays = useMemo(() => {
     const baseMonday = new Date(2024, 0, 1);
     return Array.from({ length: 7 }).map((_, i) =>
-      new Intl.DateTimeFormat("en", { weekday: "short" }).format(
+      new Intl.DateTimeFormat(locale === "en" ? "en" : locale, {
+        weekday: "short",
+      }).format(
         new Date(
           baseMonday.getFullYear(),
           baseMonday.getMonth(),
@@ -407,22 +1000,25 @@ function MiniMonth({
         )
       )
     );
-  }, []);
+  }, [locale]);
 
   return (
     <div className="nexa-calendar-month-card">
       <div className="mb-4 flex items-center justify-between gap-3">
         <div>
           <div className="text-[9px] font-black uppercase tracking-[0.22em] text-black/35">
-            Rental calendar
+            {tt.rentalCalendar}
           </div>
           <div className="mt-1 text-[clamp(23px,3vw,30px)] font-black tracking-[-0.05em] text-black">
-            {month.toLocaleString("en", { month: "long", year: "numeric" })}
+            {month.toLocaleString(locale === "en" ? "en" : locale, {
+              month: "long",
+              year: "numeric",
+            })}
           </div>
         </div>
 
         <div className="hidden rounded-full border border-black/10 bg-black/[0.03] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-black/45 sm:inline-flex">
-          From tomorrow
+          {tt.fromTomorrow}
         </div>
       </div>
 
@@ -436,7 +1032,8 @@ function MiniMonth({
 
       <div className="grid grid-cols-7 gap-[clamp(6px,1.4vw,10px)]">
         {cells.map((day, idx) => {
-          if (!day) return <div key={idx} className="h-[clamp(38px,7vw,48px)]" />;
+          if (!day)
+            return <div key={idx} className="h-[clamp(38px,7vw,48px)]" />;
 
           const isUnavailable = startOfDay(day) < minBookableDate;
           const isStart = !!range.from && isSameDay(day, range.from);
@@ -476,10 +1073,10 @@ function MiniMonth({
                   isStart || isEnd
                     ? `linear-gradient(135deg, ${ORANGE} 0%, ${PURPLE} 55%, ${BLUE} 120%)`
                     : inRange
-                    ? "linear-gradient(135deg,rgba(255,106,0,0.18),rgba(139,92,246,0.10))"
-                    : disabled
-                    ? "linear-gradient(180deg,#F4F4F5 0%,#ECECEF 100%)"
-                    : "linear-gradient(180deg,#FFFFFF 0%,#F4F4F7 100%)",
+                      ? "linear-gradient(135deg,rgba(255,106,0,0.18),rgba(139,92,246,0.10))"
+                      : disabled
+                        ? "linear-gradient(180deg,#F4F4F5 0%,#ECECEF 100%)"
+                        : "linear-gradient(180deg,#FFFFFF 0%,#F4F4F7 100%)",
                 color: isStart || isEnd ? "#fff" : undefined,
                 boxShadow:
                   isStart || isEnd
@@ -557,13 +1154,13 @@ function PlanCard({
         borderColor: selected
           ? "rgba(255,106,0,0.70)"
           : strong
-          ? "rgba(255,106,0,0.44)"
-          : SOFT,
+            ? "rgba(255,106,0,0.44)"
+            : SOFT,
         boxShadow: selected
           ? "0 0 0 3px rgba(255,106,0,0.14), 0 18px 34px rgba(255,106,0,0.18)"
           : strong
-          ? "0 10px 24px rgba(255,106,0,0.08)"
-          : "0 6px 16px rgba(0,0,0,0.05)",
+            ? "0 10px 24px rgba(255,106,0,0.08)"
+            : "0 6px 16px rgba(0,0,0,0.05)",
       }}
       onMouseEnter={(e) => {
         if (!selected) e.currentTarget.style.background = hoverBg;
@@ -602,7 +1199,9 @@ function PlanCard({
             className="nexa-plan-new text-[clamp(26px,2.15vw,30px)] font-black leading-none transition-all duration-300 group-hover:scale-[1.06]"
             style={{
               color: strong || selected ? ORANGE : "#111111",
-              textShadow: selected ? "0 8px 20px rgba(255,106,0,0.18)" : "none",
+              textShadow: selected
+                ? "0 8px 20px rgba(255,106,0,0.18)"
+                : "none",
             }}
           >
             {newPrice}
@@ -622,8 +1221,12 @@ function PlanCard({
         <div
           className="nexa-plan-chip mt-2 inline-flex items-center rounded-full border px-2 py-1 text-[clamp(8px,0.66vw,9px)] font-black uppercase tracking-[0.06em]"
           style={{
-            borderColor: strong ? "rgba(255,106,0,0.22)" : "rgba(17,17,17,0.10)",
-            background: strong ? "rgba(255,255,255,0.74)" : "rgba(17,17,17,0.03)",
+            borderColor: strong
+              ? "rgba(255,106,0,0.22)"
+              : "rgba(17,17,17,0.10)",
+            background: strong
+              ? "rgba(255,255,255,0.74)"
+              : "rgba(17,17,17,0.03)",
             color: strong ? "#C85A00" : "rgba(17,17,17,0.58)",
           }}
         >
@@ -640,6 +1243,8 @@ export default function BookingPanelV2({
   onPricingChange,
 }: BookingPanelV2Props) {
   const router = useRouter();
+  const locale = getSafeLocale(useLocale());
+  const tt: BookingPanelCopy = I18N[locale];
 
   const minBookableDate = useMemo(() => addDays(startOfDay(new Date()), 1), []);
   const pickupHalfOptions = useMemo(() => buildTimeOptions(9, 30, 14, 0), []);
@@ -654,7 +1259,9 @@ export default function BookingPanelV2({
   const [showPriceDetails, setShowPriceDetails] = useState(false);
   const [enableAiCopilot, setEnableAiCopilot] = useState(false);
 
-  const [availability, setAvailability] = useState<AvailabilityResult | null>(null);
+  const [availability, setAvailability] = useState<AvailabilityResult | null>(
+    null
+  );
   const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
 
   const [calendarOpen, setCalendarOpen] = useState(false);
@@ -668,7 +1275,9 @@ export default function BookingPanelV2({
   const pickupDropdownRef = useRef<HTMLDivElement | null>(null);
   const returnDropdownRef = useRef<HTMLDivElement | null>(null);
 
-  const [scrollStartMonth, setScrollStartMonth] = useState(startOfMonth(minBookableDate));
+  const [scrollStartMonth, setScrollStartMonth] = useState(
+    startOfMonth(minBookableDate)
+  );
   const [viewMonth, setViewMonth] = useState(startOfMonth(minBookableDate));
   const [monthsAhead, setMonthsAhead] = useState(12);
   const monthsScrollRef = useRef<HTMLDivElement | null>(null);
@@ -700,8 +1309,8 @@ export default function BookingPanelV2({
     [vehicleName]
   );
 
-  const availabilityVehicleId = useMemo(
-    () => resolveAvailabilityVehicleId(vehicleName),
+  const availabilityFleetGroup = useMemo(
+    () => resolveAvailabilityFleetGroup(vehicleName),
     [vehicleName]
   );
 
@@ -758,21 +1367,22 @@ export default function BookingPanelV2({
   }, [plan, fullDayCount, finalTotal, activePricing]);
 
   const whatsappAvailabilityHref = useMemo(() => {
-    return buildWhatsAppAvailabilityLink(vehicleName, plan, range.from);
-  }, [vehicleName, plan, range.from]);
+    return buildWhatsAppAvailabilityLink(vehicleName, plan, range.from, locale, tt);
+  }, [vehicleName, plan, range.from, locale, tt]);
 
   const compactSummary = useMemo(() => {
     if (plan === "half" && range.from) {
-      return `Half Day • ${fmtDate(range.from)} • €${activePricing.halfDayPrice}`;
+      return `${tt.halfDay} • ${fmtDate(range.from, locale, tt.selectDate)} • €${
+        activePricing.halfDayPrice
+      }`;
     }
 
     if (plan === "full" && range.from && range.to && fullDayCount > 0) {
-      return `${fullDayCount} Day${
-        fullDayCount > 1 ? "s" : ""
-      } • €${fullDayRate}/day • €${finalTotal}`;
+      const dayLabel = fullDayCount > 1 ? tt.days : tt.day;
+      return `${fullDayCount} ${dayLabel} • €${fullDayRate}/${tt.day.toLowerCase()} • €${finalTotal}`;
     }
 
-    return "Choose plan to begin";
+    return tt.choosePlanBegin;
   }, [
     plan,
     range.from,
@@ -781,6 +1391,8 @@ export default function BookingPanelV2({
     fullDayRate,
     finalTotal,
     activePricing,
+    locale,
+    tt,
   ]);
 
   const hasCompleteRentalSelection = useMemo(() => {
@@ -844,8 +1456,9 @@ export default function BookingPanelV2({
         }
 
         const params = new URLSearchParams({
-          vehicleId: String(availabilityVehicleId),
+          vehicleId: String(checkoutVehicleId),
           vehicleName: String(vehicleName),
+          fleetGroup: String(availabilityFleetGroup),
           plan: String(plan),
           from: toISODate(selectedFrom),
           to: toISODate(selectedTo),
@@ -853,27 +1466,23 @@ export default function BookingPanelV2({
           dropoffTime: String(returnTime),
         });
 
-        const response = await fetch(
-          `/api/admin/bookings/availability?${params.toString()}`,
-          {
-            method: "GET",
-            cache: "no-store",
-          }
-        );
+        const response = await fetch(`/api/admin/availability?${params.toString()}`, {
+          method: "GET",
+          cache: "no-store",
+        });
+
+        const data = (await response.json()) as AvailabilityResult;
 
         if (!response.ok) {
           if (!cancelled) {
             setAvailability({
               ok: false,
               available: false,
-              message:
-                "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
+              message: data?.message || tt.availabilityError,
             });
           }
           return;
         }
-
-        const data = (await response.json()) as AvailabilityResult;
 
         if (!cancelled) {
           setAvailability(data);
@@ -883,8 +1492,7 @@ export default function BookingPanelV2({
           setAvailability({
             ok: false,
             available: false,
-            message:
-              "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
+            message: tt.availabilityError,
           });
         }
       } finally {
@@ -902,23 +1510,25 @@ export default function BookingPanelV2({
     };
   }, [
     hasCompleteRentalSelection,
-    availabilityVehicleId,
+    checkoutVehicleId,
     vehicleName,
+    availabilityFleetGroup,
     plan,
     range.from,
     returnDate,
     pickupTime,
     returnTime,
+    tt.availabilityError,
   ]);
 
   function openCalendar(which: ActiveField) {
     if (!plan) {
-      setNotice("Please choose Half Day or Full Day first.");
+      setNotice(tt.choosePlanFirst);
       return;
     }
 
     if (plan === "half" && which === "dropoff") {
-      setNotice("For Half Day, drop-off date is the same as pickup date.");
+      setNotice(tt.halfDropoffSame);
       return;
     }
 
@@ -982,7 +1592,7 @@ export default function BookingPanelV2({
       if (activeField === "pickup") {
         setRange({ from: day, to: undefined });
         setActiveField("dropoff");
-        setNotice("Now select your drop-off date. Maximum rental is 6 days.");
+        setNotice(tt.nowSelectDropoff);
         return;
       }
 
@@ -992,12 +1602,12 @@ export default function BookingPanelV2({
       const maxDrop = addDays(range.from, 6);
 
       if (startOfDay(day) < startOfDay(minDrop)) {
-        setNotice("Full Day booking must be at least 24 hours.");
+        setNotice(tt.fullMin24);
         return;
       }
 
       if (startOfDay(day) > startOfDay(maxDrop)) {
-        setNotice("Maximum online rental is 6 days.");
+        setNotice(tt.maxOnline6);
         return;
       }
 
@@ -1015,28 +1625,22 @@ export default function BookingPanelV2({
 
   function onProceed() {
     if (isCheckingAvailability) {
-      setNotice("Checking vehicle availability. Please wait a moment.");
+      setNotice(tt.checkingWait);
       return;
     }
 
     if (isUnavailable) {
-      setNotice(
-        availability?.message ||
-          "This vehicle is not available for the selected date/time. Please choose another date or time."
-      );
+      setNotice(availability?.message || tt.unavailableNotice);
       return;
     }
 
     if (!availabilityConfirmed) {
-      setNotice(
-        availability?.message ||
-          "Live availability must be confirmed before checkout. Please wait a moment."
-      );
+      setNotice(availability?.message || tt.availabilityRequired);
       return;
     }
 
     if (!canCheckout || !range.from) {
-      setNotice("Please complete your booking details first.");
+      setNotice(tt.completeDetails);
       return;
     }
 
@@ -1048,6 +1652,14 @@ export default function BookingPanelV2({
     const params = new URLSearchParams({
       vehicleId: checkoutVehicleId,
       vehicle: vehicleName,
+      vehicleName,
+      fleetGroup: String(availability?.fleetGroup || availabilityFleetGroup),
+      assignedVehicleCode: String(availability?.assignedVehicleCode || ""),
+      assignedVehicleName: String(availability?.assignedVehicleName || ""),
+      assignedVehicleMatricula: String(availability?.assignedVehicleMatricula || ""),
+      assignedVehicleDisplayName: String(
+        availability?.assignedVehicleDisplayName || ""
+      ),
       pickupLocation: DEFAULT_PICKUP_LOCATION,
       from: toISODate(range.from),
       to: toISODate(resolvedReturnDate),
@@ -1058,16 +1670,24 @@ export default function BookingPanelV2({
       days: String(resolvedDays),
       rate: String(resolvedRate),
       availabilityChecked: "true",
-      availabilityVehicleId,
       availableCount:
         typeof availability?.availableCount === "number"
           ? String(availability.availableCount)
+          : "",
+      totalFleet:
+        typeof availability?.totalFleet === "number"
+          ? String(availability.totalFleet)
           : "",
       onlineFleetNotice:
         "For more than one scooter, we recommend booking via WhatsApp so our team can confirm availability first.",
     });
 
-    router.push(`${checkoutBasePath}?${params.toString()}`);
+    const localizedCheckoutBasePath = getLocalizedCheckoutBasePath(
+      checkoutBasePath,
+      locale
+    );
+
+    router.push(`${localizedCheckoutBasePath}?${params.toString()}`);
   }
 
   useEffect(() => {
@@ -1465,7 +2085,7 @@ export default function BookingPanelV2({
           className="nexa-vehicle-label text-[clamp(8px,0.7vw,10px)] font-extrabold uppercase tracking-[0.14em]"
           style={{ color: MUTED }}
         >
-          Vehicle
+          {tt.vehicle}
         </div>
         <div className="nexa-vehicle-name mt-0.5 truncate text-[clamp(14px,1.1vw,16px)] font-black text-black">
           {vehicleName}
@@ -1475,13 +2095,13 @@ export default function BookingPanelV2({
       <div className="nexa-plan-grid relative z-30 mt-2.5 grid grid-cols-2 gap-[clamp(7px,0.7vw,8px)]">
         <PlanCard
           selected={plan === "half"}
-          label="Half Day"
-          badge="Most Popular"
+          label={tt.halfDay}
+          badge={tt.mostPopular}
           oldPrice={`€${activePricing.halfDayOldPrice}`}
           newPrice={`€${activePricing.halfDayPrice}`}
-          line1="Pickup 09:30–14:00"
-          line2="Return 19:00–20:00"
-          chip="Best value today"
+          line1={tt.pickupWindow}
+          line2={tt.returnWindow}
+          chip={tt.bestValueToday}
           strong
           step="plan-half-day"
           enableAiCopilot={enableAiCopilot}
@@ -1490,13 +2110,13 @@ export default function BookingPanelV2({
 
         <PlanCard
           selected={plan === "full"}
-          label="Full Day"
-          badge="Full Day"
+          label={tt.fullDay}
+          badge={tt.fullDayBadge}
           oldPrice={`€${activePricing.fullDayOldPrice}`}
           newPrice={`€${activePricing.fullDayPricing[1]}`}
-          line1="24h / 48h / 72h"
-          line2="Max 6 days"
-          chip="Flexible rental"
+          line1={tt.fullBlocks}
+          line2={tt.max6Days}
+          chip={tt.flexibleRental}
           step="plan-full-day"
           enableAiCopilot={enableAiCopilot}
           onClick={() => handlePlanSelect("full")}
@@ -1513,11 +2133,10 @@ export default function BookingPanelV2({
       >
         <div className="min-w-0">
           <div className="nexa-whatsapp-availability-title text-[11px] font-black uppercase tracking-[0.12em] text-[#C85A00]">
-            Need more than one scooter?
+            {tt.moreThanOneTitle}
           </div>
           <p className="nexa-whatsapp-availability-text mt-1 text-[11px] font-semibold leading-5 text-black/62">
-            If you are looking to rent multiple scooters, we recommend booking via
-            WhatsApp so our team can confirm availability instantly.
+            {tt.moreThanOneText}
           </p>
         </div>
 
@@ -1530,33 +2149,36 @@ export default function BookingPanelV2({
             background: "linear-gradient(135deg,#22c55e 0%,#16a34a 100%)",
           }}
         >
-          Book via WhatsApp
+          {tt.bookWhatsapp}
         </a>
       </div>
 
       <div className="nexa-fields-wrap mt-2.5 grid grid-cols-1 gap-2">
         <FieldCard
-          label="Pickup Date"
-          value={fmtDate(range.from)}
+          label={tt.pickupDate}
+          value={fmtDate(range.from, locale, tt.selectDate)}
           onClick={() => openCalendar("pickup")}
           disabled={!plan}
           icon={<CalendarIcon />}
           highlight={calendarOpen && activeField === "pickup"}
+          statusLocked={tt.locked}
+          statusAuto={tt.auto}
+          statusSelect={tt.select}
         />
 
         <div className="grid grid-cols-2 gap-2">
           <div className="relative min-w-0">
             <FieldCard
-              label="Pickup Time"
-              value={formatTimeLabel(pickupTime)}
+              label={tt.pickupTime}
+              value={formatTimeLabel(pickupTime, locale)}
               onClick={() => {
                 if (!plan) {
-                  setNotice("Please choose Half Day or Full Day first.");
+                  setNotice(tt.choosePlanFirst);
                   return;
                 }
 
                 if (plan === "half" && !range.from) {
-                  setNotice("Please choose your date first.");
+                  setNotice(tt.chooseDateFirst);
                   return;
                 }
 
@@ -1567,14 +2189,18 @@ export default function BookingPanelV2({
               icon={<ClockIcon />}
               buttonRef={pickupBtnRef}
               highlight={pickupTimeOpen}
+              statusLocked={tt.locked}
+              statusAuto={tt.auto}
+              statusSelect={tt.select}
             />
 
             {pickupTimeOpen && (
               <div ref={pickupDropdownRef}>
                 <DropdownCard
-                  title="Pickup Time"
+                  title={tt.pickupTime}
                   options={pickupOptions}
                   activeValue={pickupTime}
+                  locale={locale}
                   onSelect={(value) => {
                     setPickupTime(value);
                     setPickupTimeOpen(false);
@@ -1592,13 +2218,13 @@ export default function BookingPanelV2({
 
           <div className="relative min-w-0">
             <FieldCard
-              label="Return Time"
-              value={formatTimeLabel(returnTime)}
+              label={tt.returnTime}
+              value={formatTimeLabel(returnTime, locale)}
               onClick={
                 plan === "half"
                   ? () => {
                       if (!range.from) {
-                        setNotice("Please choose your date first.");
+                        setNotice(tt.chooseDateFirst);
                         return;
                       }
 
@@ -1612,14 +2238,18 @@ export default function BookingPanelV2({
               icon={<ClockIcon />}
               buttonRef={returnBtnRef}
               highlight={plan === "half" && returnTimeOpen}
+              statusLocked={tt.locked}
+              statusAuto={tt.auto}
+              statusSelect={tt.select}
             />
 
             {plan === "half" && returnTimeOpen && (
               <div ref={returnDropdownRef}>
                 <DropdownCard
-                  title="Return Time"
+                  title={tt.returnTime}
                   options={returnHalfOptions}
                   activeValue={halfReturnTime}
+                  locale={locale}
                   onSelect={(value) => {
                     setHalfReturnTime(value);
                     setReturnTimeOpen(false);
@@ -1631,13 +2261,20 @@ export default function BookingPanelV2({
         </div>
 
         <FieldCard
-          label="Drop-off Date"
-          value={plan === "half" ? fmtDate(range.from) : fmtDate(range.to)}
+          label={tt.dropoffDate}
+          value={
+            plan === "half"
+              ? fmtDate(range.from, locale, tt.selectDate)
+              : fmtDate(range.to, locale, tt.selectDate)
+          }
           onClick={() => openCalendar("dropoff")}
           disabled={!plan}
           muted={plan === "half"}
           icon={<CalendarIcon />}
           highlight={calendarOpen && activeField === "dropoff"}
+          statusLocked={tt.locked}
+          statusAuto={tt.auto}
+          statusSelect={tt.select}
         />
       </div>
 
@@ -1648,41 +2285,33 @@ export default function BookingPanelV2({
             background: isUnavailable
               ? "#FFF1F1"
               : isCheckingAvailability
-              ? "#EFF8FF"
-              : availabilityConfirmed
-              ? "#ECFDF3"
-              : "#FFF7ED",
+                ? "#EFF8FF"
+                : availabilityConfirmed
+                  ? "#ECFDF3"
+                  : "#FFF7ED",
             borderColor: isUnavailable
               ? "rgba(239,68,68,0.24)"
               : isCheckingAvailability
-              ? "rgba(14,165,233,0.22)"
-              : availabilityConfirmed
-              ? "rgba(34,197,94,0.22)"
-              : "rgba(255,106,0,0.22)",
+                ? "rgba(14,165,233,0.22)"
+                : availabilityConfirmed
+                  ? "rgba(34,197,94,0.22)"
+                  : "rgba(255,106,0,0.22)",
             color: isUnavailable
               ? "#991B1B"
               : isCheckingAvailability
-              ? "#075985"
-              : availabilityConfirmed
-              ? "#166534"
-              : "#9C4300",
+                ? "#075985"
+                : availabilityConfirmed
+                  ? "#166534"
+                  : "#9C4300",
           }}
         >
           {isCheckingAvailability
-            ? "Checking live scooter availability..."
+            ? tt.checkingLive
             : isUnavailable
-            ? availability?.message ||
-              "This scooter is not available for the selected date/time. Please choose another date or time."
-            : availabilityConfirmed
-            ? typeof availability?.availableCount === "number" &&
-              typeof availability?.totalFleet === "number"
-              ? `${availability.availableCount}/${availability.totalFleet} scooter(s) available for this date/time.${
-                  availability.bufferMinutes
-                    ? ` ${availability.bufferMinutes} minutes buffer included.`
-                    : ""
-                }`
-              : "Scooter available for this date/time."
-            : availability?.message || "Waiting for live availability confirmation..."}
+              ? availability?.message || tt.unavailableNotice
+              : availabilityConfirmed
+                ? buildCleanAvailabilityText({ availability, tt })
+                : availability?.message || tt.waitingAvailability}
         </div>
       ) : null}
 
@@ -1693,7 +2322,7 @@ export default function BookingPanelV2({
         <div className="flex items-center justify-between gap-3">
           <div className="min-w-0">
             <div className="nexa-summary-title text-[clamp(8px,0.72vw,10px)] font-extrabold uppercase tracking-[0.12em] text-white/45">
-              Summary
+              {tt.summary}
             </div>
 
             <div className="nexa-summary-text mt-1 truncate text-[clamp(12px,1vw,14px)] font-black text-white">
@@ -1713,7 +2342,7 @@ export default function BookingPanelV2({
 
           <div className="nexa-total-box shrink-0 rounded-[12px] bg-white/8 px-3 py-2 text-right">
             <div className="text-[8px] font-extrabold uppercase tracking-[0.12em] text-white/45">
-              Total
+              {tt.total}
             </div>
             <div className="nexa-total-value mt-0.5 text-[clamp(19px,1.6vw,22px)] font-black text-white">
               {hasCompleteRentalSelection ? `€${finalTotal}` : "--"}
@@ -1726,7 +2355,7 @@ export default function BookingPanelV2({
           onClick={() => setShowPriceDetails((v) => !v)}
           className="nexa-price-details-btn mt-2 text-[11px] font-bold text-[#FFB27A] transition hover:text-white"
         >
-          {showPriceDetails ? "Hide price details" : "View price details"}
+          {showPriceDetails ? tt.hidePriceDetails : tt.viewPriceDetails}
         </button>
 
         {showPriceDetails && (
@@ -1739,14 +2368,14 @@ export default function BookingPanelV2({
               }}
             >
               <div className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-white/45">
-                Before
+                {tt.before}
               </div>
               <div className="mt-1 text-[12px] font-black text-white">
                 {plan === "half"
                   ? `€${activePricing.halfDayOldPrice}`
                   : plan === "full" && fullDayCount > 0
-                  ? `€${activePricing.fullDayOldPrice}/day`
-                  : "--"}
+                    ? `€${activePricing.fullDayOldPrice}/${tt.day.toLowerCase()}`
+                    : "--"}
               </div>
             </div>
 
@@ -1758,14 +2387,14 @@ export default function BookingPanelV2({
               }}
             >
               <div className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-white/45">
-                After
+                {tt.after}
               </div>
               <div className="mt-1 text-[12px] font-black text-white">
                 {plan === "half"
                   ? `€${activePricing.halfDayPrice}`
                   : plan === "full" && fullDayCount > 0
-                  ? `€${fullDayRate}/day`
-                  : "--"}
+                    ? `€${fullDayRate}/${tt.day.toLowerCase()}`
+                    : "--"}
               </div>
             </div>
 
@@ -1777,14 +2406,16 @@ export default function BookingPanelV2({
               }}
             >
               <div className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-white/45">
-                Length
+                {tt.length}
               </div>
               <div className="mt-1 text-[12px] font-black text-white">
                 {plan === "half"
-                  ? "Same day"
+                  ? tt.sameDay
                   : plan === "full" && fullDayCount > 0
-                  ? `${fullDayCount} day${fullDayCount > 1 ? "s" : ""}`
-                  : "--"}
+                    ? `${fullDayCount} ${
+                        fullDayCount > 1 ? tt.days : tt.day
+                      }`
+                    : "--"}
               </div>
             </div>
 
@@ -1796,7 +2427,7 @@ export default function BookingPanelV2({
               }}
             >
               <div className="text-[9px] font-extrabold uppercase tracking-[0.12em] text-white/45">
-                Save
+                {tt.save}
               </div>
               <div className="mt-1 text-[12px] font-black text-[#FFB27A]">
                 {plan ? `€${Math.max(0, saveAmount)}` : "--"}
@@ -1819,12 +2450,12 @@ export default function BookingPanelV2({
         }}
       >
         {isCheckingAvailability
-          ? "Checking availability..."
+          ? tt.checkingAvailability
           : isUnavailable
-          ? "Not available"
-          : availabilityConfirmed
-          ? "Proceed to Checkout"
-          : "Confirming availability..."}
+            ? tt.notAvailable
+            : availabilityConfirmed
+              ? tt.proceedCheckout
+              : tt.confirmingAvailability}
       </button>
 
       {notice ? (
@@ -1847,9 +2478,7 @@ export default function BookingPanelV2({
             color: "rgba(17,17,17,0.60)",
           }}
         >
-          {plan === "half"
-            ? "Half Day rentals: pickup 09:30–14:00, return 19:00–20:00. For more than one scooter, we recommend booking via WhatsApp."
-            : "Full Day bookings follow 24h blocks. For more than one scooter, we recommend booking via WhatsApp."}
+          {plan === "half" ? tt.halfNote : tt.fullNote}
         </div>
       )}
 
@@ -1875,14 +2504,14 @@ export default function BookingPanelV2({
                 <div>
                   <div className="inline-flex rounded-full border border-black/10 bg-white/60 px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.18em] text-black/45 shadow-sm">
                     {plan === "half"
-                      ? "Select rental date"
+                      ? tt.selectRentalDate
                       : activeField === "pickup"
-                      ? "Select pickup date"
-                      : "Select drop-off date"}
+                        ? tt.selectPickupDate
+                        : tt.selectDropoffDate}
                   </div>
 
                   <div className="mt-3 text-[clamp(34px,5vw,46px)] font-black leading-none tracking-[-0.07em] text-black">
-                    {viewMonth.toLocaleString("en", {
+                    {viewMonth.toLocaleString(locale === "en" ? "en" : locale, {
                       month: "long",
                       year: "numeric",
                     })}
@@ -1909,13 +2538,15 @@ export default function BookingPanelV2({
               </button>
 
               <div className="rounded-full border border-black/10 bg-white/65 px-5 py-3 text-[10px] font-black uppercase tracking-[0.18em] text-black shadow-sm">
-                Scroll months
+                {tt.scrollMonths}
               </div>
 
               <button
                 type="button"
                 onClick={() =>
-                  scrollToMonth(Math.min(monthsList.length - 1, currentIndex + 1))
+                  scrollToMonth(
+                    Math.min(monthsList.length - 1, currentIndex + 1)
+                  )
                 }
                 className="flex h-12 w-12 items-center justify-center rounded-full border border-black/10 bg-white/70 text-[25px] font-black text-black shadow-sm transition hover:-translate-y-0.5 hover:bg-white active:scale-95"
               >
@@ -1943,6 +2574,8 @@ export default function BookingPanelV2({
                       activeField={activeField}
                       minBookableDate={minBookableDate}
                       onPick={onPickDate}
+                      locale={locale}
+                      tt={tt}
                     />
                   </div>
                 ))}
@@ -1963,7 +2596,7 @@ export default function BookingPanelV2({
                 }}
                 className="text-[13px] font-black text-black/55 transition hover:text-black"
               >
-                Clear dates
+                {tt.clearDates}
               </button>
 
               <button
@@ -1974,7 +2607,7 @@ export default function BookingPanelV2({
                   background: `linear-gradient(135deg,${ORANGE} 0%,${PURPLE} 58%,${BLUE} 130%)`,
                 }}
               >
-                Done
+                {tt.done}
               </button>
             </div>
           </div>

@@ -6,8 +6,90 @@
     "contact": "Contact",
     "about": "À propos de NEXA"
   },
+  "home": {
+    "hero": {
+      "badges": {
+        "includedLabel": "Inclus",
+        "includedValue": "2 casques + antivol",
+        "freedomLabel": "Liberté",
+        "freedomValue": "KM illimités"
+      },
+      "plans": {
+        "mostPopular": "Le plus populaire",
+        "halfDay": "Demi-journée",
+        "fullDay": "Journée complète"
+      },
+      "slider": {
+        "previous": "Scooter précédent",
+        "next": "Scooter suivant"
+      },
+      "ebike": {
+        "vehicle": "Véhicule",
+        "whatsappBookingOnly": "Réservation WhatsApp uniquement",
+        "reserveTitle": "Réserver par WhatsApp",
+        "reserveDescription": "Les e-bikes sont réservés manuellement par message afin de confirmer la disponibilité instantanément.",
+        "sendWhatsapp": "Envoyer un message sur WhatsApp",
+        "whatsappMessage": "Bonjour Nexa Rentals, ce vélo électrique est-il disponible ({vehicle}) ?",
+        "prices": {
+          "oneHour": "1 heure",
+          "twoHours": "2 heures",
+          "threeHours": "3 heures",
+          "fourHours": "4 heures",
+          "oneDay": "1 jour"
+        }
+      }
+    },
+    "slides": {
+      "piaggio": {
+        "features": {
+          "0": "Scooter automatique 125cc",
+          "1": "Souple et facile à conduire",
+          "2": "Parfait pour la ville et les routes côtières",
+          "3": "2 casques inclus gratuitement",
+          "4": "Support téléphone gratuit pour la navigation",
+          "5": "Antivol de sécurité inclus gratuitement",
+          "6": "Confortable et économique",
+          "7": "Idéal pour explorer Majorque"
+        }
+      },
+      "sym": {
+        "features": {
+          "0": "Scooter automatique 125cc",
+          "1": "Design urbain élégant avec confort premium",
+          "2": "Conduite souple en ville et près des plages",
+          "3": "2 casques inclus gratuitement",
+          "4": "Support téléphone gratuit pour la navigation",
+          "5": "Antivol de sécurité inclus gratuitement",
+          "6": "Assise spacieuse et position de conduite facile",
+          "7": "Parfait pour explorer Magaluf et Majorque"
+        }
+      },
+      "moma": {
+        "features": {
+          "0": "Vélo électrique",
+          "1": "Facile à conduire",
+          "2": "Parfait pour la ville",
+          "3": "Grande autonomie JUSQU’À 100KM"
+        }
+      },
+      "cecotec": {
+        "features": {
+          "0": "Vélo électrique",
+          "1": "Parfait pour les chemins",
+          "2": "Maniement facile",
+          "3": "Autonomie JUSQU’À 60KM"
+        }
+      }
+    },
+    "seo": {
+      "title": "Location de scooters à Majorque pour les touristes",
+      "beforeLink": "Vous cherchez la meilleure location de scooters à Magaluf, Majorque ?",
+      "linkText": "Le service de location de scooters Nexa Rentals",
+      "afterLink": "propose des scooters premium et des e-bikes avec une expérience de réservation simple et rapide."
+    }
+  },
   "hero": {
-    "title": "Louez Scooter et Vélo électrique\nà Majorque",
+    "title": "Louez un scooter et un vélo électrique\nà Majorque",
     "subtitle": "Réservez en quelques secondes"
   },
   "booking": {
@@ -20,8 +102,8 @@
     "search": "Rechercher",
     "selectPickupDate": "Choisir la date de retrait",
     "selectDropoffDate": "Choisir la date de retour",
-    "clear": "Sélectionner",
-    "done": "OK"
+    "clear": "Effacer",
+    "done": "Sélectionner"
   },
   "vehicles": {
     "liveAvailability": "Disponibilité en direct",
@@ -41,28 +123,20 @@
     "instantConfirmation": "Confirmation instantanée",
     "localSupport": "Support local"
   },
-
   "checkout": {
     "defaultPickupLocation": "Magaluf (Carrer Galeón 13)",
-
     "step2of2": "Étape 2 sur 2",
     "confirmAndPay": "Confirmer & payer",
     "in60Seconds": "en 60 secondes",
-
     "backToVehicles": "← Retour aux véhicules",
-
     "daysSingular": "jour",
     "daysPlural": "jours",
-
     "savePct": "Économisez {pct}%",
     "save": "Économisez",
-
     "perDayShort": "/jour",
     "perDay": "/jour",
-
     "total": "Total",
     "totalLabel": "Total",
-
     "included": "Inclus",
     "includedBadge": "Inclus",
     "noExtraFees": "Aucun frais supplémentaire",
@@ -70,37 +144,30 @@
     "lock": "Antivol",
     "cargoBox": "Coffre",
     "free": "Gratuit",
-
     "contractReadyTitle": "Retrait avec contrat prêt (moins de 5 minutes)",
     "contractReadyDesc": "Téléchargez vos documents maintenant (optionnel) pour que le contrat soit prêt à votre arrivée — vous signez et partez.",
-
     "yourDetails": "Vos informations",
     "detailsHint": "Requis pour la réservation + contrat. Téléchargez les documents pour un retrait plus rapide.",
     "required": "Requis",
-
     "nameLabel": "Prénom *",
     "surnameLabel": "Nom *",
     "phoneLabel": "Téléphone (WhatsApp) *",
     "emailLabel": "Email *",
     "notesLabel": "Notes (optionnel)",
-
     "namePlaceholder": "Jean",
     "surnamePlaceholder": "Dupont",
     "phonePlaceholder": "+34 600 000 000",
     "emailPlaceholder": "vous@email.com",
     "notesPlaceholder": "Préférence de retrait, demandes, etc.",
-
     "documentsOptional": "Documents (optionnel)",
     "fasterPickup": "Retrait plus rapide",
     "documentsDesc": "Téléchargez maintenant pour préparer le contrat à l’arrivée — signez et récupérez le véhicule en moins de 5 minutes.",
     "chooseFilesHint": "Choisissez des fichiers pour un retrait rapide (optionnel).",
     "remove": "Supprimer",
-
     "dlFront": "Permis de conduire (recto) — optionnel",
     "dlBack": "Permis de conduire (verso) — optionnel",
     "idFront": "Carte d’identité / Passeport (recto) — optionnel",
     "idBack": "Carte d’identité / Passeport (verso) — optionnel",
-
     "payment": "Paiement",
     "pay": "Payez",
     "now": "maintenant",
@@ -111,33 +178,25 @@
     "payNow50": "Payer maintenant (50%)",
     "payPickup50": "Payer au retrait (50%)",
     "rentalTotal": "Total location",
-
     "checkContractReady": "Mes informations sont correctes et peuvent être utilisées pour préparer le contrat de location.",
     "checkAgreeTerms": "J’accepte les conditions de location et je confirme que les détails de réservation sont corrects.",
     "checkMarketing": "Envoyez-moi les nouveautés, offres et actus de NEXA Rentals (optionnel).",
-
     "pay50NowAndBook": "Payer 50% maintenant & réserver",
-
     "depositImportantTitle": "IMPORTANT — Caution au retrait",
     "depositTextBefore": "Nous prenons une caution de",
     "depositTextAfter": "au retrait (Espèces / Carte). Remboursable après retour (selon conditions).",
-
     "toContinue": "Pour continuer : entrez Prénom + Nom + Téléphone + Email, puis confirmez le contrat et acceptez les conditions.",
-
     "secureCheckout": "Paiement sécurisé",
     "localSupport": "Support local",
     "noHiddenFees": "Aucun frais caché",
-
     "stripeReady": "Prêt pour Stripe.",
     "payAtPickup": "Payer au retrait",
     "depositAtPickup": "Caution au retrait",
     "cashCard": "Espèces/Carte",
     "contractReadySaved": "Informations enregistrées pour le contrat.",
-
     "step": "Étape 2 sur 2",
     "title": "Confirmer & payer",
     "titleAccent": "en 60 secondes",
-
     "includedGroup": {
       "title": "Inclus",
       "noExtraFees": "Aucun frais supplémentaire",
@@ -217,7 +276,6 @@
       "contractReadySaved": "Informations enregistrées pour le contrat."
     }
   },
-  
   "featuredFleet": {
     "header": {
       "kicker": "Flotte en vedette",
@@ -293,7 +351,6 @@
       "missingDates": "Veuillez sélectionner les dates de prise en charge et de retour."
     }
   },
-  
   "shopSection": {
     "imageAlt": "Boutique NEXA",
     "titleLine1": "Tu préfères louer sur place ?",
@@ -303,7 +360,7 @@
       "pickupLocationTitle": "Lieu de prise en charge",
       "pickupLocationValue": "Magaluf (Carrer Galeón 13)",
       "openingHoursTitle": "Horaires d’ouverture",
-      "openingHoursValue": "Tous les jours • 10:00 – 22:00"
+      "openingHoursValue": "Tous les jours • 09:00 – 20:00"
     },
     "bring": {
       "title": "À apporter",
@@ -317,21 +374,21 @@
     }
   },
   "footer": {
-  "pickup": "Retrait à Magaluf",
-  "address": "Carrer Galeón 13, Magaluf",
-  "hours": "Tous les jours · 09:00 – 20:00",
-  "getUpdates": "Recevoir les nouveautés",
-  "dealsText": "Offres, réductions et promotions saisonnières.",
-  "yourEmail": "Votre e-mail",
-  "join": "Rejoindre",
-  "noSpam": "Aucun spam. Désabonnement à tout moment.",
-  "follow": "Suivre",
-  "allRightsReserved": "Tous droits réservés.",
-  "terms": "Conditions générales",
-  "privacy": "Politique de confidentialité",
-  "depositPolicy": "Politique de dépôt",
-  "refundPolicy": "Politique de remboursement",
-  "cookies": "Cookies",
-  "aboutNexa": "À propos de NEXA"
-}
+    "pickup": "Retrait à Magaluf",
+    "address": "Carrer Galeón 13, Magaluf",
+    "hours": "Tous les jours · 09:00 – 20:00",
+    "getUpdates": "Recevoir les nouveautés",
+    "dealsText": "Offres, réductions et promotions saisonnières.",
+    "yourEmail": "Votre e-mail",
+    "join": "Rejoindre",
+    "noSpam": "Aucun spam. Désabonnement à tout moment.",
+    "follow": "Suivre",
+    "allRightsReserved": "Tous droits réservés.",
+    "terms": "Conditions générales",
+    "privacy": "Politique de confidentialité",
+    "depositPolicy": "Politique de dépôt",
+    "refundPolicy": "Politique de remboursement",
+    "cookies": "Cookies",
+    "aboutNexa": "À propos de NEXA"
+  }
 }

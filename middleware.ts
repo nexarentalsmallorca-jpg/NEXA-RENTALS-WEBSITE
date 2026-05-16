@@ -1,22 +1,45 @@
 import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
-
-const locales = ["de", "en", "es", "fr", "it", "pt", "sv"] as const;
-const defaultLocale = "en";
+import { defaultLocale, locales, type Locale } from "./i18n/routing";
 
 const intlMiddleware = createMiddleware({
   locales: [...locales],
   defaultLocale,
+  localePrefix: "always",
 });
 
 const ADMIN_COOKIE_NAME = "nexa_admin_session";
 
-export default function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
+/*
+  SEO pages that should redirect to the main homepage.
 
-  // Skip static files and internal routes
-  if (
+  Example:
+  /en/scooter-rental-magaluf  -> /en
+  /es/scooter-rental-mallorca -> /es
+  /fr/cheap-scooter-rental-magaluf -> /fr
+
+  Non-locale versions:
+  /scooter-rental-magaluf -> /en
+*/
+const SEO_REDIRECT_PATHS = new Set([
+  "/best-scooter-rental-magaluf",
+  "/best-scooter-rental-mallorca",
+  "/cheap-scooter-rental-magaluf",
+  "/cheap-scooter-rental-mallorca",
+  "/ebike-rental-mallorca",
+  "/ebike-rental-mallorca-cheap",
+  "/rent-scooter-mallorca-125cc",
+  "/scooter-rental-magaluf",
+  "/scooter-rental-mallorca",
+]);
+
+function hasLocale(pathSegment: string | undefined): pathSegment is Locale {
+  return Boolean(pathSegment && locales.includes(pathSegment as Locale));
+}
+
+function isPublicAssetPath(pathname: string) {
+  return (
     pathname.startsWith("/_next") ||
     pathname.startsWith("/api") ||
     pathname.startsWith("/images") ||
@@ -25,43 +48,94 @@ export default function middleware(request: NextRequest) {
     pathname === "/robots.txt" ||
     pathname === "/sitemap.xml" ||
     pathname === "/manifest.json" ||
+    pathname === "/site.webmanifest" ||
     pathname.match(/\.(.*)$/)
-  ) {
+  );
+}
+
+function normalizePath(pathname: string) {
+  if (!pathname || pathname === "/") return "/";
+  return pathname.replace(/\/+$/, "");
+}
+
+export default function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Skip static files, APIs, images, icons and internal Next.js routes
+  if (isPublicAssetPath(pathname)) {
     return NextResponse.next();
   }
 
   const segments = pathname.split("/").filter(Boolean);
   const firstSegment = segments[0];
-  const hasLocalePrefix = locales.includes(
-    firstSegment as (typeof locales)[number]
-  );
-  const currentLocale = hasLocalePrefix ? firstSegment : defaultLocale;
+  const hasLocalePrefix = hasLocale(firstSegment);
 
   const pathWithoutLocale = hasLocalePrefix
     ? `/${segments.slice(1).join("/")}`
     : pathname;
 
+  const cleanPathWithoutLocale = normalizePath(pathWithoutLocale);
+
   const isAdminRoute =
-    pathWithoutLocale === "/admin-nexa-secret" ||
-    pathWithoutLocale.startsWith("/admin-nexa-secret/");
+    cleanPathWithoutLocale === "/admin-nexa-secret" ||
+    cleanPathWithoutLocale.startsWith("/admin-nexa-secret/");
 
-  const isAdminLoginRoute = pathWithoutLocale === "/admin-nexa-secret/login";
+  const isAdminLoginRoute =
+    cleanPathWithoutLocale === "/admin-nexa-secret/login";
 
-  // Force admin pages to stay outside locale routes
+  /*
+    Redirect old SEO landing pages to the main localized homepage.
+
+    Examples:
+    /en/scooter-rental-magaluf -> /en
+    /es/cheap-scooter-rental-mallorca -> /es
+    /scooter-rental-mallorca -> /en
+  */
+  if (SEO_REDIRECT_PATHS.has(cleanPathWithoutLocale)) {
+    const redirectUrl = request.nextUrl.clone();
+    const localeToUse = hasLocalePrefix ? firstSegment : defaultLocale;
+
+    redirectUrl.pathname = `/${localeToUse}`;
+    redirectUrl.search = "";
+
+    return NextResponse.redirect(redirectUrl, 308);
+  }
+
+  /*
+    Admin must stay outside language routes.
+
+    Example:
+    /en/admin-nexa-secret
+    becomes:
+    /admin-nexa-secret
+  */
   if (hasLocalePrefix && isAdminRoute) {
     const cleanAdminUrl = request.nextUrl.clone();
-    cleanAdminUrl.pathname = pathWithoutLocale;
+    cleanAdminUrl.pathname = cleanPathWithoutLocale;
     return NextResponse.redirect(cleanAdminUrl);
   }
 
-  // Protect private admin dashboard with cookie auth
-  if (isAdminRoute && !isAdminLoginRoute) {
+  /*
+    Allow login page without authentication.
+    This page must be reachable so you can log in.
+  */
+  if (isAdminLoginRoute) {
+    return NextResponse.next();
+  }
+
+  /*
+    Protect every private admin page.
+    Nobody can open the dashboard, bookings, contracts,
+    vehicles, sales, customers, calendar or settings
+    without the private admin cookie.
+  */
+  if (isAdminRoute) {
     const adminToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
 
     if (adminToken !== "active") {
       const loginUrl = request.nextUrl.clone();
       loginUrl.pathname = "/admin-nexa-secret/login";
-      loginUrl.searchParams.set("next", pathname);
+      loginUrl.searchParams.set("next", cleanPathWithoutLocale);
 
       return NextResponse.redirect(loginUrl);
     }
@@ -69,11 +143,7 @@ export default function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Let admin login page load without next-intl
-  if (isAdminLoginRoute) {
-    return NextResponse.next();
-  }
-
+  // Everything else uses your normal language system
   return intlMiddleware(request);
 }
 

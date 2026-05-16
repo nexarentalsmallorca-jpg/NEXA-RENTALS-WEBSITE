@@ -4,10 +4,109 @@ import Link from "next/link";
 import { useLocale } from "next-intl";
 import Navbar from "../../Navbar";
 
+type Locale = "en" | "es" | "de" | "fr" | "it" | "pt" | "sv";
+
 const ORANGE = "#FF7A00";
 
+const COPY: Record<
+  Locale,
+  {
+    badge: string;
+    titleA: string;
+    titleB: string;
+    description: string;
+    backHome: string;
+    whatsapp: string;
+    notice: string;
+  }
+> = {
+  en: {
+    badge: "Page under maintenance",
+    titleA: "This page is currently",
+    titleB: " under design",
+    description:
+      "We are temporarily improving this section of the NEXA Rentals website. The page will be available again soon with a better, cleaner and more premium experience.",
+    backHome: "Back to Home",
+    whatsapp: "Contact on WhatsApp",
+    notice: "Online booking from the home page remains safe and active.",
+  },
+  es: {
+    badge: "Página en mantenimiento",
+    titleA: "Esta página está actualmente",
+    titleB: " en diseño",
+    description:
+      "Estamos mejorando temporalmente esta sección de la web de NEXA Rentals. La página volverá pronto con una experiencia mejor, más limpia y más premium.",
+    backHome: "Volver al inicio",
+    whatsapp: "Contactar por WhatsApp",
+    notice:
+      "La reserva online desde la página principal sigue segura y activa.",
+  },
+  de: {
+    badge: "Seite in Wartung",
+    titleA: "Diese Seite ist aktuell",
+    titleB: " im Design",
+    description:
+      "Wir verbessern diesen Bereich der NEXA Rentals Website vorübergehend. Die Seite ist bald wieder mit einer besseren, klareren und hochwertigeren Erfahrung verfügbar.",
+    backHome: "Zur Startseite",
+    whatsapp: "Per WhatsApp kontaktieren",
+    notice:
+      "Die Online-Buchung über die Startseite bleibt sicher und aktiv.",
+  },
+  fr: {
+    badge: "Page en maintenance",
+    titleA: "Cette page est actuellement",
+    titleB: " en conception",
+    description:
+      "Nous améliorons temporairement cette section du site NEXA Rentals. La page sera bientôt disponible avec une expérience meilleure, plus claire et plus premium.",
+    backHome: "Retour à l’accueil",
+    whatsapp: "Contact WhatsApp",
+    notice:
+      "La réservation en ligne depuis la page d’accueil reste sûre et active.",
+  },
+  it: {
+    badge: "Pagina in manutenzione",
+    titleA: "Questa pagina è attualmente",
+    titleB: " in progettazione",
+    description:
+      "Stiamo migliorando temporaneamente questa sezione del sito NEXA Rentals. La pagina tornerà presto con un’esperienza migliore, più pulita e più premium.",
+    backHome: "Torna alla Home",
+    whatsapp: "Contatta su WhatsApp",
+    notice:
+      "La prenotazione online dalla home page rimane sicura e attiva.",
+  },
+  pt: {
+    badge: "Página em manutenção",
+    titleA: "Esta página está atualmente",
+    titleB: " em design",
+    description:
+      "Estamos a melhorar temporariamente esta secção do site da NEXA Rentals. A página estará disponível em breve com uma experiência melhor, mais limpa e mais premium.",
+    backHome: "Voltar ao início",
+    whatsapp: "Contactar no WhatsApp",
+    notice:
+      "A reserva online a partir da página inicial continua segura e ativa.",
+  },
+  sv: {
+    badge: "Sida under underhåll",
+    titleA: "Den här sidan är just nu",
+    titleB: " under design",
+    description:
+      "Vi förbättrar tillfälligt den här delen av NEXA Rentals webbplats. Sidan kommer snart tillbaka med en bättre, renare och mer premium upplevelse.",
+    backHome: "Tillbaka hem",
+    whatsapp: "Kontakta på WhatsApp",
+    notice:
+      "Onlinebokning från startsidan är fortfarande säker och aktiv.",
+  },
+};
+
+function getSafeLocale(locale: string): Locale {
+  return ["en", "es", "de", "fr", "it", "pt", "sv"].includes(locale)
+    ? (locale as Locale)
+    : "en";
+}
+
 export default function FleetClient() {
-  const locale = useLocale();
+  const locale = getSafeLocale(useLocale());
+  const copy = COPY[locale];
 
   return (
     <main
@@ -77,18 +176,16 @@ export default function FleetClient() {
               }}
             >
               <span className="h-2 w-2 rounded-full bg-[#FF7A00] shadow-[0_0_18px_rgba(255,122,0,0.95)]" />
-              Page under maintenance
+              {copy.badge}
             </div>
 
             <h1 className="text-[38px] font-black leading-[0.95] tracking-[-0.05em] md:text-6xl lg:text-7xl">
-              This page is currently
-              <span style={{ color: ORANGE }}> under design</span>
+              {copy.titleA}
+              <span style={{ color: ORANGE }}>{copy.titleB}</span>
             </h1>
 
             <p className="mx-auto mt-5 max-w-2xl text-base leading-7 text-white/68 md:text-lg">
-              We are temporarily improving this section of the NEXA Rentals
-              website. The page will be available again soon with a better,
-              cleaner and more premium experience.
+              {copy.description}
             </p>
 
             <div className="mt-8 grid gap-3 sm:grid-cols-2">
@@ -100,7 +197,7 @@ export default function FleetClient() {
                   boxShadow: "0 18px 44px rgba(255,122,0,0.18)",
                 }}
               >
-                Back to Home
+                {copy.backHome}
               </Link>
 
               <a
@@ -113,7 +210,7 @@ export default function FleetClient() {
                   background: "rgba(255,255,255,0.045)",
                 }}
               >
-                Contact on WhatsApp
+                {copy.whatsapp}
               </a>
             </div>
 
@@ -124,7 +221,7 @@ export default function FleetClient() {
                 background: "rgba(255,255,255,0.035)",
               }}
             >
-              Online booking from the home page remains safe and active.
+              {copy.notice}
             </div>
           </div>
         </div>

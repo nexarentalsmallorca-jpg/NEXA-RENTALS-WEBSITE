@@ -1,15 +1,16 @@
 "use client";
 
 import { useCallback, useMemo, useRef, useState } from "react";
+import { useLocale, useTranslations } from "next-intl";
+import Link from "next/link";
+import { Poppins } from "next/font/google";
+
 import Navbar from "./Navbar";
 import ShopSection from "./components/ShopSection";
 import BookingPanelV2 from "./components/BookingPanelV2";
 import GoogleReviews3D from "./components/GoogleReviews3D";
-import Link from "next/link";
-import { Poppins } from "next/font/google";
 import WhyRidersChooseNexa from "./components/WhyRidersChooseNexa";
 import NeroWebsiteAssistant from "./components/NeroWebsiteAssistant";
-import NeroBookingCopilot from "./components/NeroBookingCopilot";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -74,129 +75,138 @@ function getSeasonalHeroPricing(date = new Date()): SeasonalHeroPricing {
   };
 }
 
-const SLIDES: ScooterSlide[] = [
-  {
-    id: "piaggio",
-    name: "PIAGGIO LIBERTY 125",
-    bookingName: "Piaggio Liberty 125",
-    image: "/images/piaggio.png",
-    imageAlt: "Piaggio Liberty 125",
-    imageStyle: {
-      transform: "translateX(-115px) translateY(-35px) scale(1.8)",
-      pointerEvents: "none",
-      userSelect: "none",
+function buildSlides(t: ReturnType<typeof useTranslations>): ScooterSlide[] {
+  return [
+    {
+      id: "piaggio",
+      name: "PIAGGIO LIBERTY 125",
+      bookingName: "Piaggio Liberty 125",
+      image: "/images/piaggio.png",
+      imageAlt: "Piaggio Liberty 125",
+      imageStyle: {
+        transform: "translateX(-115px) translateY(-35px) scale(1.8)",
+        pointerEvents: "none",
+        userSelect: "none",
+      },
+      mobileImageStyle: {
+        transform: "translateX(-22px) translateY(4px) scale(1.08)",
+        pointerEvents: "none",
+        userSelect: "none",
+      },
+      features: [
+        t("slides.piaggio.features.0"),
+        t("slides.piaggio.features.1"),
+        t("slides.piaggio.features.2"),
+        t("slides.piaggio.features.3"),
+        t("slides.piaggio.features.4"),
+        t("slides.piaggio.features.5"),
+        t("slides.piaggio.features.6"),
+        t("slides.piaggio.features.7"),
+      ],
     },
-    mobileImageStyle: {
-      transform: "translateX(-22px) translateY(4px) scale(1.08)",
-      pointerEvents: "none",
-      userSelect: "none",
+    {
+      id: "sym",
+      name: "SYM SYMPHONY 125",
+      bookingName: "SYM Symphony 125",
+      image: "/images/sym1.png",
+      imageAlt: "SYM Symphony 125",
+      imageStyle: {
+        transform: "translateX(-95px) translateY(10px) scale(1.1)",
+        pointerEvents: "none",
+        userSelect: "none",
+      },
+      mobileImageStyle: {
+        transform: "translateX(-10px) translateY(8px) scale(0.92)",
+        pointerEvents: "none",
+        userSelect: "none",
+      },
+      features: [
+        t("slides.sym.features.0"),
+        t("slides.sym.features.1"),
+        t("slides.sym.features.2"),
+        t("slides.sym.features.3"),
+        t("slides.sym.features.4"),
+        t("slides.sym.features.5"),
+        t("slides.sym.features.6"),
+        t("slides.sym.features.7"),
+      ],
     },
-    features: [
-      "125cc automatic scooter",
-      "Smooth & easy to ride",
-      "Perfect for city & coastal rides",
-      "2 helmets included free",
-      "Free phone holder for navigation",
-      "Free security lock included",
-      "Comfortable & fuel efficient",
-      "Ideal for exploring Mallorca",
-    ],
-  },
-  {
-    id: "sym",
-    name: "SYM SYMPHONY 125",
-    bookingName: "SYM Symphony 125",
-    image: "/images/sym1.png",
-    imageAlt: "SYM Symphony 125",
-    imageStyle: {
-      transform: "translateX(-95px) translateY(10px) scale(1.1)",
-      pointerEvents: "none",
-      userSelect: "none",
+    {
+      id: "moma e-bike",
+      name: "MOMA E-BIKE",
+      bookingName: "MOMA E-BIKE",
+      image: "/images/ebike1.png",
+      imageAlt: "MOMA E-BIKE",
+      imageStyle: {
+        transform:
+          "translateX(-80px) translateY(-100px) scale(1.6) rotate(0deg)",
+        pointerEvents: "none",
+        userSelect: "none",
+      },
+      mobileImageStyle: {
+        transform: "translateX(-8px) translateY(-8px) scale(1.03)",
+        pointerEvents: "none",
+        userSelect: "none",
+      },
+      shadowStyle: {
+        width: "100%",
+        height: "34px",
+        bottom: "34px",
+        opacity: 0.99,
+      },
+      features: [
+        t("slides.moma.features.0"),
+        t("slides.moma.features.1"),
+        t("slides.moma.features.2"),
+        t("slides.moma.features.3"),
+      ],
+      isEbike: true,
     },
-    mobileImageStyle: {
-      transform: "translateX(-10px) translateY(8px) scale(0.92)",
-      pointerEvents: "none",
-      userSelect: "none",
+    {
+      id: "cecotec-ebike",
+      name: "CECOTEC e-Xplore MTB E-BIKE",
+      bookingName: "CECOTEC e-Xplore MTB E-BIKE",
+      image: "/images/ebike2.png",
+      imageAlt: "CECOTEC e-Xplore MTB E-BIKE",
+      imageStyle: {
+        transform:
+          "translateX(-70px) translateY(-20px) scale(1.1) rotate(-2deg)",
+        pointerEvents: "none",
+        userSelect: "none",
+      },
+      mobileImageStyle: {
+        transform: "translateX(-5px) translateY(0px) scale(0.94) rotate(-2deg)",
+        pointerEvents: "none",
+        userSelect: "none",
+      },
+      shadowStyle: {
+        width: "100%",
+        height: "34px",
+        bottom: "34px",
+        opacity: 0.99,
+      },
+      features: [
+        t("slides.cecotec.features.0"),
+        t("slides.cecotec.features.1"),
+        t("slides.cecotec.features.2"),
+        t("slides.cecotec.features.3"),
+      ],
+      isEbike: true,
     },
-    features: [
-      "125cc automatic scooter",
-      "Elegant urban design with premium comfort",
-      "Smooth handling for city and beach roads",
-      "2 helmets included free",
-      "Free phone holder for navigation",
-      "Free security lock included",
-      "Spacious seating and easy riding position",
-      "Great for exploring Magaluf and Mallorca",
-    ],
-  },
-  {
-    id: "moma e-bike",
-    name: "MOMA E-BIKE",
-    bookingName: "MOMA E-BIKE",
-    image: "/images/ebike1.png",
-    imageAlt: "MOMA E-BIKE",
-    imageStyle: {
-      transform: "translateX(-80px) translateY(-100px) scale(1.6) rotate(0deg)",
-      pointerEvents: "none",
-      userSelect: "none",
-    },
-    mobileImageStyle: {
-      transform: "translateX(-8px) translateY(-8px) scale(1.03)",
-      pointerEvents: "none",
-      userSelect: "none",
-    },
-    shadowStyle: {
-      width: "100%",
-      height: "34px",
-      bottom: "34px",
-      opacity: 0.99,
-    },
-    features: [
-      "Electric bike",
-      "Easy to ride",
-      "Perfect for city",
-      "Long battery range UPTO 100KM",
-    ],
-    isEbike: true,
-  },
-  {
-    id: "cecotec-ebike",
-    name: "CECOTEC e-Xplore MTB E-BIKE",
-    bookingName: "CECOTEC e-Xplore MTB E-BIKE",
-    image: "/images/ebike2.png",
-    imageAlt: "CECOTEC e-Xplore MTB E-BIKE",
-    imageStyle: {
-      transform: "translateX(-70px) translateY(-20px) scale(1.1) rotate(-2deg)",
-      pointerEvents: "none",
-      userSelect: "none",
-    },
-    mobileImageStyle: {
-      transform: "translateX(-5px) translateY(0px) scale(0.94) rotate(-2deg)",
-      pointerEvents: "none",
-      userSelect: "none",
-    },
-    shadowStyle: {
-      width: "100%",
-      height: "34px",
-      bottom: "34px",
-      opacity: 0.99,
-    },
-    features: [
-      "Electric bike",
-      "Perfect on Trails",
-      "Easy Handling",
-      "Range UPTO 60KM",
-    ],
-    isEbike: true,
-  },
-];
+  ];
+}
 
 export default function HomeClientV2() {
+  const t = useTranslations("home");
+  const locale = useLocale();
+
   const THEME = {
     bg: "#0f1115",
     surface: "rgba(255,255,255,0.035)",
     borderSoft: "rgba(255,255,255,0.08)",
   };
+
+  const slides = useMemo(() => buildSlides(t), [t]);
 
   const [activeIndex, setActiveIndex] = useState(0);
   const [direction, setDirection] = useState<"next" | "prev">("next");
@@ -207,18 +217,22 @@ export default function HomeClientV2() {
 
   const bookingPanelHostRef = useRef<HTMLDivElement | null>(null);
 
-  const activeSlide = useMemo(() => SLIDES[activeIndex], [activeIndex]);
+  const activeSlide = useMemo(
+    () => slides[activeIndex] || slides[0],
+    [slides, activeIndex]
+  );
+
   const isEbike = !!activeSlide.isEbike;
 
   function goPrev() {
     setDirection("prev");
-    setActiveIndex((prev) => (prev === 0 ? SLIDES.length - 1 : prev - 1));
+    setActiveIndex((prev) => (prev === 0 ? slides.length - 1 : prev - 1));
     setAnimationTick((prev) => prev + 1);
   }
 
   function goNext() {
     setDirection("next");
-    setActiveIndex((prev) => (prev === SLIDES.length - 1 ? 0 : prev + 1));
+    setActiveIndex((prev) => (prev === slides.length - 1 ? 0 : prev + 1));
     setAnimationTick((prev) => prev + 1);
   }
 
@@ -232,8 +246,8 @@ export default function HomeClientV2() {
     const target = buttons.find((btn) => {
       const text = (btn.textContent || "").toLowerCase();
       return planType === "half"
-        ? text.includes("half day")
-        : text.includes("full day");
+        ? text.includes(t("hero.plans.halfDay").toLowerCase())
+        : text.includes(t("hero.plans.fullDay").toLowerCase());
     });
 
     if (target instanceof HTMLButtonElement) {
@@ -253,7 +267,9 @@ export default function HomeClientV2() {
   const motionKey = `${activeSlide.id}-${activeIndex}-${animationTick}-${direction}`;
 
   const whatsappHref = `https://api.whatsapp.com/send?text=${encodeURIComponent(
-    `Hi Nexa Rentals, is this e-bike available (${activeSlide.bookingName})?`
+    t("hero.ebike.whatsappMessage", {
+      vehicle: activeSlide.bookingName,
+    })
   )}`;
 
   return (
@@ -548,19 +564,19 @@ export default function HomeClientV2() {
                         <div className="mt-3 grid grid-cols-2 gap-2.5 lg:hidden">
                           <div className="rounded-[16px] border border-white/70 bg-white/74 px-3 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm">
                             <div className="text-[9px] font-black uppercase tracking-[0.14em] text-[#b35b00]">
-                              Included
+                              {t("hero.badges.includedLabel")}
                             </div>
                             <div className="mt-1 text-[13px] font-black leading-tight text-[#1b1b1b]">
-                              2 helmets + lock
+                              {t("hero.badges.includedValue")}
                             </div>
                           </div>
 
                           <div className="rounded-[16px] border border-white/70 bg-white/74 px-3 py-3 shadow-[0_8px_20px_rgba(0,0,0,0.08)] backdrop-blur-sm">
                             <div className="text-[9px] font-black uppercase tracking-[0.14em] text-[#b35b00]">
-                              Freedom
+                              {t("hero.badges.freedomLabel")}
                             </div>
                             <div className="mt-1 text-[13px] font-black leading-tight text-[#1b1b1b]">
-                              Unlimited KM
+                              {t("hero.badges.freedomValue")}
                             </div>
                           </div>
                         </div>
@@ -578,7 +594,7 @@ export default function HomeClientV2() {
                             className="relative w-[128px] rounded-[24px] border-2 border-[#ff5a2a] bg-white px-3 pb-3 pt-6 text-left shadow-sm transition duration-200 hover:-translate-y-[2px] hover:shadow-[0_14px_28px_rgba(255,106,0,0.14)] active:scale-[0.985] sm:w-[140px] xl:w-[150px]"
                           >
                             <div className="absolute left-1/2 top-1 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-[#ff3b30] to-[#ff9b3d] px-2.5 py-[3px] text-[9px] font-extrabold uppercase tracking-[0.04em] text-black">
-                              Most Popular
+                              {t("hero.plans.mostPopular")}
                             </div>
 
                             <div className="text-center">
@@ -589,7 +605,7 @@ export default function HomeClientV2() {
                                 {heroPricing.halfDay}€
                               </div>
                               <div className="mt-1 text-[14px] font-semibold text-[#222]">
-                                Half Day
+                                {t("hero.plans.halfDay")}
                               </div>
                             </div>
                           </button>
@@ -608,7 +624,7 @@ export default function HomeClientV2() {
                                 {heroPricing.fullDay}€
                               </div>
                               <div className="mt-1 text-[14px] font-semibold text-[#222]">
-                                Full Day
+                                {t("hero.plans.fullDay")}
                               </div>
                             </div>
                           </button>
@@ -678,7 +694,7 @@ export default function HomeClientV2() {
                         <button
                           onClick={goPrev}
                           className="pointer-events-auto absolute left-0 flex h-11 w-11 items-center justify-center rounded-full border border-white/45 bg-black/24 text-[32px] font-light text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition hover:scale-105 hover:bg-black/38"
-                          aria-label="Previous scooter"
+                          aria-label={t("hero.slider.previous")}
                           type="button"
                         >
                           ‹
@@ -687,7 +703,7 @@ export default function HomeClientV2() {
                         <button
                           onClick={goNext}
                           className="pointer-events-auto absolute right-0 flex h-11 w-11 items-center justify-center rounded-full border border-white/45 bg-black/24 text-[32px] font-light text-white shadow-[0_8px_24px_rgba(0,0,0,0.18)] backdrop-blur-md transition hover:scale-105 hover:bg-black/38"
-                          aria-label="Next scooter"
+                          aria-label={t("hero.slider.next")}
                           type="button"
                         >
                           ›
@@ -710,7 +726,7 @@ export default function HomeClientV2() {
                           <div className="overflow-hidden rounded-[30px] border border-black/10 bg-white/90 p-5 shadow-[0_18px_40px_rgba(0,0,0,0.14)] backdrop-blur-sm">
                             <div className="rounded-[18px] border border-black/10 bg-[#f7f7f9] px-4 py-3">
                               <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-black/45">
-                                Vehicle
+                                {t("hero.ebike.vehicle")}
                               </div>
                               <div className="mt-1 text-[16px] font-bold text-[#111]">
                                 {activeSlide.bookingName}
@@ -719,13 +735,13 @@ export default function HomeClientV2() {
 
                             <div className="mt-4 rounded-[22px] border border-[#ffb37f] bg-gradient-to-br from-[#fff8f1] to-[#fffdf9] p-4">
                               <div className="mb-3 inline-flex rounded-full bg-gradient-to-r from-[#ff7a00] to-[#ffb04d] px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.12em] text-black">
-                                WhatsApp Booking Only
+                                {t("hero.ebike.whatsappBookingOnly")}
                               </div>
 
                               <div className="space-y-2">
                                 <div className="flex items-center justify-between border-b border-black/8 pb-2 text-[#111]">
                                   <span className="text-[14px] font-semibold">
-                                    1 Hour
+                                    {t("hero.ebike.prices.oneHour")}
                                   </span>
                                   <span className="text-[22px] font-black text-[#ff7a00]">
                                     9€
@@ -733,7 +749,7 @@ export default function HomeClientV2() {
                                 </div>
                                 <div className="flex items-center justify-between border-b border-black/8 pb-2 text-[#111]">
                                   <span className="text-[14px] font-semibold">
-                                    2 Hours
+                                    {t("hero.ebike.prices.twoHours")}
                                   </span>
                                   <span className="text-[22px] font-black text-[#111]">
                                     16€
@@ -741,7 +757,7 @@ export default function HomeClientV2() {
                                 </div>
                                 <div className="flex items-center justify-between border-b border-black/8 pb-2 text-[#111]">
                                   <span className="text-[14px] font-semibold">
-                                    3 Hours
+                                    {t("hero.ebike.prices.threeHours")}
                                   </span>
                                   <span className="text-[22px] font-black text-[#111]">
                                     20€
@@ -749,7 +765,7 @@ export default function HomeClientV2() {
                                 </div>
                                 <div className="flex items-center justify-between border-b border-black/8 pb-2 text-[#111]">
                                   <span className="text-[14px] font-semibold">
-                                    4 Hours
+                                    {t("hero.ebike.prices.fourHours")}
                                   </span>
                                   <span className="text-[22px] font-black text-[#111]">
                                     25€
@@ -757,7 +773,7 @@ export default function HomeClientV2() {
                                 </div>
                                 <div className="flex items-center justify-between text-[#111]">
                                   <span className="text-[14px] font-semibold">
-                                    1 Day
+                                    {t("hero.ebike.prices.oneDay")}
                                   </span>
                                   <span className="text-[24px] font-black text-[#111]">
                                     28€
@@ -768,11 +784,10 @@ export default function HomeClientV2() {
 
                             <div className="mt-4 rounded-[22px] bg-[#0b1220] p-4 text-white">
                               <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-white/55">
-                                Reserve by WhatsApp
+                                {t("hero.ebike.reserveTitle")}
                               </div>
                               <p className="mt-2 text-[14px] leading-6 text-white/82">
-                                E-bikes are reserved manually by message so we
-                                can confirm availability instantly.
+                                {t("hero.ebike.reserveDescription")}
                               </p>
 
                               <a
@@ -781,7 +796,7 @@ export default function HomeClientV2() {
                                 rel="noreferrer"
                                 className="nexa-whatsapp-magical mt-4 flex h-[54px] w-full items-center justify-center rounded-[18px] bg-gradient-to-r from-[#22c55e] to-[#16a34a] text-[15px] font-bold text-white shadow-[0_10px_24px_rgba(34,197,94,0.30)] transition duration-300 hover:scale-[1.02]"
                               >
-                                Send Message on WhatsApp
+                                {t("hero.ebike.sendWhatsapp")}
                               </a>
                             </div>
                           </div>
@@ -795,7 +810,7 @@ export default function HomeClientV2() {
                   <button
                     onClick={goPrev}
                     className="pointer-events-auto absolute left-6 z-[110] text-[90px] font-light text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.6)] transition hover:scale-110 hover:text-[#FF6A00]"
-                    aria-label="Previous scooter"
+                    aria-label={t("hero.slider.previous")}
                     type="button"
                   >
                     ‹
@@ -804,7 +819,7 @@ export default function HomeClientV2() {
                   <button
                     onClick={goNext}
                     className="pointer-events-auto absolute right-0 z-[110] text-[90px] font-light text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.6)] transition hover:scale-110 hover:text-[#FF6A00]"
-                    aria-label="Next scooter"
+                    aria-label={t("hero.slider.next")}
                     type="button"
                   >
                     ›
@@ -819,7 +834,6 @@ export default function HomeClientV2() {
       <GoogleReviews3D />
       <WhyRidersChooseNexa />
       <NeroWebsiteAssistant />
-      <NeroBookingCopilot />
       <ShopSection />
 
       <section className="pb-16 pt-10">
@@ -832,19 +846,18 @@ export default function HomeClientV2() {
             }}
           >
             <h2 className="text-2xl font-bold text-white">
-              Scooter Rental Mallorca for Tourists
+              {t("seo.title")}
             </h2>
 
             <p className="mt-4 text-white/75">
-              Looking for the best scooter rental in Magaluf, Mallorca?{" "}
+              {t("seo.beforeLink")}{" "}
               <Link
-                href="/scooter-rental-magaluf"
+                href={`/${locale}/scooter-rental-magaluf`}
                 className="font-semibold text-orange-500"
               >
-                Nexa Rentals scooter rental service
+                {t("seo.linkText")}
               </Link>{" "}
-              offers premium scooters and e-bikes with a smooth booking
-              experience.
+              {t("seo.afterLink")}
             </p>
           </div>
         </div>

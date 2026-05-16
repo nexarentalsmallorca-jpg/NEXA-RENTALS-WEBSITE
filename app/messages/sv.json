@@ -6,8 +6,90 @@
     "contact": "Kontakt",
     "about": "Om NEXA"
   },
+  "home": {
+    "hero": {
+      "badges": {
+        "includedLabel": "Ingår",
+        "includedValue": "2 hjälmar + lås",
+        "freedomLabel": "Frihet",
+        "freedomValue": "Obegränsade KM"
+      },
+      "plans": {
+        "mostPopular": "Mest populär",
+        "halfDay": "Halvdag",
+        "fullDay": "Heldag"
+      },
+      "slider": {
+        "previous": "Föregående scooter",
+        "next": "Nästa scooter"
+      },
+      "ebike": {
+        "vehicle": "Fordon",
+        "whatsappBookingOnly": "Endast WhatsApp-bokning",
+        "reserveTitle": "Reservera via WhatsApp",
+        "reserveDescription": "E-bikes reserveras manuellt via meddelande så att vi kan bekräfta tillgängligheten direkt.",
+        "sendWhatsapp": "Skicka meddelande på WhatsApp",
+        "whatsappMessage": "Hej Nexa Rentals, är denna e-bike tillgänglig ({vehicle})?",
+        "prices": {
+          "oneHour": "1 timme",
+          "twoHours": "2 timmar",
+          "threeHours": "3 timmar",
+          "fourHours": "4 timmar",
+          "oneDay": "1 dag"
+        }
+      }
+    },
+    "slides": {
+      "piaggio": {
+        "features": {
+          "0": "Automatisk 125cc scooter",
+          "1": "Mjuk och enkel att köra",
+          "2": "Perfekt för stad och kustvägar",
+          "3": "2 hjälmar ingår gratis",
+          "4": "Gratis mobilhållare för navigation",
+          "5": "Gratis säkerhetslås ingår",
+          "6": "Bekväm och bränslesnål",
+          "7": "Idealisk för att upptäcka Mallorca"
+        }
+      },
+      "sym": {
+        "features": {
+          "0": "Automatisk 125cc scooter",
+          "1": "Elegant stadsdesign med premiumkomfort",
+          "2": "Smidig körning för stad och strandvägar",
+          "3": "2 hjälmar ingår gratis",
+          "4": "Gratis mobilhållare för navigation",
+          "5": "Gratis säkerhetslås ingår",
+          "6": "Rymlig sits och bekväm körposition",
+          "7": "Perfekt för att utforska Magaluf och Mallorca"
+        }
+      },
+      "moma": {
+        "features": {
+          "0": "Elcykel",
+          "1": "Enkel att köra",
+          "2": "Perfekt för staden",
+          "3": "Lång batteriräckvidd UPP TILL 100KM"
+        }
+      },
+      "cecotec": {
+        "features": {
+          "0": "Elcykel",
+          "1": "Perfekt för stigar",
+          "2": "Enkel hantering",
+          "3": "Räckvidd UPP TILL 60KM"
+        }
+      }
+    },
+    "seo": {
+      "title": "Scooteruthyrning på Mallorca för turister",
+      "beforeLink": "Letar du efter den bästa scooteruthyrningen i Magaluf, Mallorca?",
+      "linkText": "Nexa Rentals scooteruthyrning",
+      "afterLink": "erbjuder premium-scootrar och e-bikes med en enkel och smidig bokningsupplevelse."
+    }
+  },
   "hero": {
-    "title": "Hyr Scooter & Elcykel\npå Mallorca",
+    "title": "Hyr scooter och elcykel\npå Mallorca",
     "subtitle": "Boka online på några sekunder"
   },
   "booking": {
@@ -41,28 +123,20 @@
     "instantConfirmation": "Omedelbar bekräftelse",
     "localSupport": "Lokal support"
   },
-
   "checkout": {
     "defaultPickupLocation": "Magaluf (Carrer Galeón 13)",
-
     "step2of2": "Steg 2 av 2",
     "confirmAndPay": "Bekräfta & betala",
     "in60Seconds": "på 60 sekunder",
-
     "backToVehicles": "← Tillbaka till fordon",
-
     "daysSingular": "dag",
     "daysPlural": "dagar",
-
     "savePct": "Spara {pct}%",
     "save": "Spara",
-
     "perDayShort": "/dag",
     "perDay": "/dag",
-
     "total": "Totalt",
     "totalLabel": "Totalt",
-
     "included": "Ingår",
     "includedBadge": "Ingår",
     "noExtraFees": "Inga extra avgifter",
@@ -70,37 +144,30 @@
     "lock": "Lås",
     "cargoBox": "Toppbox",
     "free": "Gratis",
-
     "contractReadyTitle": "Uthämtning med färdigt kontrakt (under 5 minuter)",
     "contractReadyDesc": "Ladda upp dina dokument nu (valfritt) så är kontraktet klart när du kommer — skriv på och åk.",
-
     "yourDetails": "Dina uppgifter",
     "detailsHint": "Krävs för bokning + kontrakt. Ladda upp dokument för snabbare uthämtning.",
     "required": "Krävs",
-
     "nameLabel": "Förnamn *",
     "surnameLabel": "Efternamn *",
     "phoneLabel": "Telefon (WhatsApp) *",
     "emailLabel": "Email *",
     "notesLabel": "Anteckningar (valfritt)",
-
     "namePlaceholder": "Johan",
     "surnamePlaceholder": "Svensson",
     "phonePlaceholder": "+34 600 000 000",
     "emailPlaceholder": "du@email.com",
     "notesPlaceholder": "Önskemål vid uthämtning, osv.",
-
     "documentsOptional": "Dokument (valfritt)",
     "fasterPickup": "Snabbare uthämtning",
     "documentsDesc": "Ladda upp nu så är kontraktet klart vid ankomst — skriv på och hämta fordonet på under 5 minuter.",
     "chooseFilesHint": "Välj filer för snabb uthämtning (valfritt).",
     "remove": "Ta bort",
-
     "dlFront": "Körkort (framsida) — valfritt",
     "dlBack": "Körkort (baksida) — valfritt",
     "idFront": "ID / Pass (framsida) — valfritt",
     "idBack": "ID / Pass (baksida) — valfritt",
-
     "payment": "Betalning",
     "pay": "Betala",
     "now": "nu",
@@ -111,33 +178,25 @@
     "payNow50": "Betala nu (50%)",
     "payPickup50": "Betala vid uthämtning (50%)",
     "rentalTotal": "Hyresbelopp totalt",
-
     "checkContractReady": "Mina uppgifter är korrekta och kan användas för att förbereda hyresavtalet.",
     "checkAgreeTerms": "Jag godkänner hyresvillkoren och bekräftar att bokningsuppgifterna är korrekta.",
     "checkMarketing": "Skicka mig uppdateringar, erbjudanden och nyheter från NEXA Rentals (valfritt).",
-
     "pay50NowAndBook": "Betala 50% nu & boka",
-
     "depositImportantTitle": "VIKTIGT — Deposition vid uthämtning",
     "depositTextBefore": "Vi tar en deposition på",
     "depositTextAfter": "vid uthämtning (Kontant / Kort). Återbetalas efter retur (enligt villkor).",
-
     "toContinue": "För att fortsätta: fyll i Förnamn + Efternamn + Telefon + Email, bekräfta kontrakt och acceptera villkor.",
-
     "secureCheckout": "Säker betalning",
     "localSupport": "Lokal support",
     "noHiddenFees": "Inga dolda avgifter",
-
     "stripeReady": "Redo för Stripe.",
     "payAtPickup": "Betala vid uthämtning",
     "depositAtPickup": "Deposition vid uthämtning",
     "cashCard": "Kontant/Kort",
     "contractReadySaved": "Uppgifter sparade för kontrakt.",
-
     "step": "Steg 2 av 2",
     "title": "Bekräfta & betala",
     "titleAccent": "på 60 sekunder",
-
     "includedGroup": {
       "title": "Ingår",
       "noExtraFees": "Inga extra avgifter",
@@ -217,7 +276,6 @@
       "contractReadySaved": "Uppgifter sparade för kontrakt."
     }
   },
-  
   "featuredFleet": {
     "header": {
       "kicker": "Utvald flotta",
@@ -293,7 +351,6 @@
       "missingDates": "Vänligen välj datum för upphämtning och återlämning."
     }
   },
-  
   "shopSection": {
     "imageAlt": "NEXA-butik",
     "titleLine1": "Föredrar du att hyra på plats?",
@@ -303,7 +360,7 @@
       "pickupLocationTitle": "Upphämtningsplats",
       "pickupLocationValue": "Magaluf (Carrer Galeón 13)",
       "openingHoursTitle": "Öppettider",
-      "openingHoursValue": "Dagligen • 10:00 – 22:00"
+      "openingHoursValue": "Dagligen • 09:00 – 20:00"
     },
     "bring": {
       "title": "Ta med",
@@ -317,21 +374,21 @@
     }
   },
   "footer": {
-  "pickup": "Upphämtning i Magaluf",
-  "address": "Carrer Galeón 13, Magaluf",
-  "hours": "Dagligen · 09:00 – 20:00",
-  "getUpdates": "Få uppdateringar",
-  "dealsText": "Erbjudanden, rabatter och säsongskampanjer.",
-  "yourEmail": "Din e-post",
-  "join": "Gå med",
-  "noSpam": "Ingen spam. Avsluta prenumerationen när som helst.",
-  "follow": "Följ",
-  "allRightsReserved": "Alla rättigheter förbehållna.",
-  "terms": "Villkor",
-  "privacy": "Integritetspolicy",
-  "depositPolicy": "Deposition policy",
-  "refundPolicy": "Återbetalningspolicy",
-  "cookies": "Cookies",
-  "aboutNexa": "Om NEXA"
-}
+    "pickup": "Upphämtning i Magaluf",
+    "address": "Carrer Galeón 13, Magaluf",
+    "hours": "Dagligen · 09:00 – 20:00",
+    "getUpdates": "Få uppdateringar",
+    "dealsText": "Erbjudanden, rabatter och säsongskampanjer.",
+    "yourEmail": "Din e-post",
+    "join": "Gå med",
+    "noSpam": "Ingen spam. Avsluta prenumerationen när som helst.",
+    "follow": "Följ",
+    "allRightsReserved": "Alla rättigheter förbehållna.",
+    "terms": "Villkor",
+    "privacy": "Integritetspolicy",
+    "depositPolicy": "Depositionspolicy",
+    "refundPolicy": "Återbetalningspolicy",
+    "cookies": "Cookies",
+    "aboutNexa": "Om NEXA"
+  }
 }
