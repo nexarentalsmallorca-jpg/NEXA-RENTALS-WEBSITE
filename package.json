@@ -8,7 +8,9 @@
     "dev:safe": "cmd /c \"set NEXT_TURBO=0&& next dev\"",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "translate:blogs": "node scripts/translate-blog-posts.mjs",
+    "generate:blog-slugs": "tsx scripts/generate-blog-slug-index-runner.ts"
   },
   "dependencies": {
     "@react-pdf/renderer": "^4.5.1",
@@ -36,6 +38,7 @@
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
+    "google-translate-api-x": "^10.7.2",
     "tailwindcss": "^4",
     "typescript": "^5"
   }

@@ -390,5 +390,42 @@
     "refundPolicy": "Rückerstattungsrichtlinie",
     "cookies": "Cookies",
     "aboutNexa": "Über NEXA"
+  },
+  "blog": {
+    "metaTitle": "Mallorca Roller- & E-Bike-Mietblog | NEXA Rentals",
+    "metaDescription": "Ratgeber zu Roller- und E-Bike-Miete in Magaluf und Mallorca — Preise, Führerschein, Kaution, Routen und Buchungstipps von NEXA Rentals.",
+    "trending": "Trends",
+    "mostPopular": "Beliebteste",
+    "mostPopularSubtitle": "Meistgelesene Guides — live nach Aufrufen sortiert.",
+    "topics": "Themen",
+    "searchPlaceholder": "Artikel suchen",
+    "searchAria": "Artikel suchen",
+    "readMore": "Weiterlesen",
+    "noResults": "Keine Artikel passen zu deiner Suche. Probiere ein anderes Thema oder Stichwort.",
+    "readyTitle": "Bereit zum Fahren in Magaluf?",
+    "readyBody": "Buche deinen 125cc-Roller oder E-Bike auf",
+    "viewVehicles": "Fahrzeuge ansehen & buchen",
+    "categories": {
+      "All": "Alle",
+      "Prices": "Preise",
+      "License": "Führerschein",
+      "E-Bikes": "E-Bikes",
+      "Booking": "Buchung",
+      "Tips": "Tipps",
+      "Routes": "Routen",
+      "Deposits": "Kaution"
+    },
+    "article": {
+      "back": "Zurück zum Blog",
+      "writtenBy": "Geschrieben von",
+      "publishedOn": "Veröffentlicht am",
+      "publishedBy": "Veröffentlicht von",
+      "publishedOnDate": "am",
+      "views": "Aufrufe",
+      "rentOnline": "Online buchen",
+      "publishedByTeam": "Nexa Rentals Team",
+      "faqTitle": "Häufig gestellte Fragen",
+      "continueReading": "Weiterlesen"
+    }
   }
 }

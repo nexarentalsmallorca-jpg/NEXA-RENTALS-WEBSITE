@@ -390,5 +390,42 @@
     "refundPolicy": "Politica di Rimborso",
     "cookies": "Cookie",
     "aboutNexa": "Su NEXA"
+  },
+  "blog": {
+    "metaTitle": "Blog noleggio scooter ed e-bike Maiorca | NEXA Rentals",
+    "metaDescription": "Guide al noleggio scooter ed e-bike a Magaluf e Maiorca — prezzi, patente, deposito, percorsi e prenotazione con NEXA Rentals.",
+    "trending": "Di tendenza",
+    "mostPopular": "Più popolari",
+    "mostPopularSubtitle": "Guide più lette — classificate in base alle visualizzazioni.",
+    "topics": "Argomenti",
+    "searchPlaceholder": "Cerca articoli",
+    "searchAria": "Cerca articoli",
+    "readMore": "Leggi di più",
+    "noResults": "Nessun articolo corrisponde alla ricerca. Prova un altro argomento o parola chiave.",
+    "readyTitle": "Pronto a guidare a Magaluf?",
+    "readyBody": "Prenota il tuo scooter 125cc o e-bike su",
+    "viewVehicles": "Vedi veicoli e prenota",
+    "categories": {
+      "All": "Tutti",
+      "Prices": "Prezzi",
+      "License": "Patente",
+      "E-Bikes": "E-Bike",
+      "Booking": "Prenotazione",
+      "Tips": "Consigli",
+      "Routes": "Percorsi",
+      "Deposits": "Deposito"
+    },
+    "article": {
+      "back": "Torna al blog",
+      "writtenBy": "Scritto da",
+      "publishedOn": "Pubblicato il",
+      "publishedBy": "Pubblicato da",
+      "publishedOnDate": "il",
+      "views": "Visualizzazioni",
+      "rentOnline": "Prenota online",
+      "publishedByTeam": "Team Nexa Rentals",
+      "faqTitle": "Domande frequenti",
+      "continueReading": "Continua a leggere"
+    }
   }
 }

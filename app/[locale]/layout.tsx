@@ -91,7 +91,7 @@ export default async function RootLayout({ children, params }: Props) {
       className={`${inter.variable} ${playfair.variable} ${poppins.variable}`}
       suppressHydrationWarning
     >
-      <body suppressHydrationWarning>
+      <body className="overflow-x-clip" suppressHydrationWarning>
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
 

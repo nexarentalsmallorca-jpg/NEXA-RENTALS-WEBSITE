@@ -390,5 +390,42 @@
     "refundPolicy": "Återbetalningspolicy",
     "cookies": "Cookies",
     "aboutNexa": "Om NEXA"
+  },
+  "blog": {
+    "metaTitle": "Mallorca scooter- & e-bike-hyrningsblogg | NEXA Rentals",
+    "metaDescription": "Guider om scooter- och e-bike-hyrning i Magaluf och Mallorca — priser, körkort, deposition, rutter och bokning med NEXA Rentals.",
+    "trending": "Trendar",
+    "mostPopular": "Mest populära",
+    "mostPopularSubtitle": "Mest lästa guider — rankade efter live-visningar.",
+    "topics": "Ämnen",
+    "searchPlaceholder": "Sök artiklar",
+    "searchAria": "Sök artiklar",
+    "readMore": "Läs mer",
+    "noResults": "Inga artiklar matchar din sökning. Prova ett annat ämne eller nyckelord.",
+    "readyTitle": "Redo att köra i Magaluf?",
+    "readyBody": "Boka din 125cc-scooter eller e-bike på",
+    "viewVehicles": "Se fordon & boka",
+    "categories": {
+      "All": "Alla",
+      "Prices": "Priser",
+      "License": "Körkort",
+      "E-Bikes": "E-bikes",
+      "Booking": "Bokning",
+      "Tips": "Tips",
+      "Routes": "Rutter",
+      "Deposits": "Deposition"
+    },
+    "article": {
+      "back": "Tillbaka till bloggen",
+      "writtenBy": "Skriven av",
+      "publishedOn": "Publicerad",
+      "publishedBy": "Publicerad av",
+      "publishedOnDate": "den",
+      "views": "Visningar",
+      "rentOnline": "Boka online",
+      "publishedByTeam": "Nexa Rentals-teamet",
+      "faqTitle": "Vanliga frågor",
+      "continueReading": "Läs mer"
+    }
   }
 }

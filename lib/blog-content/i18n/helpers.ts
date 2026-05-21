@@ -1,0 +1,188 @@
+import type { Locale } from "@/i18n/routing";
+import type { BlogCategory, BlogFaq, BlogSection, BlogTranslation } from "@/lib/blogs";
+import { blogSlugByAnySlug, type BlogSlugEntry } from "@/lib/blog-slug-index";
+
+export type BlogLocaleContent = Omit<
+  BlogTranslation,
+  "category" | "readTime" | "publishedAt" | "updatedAt" | "heroImage"
+>;
+
+const READ_TIME: Record<Locale, string> = {
+  en: "min read",
+  es: "min de lectura",
+  de: "Min. Lesezeit",
+  fr: "min de lecture",
+  it: "min di lettura",
+  pt: "min de leitura",
+  sv: "min läsning",
+};
+
+export function blogReadTime(minutes: number, locale: Locale) {
+  return `${minutes} ${READ_TIME[locale]}`;
+}
+
+export function blogBookLink(locale: Locale, label?: string) {
+  const text =
+    label ??
+    ({
+      en: "book your scooter online",
+      es: "reserva tu scooter online",
+      de: "buche deinen Roller online",
+      fr: "réservez votre scooter en ligne",
+      it: "prenota il tuo scooter online",
+      pt: "reserve o seu scooter online",
+      sv: "boka din scooter online",
+    }[locale] ?? "book online");
+  return `[${text}](https://www.nexarentals.es/${locale}/vehicles)`;
+}
+
+export function blogContactLink(locale: Locale, label?: string) {
+  const text =
+    label ??
+    ({
+      en: "contact NEXA Rentals",
+      es: "contacta con NEXA Rentals",
+      de: "kontaktiere NEXA Rentals",
+      fr: "contactez NEXA Rentals",
+      it: "contatta NEXA Rentals",
+      pt: "contacte a NEXA Rentals",
+      sv: "kontakta NEXA Rentals",
+    }[locale] ?? "contact us");
+  return `[${text}](https://www.nexarentals.es/${locale}/contact)`;
+}
+
+export function localizeMarkdownLinks(text: string, locale: Locale) {
+  return text.replace(/\/en\/(vehicles|contact)/g, `/${locale}/$1`);
+}
+
+/** Map English blog slugs to the slug used in the target locale. */
+export function buildEnglishToLocaleBlogSlugMap(
+  posts: { translations: Partial<Record<Locale, { slug: string }>> & { en: { slug: string } } }[],
+  locale: Locale
+): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const post of posts) {
+    const enSlug = post.translations.en.slug;
+    const locSlug = post.translations[locale]?.slug;
+    if (locSlug) map.set(enSlug, locSlug);
+  }
+  return map;
+}
+
+/** Map any known slug (any locale) to the slug used in `locale`. */
+export function buildAnySlugToLocaleBlogSlugMap(locale: Locale): Map<string, string> {
+  const map = new Map<string, string>();
+  for (const entry of Object.values(blogSlugByAnySlug) as BlogSlugEntry[]) {
+    const target = entry[locale];
+    if (!target) continue;
+    for (const value of Object.values(entry)) {
+      if (typeof value === "string" && value !== entry.id) {
+        map.set(value, target);
+      }
+    }
+  }
+  return map;
+}
+
+export function localizeBlogMarkdownLinks(
+  text: string,
+  locale: Locale,
+  slugToLocaleSlug: Map<string, string>
+) {
+  let result = localizeMarkdownLinks(text, locale);
+
+  const replaceSlug = (slug: string) => slugToLocaleSlug.get(slug) ?? slug;
+
+  result = result.replace(
+    /https:\/\/www\.nexarentals\.es\/(?:en|[a-z]{2})\/blog\/([a-z0-9-]+)/gi,
+    (_, slug: string) =>
+      `https://www.nexarentals.es/${locale}/blog/${replaceSlug(slug)}`
+  );
+  result = result.replace(
+    /https:\/\/www\.nexarentals\.es\/blog\/([a-z0-9-]+)/gi,
+    (_, slug: string) =>
+      `https://www.nexarentals.es/${locale}/blog/${replaceSlug(slug)}`
+  );
+  result = result.replace(/\/en\/blog\/([a-z0-9-]+)/gi, (_, slug: string) => {
+    return `/${locale}/blog/${replaceSlug(slug)}`;
+  });
+  result = result.replace(
+    new RegExp(`/${locale}/blog/([a-z0-9-]+)`, "gi"),
+    (_, slug: string) => `/${locale}/blog/${replaceSlug(slug)}`
+  );
+
+  return result;
+}
+
+/** Factory packs use two short generic paragraphs per section. */
+export function isStubBlogContent(content: BlogLocaleContent): boolean {
+  if (content.sections.length === 0) return true;
+  return content.sections.every((section) => section.paragraphs.length === 2);
+}
+
+export function applyBlogLinkLocalization(
+  content: BlogLocaleContent,
+  locale: Locale,
+  slugToLocaleSlug: Map<string, string>
+): BlogLocaleContent {
+  const link = (text: string) =>
+    localizeBlogMarkdownLinks(text, locale, slugToLocaleSlug);
+
+  return {
+    ...content,
+    quickAnswer: link(content.quickAnswer),
+    excerpt: link(content.excerpt),
+    ctaText: link(content.ctaText),
+    sections: content.sections.map((section) => ({
+      heading: section.heading,
+      paragraphs: section.paragraphs.map(link),
+    })),
+    faqs: content.faqs.map((faq) => ({
+      question: faq.question,
+      answer: link(faq.answer),
+    })),
+  };
+}
+
+export function finalizeBlogTranslation(
+  content: BlogLocaleContent,
+  locale: Locale,
+  category: BlogCategory,
+  publishedAt: string,
+  readMinutes: number
+): BlogTranslation {
+  return {
+    ...content,
+    heroImage: "",
+    category,
+    publishedAt,
+    updatedAt: publishedAt,
+    readTime: blogReadTime(readMinutes, locale),
+    metaTitle: content.metaTitle ?? `${content.title} | NEXA Rentals Mallorca`,
+    quickAnswer: localizeMarkdownLinks(content.quickAnswer, locale),
+    excerpt: localizeMarkdownLinks(content.excerpt, locale),
+    ctaText: localizeMarkdownLinks(content.ctaText, locale),
+    sections: content.sections.map((s) => ({
+      heading: s.heading,
+      paragraphs: s.paragraphs.map((p) => localizeMarkdownLinks(p, locale)),
+    })),
+    faqs: content.faqs.map((f) => ({
+      question: f.question,
+      answer: localizeMarkdownLinks(f.answer, locale),
+    })),
+  };
+}
+
+export function mergeBlogLocales(
+  en: BlogTranslation,
+  locale: Locale,
+  category: BlogCategory,
+  publishedAt: string,
+  readMinutes: number,
+  pack?: BlogLocaleContent
+): BlogTranslation {
+  if (!pack) return en;
+  return finalizeBlogTranslation(pack, locale, category, publishedAt, readMinutes);
+}
+
+export type BlogLocalePack = Record<string, BlogLocaleContent>;

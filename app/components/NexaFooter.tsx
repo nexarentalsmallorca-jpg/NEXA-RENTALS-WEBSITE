@@ -21,7 +21,7 @@ export default function NexaFooter() {
   const ORANGE = "#FF7A00";
 
   return (
-    <footer className="relative overflow-hidden text-white" style={{ background: THEME.bg }}>
+    <footer className="relative overflow-x-clip text-white" style={{ background: THEME.bg }}>
       {/* Background effects */}
       <div className="pointer-events-none absolute inset-0">
         <div

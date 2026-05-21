@@ -6,6 +6,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { MouseEvent as ReactMouseEvent } from "react";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
+import { replaceLocaleInPathWithBlog } from "@/lib/blog-locale-path";
 
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
@@ -154,19 +155,6 @@ function safeGetLocaleFromPath(pathname: string): Locale {
   return "en";
 }
 
-function replaceLocaleInPath(pathname: string, nextLocale: Locale): string {
-  const parts = pathname.split("/").filter(Boolean);
-
-  if (parts.length === 0) return `/${nextLocale}`;
-
-  const hasLocale = isLocale(parts[0]);
-  const rest = hasLocale ? parts.slice(1) : parts;
-
-  const nextPath = `/${nextLocale}${rest.length ? `/${rest.join("/")}` : ""}`;
-
-  return nextPath.replace(/\/+$/, "") || `/${nextLocale}`;
-}
-
 function getOfferEndDate() {
   const now = new Date();
   return new Date(now.getFullYear(), 4, 31, 23, 59, 59, 999);
@@ -218,7 +206,7 @@ export default function Navbar() {
 
   const homeHref = `/${currentLocale}`;
   const fleetHref = `/${currentLocale}/fleet`;
-  const blogsHref = `/${currentLocale}/#blogs`;
+  const blogsHref = `/${currentLocale}/blog`;
   const contactHref = `/${currentLocale}/contact`;
   const aboutHref = `/${currentLocale}/about`;
 
@@ -276,7 +264,7 @@ export default function Navbar() {
     setLangOpen(false);
     setMobileOpen(false);
 
-    const nextPath = replaceLocaleInPath(pathname, nextLocale);
+    const nextPath = replaceLocaleInPathWithBlog(pathname, nextLocale);
     const qs = searchParams?.toString() || "";
     const finalPath = qs ? `${nextPath}?${qs}` : nextPath;
 
@@ -798,11 +786,11 @@ export default function Navbar() {
               onClick={() => setMobileOpen(false)}
             >
               <Image
-                src="/images/nexa.png"
+                src="/images/icon-nobg.png"
                 alt={t("about")}
-                width={22}
-                height={22}
-                className="opacity-90"
+                width={24}
+                height={24}
+                className="h-6 w-6 shrink-0 object-contain opacity-95"
               />
               <span>{t("about")}</span>
             </Link>

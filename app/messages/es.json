@@ -390,5 +390,42 @@
     "refundPolicy": "Política de Reembolso",
     "cookies": "Cookies",
     "aboutNexa": "Sobre NEXA"
+  },
+  "blog": {
+    "metaTitle": "Blog de alquiler de scooters y e-bikes en Mallorca | NEXA Rentals",
+    "metaDescription": "Guías de alquiler de scooters y e-bikes en Magaluf y Mallorca: precios, licencias, depósitos, rutas y consejos de reserva con NEXA Rentals.",
+    "trending": "Tendencias",
+    "mostPopular": "Más populares",
+    "mostPopularSubtitle": "Guías más leídas — clasificadas por visitas en tiempo real.",
+    "topics": "Temas",
+    "searchPlaceholder": "Buscar artículos",
+    "searchAria": "Buscar artículos",
+    "readMore": "Leer más",
+    "noResults": "Ningún artículo coincide con tu búsqueda. Prueba otro tema o palabra clave.",
+    "readyTitle": "¿Listo para rodar en Magaluf?",
+    "readyBody": "Reserva tu scooter 125cc o e-bike en",
+    "viewVehicles": "Ver vehículos y reservar",
+    "categories": {
+      "All": "Todos",
+      "Prices": "Precios",
+      "License": "Licencia",
+      "E-Bikes": "E-Bikes",
+      "Booking": "Reserva",
+      "Tips": "Consejos",
+      "Routes": "Rutas",
+      "Deposits": "Depósitos"
+    },
+    "article": {
+      "back": "Volver al blog",
+      "writtenBy": "Escrito por",
+      "publishedOn": "Publicado el",
+      "publishedBy": "Publicado por",
+      "publishedOnDate": "el",
+      "views": "Visitas",
+      "rentOnline": "Reservar online",
+      "publishedByTeam": "Equipo Nexa Rentals",
+      "faqTitle": "Preguntas frecuentes",
+      "continueReading": "Seguir leyendo"
+    }
   }
 }

@@ -274,7 +274,7 @@ export default function HomeClientV2() {
 
   return (
     <div
-      className="relative min-h-screen overflow-hidden text-white"
+      className="relative min-h-screen overflow-x-clip text-white"
       style={{ background: THEME.bg }}
     >
       <style jsx global>{`
@@ -528,7 +528,7 @@ export default function HomeClientV2() {
         }
       `}</style>
 
-      <main className="relative overflow-hidden">
+      <main className="relative min-w-0 overflow-x-clip">
         <Navbar />
 
         <section className="relative pb-8 pt-0 lg:-mt-4 lg:pb-14">

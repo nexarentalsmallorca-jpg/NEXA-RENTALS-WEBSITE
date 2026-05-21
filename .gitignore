@@ -20,6 +20,11 @@
 # production
 /build
 
+# blog translation script temp files
+.blog-posts-export.json
+.blog-manual-slugs.json
+lib/blog-content/i18n/generated/.translation-cache.json
+
 # misc
 .DS_Store
 *.pem
