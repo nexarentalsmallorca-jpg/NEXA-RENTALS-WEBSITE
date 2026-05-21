@@ -8,15 +8,18 @@ import {
   type Locale,
 } from "@/i18n/routing";
 import {
+  buildPostHreflangLanguages,
+  blogCanonicalUrl,
+  INDEXABLE_ROBOTS,
+  SITE_URL,
+} from "@/lib/blog-seo";
+import {
   getBlogBySlug,
   getBlogHeroImage,
   getBlogTranslation,
   getBlogsForLocale,
-  hasBlogLocale,
 } from "@/lib/blogs";
 import { getBlogViewCount } from "@/lib/blog-views";
-
-const SITE_URL = "https://www.nexarentals.es";
 
 export const revalidate = 60;
 
@@ -46,21 +49,15 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const blog = getBlogTranslation(post, locale);
   const heroImage = getBlogHeroImage(post.id);
-  const canonical = `${SITE_URL}/${locale}/blog/${blog.slug}`;
+  const canonical = blogCanonicalUrl(locale, blog.slug);
 
   return {
     title: blog.metaTitle,
     description: blog.metaDescription,
+    robots: INDEXABLE_ROBOTS,
     alternates: {
       canonical,
-      languages: Object.fromEntries(
-        locales
-          .filter((loc) => hasBlogLocale(post, loc))
-          .map((loc) => [
-            loc,
-            `${SITE_URL}/${loc}/blog/${getBlogTranslation(post, loc).slug}`,
-          ])
-      ),
+      languages: buildPostHreflangLanguages(post),
     },
     openGraph: {
       title: blog.metaTitle,

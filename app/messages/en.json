@@ -389,11 +389,21 @@
     "depositPolicy": "Deposit Policy",
     "refundPolicy": "Refund Policy",
     "cookies": "Cookies",
-    "aboutNexa": "About NEXA"
+    "aboutNexa": "About NEXA",
+    "rentalGuides": "Rental guides",
+    "blog": "Blog"
   },
   "blog": {
     "metaTitle": "Mallorca Scooter & E-Bike Rental Blog | NEXA Rentals",
     "metaDescription": "In-depth scooter and e-bike rental guides for Magaluf and Mallorca — prices, licenses, deposits, routes and booking tips from NEXA Rentals.",
+    "indexHeading": "Mallorca scooter & e-bike rental guides",
+    "indexIntro": "Browse every NEXA Rentals guide on scooter and e-bike hire in Magaluf and Mallorca — prices, licences, deposits, routes, and booking tips.",
+    "allArticlesNav": "All blog articles",
+    "breadcrumbHome": "Home",
+    "breadcrumbBlog": "Blog",
+    "rentalGuidesTitle": "Mallorca Scooter & E-Bike Rental Guides",
+    "rentalGuidesIntro": "Practical guides on prices, licences, deposits, beach pickup, and booking — written for tourists in Magaluf and Mallorca.",
+    "rentalGuidesViewAll": "View all rental guides →",
     "trending": "Trending",
     "mostPopular": "Most Popular",
     "mostPopularSubtitle": "Top-read guides — ranked live from reader views.",

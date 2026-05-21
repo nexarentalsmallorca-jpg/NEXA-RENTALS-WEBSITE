@@ -12,9 +12,8 @@ import {
   type BlogCategory,
   type BlogTranslation,
 } from "@/lib/blogs";
+import { blogCanonicalUrl, SITE_URL } from "@/lib/blog-seo";
 import type { Locale } from "@/i18n/routing";
-
-const SITE_URL = "https://www.nexarentals.es";
 const PAGE_BG = "#F9F8F7";
 const ORANGE = "#FF7A00";
 const INSTAGRAM_URL = "https://www.instagram.com/nexarentalsmallorca/";
@@ -93,10 +92,11 @@ export default async function BlogArticle({
   initialViewCount = 0,
 }: Props) {
   const t = await getTranslations({ locale, namespace: "blog.article" });
+  const tBlog = await getTranslations({ locale, namespace: "blog" });
   const tCat = await getTranslations({ locale, namespace: "blog.categories" });
   const categoryLabel = tCat(blog.category);
 
-  const articleUrl = `${SITE_URL}/${locale}/blog/${blog.slug}`;
+  const articleUrl = blogCanonicalUrl(locale, blog.slug);
   const bookHref = `/${locale}/vehicles`;
   const publishedLong = formatPublishedDateLong(blog.publishedAt, locale);
 
@@ -126,18 +126,21 @@ export default async function BlogArticle({
     inLanguage: locale,
   };
 
-  const faqJsonLd = {
-    "@context": "https://schema.org",
-    "@type": "FAQPage",
-    mainEntity: blog.faqs.map((faq) => ({
-      "@type": "Question",
-      name: faq.question,
-      acceptedAnswer: {
-        "@type": "Answer",
-        text: faq.answer,
-      },
-    })),
-  };
+  const faqJsonLd =
+    blog.faqs.length > 0
+      ? {
+          "@context": "https://schema.org",
+          "@type": "FAQPage",
+          mainEntity: blog.faqs.map((faq) => ({
+            "@type": "Question",
+            name: faq.question,
+            acceptedAnswer: {
+              "@type": "Answer",
+              text: faq.answer,
+            },
+          })),
+        }
+      : null;
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -146,13 +149,13 @@ export default async function BlogArticle({
       {
         "@type": "ListItem",
         position: 1,
-        name: "Home",
+        name: tBlog("breadcrumbHome"),
         item: `${SITE_URL}/${locale}`,
       },
       {
         "@type": "ListItem",
         position: 2,
-        name: "Blog",
+        name: tBlog("breadcrumbBlog"),
         item: `${SITE_URL}/${locale}/blog`,
       },
       {
@@ -170,10 +173,12 @@ export default async function BlogArticle({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
-      />
+      {faqJsonLd ? (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
+        />
+      ) : null}
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}

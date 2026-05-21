@@ -389,11 +389,21 @@
     "depositPolicy": "Política de Depósito",
     "refundPolicy": "Política de Reembolso",
     "cookies": "Cookies",
-    "aboutNexa": "Sobre a NEXA"
+    "aboutNexa": "Sobre a NEXA",
+    "rentalGuides": "Guias de aluguer",
+    "blog": "Blog"
   },
   "blog": {
     "metaTitle": "Blog de aluguer de scooters e e-bikes em Maiorca | NEXA Rentals",
     "metaDescription": "Guias de aluguer de scooters e e-bikes em Magaluf e Maiorca — preços, carta, caução, rotas e reserva com a NEXA Rentals.",
+    "indexHeading": "Guias de aluguer de scooters e e-bikes em Maiorca",
+    "indexIntro": "Consulte todos os guias NEXA Rentals sobre aluguer de scooters e e-bikes em Magaluf e Maiorca — preços, carta, caução, rotas e reserva.",
+    "allArticlesNav": "Todos os artigos do blog",
+    "breadcrumbHome": "Início",
+    "breadcrumbBlog": "Blog",
+    "rentalGuidesTitle": "Guias de aluguer de scooters e e-bikes em Maiorca",
+    "rentalGuidesIntro": "Guias práticos sobre preços, carta, caução, recolha na praia e reserva para turistas em Magaluf e Maiorca.",
+    "rentalGuidesViewAll": "Ver todos os guias →",
     "trending": "Em destaque",
     "mostPopular": "Mais populares",
     "mostPopularSubtitle": "Guias mais lidos — ordenados por visualizações em tempo real.",

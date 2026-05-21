@@ -389,11 +389,21 @@
     "depositPolicy": "Kautionsrichtlinie",
     "refundPolicy": "Rückerstattungsrichtlinie",
     "cookies": "Cookies",
-    "aboutNexa": "Über NEXA"
+    "aboutNexa": "Über NEXA",
+    "rentalGuides": "Miet-Ratgeber",
+    "blog": "Blog"
   },
   "blog": {
     "metaTitle": "Mallorca Roller- & E-Bike-Mietblog | NEXA Rentals",
     "metaDescription": "Ratgeber zu Roller- und E-Bike-Miete in Magaluf und Mallorca — Preise, Führerschein, Kaution, Routen und Buchungstipps von NEXA Rentals.",
+    "indexHeading": "Mallorca Roller- & E-Bike-Miet-Ratgeber",
+    "indexIntro": "Alle NEXA Rentals Ratgeber zu Roller- und E-Bike-Miete in Magaluf und Mallorca — Preise, Führerschein, Kaution, Routen und Buchung.",
+    "allArticlesNav": "Alle Blog-Artikel",
+    "breadcrumbHome": "Startseite",
+    "breadcrumbBlog": "Blog",
+    "rentalGuidesTitle": "Mallorca Roller- & E-Bike-Miet-Ratgeber",
+    "rentalGuidesIntro": "Praktische Ratgeber zu Preisen, Führerschein, Kaution, Strand-Abholung und Buchung für Touristen in Magaluf und Mallorca.",
+    "rentalGuidesViewAll": "Alle Ratgeber ansehen →",
     "trending": "Trends",
     "mostPopular": "Beliebteste",
     "mostPopularSubtitle": "Meistgelesene Guides — live nach Aufrufen sortiert.",

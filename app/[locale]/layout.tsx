@@ -4,6 +4,7 @@ import { Inter, Playfair_Display, Poppins } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
 
+import FooterMoneyBlogLinks from "../components/FooterMoneyBlogLinks";
 import NexaFooter from "../components/NexaFooter";
 import WhatsAppSupport from "../components/WhatsAppSupport";
 import NeroBookingCopilot from "../components/NeroBookingCopilot";
@@ -37,6 +38,7 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://www.nexarentals.es"),
   title: "Scooter Rental Mallorca | Nexa Rentals Magaluf",
   description:
     "Looking for scooter rental in Mallorca? Nexa Rentals offers premium scooters and e-bikes in Magaluf with fast online booking, modern vehicles, and a smooth rental experience for tourists.",
@@ -61,6 +63,7 @@ export const metadata: Metadata = {
       it: "/it",
       pt: "/pt",
       sv: "/sv",
+      "x-default": "/en",
     },
   },
 };
@@ -107,6 +110,7 @@ export default async function RootLayout({ children, params }: Props) {
             ]}
           />
 
+          <FooterMoneyBlogLinks locale={locale} />
           <NexaFooter />
         </NextIntlClientProvider>
       </body>

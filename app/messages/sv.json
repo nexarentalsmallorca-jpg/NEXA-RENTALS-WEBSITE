@@ -389,11 +389,21 @@
     "depositPolicy": "Depositionspolicy",
     "refundPolicy": "Återbetalningspolicy",
     "cookies": "Cookies",
-    "aboutNexa": "Om NEXA"
+    "aboutNexa": "Om NEXA",
+    "rentalGuides": "Hyrguider",
+    "blog": "Blogg"
   },
   "blog": {
     "metaTitle": "Mallorca scooter- & e-bike-hyrningsblogg | NEXA Rentals",
     "metaDescription": "Guider om scooter- och e-bike-hyrning i Magaluf och Mallorca — priser, körkort, deposition, rutter och bokning med NEXA Rentals.",
+    "indexHeading": "Guider för scooter- och e-bike-hyrning på Mallorca",
+    "indexIntro": "Bläddra bland alla NEXA Rentals-guider om scooter- och e-bike-hyrning i Magaluf och Mallorca — priser, körkort, deposition, rutter och bokning.",
+    "allArticlesNav": "Alla bloggartiklar",
+    "breadcrumbHome": "Hem",
+    "breadcrumbBlog": "Blogg",
+    "rentalGuidesTitle": "Guider för scooter- och e-bike-hyrning på Mallorca",
+    "rentalGuidesIntro": "Praktiska guider om priser, körkort, deposition, hämtning vid stranden och bokning för turister i Magaluf och Mallorca.",
+    "rentalGuidesViewAll": "Visa alla guider →",
     "trending": "Trendar",
     "mostPopular": "Mest populära",
     "mostPopularSubtitle": "Mest lästa guider — rankade efter live-visningar.",

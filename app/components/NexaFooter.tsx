@@ -167,6 +167,10 @@ export default function NexaFooter() {
             <Link href={`/${locale}/about-nexa`} className="transition hover:text-white">
               {t("aboutNexa")}
             </Link>
+
+            <Link href={`/${locale}/blog`} className="transition hover:text-white">
+              {t("blog")}
+            </Link>
           </div>
         </div>
       </div>

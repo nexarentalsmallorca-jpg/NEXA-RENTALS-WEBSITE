@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import BlogRentalGuides from "@/app/components/blog/BlogRentalGuides";
+import { defaultLocale, isValidLocale, type Locale } from "@/i18n/routing";
 
 const ORANGE = "#FF7A00";
 
@@ -9,9 +11,18 @@ export const metadata: Metadata = {
     "Looking for e-bike rental in Mallorca? Nexa Rentals offers premium electric bikes in Magaluf with fast online booking and a smooth rental experience for tourists.",
 };
 
-export default function EBikeRentalMallorcaPage() {
+type Props = {
+  params: Promise<{ locale: string }>;
+};
+
+export default async function EBikeRentalMallorcaPage({ params }: Props) {
+  const { locale: requestedLocale } = await params;
+  const locale: Locale = isValidLocale(requestedLocale)
+    ? requestedLocale
+    : defaultLocale;
+
   return (
-    <main className="min-h-screen bg-black text-white">
+    <main className="min-h-screen overflow-x-clip bg-black text-white">
       <section className="relative overflow-hidden border-b border-white/10 bg-[radial-gradient(circle_at_top,rgba(255,122,0,0.18),transparent_28%),linear-gradient(180deg,#070707_0%,#0B0B0B_100%)]">
         <div className="mx-auto max-w-6xl px-4 py-16 md:px-6 md:py-24">
           <div className="max-w-4xl">
@@ -32,7 +43,7 @@ export default function EBikeRentalMallorcaPage() {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href="/vehicles"
+                href={`/${locale}/vehicles`}
                 className="inline-flex min-h-[52px] items-center justify-center rounded-xl px-6 text-sm font-semibold text-black transition hover:scale-[1.02]"
                 style={{
                   background: `linear-gradient(135deg, ${ORANGE} 0%, #ff9a3d 100%)`,
@@ -43,7 +54,7 @@ export default function EBikeRentalMallorcaPage() {
               </Link>
 
               <Link
-                href="/"
+                href={`/${locale}`}
                 className="inline-flex min-h-[52px] items-center justify-center rounded-xl border border-white/15 bg-white/5 px-6 text-sm font-semibold text-white transition hover:border-white/25 hover:bg-white/10"
               >
                 Book Online
@@ -163,7 +174,7 @@ export default function EBikeRentalMallorcaPage() {
 
           <div className="mt-8 flex flex-wrap gap-4">
             <Link
-              href="/vehicles"
+              href={`/${locale}/vehicles`}
               className="inline-flex min-h-[52px] items-center justify-center rounded-xl px-6 text-sm font-semibold text-black transition hover:scale-[1.02]"
               style={{
                 background: `linear-gradient(135deg, ${ORANGE} 0%, #ff9a3d 100%)`,
@@ -174,13 +185,17 @@ export default function EBikeRentalMallorcaPage() {
             </Link>
 
             <Link
-              href="/"
+              href={`/${locale}`}
               className="inline-flex min-h-[52px] items-center justify-center rounded-xl border border-white/15 bg-white/5 px-6 text-sm font-semibold text-white transition hover:border-white/25 hover:bg-white/10"
             >
               Start Booking
             </Link>
           </div>
         </div>
+      </section>
+
+      <section className="mx-auto max-w-6xl px-4 pb-16 md:px-6">
+        <BlogRentalGuides locale={locale} variant="dark" />
       </section>
     </main>
   );

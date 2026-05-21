@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
 
+import BlogRentalGuides from "@/app/components/blog/BlogRentalGuides";
 import HomeClientV2 from "../HomeClientV2";
 import { defaultLocale, isValidLocale, type Locale } from "../../i18n/routing";
 
@@ -25,8 +26,15 @@ export default async function Page({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <Suspense fallback={null}>
-      <HomeClientV2 key={locale} />
-    </Suspense>
+    <>
+      <Suspense fallback={null}>
+        <HomeClientV2 key={locale} />
+      </Suspense>
+      <div className="bg-[#0f1115] px-4 py-10 sm:px-6">
+        <div className="mx-auto max-w-6xl">
+          <BlogRentalGuides locale={locale} variant="dark" />
+        </div>
+      </div>
+    </>
   );
 }

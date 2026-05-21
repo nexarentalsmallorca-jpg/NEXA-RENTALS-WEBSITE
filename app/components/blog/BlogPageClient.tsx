@@ -176,9 +176,9 @@ function FeaturedBlock({
           {tCat(post.category)} · {post.readTime}
         </p>
 
-        <h1 className="mt-3 break-words font-[family-name:var(--font-playfair)] text-[1.45rem] font-semibold leading-[1.12] tracking-[-0.02em] text-stone-950 sm:mt-4 sm:text-[2rem] lg:text-[2.35rem] xl:text-[2.5rem]">
+        <h2 className="mt-3 break-words font-[family-name:var(--font-playfair)] text-[1.45rem] font-semibold leading-[1.12] tracking-[-0.02em] text-stone-950 sm:mt-4 sm:text-[2rem] lg:text-[2.35rem] xl:text-[2.5rem]">
           {post.title}
-        </h1>
+        </h2>
 
         <PublishedBy publishedAt={post.publishedAt} large className="mt-4 sm:mt-5" />
 
