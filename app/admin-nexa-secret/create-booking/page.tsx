@@ -3,6 +3,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import AdminShell from "../../components/dashboard/AdminShell";
 import { nexaFleet } from "../../../lib/nexaFleet";
+import {
+  getManualBookingsFromLocalStorage,
+  setManualBookingsLocalStorage,
+  stripBookingForLocalStorage,
+} from "@/lib/manualBookingsLocalStorage";
 
 type PaymentMethod = "cash" | "card" | "";
 type BookingAction = "rent_now" | "reserve_now";
@@ -380,17 +385,7 @@ function getStatusFromBookingAction(value: BookingAction) {
 }
 
 function getStoredBookings(): ManualBooking[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const saved = JSON.parse(
-      localStorage.getItem("nexa_manual_bookings") || "[]"
-    );
-
-    return Array.isArray(saved) ? saved : [];
-  } catch {
-    return [];
-  }
+  return getManualBookingsFromLocalStorage<ManualBooking>();
 }
 
 function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
@@ -960,29 +955,44 @@ export default function CreateBookingPage() {
 
   function saveBookingToLocalStorage(bookingToSave: ManualBooking) {
     const currentBookings = getStoredBookings();
-    const updatedBookings = [bookingToSave, ...currentBookings];
+    const updatedBookings = [
+      stripBookingForLocalStorage(bookingToSave),
+      ...currentBookings,
+    ];
 
-    localStorage.setItem(
-      "nexa_manual_bookings",
-      JSON.stringify(updatedBookings)
-    );
-
-    setManualBookings(updatedBookings);
+    try {
+      setManualBookingsLocalStorage(updatedBookings);
+      setManualBookings(updatedBookings);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo guardar la reserva en el navegador.";
+      setContractStatus(message);
+      throw error;
+    }
   }
 
   function updateBookingInLocalStorage(updatedBooking: ManualBooking) {
     const latestBookings = getStoredBookings();
 
     const replacedBookings = latestBookings.map((booking) =>
-      booking.id === updatedBooking.id ? updatedBooking : booking
+      booking.id === updatedBooking.id
+        ? stripBookingForLocalStorage(updatedBooking)
+        : booking
     );
 
-    localStorage.setItem(
-      "nexa_manual_bookings",
-      JSON.stringify(replacedBookings)
-    );
-
-    setManualBookings(replacedBookings);
+    try {
+      setManualBookingsLocalStorage(replacedBookings);
+      setManualBookings(replacedBookings);
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "No se pudo actualizar la reserva en el navegador.";
+      setContractStatus(message);
+      throw error;
+    }
   }
 
   async function generateContractPdf(newBooking: ManualBooking) {
@@ -1044,8 +1054,6 @@ export default function CreateBookingPage() {
         ...newBooking,
         contractPdf: {
           fileName: String(data.fileName || ""),
-          pdfBase64:
-            typeof data.pdfBase64 === "string" ? data.pdfBase64 : undefined,
           storagePath: storage?.path,
           signedUrl: storage?.signedUrl,
           drive: data.drive,
@@ -1053,7 +1061,22 @@ export default function CreateBookingPage() {
         },
       };
 
-      updateBookingInLocalStorage(updatedBooking);
+      try {
+        updateBookingInLocalStorage(updatedBooking);
+      } catch (storageError: unknown) {
+        const msg =
+          storageError instanceof Error
+            ? storageError.message
+            : "Error al guardar en el navegador.";
+        if (storage?.ok || drive?.uploaded) {
+          setContractStatus(
+            `PDF en Supabase/Drive OK, pero ${msg} Abre Contratos para ver el PDF.`
+          );
+        } else {
+          setContractStatus(msg);
+        }
+        return;
+      }
 
       const driveReason =
         String(data.googleDriveReason || "") ||

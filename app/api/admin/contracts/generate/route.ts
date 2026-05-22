@@ -549,7 +549,10 @@ export async function POST(request: NextRequest) {
       fileName,
     });
 
-    const pdfBase64 = bufferToBase64(Buffer.from(pdfBuffer));
+    const includePdfBase64 = !storageResult.ok;
+    const pdfBase64 = includePdfBase64
+      ? bufferToBase64(Buffer.from(pdfBuffer))
+      : undefined;
 
     return NextResponse.json({
       ok: true,

@@ -2,6 +2,11 @@
 
 import { useEffect, useMemo, useState } from "react";
 import AdminShell from "../../components/dashboard/AdminShell";
+import {
+  getManualBookingsFromLocalStorage,
+  setManualBookingsLocalStorage,
+  stripContractPdfForLocalStorage,
+} from "@/lib/manualBookingsLocalStorage";
 
 type ContractBooking = {
   id?: string;
@@ -61,17 +66,7 @@ type ApiBookingRow = ContractBooking & {
 };
 
 function getStoredManualBookings(): ContractBooking[] {
-  if (typeof window === "undefined") return [];
-
-  try {
-    const saved = JSON.parse(
-      localStorage.getItem("nexa_manual_bookings") || "[]"
-    );
-
-    return Array.isArray(saved) ? saved : [];
-  } catch {
-    return [];
-  }
+  return getManualBookingsFromLocalStorage<ContractBooking>();
 }
 
 function saveContractPdfToLocalStorage(
@@ -86,10 +81,16 @@ function saveContractPdfToLocalStorage(
     (item) => getContractNumber(item) === contractNumber
   );
 
+  const safePdf = stripContractPdfForLocalStorage(
+    contractPdf as NonNullable<ContractBooking["contractPdf"]> & {
+      pdfBase64?: string;
+    }
+  ) as ContractBooking["contractPdf"];
+
   const merged: ContractBooking =
     index >= 0
-      ? { ...saved[index], contractPdf }
-      : { ...booking, contractPdf };
+      ? { ...saved[index], contractPdf: safePdf }
+      : { ...booking, contractPdf: safePdf };
 
   if (index >= 0) {
     saved[index] = merged;
@@ -97,7 +98,7 @@ function saveContractPdfToLocalStorage(
     saved.unshift(merged);
   }
 
-  localStorage.setItem("nexa_manual_bookings", JSON.stringify(saved));
+  setManualBookingsLocalStorage(saved);
 }
 
 function cleanText(value: any) {
@@ -528,7 +529,6 @@ export default function ContractsPage() {
 
       const contractPdf = {
         fileName: data.fileName,
-        pdfBase64: data.pdfBase64 || undefined,
         storagePath: data.storage?.path,
         signedUrl: data.storage?.signedUrl,
         drive: data.drive,
