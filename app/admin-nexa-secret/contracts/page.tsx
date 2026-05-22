@@ -43,6 +43,8 @@ type ContractBooking = {
   contractPdf?: {
     fileName?: string;
     pdfBase64?: string;
+    storagePath?: string;
+    signedUrl?: string;
     drive?: {
       uploaded?: boolean;
       webViewLink?: string;
@@ -241,9 +243,26 @@ function getCreatedAt(booking: ContractBooking) {
 function hasPdf(booking: ContractBooking) {
   return Boolean(
     booking.contractPdf?.pdfBase64 ||
+      booking.contractPdf?.signedUrl ||
+      booking.contractPdf?.storagePath ||
       booking.contractPdf?.drive?.webViewLink ||
       booking.contractPdf?.drive?.webContentLink
   );
+}
+
+async function openStorageContractPdf(storagePath: string) {
+  const response = await fetch(
+    `/api/admin/contracts/file?path=${encodeURIComponent(storagePath)}`,
+    { cache: "no-store" }
+  );
+
+  const data = await response.json();
+
+  if (!data?.ok || !data?.signedUrl) {
+    throw new Error(data?.error || "Could not load contract PDF from storage.");
+  }
+
+  window.open(data.signedUrl, "_blank", "noopener,noreferrer");
 }
 
 function isDriveUploaded(booking: ContractBooking) {
@@ -293,13 +312,28 @@ function downloadPdfBase64(base64: string, fileName: string) {
   }, 60_000);
 }
 
-function handleDownload(booking: ContractBooking) {
+async function handleDownload(booking: ContractBooking) {
   const fileName = getContractFileName(booking);
   const pdfBase64 = booking.contractPdf?.pdfBase64;
 
   if (pdfBase64) {
     downloadPdfBase64(pdfBase64, fileName);
     return;
+  }
+
+  if (booking.contractPdf?.signedUrl) {
+    window.open(booking.contractPdf.signedUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  if (booking.contractPdf?.storagePath) {
+    try {
+      await openStorageContractPdf(booking.contractPdf.storagePath);
+      return;
+    } catch (error: any) {
+      alert(error?.message || "Could not download contract PDF.");
+      return;
+    }
   }
 
   const driveDownload =
@@ -314,12 +348,27 @@ function handleDownload(booking: ContractBooking) {
   alert("This contract PDF is not available yet.");
 }
 
-function handlePrint(booking: ContractBooking) {
+async function handlePrint(booking: ContractBooking) {
   const pdfBase64 = booking.contractPdf?.pdfBase64;
 
   if (pdfBase64) {
     openPdfBase64(pdfBase64);
     return;
+  }
+
+  if (booking.contractPdf?.signedUrl) {
+    window.open(booking.contractPdf.signedUrl, "_blank", "noopener,noreferrer");
+    return;
+  }
+
+  if (booking.contractPdf?.storagePath) {
+    try {
+      await openStorageContractPdf(booking.contractPdf.storagePath);
+      return;
+    } catch (error: any) {
+      alert(error?.message || "Could not open contract PDF.");
+      return;
+    }
   }
 
   const driveLink =

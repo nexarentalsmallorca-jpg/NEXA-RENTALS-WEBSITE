@@ -954,6 +954,28 @@ function normalizeBookingForDashboard(row: any) {
       assignedVehicleCode,
       fleetGroup,
     },
+
+    contractPdf: buildContractPdfFromRow(row),
+  };
+}
+
+function buildContractPdfFromRow(row: any) {
+  const storagePath = cleanText(row.contract_pdf_path);
+  const driveLink = cleanText(row.google_drive_file_link);
+
+  if (!storagePath && !driveLink) return undefined;
+
+  return {
+    fileName: cleanText(row.contract_pdf_name) || undefined,
+    storagePath: storagePath || undefined,
+    drive: driveLink
+      ? {
+          uploaded: true,
+          webViewLink: driveLink,
+          webContentLink: driveLink,
+          fileName: cleanText(row.contract_pdf_name) || undefined,
+        }
+      : undefined,
   };
 }
 

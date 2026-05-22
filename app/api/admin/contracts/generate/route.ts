@@ -1,8 +1,15 @@
 import React from "react";
 import { NextRequest, NextResponse } from "next/server";
-import { renderToStream } from "@react-pdf/renderer";
+import { renderToBuffer } from "@react-pdf/renderer";
 import NexaContractPDF from "../../../../components/contracts/NexaContractPDF";
-import { uploadContractPdfToGoogleDrive } from "@/lib/googleDrive";
+import {
+  persistContractPdfToSupabaseStorage,
+  tryUpdateBookingContractMetadata,
+} from "@/lib/contractPdfStorage";
+import {
+  getCustomerFolderNameFromFileName,
+  uploadContractPdfToGoogleDrive,
+} from "@/lib/googleDrive";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -322,24 +329,6 @@ function bufferToBase64(buffer: Buffer) {
   return buffer.toString("base64");
 }
 
-async function streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
-  const chunks: Buffer[] = [];
-
-  return new Promise((resolve, reject) => {
-    stream.on("data", (chunk) => {
-      chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
-    });
-
-    stream.on("end", () => {
-      resolve(Buffer.concat(chunks));
-    });
-
-    stream.on("error", (error) => {
-      reject(error);
-    });
-  });
-}
-
 async function safeUploadToGoogleDrive({
   booking,
   fileName,
@@ -349,7 +338,7 @@ async function safeUploadToGoogleDrive({
   fileName: string;
   pdfBuffer: Buffer;
 }): Promise<DriveUploadResult> {
-  const customerFolderName = createCustomerFolderName(booking);
+  const customerFolderName = getCustomerFolderNameFromFileName(fileName);
 
   try {
     console.log("📤 Starting contract Google Drive upload from generate route:", {
@@ -464,14 +453,17 @@ export async function POST(request: NextRequest) {
     }
 
     const fileName = createContractFileName(booking);
-    const customerFolderName = createCustomerFolderName(booking);
+    const customerFolderName = getCustomerFolderNameFromFileName(fileName);
+    const bookingKey =
+      cleanText(booking?.id) ||
+      getContractNumber(booking) ||
+      `booking_${Date.now()}`;
 
     const pdfDocument = React.createElement(NexaContractPDF as any, {
       booking: booking as any,
     });
 
-    const pdfStream = await renderToStream(pdfDocument as any);
-    const pdfBuffer = await streamToBuffer(pdfStream as NodeJS.ReadableStream);
+    const pdfBuffer = await renderToBuffer(pdfDocument as any);
 
     if (!pdfBuffer || pdfBuffer.length === 0) {
       return NextResponse.json(
@@ -489,11 +481,31 @@ export async function POST(request: NextRequest) {
       pdfBuffer,
     });
 
+    const storageResult = await persistContractPdfToSupabaseStorage({
+      bookingKey,
+      fileName,
+      pdfBuffer: Buffer.from(pdfBuffer),
+    });
+
+    const metadataUpdate = storageResult.ok
+      ? await tryUpdateBookingContractMetadata({
+          bookingKey,
+          contractNumber: getContractNumber(booking),
+          storage: storageResult,
+          drive: driveResult,
+          fileName,
+        })
+      : { ok: false };
+
+    const pdfOk = Boolean(driveResult?.uploaded) || storageResult.ok;
+
     return NextResponse.json({
-      ok: true,
+      ok: pdfOk,
       fileName,
       customerFolderName,
-      pdfBase64: bufferToBase64(pdfBuffer),
+      pdfBase64: bufferToBase64(Buffer.from(pdfBuffer)),
+      storage: storageResult,
+      bookingMetadataUpdated: Boolean(metadataUpdate?.ok),
       drive: driveResult,
       googleDriveUploaded: Boolean(driveResult?.uploaded),
       googleDriveFailed: Boolean(driveResult?.failed),
@@ -501,6 +513,17 @@ export async function POST(request: NextRequest) {
       googleDriveFileLink: driveResult?.webViewLink || null,
       googleDriveFolderLink: driveResult?.folderWebViewLink || null,
       googleDriveReason: driveResult?.reason || driveResult?.error || null,
+      warnings: [
+        !storageResult.ok
+          ? storageResult.error || "Contract PDF was not saved to Supabase storage."
+          : null,
+        driveResult?.failed
+          ? driveResult?.reason || driveResult?.error || "Google Drive upload failed."
+          : null,
+        driveResult?.skipped
+          ? driveResult?.reason || "Google Drive upload skipped."
+          : null,
+      ].filter(Boolean),
     });
   } catch (error: any) {
     console.error("❌ Contract generation error:", {

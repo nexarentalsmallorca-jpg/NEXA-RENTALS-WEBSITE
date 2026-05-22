@@ -53,9 +53,37 @@ function ensurePdfFileName(fileName: string) {
   return `${safeName}.pdf`;
 }
 
-function getCustomerFolderNameFromFileName(fileName: string) {
+export function getCustomerFolderNameFromFileName(fileName: string) {
   const withoutPdf = fileName.replace(/\.pdf$/i, "");
   return sanitizeDriveName(withoutPdf || "NEXA_CUSTOMER_CONTRACT");
+}
+
+function getContractsParentFolderCandidates(): string[] {
+  const fromEnv = cleanText(process.env.GOOGLE_DRIVE_CONTRACTS_FOLDER_NAME);
+
+  const defaults = [
+    "NEXA Rentals Contract",
+    "NEXA Rentals Contracts",
+    "NEXA_Rentals_Contract",
+    "NEXA_Rentals_Contracts",
+  ];
+
+  return Array.from(
+    new Set([fromEnv, ...defaults].filter(Boolean) as string[])
+  );
+}
+
+function getFolderNameSearchVariants(folderName: string) {
+  const raw = cleanText(folderName);
+  const sanitized = sanitizeDriveName(raw);
+
+  return Array.from(
+    new Set(
+      [raw, sanitized, raw.replace(/_/g, " "), sanitized.replace(/_/g, " ")].filter(
+        Boolean
+      )
+    )
+  );
 }
 
 function createFinalCustomerFolderName({
@@ -130,6 +158,46 @@ function getOAuthDriveClient() {
     version: "v3",
     auth: oauth2Client,
   });
+}
+
+async function findFolderByNameGlobally({
+  drive,
+  folderName,
+}: {
+  drive: any;
+  folderName: string;
+}): Promise<DriveFolderResult | null> {
+  const variants = getFolderNameSearchVariants(folderName);
+
+  for (const variant of variants) {
+    const query = [
+      `name = '${escapeDriveQueryValue(variant)}'`,
+      `mimeType = 'application/vnd.google-apps.folder'`,
+      "trashed = false",
+    ].join(" and ");
+
+    const result = await drive.files.list({
+      q: query,
+      fields: "files(id, name, webViewLink)",
+      spaces: "drive",
+      supportsAllDrives: true,
+      includeItemsFromAllDrives: true,
+      pageSize: 5,
+    });
+
+    const folder = result.data.files?.[0];
+
+    if (folder?.id) {
+      return {
+        id: folder.id,
+        name: folder.name || variant,
+        webViewLink: folder.webViewLink || null,
+        existed: true,
+      };
+    }
+  }
+
+  return null;
 }
 
 async function findFolderInGoogleDrive({
@@ -246,35 +314,54 @@ async function getOrCreateContractsParentFolder({
     return cleanConfiguredId;
   }
 
-  const parentFolderName = sanitizeDriveName(
-    process.env.GOOGLE_DRIVE_CONTRACTS_FOLDER_NAME ||
-      "NEXA_Rentals_Contracts"
+  const candidates = getContractsParentFolderCandidates();
+
+  console.log(
+    "⚠️ GOOGLE_DRIVE_CONTRACTS_FOLDER_ID missing. Searching for parent folder:",
+    { candidates }
   );
 
-  console.log("⚠️ GOOGLE_DRIVE_CONTRACTS_FOLDER_ID missing. Will find/create parent folder:", {
-    parentFolderName,
-  });
-
-  const existingFolder = await findFolderInGoogleDrive({
-    drive,
-    parentFolderId: "root",
-    folderName: parentFolderName,
-  });
-
-  if (existingFolder?.id) {
-    console.log("✅ Existing parent contracts folder found:", {
-      parentFolderId: existingFolder.id,
-      parentFolderName: existingFolder.name,
-      parentFolderLink: existingFolder.webViewLink,
+  for (const candidate of candidates) {
+    const existingGlobal = await findFolderByNameGlobally({
+      drive,
+      folderName: candidate,
     });
 
-    return existingFolder.id;
+    if (existingGlobal?.id) {
+      console.log("✅ Existing parent contracts folder found (global search):", {
+        parentFolderId: existingGlobal.id,
+        parentFolderName: existingGlobal.name,
+        parentFolderLink: existingGlobal.webViewLink,
+        searchedAs: candidate,
+      });
+
+      return existingGlobal.id;
+    }
+
+    const existingInRoot = await findFolderInGoogleDrive({
+      drive,
+      parentFolderId: "root",
+      folderName: candidate,
+    });
+
+    if (existingInRoot?.id) {
+      console.log("✅ Existing parent contracts folder found (root):", {
+        parentFolderId: existingInRoot.id,
+        parentFolderName: existingInRoot.name,
+        parentFolderLink: existingInRoot.webViewLink,
+        searchedAs: candidate,
+      });
+
+      return existingInRoot.id;
+    }
   }
+
+  const createName = sanitizeDriveName(candidates[0] || "NEXA_Rentals_Contracts");
 
   const createdFolder = await createFolderInGoogleDrive({
     drive,
     parentFolderId: "root",
-    folderName: parentFolderName,
+    folderName: createName,
   });
 
   if (!createdFolder.id) {
@@ -453,16 +540,19 @@ export async function uploadContractPdfToGoogleDrive({
 
     const safeFileName = ensurePdfFileName(fileName);
 
-    const finalCustomerFolderName = createFinalCustomerFolderName({
-      fileName,
-      folderName,
-      customerFolderName,
-      customerName,
-      contractDate,
-      contractNumber,
-      vehicleCode,
-      vehiclePlate,
-    });
+    // Subfolder name matches the PDF file name (without .pdf), per NEXA workflow.
+    const finalCustomerFolderName =
+      getCustomerFolderNameFromFileName(safeFileName) ||
+      createFinalCustomerFolderName({
+        fileName,
+        folderName,
+        customerFolderName,
+        customerName,
+        contractDate,
+        contractNumber,
+        vehicleCode,
+        vehiclePlate,
+      });
 
     console.log("✅ Google Drive upload names prepared:", {
       parentFolderId,

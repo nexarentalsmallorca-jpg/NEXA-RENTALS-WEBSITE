@@ -1004,9 +1004,14 @@ export default function CreateBookingPage() {
       const data = await response.json();
 
       if (!data.ok) {
-        console.error("PDF generation failed:", data.error);
+        console.error("PDF generation failed:", data.error, data.warnings);
+        const warningText = Array.isArray(data.warnings)
+          ? data.warnings.join(" ")
+          : "";
         setContractStatus(
-          data.error ||
+          [data.error, warningText]
+            .filter(Boolean)
+            .join(" ") ||
             "La reserva se ha guardado, pero el PDF no se pudo generar."
         );
         return;
@@ -1017,6 +1022,8 @@ export default function CreateBookingPage() {
         contractPdf: {
           fileName: data.fileName,
           pdfBase64: data.pdfBase64,
+          storagePath: data.storage?.path,
+          signedUrl: data.storage?.signedUrl,
           drive: data.drive,
           generatedAt: new Date().toISOString(),
         },
@@ -1024,16 +1031,36 @@ export default function CreateBookingPage() {
 
       updateBookingInLocalStorage(updatedBooking);
 
-      if (data.drive?.uploaded) {
+      if (data.drive?.uploaded && data.storage?.ok) {
         setContractStatus(
-          `PDF generado y subido a Google Drive: ${data.fileName}`
+          `PDF guardado en Supabase y Google Drive: ${data.fileName}`
+        );
+      } else if (data.drive?.uploaded) {
+        setContractStatus(
+          `PDF subido a Google Drive: ${data.fileName}`
+        );
+      } else if (data.storage?.ok) {
+        setContractStatus(
+          data.drive?.skipped
+            ? `PDF guardado en Supabase. Google Drive pendiente (revisa ENV vars en Vercel): ${data.fileName}`
+            : `PDF guardado en Supabase: ${data.fileName}`
         );
       } else if (data.drive?.skipped) {
         setContractStatus(
-          `PDF generado correctamente. Google Drive está pendiente de configurar con ENV vars.`
+          `PDF generado. Google Drive pendiente de configurar (GOOGLE_DRIVE_* en Vercel).`
+        );
+      } else if (data.drive?.failed) {
+        setContractStatus(
+          `PDF generado y guardado localmente. Google Drive falló: ${
+            data.googleDriveReason || data.drive?.reason || "error desconocido"
+          }`
         );
       } else {
         setContractStatus(`PDF generado correctamente: ${data.fileName}`);
+      }
+
+      if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        console.warn("Contract PDF warnings:", data.warnings);
       }
 
       console.log("PDF contract generated:", data);
