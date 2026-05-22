@@ -331,6 +331,28 @@ function bufferToBase64(buffer: Buffer) {
   return buffer.toString("base64");
 }
 
+const DRIVE_UPLOAD_TIMEOUT_MS = 20_000;
+
+async function withTimeout<T>(
+  promise: Promise<T>,
+  timeoutMs: number,
+  label: string
+): Promise<T> {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new Error(`${label} timed out after ${timeoutMs / 1000}s`));
+    }, timeoutMs);
+  });
+
+  try {
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timer) clearTimeout(timer);
+  }
+}
+
 async function safeUploadToGoogleDrive({
   booking,
   fileName,
@@ -484,17 +506,55 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const driveResult = await safeUploadToGoogleDrive({
-      booking,
-      fileName,
-      pdfBuffer,
-    });
+    let driveResult: DriveUploadResult = {
+      uploaded: false,
+      skipped: true,
+      failed: false,
+      reason: "Google Drive upload not started.",
+    };
 
-    const storageResult = await persistContractPdfToSupabaseStorage({
-      bookingKey,
-      fileName,
-      pdfBuffer: Buffer.from(pdfBuffer),
-    });
+    try {
+      driveResult = await withTimeout(
+        safeUploadToGoogleDrive({
+          booking,
+          fileName,
+          pdfBuffer: Buffer.from(pdfBuffer),
+        }),
+        DRIVE_UPLOAD_TIMEOUT_MS,
+        "Google Drive upload"
+      );
+    } catch (driveError: any) {
+      console.error("❌ Google Drive upload timed out or failed:", driveError);
+      driveResult = {
+        uploaded: false,
+        skipped: false,
+        failed: true,
+        reason: driveError?.message || "Google Drive upload failed.",
+        error: driveError?.message || "Google Drive upload failed.",
+      };
+    }
+
+    let storageResult: Awaited<
+      ReturnType<typeof persistContractPdfToSupabaseStorage>
+    > = { ok: false, error: "Storage upload not started." };
+
+    try {
+      storageResult = await withTimeout(
+        persistContractPdfToSupabaseStorage({
+          bookingKey,
+          fileName,
+          pdfBuffer: Buffer.from(pdfBuffer),
+        }),
+        12_000,
+        "Supabase storage upload"
+      );
+    } catch (storageError: any) {
+      console.error("❌ Supabase storage upload failed:", storageError);
+      storageResult = {
+        ok: false,
+        error: storageError?.message || "Supabase storage upload failed.",
+      };
+    }
 
     const metadataUpdate = storageResult.ok
       ? await tryUpdateBookingContractMetadata({
@@ -506,16 +566,14 @@ export async function POST(request: NextRequest) {
         })
       : { ok: false };
 
+    const pdfBase64 = bufferToBase64(Buffer.from(pdfBuffer));
+
     return NextResponse.json({
       ok: true,
       pdfGenerated: true,
       fileName,
       customerFolderName,
-      // Omit huge base64 when storage succeeded (avoids localStorage / response limits).
-      pdfBase64:
-        storageResult.ok && storageResult.signedUrl
-          ? undefined
-          : bufferToBase64(Buffer.from(pdfBuffer)),
+      pdfBase64,
       storage: storageResult,
       bookingMetadataUpdated: Boolean(metadataUpdate?.ok),
       drive: driveResult,

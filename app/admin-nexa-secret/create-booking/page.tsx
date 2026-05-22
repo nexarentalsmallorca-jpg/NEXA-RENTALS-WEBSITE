@@ -74,6 +74,8 @@ type ManualBooking = {
   contractPdf?: {
     fileName?: string;
     pdfBase64?: string;
+    storagePath?: string;
+    signedUrl?: string;
     drive?: any;
     generatedAt?: string;
   };
@@ -995,38 +997,57 @@ export default function CreateBookingPage() {
         },
         body: JSON.stringify({
           booking: newBooking,
-          existingBookings: allBookings.filter(
-            (booking) => booking.id !== newBooking.id
-          ),
+          skipOverlapCheck: true,
         }),
       });
 
-      const data = await response.json();
+      const rawText = await response.text();
+      let data: Record<string, unknown> = {};
+
+      try {
+        data = rawText ? JSON.parse(rawText) : {};
+      } catch {
+        throw new Error(
+          response.ok
+            ? "Invalid server response while generating PDF."
+            : `PDF API error (${response.status}): ${rawText.slice(0, 200)}`
+        );
+      }
+
+      const storage = data.storage as
+        | { signedUrl?: string; path?: string; ok?: boolean }
+        | undefined;
+      const drive = data.drive as { uploaded?: boolean } | undefined;
 
       const hasPdfArtifact =
-        data.pdfBase64 || data.storage?.signedUrl || data.storage?.path;
+        data.pdfBase64 || storage?.signedUrl || storage?.path;
 
-      if (!data.ok && !hasPdfArtifact) {
+      if (!response.ok || (!data.ok && !hasPdfArtifact)) {
         console.error("PDF generation failed:", data.error, data.warnings);
         const warningText = Array.isArray(data.warnings)
           ? data.warnings.join(" ")
           : "";
         setContractStatus(
-          [data.error, warningText]
+          [
+            !response.ok ? `HTTP ${response.status}` : null,
+            data.error,
+            warningText,
+          ]
             .filter(Boolean)
-            .join(" ") ||
+            .join(" — ") ||
             "La reserva se ha guardado, pero el PDF no se pudo generar."
         );
         return;
       }
 
-      const updatedBooking = {
+      const updatedBooking: ManualBooking = {
         ...newBooking,
         contractPdf: {
-          fileName: data.fileName,
-          pdfBase64: data.pdfBase64 || undefined,
-          storagePath: data.storage?.path,
-          signedUrl: data.storage?.signedUrl,
+          fileName: String(data.fileName || ""),
+          pdfBase64:
+            typeof data.pdfBase64 === "string" ? data.pdfBase64 : undefined,
+          storagePath: storage?.path,
+          signedUrl: storage?.signedUrl,
           drive: data.drive,
           generatedAt: new Date().toISOString(),
         },
@@ -1034,28 +1055,30 @@ export default function CreateBookingPage() {
 
       updateBookingInLocalStorage(updatedBooking);
 
-      if (data.drive?.uploaded && data.storage?.ok) {
+      if (drive?.uploaded && storage?.ok) {
         setContractStatus(
           `PDF guardado en Supabase y Google Drive: ${data.fileName}`
         );
-      } else if (data.drive?.uploaded) {
+      } else if (drive?.uploaded) {
         setContractStatus(
           `PDF subido a Google Drive: ${data.fileName}`
         );
-      } else if (data.storage?.ok) {
+      } else if (storage?.ok) {
         setContractStatus(
-          data.drive?.skipped
+          (data.drive as { skipped?: boolean })?.skipped
             ? `PDF guardado en Supabase. Google Drive pendiente (revisa ENV vars en Vercel): ${data.fileName}`
             : `PDF guardado en Supabase: ${data.fileName}`
         );
-      } else if (data.drive?.skipped) {
+      } else if ((data.drive as { skipped?: boolean })?.skipped) {
         setContractStatus(
           `PDF generado. Google Drive pendiente de configurar (GOOGLE_DRIVE_* en Vercel).`
         );
-      } else if (data.drive?.failed) {
+      } else if ((data.drive as { failed?: boolean })?.failed) {
         setContractStatus(
           `PDF generado y guardado localmente. Google Drive falló: ${
-            data.googleDriveReason || data.drive?.reason || "error desconocido"
+            data.googleDriveReason ||
+            (data.drive as { reason?: string })?.reason ||
+            "error desconocido"
           }`
         );
       } else {
@@ -1067,10 +1090,14 @@ export default function CreateBookingPage() {
       }
 
       console.log("PDF contract generated:", data);
-    } catch (err) {
+    } catch (err: unknown) {
       console.error("PDF generation request failed:", err);
+      const message =
+        err instanceof Error
+          ? err.message
+          : "Error desconocido al generar el PDF.";
       setContractStatus(
-        "La reserva se ha guardado, pero hubo un error al generar el PDF."
+        `La reserva se ha guardado, pero el PDF falló: ${message}`
       );
     } finally {
       setIsGeneratingContract(false);
