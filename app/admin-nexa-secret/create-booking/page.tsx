@@ -1003,7 +1003,10 @@ export default function CreateBookingPage() {
 
       const data = await response.json();
 
-      if (!data.ok) {
+      const hasPdfArtifact =
+        data.pdfBase64 || data.storage?.signedUrl || data.storage?.path;
+
+      if (!data.ok && !hasPdfArtifact) {
         console.error("PDF generation failed:", data.error, data.warnings);
         const warningText = Array.isArray(data.warnings)
           ? data.warnings.join(" ")
@@ -1021,7 +1024,7 @@ export default function CreateBookingPage() {
         ...newBooking,
         contractPdf: {
           fileName: data.fileName,
-          pdfBase64: data.pdfBase64,
+          pdfBase64: data.pdfBase64 || undefined,
           storagePath: data.storage?.path,
           signedUrl: data.storage?.signedUrl,
           drive: data.drive,

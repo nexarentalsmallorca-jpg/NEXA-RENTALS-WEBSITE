@@ -6,6 +6,7 @@ import {
   persistContractPdfToSupabaseStorage,
   tryUpdateBookingContractMetadata,
 } from "@/lib/contractPdfStorage";
+import { normalizeBookingForContractPdf } from "@/lib/contractBookingNormalize";
 import {
   getCustomerFolderNameFromFileName,
   uploadContractPdfToGoogleDrive,
@@ -13,6 +14,7 @@ import {
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 type BookingLike = {
   id?: string;
@@ -400,10 +402,15 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
 
-    const booking = body.booking as BookingLike;
+    const rawBooking = body.booking as BookingLike;
     const existingBookings = Array.isArray(body.existingBookings)
       ? (body.existingBookings as BookingLike[])
       : [];
+    const skipOverlapCheck = Boolean(body.skipOverlapCheck || body.regenerate);
+
+    const booking = normalizeBookingForContractPdf(
+      rawBooking
+    ) as BookingLike;
 
     if (booking?.contractData && !booking.contractData.email) {
       booking.contractData.email = "";
@@ -421,7 +428,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const overlapConflict = checkVehicleOverlap(booking, existingBookings);
+    const overlapConflict = skipOverlapCheck
+      ? null
+      : checkVehicleOverlap(booking, existingBookings);
 
     if (overlapConflict) {
       const vehicleCode = booking?.vehicle?.codigo || "este vehículo";
@@ -497,13 +506,16 @@ export async function POST(request: NextRequest) {
         })
       : { ok: false };
 
-    const pdfOk = Boolean(driveResult?.uploaded) || storageResult.ok;
-
     return NextResponse.json({
-      ok: pdfOk,
+      ok: true,
+      pdfGenerated: true,
       fileName,
       customerFolderName,
-      pdfBase64: bufferToBase64(Buffer.from(pdfBuffer)),
+      // Omit huge base64 when storage succeeded (avoids localStorage / response limits).
+      pdfBase64:
+        storageResult.ok && storageResult.signedUrl
+          ? undefined
+          : bufferToBase64(Buffer.from(pdfBuffer)),
       storage: storageResult,
       bookingMetadataUpdated: Boolean(metadataUpdate?.ok),
       drive: driveResult,
@@ -521,7 +533,7 @@ export async function POST(request: NextRequest) {
           ? driveResult?.reason || driveResult?.error || "Google Drive upload failed."
           : null,
         driveResult?.skipped
-          ? driveResult?.reason || "Google Drive upload skipped."
+          ? driveResult?.reason || "Google Drive upload skipped (check GOOGLE_DRIVE_* env vars)."
           : null,
       ].filter(Boolean),
     });

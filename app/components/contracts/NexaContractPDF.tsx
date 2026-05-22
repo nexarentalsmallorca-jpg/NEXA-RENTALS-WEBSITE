@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import React from "react";
 import {
   Document,
@@ -65,12 +67,26 @@ type BookingData = {
   };
 };
 
-const SITE_URL =
-  process.env.NEXT_PUBLIC_SITE_URL ||
-  process.env.NEXT_PUBLIC_APP_URL ||
-  "https://www.nexarentals.es";
+function getLocalContractLogoPath(): string | null {
+  const candidates = [
+    path.join(process.cwd(), "public", "images", "reallogo.png"),
+    path.join(process.cwd(), "public", "images", "icon-nobg.png"),
+    path.join(process.cwd(), "public", "icon.png"),
+    path.join(process.cwd(), "public", "images", "nexa-logo.png"),
+  ];
 
-const TOP_LOGO_URL = `${SITE_URL}/images/nexa-logo.png`;
+  for (const filePath of candidates) {
+    try {
+      if (fs.existsSync(filePath)) return filePath;
+    } catch {
+      // ignore fs errors in edge runtimes
+    }
+  }
+
+  return null;
+}
+
+const CONTRACT_LOGO_SRC = getLocalContractLogoPath();
 
 const styles = StyleSheet.create({
   page: {
@@ -195,6 +211,12 @@ const styles = StyleSheet.create({
     width: 180,
     height: 76,
     objectFit: "contain",
+  },
+
+  logoFallback: {
+    fontSize: 14,
+    fontFamily: "Helvetica-Bold",
+    color: "#111111",
   },
 
   companyBlock: {
@@ -574,7 +596,11 @@ function FrontHeader({
 
         <View style={styles.headerRow}>
           <View style={styles.logoBlock}>
-            <Image src={TOP_LOGO_URL} style={styles.logo} />
+            {CONTRACT_LOGO_SRC ? (
+              <Image src={CONTRACT_LOGO_SRC} style={styles.logo} />
+            ) : (
+              <Text style={styles.logoFallback}>NEXA RENTALS</Text>
+            )}
           </View>
 
           <View style={styles.companyBlock}>

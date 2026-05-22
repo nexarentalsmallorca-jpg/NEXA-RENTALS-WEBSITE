@@ -74,6 +74,32 @@ function getStoredManualBookings(): ContractBooking[] {
   }
 }
 
+function saveContractPdfToLocalStorage(
+  booking: ContractBooking,
+  contractPdf: NonNullable<ContractBooking["contractPdf"]>
+) {
+  if (typeof window === "undefined") return;
+
+  const contractNumber = getContractNumber(booking);
+  const saved = getStoredManualBookings();
+  const index = saved.findIndex(
+    (item) => getContractNumber(item) === contractNumber
+  );
+
+  const merged: ContractBooking =
+    index >= 0
+      ? { ...saved[index], contractPdf }
+      : { ...booking, contractPdf };
+
+  if (index >= 0) {
+    saved[index] = merged;
+  } else {
+    saved.unshift(merged);
+  }
+
+  localStorage.setItem("nexa_manual_bookings", JSON.stringify(saved));
+}
+
 function cleanText(value: any) {
   return String(value || "").trim();
 }
@@ -414,6 +440,8 @@ export default function ContractsPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState("");
   const [search, setSearch] = useState("");
+  const [generatingContractId, setGeneratingContractId] = useState("");
+  const [generateError, setGenerateError] = useState("");
 
   async function loadContracts() {
     setIsLoading(true);
@@ -458,6 +486,78 @@ export default function ContractsPage() {
       );
     } finally {
       setIsLoading(false);
+    }
+  }
+
+  async function handleGeneratePdf(booking: ContractBooking) {
+    const contractNumber = getContractNumber(booking);
+    setGeneratingContractId(contractNumber);
+    setGenerateError("");
+
+    try {
+      const response = await fetch("/api/admin/contracts/generate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking: {
+            ...booking,
+            id: booking.id || contractNumber,
+            contract_number: contractNumber,
+            customer_name: getCustomerName(booking),
+            phone: getCustomerPhone(booking),
+          },
+          skipOverlapCheck: true,
+          regenerate: true,
+        }),
+      });
+
+      const data = await response.json();
+
+      const hasPdfArtifact =
+        data.pdfBase64 || data.storage?.signedUrl || data.storage?.path;
+
+      if (!data.ok && !hasPdfArtifact) {
+        const message =
+          data.error ||
+          (Array.isArray(data.warnings) ? data.warnings.join(" ") : "") ||
+          "Could not generate contract PDF.";
+        setGenerateError(message);
+        alert(`PDF failed:\n\n${message}`);
+        return;
+      }
+
+      const contractPdf = {
+        fileName: data.fileName,
+        pdfBase64: data.pdfBase64 || undefined,
+        storagePath: data.storage?.path,
+        signedUrl: data.storage?.signedUrl,
+        drive: data.drive,
+        generatedAt: new Date().toISOString(),
+      };
+
+      saveContractPdfToLocalStorage(booking, contractPdf);
+
+      setContracts((prev) =>
+        prev.map((item) =>
+          getContractNumber(item) === contractNumber
+            ? { ...item, contractPdf }
+            : item
+        )
+      );
+
+      if (data.drive?.uploaded) {
+        alert(`PDF generated and saved to Google Drive: ${data.fileName}`);
+      } else if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        alert(`PDF generated. ${data.warnings.join(" ")}`);
+      } else {
+        alert(`PDF generated: ${data.fileName}`);
+      }
+    } catch (err: any) {
+      const message = err?.message || "Contract PDF generation request failed.";
+      setGenerateError(message);
+      alert(message);
+    } finally {
+      setGeneratingContractId("");
     }
   }
 
@@ -625,6 +725,12 @@ export default function ContractsPage() {
               {error}
             </div>
           ) : null}
+
+          {generateError ? (
+            <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-3 text-sm font-bold text-red-300">
+              {generateError}
+            </div>
+          ) : null}
         </section>
 
         <section className="space-y-4">
@@ -716,6 +822,19 @@ export default function ContractsPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-3 xl:justify-end">
+                  {!hasPdf(booking) ? (
+                    <button
+                      type="button"
+                      onClick={() => handleGeneratePdf(booking)}
+                      disabled={generatingContractId === contractNumber}
+                      className="rounded-2xl border border-orange-400/25 bg-orange-500/15 px-4 py-3 text-sm font-black text-orange-200 transition hover:border-orange-300/40 disabled:opacity-50"
+                    >
+                      {generatingContractId === contractNumber
+                        ? "Generating..."
+                        : "Generate PDF"}
+                    </button>
+                  ) : null}
+
                   {booking.contractPdf?.drive?.webViewLink ? (
                     <button
                       type="button"
