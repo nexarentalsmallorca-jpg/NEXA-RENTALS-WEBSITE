@@ -91,11 +91,14 @@ export async function tryUpdateBookingContractMetadata({
   };
   fileName: string;
 }) {
-  if (!storage.ok || !storage.path) return { ok: false };
+  const hasStorage = Boolean(storage.ok && storage.path);
+  const hasDrive = Boolean(drive?.uploaded && drive?.webViewLink);
+
+  if (!hasStorage && !hasDrive) return { ok: false };
 
   const payload: Record<string, string | null> = {
-    contract_pdf_path: storage.path,
-    contract_pdf_name: storage.name || fileName,
+    contract_pdf_path: hasStorage ? storage.path! : null,
+    contract_pdf_name: storage.name || drive?.fileName || fileName,
     google_drive_file_id: drive?.fileId || null,
     google_drive_file_link: drive?.webViewLink || null,
     google_drive_folder_link: drive?.folderWebViewLink || null,

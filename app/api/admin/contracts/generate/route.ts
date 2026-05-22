@@ -331,7 +331,7 @@ function bufferToBase64(buffer: Buffer) {
   return buffer.toString("base64");
 }
 
-const DRIVE_UPLOAD_TIMEOUT_MS = 20_000;
+const DRIVE_UPLOAD_TIMEOUT_MS = 50_000;
 
 async function withTimeout<T>(
   promise: Promise<T>,
@@ -513,26 +513,11 @@ export async function POST(request: NextRequest) {
       reason: "Google Drive upload not started.",
     };
 
-    try {
-      driveResult = await withTimeout(
-        safeUploadToGoogleDrive({
-          booking,
-          fileName,
-          pdfBuffer: Buffer.from(pdfBuffer),
-        }),
-        DRIVE_UPLOAD_TIMEOUT_MS,
-        "Google Drive upload"
-      );
-    } catch (driveError: any) {
-      console.error("❌ Google Drive upload timed out or failed:", driveError);
-      driveResult = {
-        uploaded: false,
-        skipped: false,
-        failed: true,
-        reason: driveError?.message || "Google Drive upload failed.",
-        error: driveError?.message || "Google Drive upload failed.",
-      };
-    }
+    driveResult = await safeUploadToGoogleDrive({
+      booking,
+      fileName,
+      pdfBuffer: Buffer.from(pdfBuffer),
+    });
 
     let storageResult: Awaited<
       ReturnType<typeof persistContractPdfToSupabaseStorage>
@@ -556,15 +541,13 @@ export async function POST(request: NextRequest) {
       };
     }
 
-    const metadataUpdate = storageResult.ok
-      ? await tryUpdateBookingContractMetadata({
-          bookingKey,
-          contractNumber: getContractNumber(booking),
-          storage: storageResult,
-          drive: driveResult,
-          fileName,
-        })
-      : { ok: false };
+    const metadataUpdate = await tryUpdateBookingContractMetadata({
+      bookingKey,
+      contractNumber: getContractNumber(booking),
+      storage: storageResult,
+      drive: driveResult,
+      fileName,
+    });
 
     const pdfBase64 = bufferToBase64(Buffer.from(pdfBuffer));
 

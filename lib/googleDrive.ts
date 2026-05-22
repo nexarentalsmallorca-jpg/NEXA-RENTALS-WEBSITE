@@ -21,6 +21,59 @@ type DriveFolderResult = {
   existed: boolean;
 };
 
+type DriveParentContext = {
+  id: string;
+  name: string;
+  driveId: string | null;
+  isSharedDrive: boolean;
+};
+
+const DRIVE_LIST_DEFAULTS = {
+  spaces: "drive" as const,
+  supportsAllDrives: true,
+  includeItemsFromAllDrives: true,
+};
+
+function formatDriveApiError(error: any) {
+  const apiMessage =
+    error?.response?.data?.error?.message ||
+    error?.errors?.[0]?.message ||
+    error?.message ||
+    "Google Drive upload failed.";
+
+  if (apiMessage.includes("insufficient") || error?.code === 403) {
+    return `${apiMessage} — The Google account for GOOGLE_DRIVE_REFRESH_TOKEN must have Editor access to the contracts folder (GOOGLE_DRIVE_CONTRACTS_FOLDER_ID). Re-authorize with scope https://www.googleapis.com/auth/drive`;
+  }
+
+  return apiMessage;
+}
+
+async function getDriveParentContext(
+  drive: any,
+  parentFolderId: string
+): Promise<DriveParentContext> {
+  const meta = await drive.files.get({
+    fileId: parentFolderId,
+    fields: "id, name, driveId, capabilities",
+    supportsAllDrives: true,
+  });
+
+  const canAddChildren = meta.data.capabilities?.canAddChildren;
+
+  if (canAddChildren === false) {
+    throw new Error(
+      `Google Drive folder "${meta.data.name || parentFolderId}" does not allow creating files. Share it with Editor access for the OAuth Google account.`
+    );
+  }
+
+  return {
+    id: meta.data.id || parentFolderId,
+    name: meta.data.name || "Contracts",
+    driveId: meta.data.driveId || null,
+    isSharedDrive: Boolean(meta.data.driveId),
+  };
+}
+
 function bufferToStream(buffer: Buffer) {
   return Readable.from(buffer);
 }
@@ -179,10 +232,9 @@ async function findFolderByNameGlobally({
     const result = await drive.files.list({
       q: query,
       fields: "files(id, name, webViewLink)",
-      spaces: "drive",
-      supportsAllDrives: true,
-      includeItemsFromAllDrives: true,
+      corpora: "allDrives",
       pageSize: 5,
+      ...DRIVE_LIST_DEFAULTS,
     });
 
     const folder = result.data.files?.[0];
@@ -221,10 +273,9 @@ async function findFolderInGoogleDrive({
   const result = await drive.files.list({
     q: query,
     fields: "files(id, name, webViewLink)",
-    spaces: "drive",
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
+    corpora: "allDrives",
     pageSize: 1,
+    ...DRIVE_LIST_DEFAULTS,
   });
 
   const folder = result.data.files?.[0];
@@ -239,7 +290,7 @@ async function findFolderInGoogleDrive({
   };
 }
 
-async function createFolderInGoogleDrive({
+async function findCustomerFolderInParent({
   drive,
   parentFolderId,
   folderName,
@@ -247,10 +298,36 @@ async function createFolderInGoogleDrive({
   drive: any;
   parentFolderId: string;
   folderName: string;
+}): Promise<DriveFolderResult | null> {
+  const variants = getFolderNameSearchVariants(folderName);
+
+  for (const variant of variants) {
+    const found = await findFolderInGoogleDrive({
+      drive,
+      parentFolderId,
+      folderName: variant,
+    });
+
+    if (found?.id) return found;
+  }
+
+  return null;
+}
+
+async function createFolderInGoogleDrive({
+  drive,
+  parentFolderId,
+  folderName,
+  parentContext,
+}: {
+  drive: any;
+  parentFolderId: string;
+  folderName: string;
+  parentContext?: DriveParentContext | null;
 }): Promise<DriveFolderResult> {
   const safeFolderName = sanitizeDriveName(folderName);
 
-  const existingFolder = await findFolderInGoogleDrive({
+  const existingFolder = await findCustomerFolderInParent({
     drive,
     parentFolderId,
     folderName: safeFolderName,
@@ -280,6 +357,7 @@ async function createFolderInGoogleDrive({
     },
     fields: "id, name, webViewLink",
     supportsAllDrives: true,
+    enforceSingleParent: true,
   });
 
   console.log("✅ Google Drive folder created:", {
@@ -307,11 +385,16 @@ async function getOrCreateContractsParentFolder({
   const cleanConfiguredId = cleanText(configuredParentFolderId);
 
   if (cleanConfiguredId) {
+    const parentContext = await getDriveParentContext(drive, cleanConfiguredId);
+
     console.log("✅ Using configured Google Drive parent folder:", {
-      parentFolderId: cleanConfiguredId,
+      parentFolderId: parentContext.id,
+      parentFolderName: parentContext.name,
+      driveId: parentContext.driveId,
+      isSharedDrive: parentContext.isSharedDrive,
     });
 
-    return cleanConfiguredId;
+    return parentContext.id;
   }
 
   const candidates = getContractsParentFolderCandidates();
@@ -398,10 +481,9 @@ async function findExistingPdfInFolder({
   const result = await drive.files.list({
     q: query,
     fields: "files(id, name, webViewLink, webContentLink)",
-    spaces: "drive",
-    supportsAllDrives: true,
-    includeItemsFromAllDrives: true,
+    corpora: "allDrives",
     pageSize: 1,
+    ...DRIVE_LIST_DEFAULTS,
   });
 
   return result.data.files?.[0] || null;
@@ -538,6 +620,8 @@ export async function uploadContractPdfToGoogleDrive({
       throw new Error("Google Drive parent folder ID is missing or invalid.");
     }
 
+    const parentContext = await getDriveParentContext(drive, parentFolderId);
+
     const safeFileName = ensurePdfFileName(fileName);
 
     // Subfolder name matches the PDF file name (without .pdf), per NEXA workflow.
@@ -555,15 +639,18 @@ export async function uploadContractPdfToGoogleDrive({
       });
 
     console.log("✅ Google Drive upload names prepared:", {
-      parentFolderId,
+      parentFolderId: parentContext.id,
+      parentFolderName: parentContext.name,
+      isSharedDrive: parentContext.isSharedDrive,
       safeFileName,
       finalCustomerFolderName,
     });
 
     const customerFolder = await createFolderInGoogleDrive({
       drive,
-      parentFolderId,
+      parentFolderId: parentContext.id,
       folderName: finalCustomerFolderName,
+      parentContext,
     });
 
     if (!customerFolder.id) {
@@ -576,19 +663,50 @@ export async function uploadContractPdfToGoogleDrive({
       fileName: safeFileName,
     });
 
-    const uploadedFile = await drive.files.create({
-      requestBody: {
-        name: safeFileName,
-        mimeType: "application/pdf",
-        parents: [customerFolder.id],
-      },
-      media: {
-        mimeType: "application/pdf",
-        body: bufferToStream(pdfBuffer),
-      },
-      fields: "id, name, webViewLink, webContentLink",
-      supportsAllDrives: true,
-    });
+    let uploadedFile: any = null;
+    let lastUploadError: any = null;
+
+    for (let attempt = 1; attempt <= 2; attempt += 1) {
+      try {
+        uploadedFile = await drive.files.create({
+          requestBody: {
+            name: safeFileName,
+            mimeType: "application/pdf",
+            parents: [customerFolder.id],
+          },
+          media: {
+            mimeType: "application/pdf",
+            body: bufferToStream(pdfBuffer),
+          },
+          fields: "id, name, webViewLink, webContentLink",
+          supportsAllDrives: true,
+          enforceSingleParent: true,
+        });
+        lastUploadError = null;
+        break;
+      } catch (uploadError: any) {
+        lastUploadError = uploadError;
+        const retryable =
+          uploadError?.code === 503 ||
+          uploadError?.code === 429 ||
+          uploadError?.status === 503;
+
+        console.warn("⚠️ Google Drive PDF upload attempt failed:", {
+          attempt,
+          message: uploadError?.message,
+          code: uploadError?.code,
+          retryable,
+        });
+
+        if (!retryable || attempt === 2) {
+          throw uploadError;
+        }
+      }
+    }
+
+    if (!uploadedFile?.data?.id) {
+      throw lastUploadError || new Error("Google Drive PDF upload returned no file id.");
+    }
 
     console.log("✅ PDF uploaded inside customer Google Drive folder:", {
       fileId: uploadedFile.data.id,
@@ -637,8 +755,8 @@ export async function uploadContractPdfToGoogleDrive({
       uploaded: false,
       skipped: false,
       failed: true,
-      reason: error?.message || "Google Drive upload failed.",
-      error: error?.message || "Google Drive upload failed.",
+      reason: formatDriveApiError(error),
+      error: formatDriveApiError(error),
 
       fileId: null,
       fileName: null,

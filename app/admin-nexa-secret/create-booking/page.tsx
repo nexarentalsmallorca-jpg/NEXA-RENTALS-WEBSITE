@@ -1055,6 +1055,10 @@ export default function CreateBookingPage() {
 
       updateBookingInLocalStorage(updatedBooking);
 
+      const driveReason =
+        String(data.googleDriveReason || "") ||
+        String((data.drive as { reason?: string })?.reason || "");
+
       if (drive?.uploaded && storage?.ok) {
         setContractStatus(
           `PDF guardado en Supabase y Google Drive: ${data.fileName}`
@@ -1062,6 +1066,10 @@ export default function CreateBookingPage() {
       } else if (drive?.uploaded) {
         setContractStatus(
           `PDF subido a Google Drive: ${data.fileName}`
+        );
+      } else if (storage?.ok && (data.drive as { failed?: boolean })?.failed) {
+        setContractStatus(
+          `PDF guardado en Supabase. Google Drive NO subió: ${driveReason || "sin permiso o timeout — revisa Vercel env y acceso a la carpeta NEXA Rentals Contract"}`
         );
       } else if (storage?.ok) {
         setContractStatus(
@@ -1075,11 +1083,7 @@ export default function CreateBookingPage() {
         );
       } else if ((data.drive as { failed?: boolean })?.failed) {
         setContractStatus(
-          `PDF generado y guardado localmente. Google Drive falló: ${
-            data.googleDriveReason ||
-            (data.drive as { reason?: string })?.reason ||
-            "error desconocido"
-          }`
+          `PDF generado. Google Drive falló: ${driveReason || "error desconocido"}`
         );
       } else {
         setContractStatus(`PDF generado correctamente: ${data.fileName}`);
