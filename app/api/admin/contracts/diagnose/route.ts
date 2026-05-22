@@ -9,18 +9,15 @@ import { normalizeBookingForContractPdf } from "@/lib/contractBookingNormalize";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const LOGO_CANDIDATES = [
-  "public/images/reallogo.png",
-  "public/images/icon-nobg.png",
-  "public/icon.png",
-  "public/images/nexa-logo.png",
-];
+const CONTRACT_LOGO_PATH = "public/images/nexa-logo.png";
 
 export async function GET() {
-  const logos = LOGO_CANDIDATES.map((relative) => {
-    const absolute = path.join(process.cwd(), relative);
-    return { path: relative, exists: fs.existsSync(absolute) };
-  });
+  const contractLogoPath = path.join(process.cwd(), CONTRACT_LOGO_PATH);
+  const logos = {
+    path: CONTRACT_LOGO_PATH,
+    exists: fs.existsSync(contractLogoPath),
+    usedInContracts: true,
+  };
 
   const googleDrive = {
     clientId: Boolean(process.env.GOOGLE_DRIVE_CLIENT_ID?.trim()),
@@ -68,6 +65,6 @@ export async function GET() {
     googleDrive,
     supabase,
     pdfTest,
-    deployedFix: "Uses local logo path, not /images/nexa-logo.png",
+    deployedFix: "Contract PDF uses public/images/nexa-logo.png",
   });
 }

@@ -67,26 +67,22 @@ type BookingData = {
   };
 };
 
-function getLocalContractLogoPath(): string | null {
-  const candidates = [
-    path.join(process.cwd(), "public", "images", "reallogo.png"),
-    path.join(process.cwd(), "public", "images", "icon-nobg.png"),
-    path.join(process.cwd(), "public", "icon.png"),
-    path.join(process.cwd(), "public", "images", "nexa-logo.png"),
-  ];
+const CONTRACT_LOGO_PATH = path.join(
+  process.cwd(),
+  "public",
+  "images",
+  "nexa-logo.png"
+);
 
-  for (const filePath of candidates) {
-    try {
-      if (fs.existsSync(filePath)) return filePath;
-    } catch {
-      // ignore fs errors in edge runtimes
-    }
+function getContractLogoPath(): string | null {
+  try {
+    return fs.existsSync(CONTRACT_LOGO_PATH) ? CONTRACT_LOGO_PATH : null;
+  } catch {
+    return null;
   }
-
-  return null;
 }
 
-const CONTRACT_LOGO_SRC = getLocalContractLogoPath();
+const CONTRACT_LOGO_SRC = getContractLogoPath();
 
 const styles = StyleSheet.create({
   page: {
