@@ -3,6 +3,9 @@
     "app/api/admin/contracts/generate/route.ts": {
       "maxDuration": 60
     },
+    "app/api/admin/contracts/diagnose/route.ts": {
+      "maxDuration": 60
+    },
     "app/api/stripe/upload-booking-documents/route.ts": {
       "maxDuration": 60
     }

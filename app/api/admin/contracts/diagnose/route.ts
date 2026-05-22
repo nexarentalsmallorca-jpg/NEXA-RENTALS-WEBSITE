@@ -5,9 +5,17 @@ import fs from "node:fs";
 import path from "node:path";
 import NexaContractPDF from "@/app/components/contracts/NexaContractPDF";
 import { normalizeBookingForContractPdf } from "@/lib/contractBookingNormalize";
+import {
+  getGoogleDriveEnvStatus,
+  GOOGLE_DRIVE_OAUTH_PLAYGROUND_REDIRECT,
+  GOOGLE_DRIVE_SCOPE,
+  verifyGoogleDriveOAuth,
+} from "@/lib/googleDriveOAuth";
+import { uploadContractPdfToGoogleDrive } from "@/lib/googleDrive";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 60;
 
 const CONTRACT_LOGO_PATH = "public/images/nexa-logo.png";
 
@@ -20,14 +28,15 @@ export async function GET() {
   };
 
   const googleDrive = {
-    clientId: Boolean(process.env.GOOGLE_DRIVE_CLIENT_ID?.trim()),
-    clientSecret: Boolean(process.env.GOOGLE_DRIVE_CLIENT_SECRET?.trim()),
-    refreshToken: Boolean(process.env.GOOGLE_DRIVE_REFRESH_TOKEN?.trim()),
-    contractsFolderId: Boolean(process.env.GOOGLE_DRIVE_CONTRACTS_FOLDER_ID?.trim()),
+    ...getGoogleDriveEnvStatus(),
     contractsFolderName:
       process.env.GOOGLE_DRIVE_CONTRACTS_FOLDER_NAME?.trim() ||
       "NEXA Rentals Contract",
+    requiredScope: GOOGLE_DRIVE_SCOPE,
+    oauthPlaygroundRedirect: GOOGLE_DRIVE_OAUTH_PLAYGROUND_REDIRECT,
   };
+
+  const oauthTest = await verifyGoogleDriveOAuth();
 
   const supabase = {
     url: Boolean(
@@ -56,13 +65,61 @@ export async function GET() {
     pdfTest = { ok: false, error: error?.message || "PDF render failed" };
   }
 
+  let driveUploadTest: {
+    ok: boolean;
+    skipped?: boolean;
+    error?: string;
+    folderLink?: string | null;
+    fileLink?: string | null;
+  } = { ok: false, skipped: true };
+
+  if (oauthTest.ok) {
+    try {
+      const fileName = `NEXA_DIAGNOSE_${Date.now()}.pdf`;
+      const result = await uploadContractPdfToGoogleDrive({
+        fileName,
+        pdfBuffer: Buffer.from(
+          `%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF`
+        ),
+        customerFolderName: fileName.replace(/\.pdf$/i, ""),
+        contractNumber: "NX-DIAGNOSE",
+      });
+
+      driveUploadTest = {
+        ok: Boolean(result.uploaded),
+        error: result.failed
+          ? result.reason || result.error || "Drive upload failed"
+          : undefined,
+        folderLink: result.folderWebViewLink,
+        fileLink: result.webViewLink,
+      };
+    } catch (error: any) {
+      driveUploadTest = {
+        ok: false,
+        error: error?.message || "Drive upload test failed",
+      };
+    }
+  } else {
+    driveUploadTest = {
+      ok: false,
+      skipped: true,
+      error: oauthTest.error,
+    };
+  }
+
+  const allOk = pdfTest.ok && oauthTest.ok && driveUploadTest.ok;
+
   return NextResponse.json({
-    ok: pdfTest.ok,
-    message: pdfTest.ok
-      ? "PDF engine works on this server."
-      : "PDF engine FAILED — fix this before contracts will work.",
+    ok: allOk,
+    message: allOk
+      ? "PDF + Google OAuth + Drive upload all work on this server."
+      : oauthTest.ok
+        ? "OAuth works but check pdfTest or driveUploadTest."
+        : "Fix Google Drive OAuth (invalid_grant) — see oauthTest.error and oauthTest.hint.",
     logos,
     googleDrive,
+    oauthTest,
+    driveUploadTest,
     supabase,
     pdfTest,
     deployedFix: "Contract PDF uses public/images/nexa-logo.png",

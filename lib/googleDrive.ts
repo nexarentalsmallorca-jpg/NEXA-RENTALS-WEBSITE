@@ -1,5 +1,11 @@
 import { google } from "googleapis";
 import { Readable } from "stream";
+import {
+  cleanGoogleDriveEnv,
+  createGoogleDriveOAuthClient,
+  formatGoogleDriveOAuthError,
+  verifyGoogleDriveOAuth,
+} from "@/lib/googleDriveOAuth";
 
 type UploadContractPdfParams = {
   fileName: string;
@@ -35,17 +41,7 @@ const DRIVE_LIST_DEFAULTS = {
 };
 
 function formatDriveApiError(error: any) {
-  const apiMessage =
-    error?.response?.data?.error?.message ||
-    error?.errors?.[0]?.message ||
-    error?.message ||
-    "Google Drive upload failed.";
-
-  if (apiMessage.includes("insufficient") || error?.code === 403) {
-    return `${apiMessage} — The Google account for GOOGLE_DRIVE_REFRESH_TOKEN must have Editor access to the contracts folder (GOOGLE_DRIVE_CONTRACTS_FOLDER_ID). Re-authorize with scope https://www.googleapis.com/auth/drive`;
-  }
-
-  return apiMessage;
+  return formatGoogleDriveOAuthError(error);
 }
 
 async function getDriveParentContext(
@@ -180,9 +176,13 @@ function createFinalCustomerFolderName({
 }
 
 function getOAuthDriveClient() {
-  const clientId = process.env.GOOGLE_DRIVE_CLIENT_ID?.trim();
-  const clientSecret = process.env.GOOGLE_DRIVE_CLIENT_SECRET?.trim();
-  const refreshToken = process.env.GOOGLE_DRIVE_REFRESH_TOKEN?.trim();
+  const clientId = cleanGoogleDriveEnv(process.env.GOOGLE_DRIVE_CLIENT_ID);
+  const clientSecret = cleanGoogleDriveEnv(
+    process.env.GOOGLE_DRIVE_CLIENT_SECRET
+  );
+  const refreshToken = cleanGoogleDriveEnv(
+    process.env.GOOGLE_DRIVE_REFRESH_TOKEN
+  );
 
   if (!clientId || !clientSecret || !refreshToken) {
     console.error("❌ Missing Google Drive OAuth ENV variables:", {
@@ -197,15 +197,11 @@ function getOAuthDriveClient() {
     return null;
   }
 
-  const oauth2Client = new google.auth.OAuth2(
-    clientId,
-    clientSecret,
-    "https://developers.google.com/oauthplayground"
-  );
+  const oauth2Client = createGoogleDriveOAuthClient();
 
-  oauth2Client.setCredentials({
-    refresh_token: refreshToken,
-  });
+  if (!oauth2Client) {
+    return null;
+  }
 
   return google.drive({
     version: "v3",
@@ -542,6 +538,29 @@ export async function uploadContractPdfToGoogleDrive({
     vehicleCode,
     vehiclePlate,
   });
+
+  const oauthCheck = await verifyGoogleDriveOAuth();
+
+  if (!oauthCheck.ok) {
+    return {
+      uploaded: false,
+      skipped: false,
+      failed: true,
+      reason: oauthCheck.error || "Google Drive OAuth failed.",
+      error: oauthCheck.error || "Google Drive OAuth failed.",
+      fileId: null,
+      fileName: null,
+      webViewLink: null,
+      webContentLink: null,
+      folderId: null,
+      folderName: null,
+      folderWebViewLink: null,
+      parentFolderId: null,
+      debug: {
+        oauth: oauthCheck,
+      },
+    };
+  }
 
   const drive = getOAuthDriveClient();
 

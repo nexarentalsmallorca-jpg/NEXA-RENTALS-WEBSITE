@@ -1068,8 +1068,11 @@ export default function CreateBookingPage() {
           `PDF subido a Google Drive: ${data.fileName}`
         );
       } else if (storage?.ok && (data.drive as { failed?: boolean })?.failed) {
+        const isInvalidGrant = /invalid_grant/i.test(driveReason);
         setContractStatus(
-          `PDF guardado en Supabase. Google Drive NO subió: ${driveReason || "sin permiso o timeout — revisa Vercel env y acceso a la carpeta NEXA Rentals Contract"}`
+          isInvalidGrant
+            ? "PDF guardado en Supabase. Google Drive: token OAuth caducado (invalid_grant). Genera un nuevo GOOGLE_DRIVE_REFRESH_TOKEN en OAuth Playground y actualízalo en Vercel → Redeploy. Diagnóstico: /api/admin/contracts/diagnose"
+            : `PDF guardado en Supabase. Google Drive NO subió: ${driveReason || "sin permiso — revisa Vercel env y acceso Editor a la carpeta NEXA Rentals Contract"}`
         );
       } else if (storage?.ok) {
         setContractStatus(
