@@ -101,7 +101,11 @@ export function formatGoogleDriveOAuthError(error: any, redirectUri?: string) {
 
   const normalized = String(apiMessage).toLowerCase();
 
-  if (normalized.includes("invalid_grant")) {
+  if (
+    normalized.includes("invalid_grant") ||
+    normalized.includes("expired") ||
+    normalized.includes("revoked")
+  ) {
     return getInvalidGrantHelp(uri);
   }
 
