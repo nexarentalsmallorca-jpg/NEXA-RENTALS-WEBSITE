@@ -1,11 +1,5 @@
 import { google } from "googleapis";
 import { Readable } from "stream";
-import {
-  cleanGoogleDriveEnv,
-  createGoogleDriveOAuthClient,
-  formatGoogleDriveOAuthError,
-  verifyGoogleDriveOAuth,
-} from "@/lib/googleDriveOAuth";
 
 type UploadContractPdfParams = {
   fileName: string;
@@ -40,42 +34,51 @@ const DRIVE_LIST_DEFAULTS = {
   includeItemsFromAllDrives: true,
 };
 
-function formatDriveApiError(error: any) {
-  return formatGoogleDriveOAuthError(error);
+function cleanText(value: unknown) {
+  return String(value || "").trim();
 }
 
-async function getDriveParentContext(
-  drive: any,
-  parentFolderId: string
-): Promise<DriveParentContext> {
-  const meta = await drive.files.get({
-    fileId: parentFolderId,
-    fields: "id, name, driveId, capabilities",
-    supportsAllDrives: true,
-  });
+function cleanEnv(value: unknown) {
+  return cleanText(value)
+    .replace(/^["']|["']$/g, "")
+    .replace(/\r/g, "")
+    .replace(/\n/g, "");
+}
 
-  const canAddChildren = meta.data.capabilities?.canAddChildren;
+function maskValue(value: string | undefined | null) {
+  const clean = cleanText(value);
+  if (!clean) return null;
+  if (clean.length <= 10) return `${clean.length} chars`;
+  return `${clean.slice(0, 6)}...${clean.slice(-4)} (${clean.length} chars)`;
+}
 
-  if (canAddChildren === false) {
-    throw new Error(
-      `Google Drive folder "${meta.data.name || parentFolderId}" does not allow creating files. Share it with Editor access for the OAuth Google account.`
-    );
+function formatGoogleDriveError(error: any) {
+  const status = error?.status || error?.code || error?.response?.status;
+  const message =
+    error?.response?.data?.error_description ||
+    error?.response?.data?.error?.message ||
+    error?.response?.data?.error ||
+    error?.errors?.[0]?.message ||
+    error?.message ||
+    "Unknown Google Drive error";
+
+  if (status === 401) {
+    return `Unauthorized. Google rejected the OAuth credentials. Regenerate the refresh_token using the SAME Google Client ID and Client Secret that are in Vercel. Also redeploy Vercel after changing env variables. Original error: ${message}`;
   }
 
-  return {
-    id: meta.data.id || parentFolderId,
-    name: meta.data.name || "Contracts",
-    driveId: meta.data.driveId || null,
-    isSharedDrive: Boolean(meta.data.driveId),
-  };
+  if (status === 403) {
+    return `Forbidden. The Google account/token does not have permission for this Drive folder, or the OAuth scope is too limited. Regenerate the token with scope https://www.googleapis.com/auth/drive and make sure the Google account has Editor access to the folder. Original error: ${message}`;
+  }
+
+  if (status === 404) {
+    return `Google Drive folder or file not found. Check GOOGLE_DRIVE_CONTRACTS_FOLDER_ID and make sure the OAuth Google account can access that folder. Original error: ${message}`;
+  }
+
+  return message;
 }
 
 function bufferToStream(buffer: Buffer) {
   return Readable.from(buffer);
-}
-
-function cleanText(value: unknown) {
-  return String(value || "").trim();
 }
 
 function sanitizeDriveName(name: string) {
@@ -117,9 +120,7 @@ function getContractsParentFolderCandidates(): string[] {
     "NEXA_Rentals_Contracts",
   ];
 
-  return Array.from(
-    new Set([fromEnv, ...defaults].filter(Boolean) as string[])
-  );
+  return Array.from(new Set([fromEnv, ...defaults].filter(Boolean)));
 }
 
 function getFolderNameSearchVariants(folderName: string) {
@@ -175,38 +176,81 @@ function createFinalCustomerFolderName({
   return getCustomerFolderNameFromFileName(fileName);
 }
 
-function getOAuthDriveClient() {
-  const clientId = cleanGoogleDriveEnv(process.env.GOOGLE_DRIVE_CLIENT_ID);
-  const clientSecret = cleanGoogleDriveEnv(
-    process.env.GOOGLE_DRIVE_CLIENT_SECRET
-  );
-  const refreshToken = cleanGoogleDriveEnv(
-    process.env.GOOGLE_DRIVE_REFRESH_TOKEN
-  );
+async function createOAuthDriveClient() {
+  const clientId = cleanEnv(process.env.GOOGLE_DRIVE_CLIENT_ID);
+  const clientSecret = cleanEnv(process.env.GOOGLE_DRIVE_CLIENT_SECRET);
+  const refreshToken = cleanEnv(process.env.GOOGLE_DRIVE_REFRESH_TOKEN);
+
+  console.log("🔐 Google Drive OAuth env check:", {
+    GOOGLE_DRIVE_CLIENT_ID: Boolean(clientId),
+    GOOGLE_DRIVE_CLIENT_SECRET: Boolean(clientSecret),
+    GOOGLE_DRIVE_REFRESH_TOKEN: Boolean(refreshToken),
+    GOOGLE_DRIVE_CLIENT_ID_MASKED: maskValue(clientId),
+    GOOGLE_DRIVE_CLIENT_SECRET_MASKED: maskValue(clientSecret),
+    GOOGLE_DRIVE_REFRESH_TOKEN_MASKED: maskValue(refreshToken),
+  });
 
   if (!clientId || !clientSecret || !refreshToken) {
-    console.error("❌ Missing Google Drive OAuth ENV variables:", {
-      GOOGLE_DRIVE_CLIENT_ID: Boolean(clientId),
-      GOOGLE_DRIVE_CLIENT_SECRET: Boolean(clientSecret),
-      GOOGLE_DRIVE_REFRESH_TOKEN: Boolean(refreshToken),
-      GOOGLE_DRIVE_CLIENT_ID_LENGTH: clientId?.length || 0,
-      GOOGLE_DRIVE_CLIENT_SECRET_LENGTH: clientSecret?.length || 0,
-      GOOGLE_DRIVE_REFRESH_TOKEN_LENGTH: refreshToken?.length || 0,
-    });
-
-    return null;
+    throw new Error(
+      "Missing Google Drive OAuth env variables. Required: GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET, GOOGLE_DRIVE_REFRESH_TOKEN."
+    );
   }
 
-  const oauth2Client = createGoogleDriveOAuthClient();
+  const oauth2Client = new google.auth.OAuth2(clientId, clientSecret);
 
-  if (!oauth2Client) {
-    return null;
+  oauth2Client.setCredentials({
+    refresh_token: refreshToken,
+  });
+
+  try {
+    const token = await oauth2Client.getAccessToken();
+
+    if (!token?.token) {
+      throw new Error("Google OAuth did not return an access token.");
+    }
+
+    console.log("✅ Google Drive OAuth access token generated successfully.");
+  } catch (error: any) {
+    console.error("❌ Google OAuth token refresh failed:", {
+      message: error?.message,
+      status: error?.status,
+      code: error?.code,
+      responseData: error?.response?.data,
+    });
+
+    throw new Error(formatGoogleDriveError(error));
   }
 
   return google.drive({
     version: "v3",
     auth: oauth2Client,
   });
+}
+
+async function getDriveParentContext(
+  drive: any,
+  parentFolderId: string
+): Promise<DriveParentContext> {
+  const meta = await drive.files.get({
+    fileId: parentFolderId,
+    fields: "id, name, driveId, capabilities",
+    supportsAllDrives: true,
+  });
+
+  const canAddChildren = meta.data.capabilities?.canAddChildren;
+
+  if (canAddChildren === false) {
+    throw new Error(
+      `Google Drive folder "${meta.data.name || parentFolderId}" does not allow creating files. Share it with Editor access for the OAuth Google account.`
+    );
+  }
+
+  return {
+    id: meta.data.id || parentFolderId,
+    name: meta.data.name || "Contracts",
+    driveId: meta.data.driveId || null,
+    isSharedDrive: Boolean(meta.data.driveId),
+  };
 }
 
 async function findFolderByNameGlobally({
@@ -314,12 +358,10 @@ async function createFolderInGoogleDrive({
   drive,
   parentFolderId,
   folderName,
-  parentContext,
 }: {
   drive: any;
   parentFolderId: string;
   folderName: string;
-  parentContext?: DriveParentContext | null;
 }): Promise<DriveFolderResult> {
   const safeFolderName = sanitizeDriveName(folderName);
 
@@ -353,7 +395,6 @@ async function createFolderInGoogleDrive({
     },
     fields: "id, name, webViewLink",
     supportsAllDrives: true,
-    enforceSingleParent: true,
   });
 
   console.log("✅ Google Drive folder created:", {
@@ -407,7 +448,7 @@ async function getOrCreateContractsParentFolder({
     });
 
     if (existingGlobal?.id) {
-      console.log("✅ Existing parent contracts folder found (global search):", {
+      console.log("✅ Existing parent contracts folder found globally:", {
         parentFolderId: existingGlobal.id,
         parentFolderName: existingGlobal.name,
         parentFolderLink: existingGlobal.webViewLink,
@@ -424,7 +465,7 @@ async function getOrCreateContractsParentFolder({
     });
 
     if (existingInRoot?.id) {
-      console.log("✅ Existing parent contracts folder found (root):", {
+      console.log("✅ Existing parent contracts folder found in root:", {
         parentFolderId: existingInRoot.id,
         parentFolderName: existingInRoot.name,
         parentFolderLink: existingInRoot.webViewLink,
@@ -435,7 +476,9 @@ async function getOrCreateContractsParentFolder({
     }
   }
 
-  const createName = sanitizeDriveName(candidates[0] || "NEXA_Rentals_Contracts");
+  const createName = sanitizeDriveName(
+    candidates[0] || "NEXA_Rentals_Contracts"
+  );
 
   const createdFolder = await createFolderInGoogleDrive({
     drive,
@@ -539,58 +582,6 @@ export async function uploadContractPdfToGoogleDrive({
     vehiclePlate,
   });
 
-  const oauthCheck = await verifyGoogleDriveOAuth();
-
-  if (!oauthCheck.ok) {
-    return {
-      uploaded: false,
-      skipped: false,
-      failed: true,
-      reason: oauthCheck.error || "Google Drive OAuth failed.",
-      error: oauthCheck.error || "Google Drive OAuth failed.",
-      fileId: null,
-      fileName: null,
-      webViewLink: null,
-      webContentLink: null,
-      folderId: null,
-      folderName: null,
-      folderWebViewLink: null,
-      parentFolderId: null,
-      debug: {
-        oauth: oauthCheck,
-      },
-    };
-  }
-
-  const drive = getOAuthDriveClient();
-
-  if (!drive) {
-    return {
-      uploaded: false,
-      skipped: true,
-      failed: false,
-      reason:
-        "Google Drive OAuth ENV vars are missing. Check GOOGLE_DRIVE_CLIENT_ID, GOOGLE_DRIVE_CLIENT_SECRET and GOOGLE_DRIVE_REFRESH_TOKEN.",
-      fileId: null,
-      fileName: null,
-      webViewLink: null,
-      webContentLink: null,
-      folderId: null,
-      folderName: null,
-      folderWebViewLink: null,
-      parentFolderId: null,
-      debug: {
-        GOOGLE_DRIVE_CLIENT_ID: Boolean(process.env.GOOGLE_DRIVE_CLIENT_ID),
-        GOOGLE_DRIVE_CLIENT_SECRET: Boolean(
-          process.env.GOOGLE_DRIVE_CLIENT_SECRET
-        ),
-        GOOGLE_DRIVE_REFRESH_TOKEN: Boolean(
-          process.env.GOOGLE_DRIVE_REFRESH_TOKEN
-        ),
-      },
-    };
-  }
-
   if (!fileName || !cleanText(fileName)) {
     return {
       uploaded: false,
@@ -630,6 +621,8 @@ export async function uploadContractPdfToGoogleDrive({
   let parentFolderId: string | null = null;
 
   try {
+    const drive = await createOAuthDriveClient();
+
     parentFolderId = await getOrCreateContractsParentFolder({
       drive,
       configuredParentFolderId: process.env.GOOGLE_DRIVE_CONTRACTS_FOLDER_ID,
@@ -640,10 +633,8 @@ export async function uploadContractPdfToGoogleDrive({
     }
 
     const parentContext = await getDriveParentContext(drive, parentFolderId);
-
     const safeFileName = ensurePdfFileName(fileName);
 
-    // Subfolder name matches the PDF file name (without .pdf), per NEXA workflow.
     const finalCustomerFolderName =
       getCustomerFolderNameFromFileName(safeFileName) ||
       createFinalCustomerFolderName({
@@ -669,7 +660,6 @@ export async function uploadContractPdfToGoogleDrive({
       drive,
       parentFolderId: parentContext.id,
       folderName: finalCustomerFolderName,
-      parentContext,
     });
 
     if (!customerFolder.id) {
@@ -699,22 +689,27 @@ export async function uploadContractPdfToGoogleDrive({
           },
           fields: "id, name, webViewLink, webContentLink",
           supportsAllDrives: true,
-          enforceSingleParent: true,
         });
+
         lastUploadError = null;
         break;
       } catch (uploadError: any) {
         lastUploadError = uploadError;
+
         const retryable =
           uploadError?.code === 503 ||
           uploadError?.code === 429 ||
-          uploadError?.status === 503;
+          uploadError?.status === 503 ||
+          uploadError?.response?.status === 503 ||
+          uploadError?.response?.status === 429;
 
         console.warn("⚠️ Google Drive PDF upload attempt failed:", {
           attempt,
           message: uploadError?.message,
           code: uploadError?.code,
+          status: uploadError?.status || uploadError?.response?.status,
           retryable,
+          responseData: uploadError?.response?.data,
         });
 
         if (!retryable || attempt === 2) {
@@ -724,7 +719,10 @@ export async function uploadContractPdfToGoogleDrive({
     }
 
     if (!uploadedFile?.data?.id) {
-      throw lastUploadError || new Error("Google Drive PDF upload returned no file id.");
+      throw (
+        lastUploadError ||
+        new Error("Google Drive PDF upload returned no file id.")
+      );
     }
 
     console.log("✅ PDF uploaded inside customer Google Drive folder:", {
@@ -764,18 +762,20 @@ export async function uploadContractPdfToGoogleDrive({
     console.error("❌ Google Drive upload failed:", {
       message: error?.message,
       code: error?.code,
-      status: error?.status,
+      status: error?.status || error?.response?.status,
       errors: error?.errors,
       responseData: error?.response?.data,
       parentFolderId,
     });
 
+    const readableError = formatGoogleDriveError(error);
+
     return {
       uploaded: false,
       skipped: false,
       failed: true,
-      reason: formatDriveApiError(error),
-      error: formatDriveApiError(error),
+      reason: readableError,
+      error: readableError,
 
       fileId: null,
       fileName: null,
@@ -792,7 +792,7 @@ export async function uploadContractPdfToGoogleDrive({
       parentFolderId,
       debug: {
         code: error?.code,
-        status: error?.status,
+        status: error?.status || error?.response?.status,
         responseData: error?.response?.data,
       },
     };
