@@ -11,6 +11,7 @@ import {
 } from "@/lib/blog-popular";
 import { motion, useInView, type Variants } from "framer-motion";
 import { useTranslations } from "next-intl";
+import BlogViewCount from "@/app/components/blog/BlogViewCount";
 import { passVerticalWheelToPage } from "@/lib/pass-vertical-wheel";
 import { isBlogPlaceholderImage, type BlogCategory } from "@/lib/blogs";
 import type { Locale } from "@/i18n/routing";
@@ -90,6 +91,7 @@ type Props = {
   locale: Locale;
   blogs: BlogListItem[];
   initialPopular: PopularBlogItem[];
+  viewCounts: Record<string, number>;
 };
 
 function formatPublishedDate(iso: string) {
@@ -130,9 +132,11 @@ function PublishedBy({
 function FeaturedBlock({
   locale,
   post,
+  viewCount,
 }: {
   locale: Locale;
   post: BlogListItem;
+  viewCount: number;
 }) {
   const t = useTranslations("blog");
   const tCat = useTranslations("blog.categories");
@@ -182,6 +186,13 @@ function FeaturedBlock({
 
         <PublishedBy publishedAt={post.publishedAt} large className="mt-4 sm:mt-5" />
 
+        <BlogViewCount
+          postId={post.id}
+          initialCount={viewCount}
+          size="sm"
+          className="mt-3"
+        />
+
         <p className="mt-5 text-[15px] leading-[1.7] text-stone-600 sm:text-base lg:text-lg">
           {post.excerpt}
         </p>
@@ -207,10 +218,12 @@ function GridCard({
   post,
   locale,
   index,
+  viewCount,
 }: {
   post: BlogListItem;
   locale: Locale;
   index: number;
+  viewCount: number;
 }) {
   const tCat = useTranslations("blog.categories");
   const ref = useRef<HTMLDivElement>(null);
@@ -272,6 +285,7 @@ export default function BlogPageClient({
   locale,
   blogs,
   initialPopular,
+  viewCounts,
 }: Props) {
   const t = useTranslations("blog");
   const tCat = useTranslations("blog.categories");
@@ -279,6 +293,8 @@ export default function BlogPageClient({
   const [activeTopic, setActiveTopic] = useState<BlogCategory | "All">("All");
   const [popularPosts, setPopularPosts] =
     useState<PopularBlogItem[]>(initialPopular);
+  const [liveViewCounts, setLiveViewCounts] =
+    useState<Record<string, number>>(viewCounts);
   const { revealRef, phase, marqueeActive } = useBlogPopularDoorReveal();
   const revealOpen = phase === "opening" || phase === "open";
   const revealSlidePx = useRevealSlidePx();
@@ -294,9 +310,9 @@ export default function BlogPageClient({
           counts?: Record<string, number>;
         };
         if (cancelled) return;
-        setPopularPosts(
-          resolvePopularPosts(blogs, data.counts ?? {}, 6)
-        );
+        const counts = data.counts ?? {};
+        setLiveViewCounts(counts);
+        setPopularPosts(resolvePopularPosts(blogs, counts, 6));
       } catch {
         /* keep server-provided initialPopular */
       }
@@ -352,7 +368,11 @@ export default function BlogPageClient({
             animate={{ y: revealOpen ? -revealSlidePx : 0 }}
             transition={revealTransition}
           >
-            <FeaturedBlock locale={locale} post={featured} />
+            <FeaturedBlock
+              locale={locale}
+              post={featured}
+              viewCount={liveViewCounts[featured.id] ?? 0}
+            />
           </motion.div>
         )}
       </div>
@@ -439,6 +459,7 @@ export default function BlogPageClient({
               post={post}
               locale={locale}
               index={index}
+              viewCount={liveViewCounts[post.id] ?? 0}
             />
           ))}
         </div>

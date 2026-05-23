@@ -75,6 +75,7 @@ export default async function BlogPage({ params }: Props) {
         locale={locale}
         blogs={blogs}
         initialPopular={initialPopular}
+        viewCounts={viewCounts}
       />
 
       <div className="mx-auto w-full min-w-0 max-w-[1320px] px-4 pb-8 sm:px-6 md:px-8 lg:px-10">

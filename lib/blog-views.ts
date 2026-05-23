@@ -3,12 +3,40 @@ import {
   readLocalBlogViewCounts,
   type BlogViewCounts,
 } from "./blog-views-store";
+import {
+  BLOG_POST_VIEW_ORDER,
+  getBlogViewSeedCounts,
+} from "./blog-view-seeds";
 import { getSupabaseAdminOptional } from "./supabaseOptional";
+
+function withViewSeedFloor(postId: string, stored: number): number {
+  const seed = getBlogViewSeedCounts()[postId] ?? 0;
+  return Math.max(stored, seed);
+}
+
+function mergeViewCounts(...sources: BlogViewCounts[]): BlogViewCounts {
+  const merged: BlogViewCounts = {};
+
+  for (const { id } of BLOG_POST_VIEW_ORDER) {
+    let stored = 0;
+    for (const source of sources) {
+      const n = source[id];
+      if (typeof n === "number" && Number.isFinite(n)) {
+        stored = Math.max(stored, n);
+      }
+    }
+    merged[id] = withViewSeedFloor(id, stored);
+  }
+
+  return merged;
+}
 
 export type { BlogViewCounts };
 
 export async function getAllBlogViewCounts(): Promise<BlogViewCounts> {
+  const local = await readLocalBlogViewCounts();
   const supabase = getSupabaseAdminOptional();
+
   if (supabase) {
     try {
       const { data, error } = await supabase
@@ -16,19 +44,20 @@ export async function getAllBlogViewCounts(): Promise<BlogViewCounts> {
         .select("post_id, view_count");
 
       if (!error && data) {
-        return Object.fromEntries(
+        const remote = Object.fromEntries(
           data.map((row) => [
             row.post_id as string,
             Number(row.view_count) || 0,
           ])
         );
+        return mergeViewCounts(local, remote);
       }
     } catch {
-      /* fall through to local file */
+      /* fall through */
     }
   }
 
-  return readLocalBlogViewCounts();
+  return mergeViewCounts(local);
 }
 
 export async function getBlogViewCount(postId: string): Promise<number> {
@@ -46,7 +75,7 @@ export async function incrementBlogView(postId: string): Promise<number> {
       });
 
       if (!error && data !== null && data !== undefined) {
-        return Number(data);
+        return withViewSeedFloor(postId, Number(data));
       }
 
       const { data: row, error: upsertError } = await supabase
@@ -73,11 +102,14 @@ export async function incrementBlogView(postId: string): Promise<number> {
         .select("view_count")
         .single();
 
-      if (inserted) return Number(inserted.view_count) || 1;
+      if (inserted) {
+        return withViewSeedFloor(postId, Number(inserted.view_count) || 1);
+      }
     } catch {
       /* fall through */
     }
   }
 
-  return incrementLocalBlogView(postId);
+  const localNext = await incrementLocalBlogView(postId);
+  return withViewSeedFloor(postId, localNext);
 }

@@ -2,6 +2,7 @@
 import type { Locale } from "../i18n/routing";
 import { additionalBlogPosts } from "./blog-content/additional-posts";
 import { applyBlogTranslations } from "./blog-content/i18n/apply";
+import { applyBlogPublishSchedule } from "./blog-publish-schedule";
 
 export type BlogCategory =
   | "Prices"
@@ -764,10 +765,9 @@ export const blogPosts: BlogPost[] = [
   },
 ];
 
-export const allBlogPosts: BlogPost[] = applyBlogTranslations([
-  ...blogPosts,
-  ...additionalBlogPosts,
-]);
+export const allBlogPosts: BlogPost[] = applyBlogPublishSchedule(
+  applyBlogTranslations([...blogPosts, ...additionalBlogPosts])
+);
 
 export function getBlogsForLocale(locale: Locale) {
   return allBlogPosts
