@@ -120,6 +120,41 @@ export function isStubBlogContent(content: BlogLocaleContent): boolean {
   return content.sections.every((section) => section.paragraphs.length === 2);
 }
 
+/** Generated locale pack that still matches English body copy (failed translation). */
+export function isEnglishBlogLocalePack(
+  pack: BlogLocaleContent,
+  en: BlogTranslation
+): boolean {
+  let total = 0;
+  let same = 0;
+
+  const compare = (a?: string, b?: string) => {
+    if (!a?.trim() || !b?.trim()) return;
+    total += 1;
+    if (a.trim() === b.trim()) same += 1;
+  };
+
+  compare(pack.quickAnswer, en.quickAnswer);
+  compare(pack.excerpt, en.excerpt);
+  compare(pack.metaDescription, en.metaDescription);
+
+  for (let i = 0; i < pack.sections.length; i++) {
+    compare(pack.sections[i]?.heading, en.sections[i]?.heading);
+    const paragraphs = pack.sections[i]?.paragraphs ?? [];
+    for (let j = 0; j < paragraphs.length; j++) {
+      compare(paragraphs[j], en.sections[i]?.paragraphs[j]);
+    }
+  }
+
+  for (let i = 0; i < pack.faqs.length; i++) {
+    compare(pack.faqs[i]?.question, en.faqs[i]?.question);
+    compare(pack.faqs[i]?.answer, en.faqs[i]?.answer);
+  }
+
+  if (total === 0) return true;
+  return same / total >= 0.3;
+}
+
 export function applyBlogLinkLocalization(
   content: BlogLocaleContent,
   locale: Locale,

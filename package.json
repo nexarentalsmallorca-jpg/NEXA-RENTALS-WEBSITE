@@ -10,6 +10,7 @@
     "start": "next start",
     "lint": "next lint",
     "translate:blogs": "node scripts/translate-blog-posts.mjs",
+    "translate:blogs:openai": "node scripts/translate-blogs-openai.mjs",
     "generate:blog-slugs": "tsx scripts/generate-blog-slug-index-runner.ts"
   },
   "dependencies": {

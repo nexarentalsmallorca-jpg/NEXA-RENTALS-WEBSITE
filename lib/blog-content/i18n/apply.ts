@@ -5,6 +5,7 @@ import {
   buildAnySlugToLocaleBlogSlugMap,
   buildEnglishToLocaleBlogSlugMap,
   finalizeBlogTranslation,
+  isEnglishBlogLocalePack,
   isStubBlogContent,
   localizeBlogMarkdownLinks,
   type BlogLocaleContent,
@@ -85,7 +86,11 @@ export function applyBlogTranslations(posts: BlogPost[]): BlogPost[] {
       if (locale === "en") continue;
 
       const manualPack = blogTranslations[locale]?.[post.id];
-      const generatedPack = generatedBlogTranslations[locale]?.[post.id];
+      const rawGenerated = generatedBlogTranslations[locale]?.[post.id];
+      const generatedPack =
+        rawGenerated && !isEnglishBlogLocalePack(rawGenerated, en)
+          ? rawGenerated
+          : undefined;
       const pack = generatedPack ?? manualPack;
       if (!pack) continue;
 
