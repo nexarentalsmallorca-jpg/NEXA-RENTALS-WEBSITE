@@ -12,6 +12,54 @@ import {
 type PaymentMethod = "cash" | "card" | "";
 type BookingAction = "rent_now" | "reserve_now";
 
+type NexaSpecialRoute = {
+  id: string;
+  shortName: string;
+  name: string;
+  description: string;
+  mapUrl: string;
+  distance?: string;
+  duration?: string;
+};
+
+const NEXA_SPECIAL_ROUTES: NexaSpecialRoute[] = [
+  {
+    id: "route-1",
+    shortName: "Route 1",
+    name: "Route 1 — Mallorca Coastal Ride",
+    description:
+      "A beautiful easy route with sea views, nice roads and perfect stops for photos.",
+    mapUrl: "PASTE_GOOGLE_MAPS_ROUTE_1_LINK_HERE",
+    distance: "Approx. 35–45 km",
+    duration: "Approx. 1.5–2 hours",
+  },
+  {
+    id: "route-2",
+    shortName: "Route 2",
+    name: "Route 2 — Viewpoints & Villages",
+    description:
+      "A scenic route through beautiful Mallorca roads, viewpoints and local village stops.",
+    mapUrl: "PASTE_GOOGLE_MAPS_ROUTE_2_LINK_HERE",
+    distance: "Approx. 45–60 km",
+    duration: "Approx. 2–3 hours",
+  },
+  {
+    id: "route-3",
+    shortName: "Route 3",
+    name: "Route 3 — Sunset Experience",
+    description:
+      "A relaxed route designed for sunset views, photos and a premium rental experience.",
+    mapUrl: "PASTE_GOOGLE_MAPS_ROUTE_3_LINK_HERE",
+    distance: "Approx. 30–40 km",
+    duration: "Approx. 1.5–2 hours",
+  },
+];
+
+function getNexaSpecialRouteById(routeId?: string | null) {
+  if (!routeId) return null;
+  return NEXA_SPECIAL_ROUTES.find((route) => route.id === routeId) || null;
+}
+
 type BookingForm = {
   numeroContrato: string;
   codigoVehiculo: string;
@@ -75,6 +123,8 @@ type ManualBooking = {
     extras?: string;
     paymentMethod?: PaymentMethod;
     bookingAction?: BookingAction;
+    specialRouteId?: string;
+    specialRouteName?: string;
   };
   contractPdf?: {
     fileName?: string;
@@ -448,8 +498,7 @@ function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
 
   const vehicleCode =
     row.vehicle_code || extractVehicleCodeFromText(row.vehicle_name || "");
-
-  const method = normalizePaymentMethod(row.payment_method);
+      const method = normalizePaymentMethod(row.payment_method);
 
   const cleanStatus = String(row.status || "").toLowerCase();
   const bookingAction: BookingAction =
@@ -760,8 +809,14 @@ export default function CreateBookingPage() {
   const [contractStatus, setContractStatus] = useState("");
   const [isGeneratingContract, setIsGeneratingContract] = useState(false);
   const [isLoadingOnlineBookings, setIsLoadingOnlineBookings] = useState(true);
+  const [selectedRouteId, setSelectedRouteId] = useState("");
 
   const timeOptions = useMemo(() => generateTimeOptions(), []);
+
+  const selectedRoute = useMemo(
+    () => getNexaSpecialRouteById(selectedRouteId),
+    [selectedRouteId]
+  );
 
   async function refreshAllBookings() {
     setManualBookings(getStoredBookings());
@@ -942,7 +997,7 @@ export default function CreateBookingPage() {
         ? {
             pagado: value,
           }
-        : {}),
+                  : {}),
     }));
   }
 
@@ -992,6 +1047,72 @@ export default function CreateBookingPage() {
           : "No se pudo actualizar la reserva en el navegador.";
       setContractStatus(message);
       throw error;
+    }
+  }
+
+  async function sendSelectedRouteEmail({
+    customerName,
+    customerEmail,
+    routeId,
+    contractNumber,
+    pickupDate,
+    pickupTime,
+    dropoffDate,
+    dropoffTime,
+  }: {
+    customerName: string;
+    customerEmail: string;
+    routeId: string;
+    contractNumber: string;
+    pickupDate: string;
+    pickupTime: string;
+    dropoffDate: string;
+    dropoffTime: string;
+  }) {
+    if (!customerEmail.trim() || !routeId.trim()) return;
+
+    try {
+      const response = await fetch("/api/admin/send-route-email", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          customerName,
+          customerEmail,
+          routeId,
+          contractNumber,
+          pickupDate,
+          pickupTime,
+          dropoffDate,
+          dropoffTime,
+        }),
+      });
+
+      const data = await response.json().catch(() => null);
+
+      if (!response.ok || !data?.ok) {
+        console.warn("NEXA route email was not sent:", data?.error || data);
+        setContractStatus((previous) =>
+          previous
+            ? `${previous} Ruta no enviada por email: ${data?.error || "revisa /api/admin/send-route-email"}`
+            : `Ruta no enviada por email: ${data?.error || "revisa /api/admin/send-route-email"}`
+        );
+        return;
+      }
+
+      setContractStatus((previous) =>
+        previous
+          ? `${previous} Ruta enviada por email a ${customerEmail}.`
+          : `Ruta enviada por email a ${customerEmail}.`
+      );
+    } catch (error) {
+      console.warn("NEXA route email failed:", error);
+      setContractStatus((previous) =>
+        previous
+          ? `${previous} Ruta no enviada por email: error de conexión.`
+          : "Ruta no enviada por email: error de conexión."
+      );
     }
   }
 
@@ -1202,6 +1323,8 @@ export default function CreateBookingPage() {
         metodoPago: paymentMethod,
         paymentMethod,
         bookingAction,
+        specialRouteId: selectedRoute?.id || "",
+        specialRouteName: selectedRoute?.name || "",
         fianza: "150 €",
         franquicia: "800 €",
         extras:
@@ -1230,6 +1353,20 @@ export default function CreateBookingPage() {
     console.log("NEXA booking created:", newBooking);
 
     await generateContractPdf(newBooking);
+
+    if (selectedRoute?.id && form.email.trim()) {
+      await sendSelectedRouteEmail({
+        customerName: form.nombreCliente,
+        customerEmail: form.email.trim(),
+        routeId: selectedRoute.id,
+        contractNumber: numeroContratoAutomatico,
+        pickupDate: form.fechaEntrega,
+        pickupTime: form.horaEntrega,
+        dropoffDate: form.fechaDevolucion,
+        dropoffTime: form.horaDevolucion,
+      });
+    }
+
     await refreshAllBookings();
 
     setForm({
@@ -1238,6 +1375,7 @@ export default function CreateBookingPage() {
     });
 
     setBookingAction("rent_now");
+    setSelectedRouteId("");
 
     window.setTimeout(() => {
       window.scrollTo({
@@ -1359,7 +1497,7 @@ export default function CreateBookingPage() {
                 <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 md:col-span-2">
                   <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-300">
                     No disponible para estas fechas
-                  </p>
+                                      </p>
                   <p className="mt-1 text-sm font-bold text-white/75">
                     Este vehículo ya tiene una reserva cruzada.{" "}
                     {getBlockedUntilLabel(
@@ -1593,6 +1731,57 @@ export default function CreateBookingPage() {
               onChange={setBookingAction}
             />
 
+            <div className="rounded-[26px] border border-sky-400/15 bg-sky-500/[0.06] p-4">
+              <p className="text-[11px] font-black uppercase tracking-[0.2em] text-sky-300">
+                Ruta especial opcional
+              </p>
+
+              <p className="mt-1 text-xs font-semibold leading-5 text-white/45">
+                Selecciona una ruta para enviarla automáticamente por email
+                después de generar el contrato. Si lo dejas vacío, no se envía
+                nada.
+              </p>
+
+              <select
+                value={selectedRouteId}
+                onChange={(e) => setSelectedRouteId(e.target.value)}
+                className="mt-4 w-full rounded-2xl border border-white/10 bg-[#11131A] px-4 py-4 text-white outline-none focus:border-sky-400/50"
+              >
+                <option value="">Sin ruta especial</option>
+                {NEXA_SPECIAL_ROUTES.map((route) => (
+                  <option key={route.id} value={route.id}>
+                    {route.shortName} · {route.name}
+                  </option>
+                ))}
+              </select>
+
+              {selectedRoute ? (
+                <div className="mt-4 rounded-2xl border border-white/10 bg-white/[0.04] p-4">
+                  <p className="text-sm font-black text-white">
+                    {selectedRoute.name}
+                  </p>
+
+                  <p className="mt-1 text-xs font-semibold leading-5 text-white/50">
+                    {selectedRoute.description}
+                  </p>
+
+                  <div className="mt-3 flex flex-wrap gap-2 text-[11px] font-black text-white/55">
+                    {selectedRoute.distance ? (
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">
+                        {selectedRoute.distance}
+                      </span>
+                    ) : null}
+
+                    {selectedRoute.duration ? (
+                      <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2">
+                        {selectedRoute.duration}
+                      </span>
+                    ) : null}
+                  </div>
+                </div>
+              ) : null}
+            </div>
+
             <div className="grid gap-4">
               <input
                 value={form.dias}
@@ -1641,6 +1830,10 @@ export default function CreateBookingPage() {
                 <p>
                   <span className="font-black text-white">Contrato:</span>{" "}
                   {form.numeroContrato || nextContractNumber}
+                </p>
+                <p>
+                  <span className="font-black text-white">Ruta especial:</span>{" "}
+                  {selectedRoute ? selectedRoute.name : "Sin ruta"}
                 </p>
                 <p>
                   <span className="font-black text-white">Estado:</span>{" "}
