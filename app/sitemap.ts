@@ -9,7 +9,6 @@ const routes = [
   "",
 
   // CORE PAGES
-  "/vehicles",
   "/about",
 
   // MAIN SEO PAGES

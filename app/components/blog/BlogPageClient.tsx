@@ -489,7 +489,7 @@ export default function BlogPageClient({
             </a>
           </p>
           <Link
-            href={`/${locale}/vehicles`}
+            href={`/${locale}`}
             className="mt-8 inline-flex min-h-[48px] items-center justify-center rounded-xl px-8 text-sm font-semibold text-white transition hover:brightness-105"
             style={{
               background: `linear-gradient(135deg, ${ORANGE} 0%, #ff9a3d 100%)`,

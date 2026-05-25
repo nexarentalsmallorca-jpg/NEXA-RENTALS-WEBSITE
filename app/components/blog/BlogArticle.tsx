@@ -97,7 +97,7 @@ export default async function BlogArticle({
   const categoryLabel = tCat(blog.category);
 
   const articleUrl = blogCanonicalUrl(locale, blog.slug);
-  const bookHref = `/${locale}/vehicles`;
+  const bookHref = `/${locale}`;
   const publishedLong = formatPublishedDateLong(blog.publishedAt, locale);
 
   const articleJsonLd = {

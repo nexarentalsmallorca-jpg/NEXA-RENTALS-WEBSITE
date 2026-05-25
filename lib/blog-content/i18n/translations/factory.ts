@@ -49,7 +49,7 @@ const COPY: Record<Locale, LocaleCopy> = {
     excerpt: (title) => `Practical tourist guide to ${title.toLowerCase()} with NEXA Rentals Mallorca.`,
     quickAnswer: (title) => `${title} depends on your dates, licence, route and rental duration. NEXA Rentals helps visitors compare options, check availability and book online before arrival.`,
     ctaTitle: "Ready to book in Magaluf?",
-    ctaText: "See available scooters and e-bikes on /en/vehicles or ask the team a question through /en/contact.",
+    ctaText: "See available scooters and e-bikes on /en or ask the team a question through /en/contact.",
     faqs: (title) => [
       { question: `Is ${title.toLowerCase()} suitable for tourists?`, answer: "Yes. It is written for visitors staying in Magaluf, Palmanova and nearby Mallorca resorts." },
       { question: "Should I book before arrival?", answer: "Yes, online booking is recommended in high season because popular scooters and e-bikes can sell out." },
@@ -62,7 +62,7 @@ const COPY: Record<Locale, LocaleCopy> = {
     excerpt: (title) => `Guia practica para turistas sobre ${title.toLowerCase()} con NEXA Rentals Mallorca.`,
     quickAnswer: (title) => `${title} depende de tus fechas, licencia, ruta y duracion del alquiler. NEXA Rentals ayuda a comprobar disponibilidad, condiciones y reserva online antes de llegar.`,
     ctaTitle: "Listo para reservar en Magaluf?",
-    ctaText: "Consulta scooters y e-bikes disponibles en /es/vehicles o pregunta al equipo desde /es/contact.",
+    ctaText: "Consulta scooters y e-bikes disponibles en /es o pregunta al equipo desde /es/contact.",
     faqs: (title) => [
       { question: `Es ${title.toLowerCase()} adecuado para turistas?`, answer: "Si. La guia esta pensada para visitantes alojados en Magaluf, Palmanova y otras zonas cercanas de Mallorca." },
       { question: "Conviene reservar antes de llegar?", answer: "Si, en temporada alta la reserva online es recomendable porque los scooters y e-bikes mas solicitados pueden agotarse." },
@@ -75,7 +75,7 @@ const COPY: Record<Locale, LocaleCopy> = {
     excerpt: (title) => `Praktischer Touristenratgeber zu ${title.toLowerCase()} mit NEXA Rentals Mallorca.`,
     quickAnswer: (title) => `${title} hangt von deinen Daten, deinem Fuhrerschein, der Route und der Mietdauer ab. NEXA Rentals hilft bei Verfugbarkeit, Bedingungen und Online-Buchung vor der Anreise.`,
     ctaTitle: "Bereit zur Buchung in Magaluf?",
-    ctaText: "Sieh verfugbare Roller und E-Bikes unter /de/vehicles oder frage das Team uber /de/contact.",
+    ctaText: "Sieh verfugbare Roller und E-Bikes unter /de oder frage das Team uber /de/contact.",
     faqs: (title) => [
       { question: `Ist ${title.toLowerCase()} fur Touristen geeignet?`, answer: "Ja. Der Ratgeber richtet sich an Gaste in Magaluf, Palmanova und den nahen Ferienorten Mallorcas." },
       { question: "Sollte ich vor der Ankunft buchen?", answer: "Ja, in der Hochsaison ist Online-Buchung sinnvoll, weil beliebte Roller und E-Bikes ausgebucht sein konnen." },
@@ -88,7 +88,7 @@ const COPY: Record<Locale, LocaleCopy> = {
     excerpt: (title) => `Guide pratique pour touristes sur ${title.toLowerCase()} avec NEXA Rentals Mallorca.`,
     quickAnswer: (title) => `${title} depend de vos dates, de votre permis, de votre itineraire et de la duree de location. NEXA Rentals aide a verifier disponibilites, conditions et reservation en ligne avant l'arrivee.`,
     ctaTitle: "Pret a reserver a Magaluf ?",
-    ctaText: "Consultez les scooters et e-bikes disponibles sur /en/vehicles ou posez une question a l'equipe via /en/contact.",
+    ctaText: "Consultez les scooters et e-bikes disponibles sur /fr ou posez une question a l'equipe via /fr/contact.",
     faqs: (title) => [
       { question: `${title} convient-il aux touristes ?`, answer: "Oui. Ce guide s'adresse aux visiteurs loges a Magaluf, Palmanova et dans les stations proches de Majorque." },
       { question: "Faut-il reserver avant l'arrivee ?", answer: "Oui, la reservation en ligne est conseillee en haute saison car les scooters et e-bikes populaires peuvent etre complets." },
@@ -101,7 +101,7 @@ const COPY: Record<Locale, LocaleCopy> = {
     excerpt: (title) => `Guida pratica per turisti su ${title.toLowerCase()} con NEXA Rentals Mallorca.`,
     quickAnswer: (title) => `${title} dipende da date, patente, itinerario e durata del noleggio. NEXA Rentals aiuta a verificare disponibilita, condizioni e prenotazione online prima dell'arrivo.`,
     ctaTitle: "Pronto a prenotare a Magaluf?",
-    ctaText: "Consulta scooter ed e-bike disponibili su /it/vehicles o fai una domanda al team da /it/contact.",
+    ctaText: "Consulta scooter ed e-bike disponibili su /it o fai una domanda al team da /it/contact.",
     faqs: (title) => [
       { question: `${title} e adatto ai turisti?`, answer: "Si. La guida e pensata per chi soggiorna a Magaluf, Palmanova e nelle localita vicine di Maiorca." },
       { question: "Conviene prenotare prima dell'arrivo?", answer: "Si, in alta stagione la prenotazione online e consigliata perche scooter ed e-bike richiesti possono esaurirsi." },
@@ -114,7 +114,7 @@ const COPY: Record<Locale, LocaleCopy> = {
     excerpt: (title) => `Guia pratico para turistas sobre ${title.toLowerCase()} com a NEXA Rentals Mallorca.`,
     quickAnswer: (title) => `${title} depende das datas, carta, percurso e duracao do aluguer. A NEXA Rentals ajuda a confirmar disponibilidade, condicoes e reserva online antes da chegada.`,
     ctaTitle: "Pronto para reservar em Magaluf?",
-    ctaText: "Veja scooters e e-bikes disponiveis em /pt/vehicles ou fale com a equipa em /pt/contact.",
+    ctaText: "Veja scooters e e-bikes disponiveis em /pt ou fale com a equipa em /pt/contact.",
     faqs: (title) => [
       { question: `${title} e adequado para turistas?`, answer: "Sim. O guia foi escrito para visitantes em Magaluf, Palmanova e outras zonas proximas de Maiorca." },
       { question: "Devo reservar antes de chegar?", answer: "Sim, na epoca alta a reserva online e recomendada porque as scooters e e-bikes mais procuradas podem esgotar." },
@@ -127,7 +127,7 @@ const COPY: Record<Locale, LocaleCopy> = {
     excerpt: (title) => `Praktisk turistguide om ${title.toLowerCase()} med NEXA Rentals Mallorca.`,
     quickAnswer: (title) => `${title} beror pa datum, korkort, rutt och hyrestid. NEXA Rentals hjalper dig att kontrollera tillganglighet, villkor och onlinebokning fore ankomst.`,
     ctaTitle: "Redo att boka i Magaluf?",
-    ctaText: "Se tillgangliga skotrar och elcyklar pa /sv/vehicles eller stall en fraga till teamet via /sv/contact.",
+    ctaText: "Se tillgangliga skotrar och elcyklar pa /sv eller stall en fraga till teamet via /sv/contact.",
     faqs: (title) => [
       { question: `Passar ${title.toLowerCase()} for turister?`, answer: "Ja. Guiden ar skriven for besokare i Magaluf, Palmanova och naraliggande orter pa Mallorca." },
       { question: "Bor jag boka fore ankomst?", answer: "Ja, under hogsasong rekommenderas onlinebokning eftersom populara skotrar och elcyklar kan bli fullbokade." },

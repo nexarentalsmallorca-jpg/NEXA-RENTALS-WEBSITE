@@ -46,7 +46,7 @@ export const license125ccSpainSections: BlogSection[] = [
     paragraphs: [
       "If your license is not accepted for a 125cc scooter, it does not mean your day in Magaluf is ruined. You may still have other transport choices, depending on your route and comfort level. NEXA Rentals also offers e-bikes, with prices from €9 for one hour up to €28 for one day, which can be useful for relaxed movement around Magaluf, Palmanova, and nearby areas.",
       "An e-bike is not a substitute for every scooter route. It will not feel the same for longer distances, hills, or island-wide plans. But for beach hopping, lunch trips, and short coastal exploring, it can be a sensible alternative when licensing rules prevent a scooter rental. The important thing is to choose the vehicle that fits both your documents and your actual plan.",
-      "If you are unsure before booking, ask early. It is better to know that you need a different vehicle than to arrive ready for a 125cc scooter and discover the paperwork does not work. You can check available vehicles through [NEXA Rentals vehicles](https://www.nexarentals.es/en/vehicles) and then contact the team if the licensing side needs clarification.",
+      "If you are unsure before booking, ask early. It is better to know that you need a different vehicle than to arrive ready for a 125cc scooter and discover the paperwork does not work. You can check available vehicles through [NEXA Rentals vehicles](https://www.nexarentals.es/en) and then contact the team if the licensing side needs clarification.",
     ],
   },
   {
@@ -61,7 +61,7 @@ export const license125ccSpainSections: BlogSection[] = [
     heading: "How to check before you book",
     paragraphs: [
       "The simplest approach is to gather your documents, check the categories on your license, and ask NEXA Rentals before booking if anything is unclear. Include your country of issue, how long you have held the license, and whether the card shows A1 or only B. A clear question gets a clearer answer, and it avoids the vague uncertainty that often comes from social media advice.",
-      "Once your license situation is confirmed, booking is straightforward. Choose the vehicle and rental time on the [online booking page](https://www.nexarentals.es/en/vehicles), then bring the original documents to pickup in Magaluf. Remember that the person who will ride should be the person whose license has been checked, unless the rental company has approved an additional rider.",
+      "Once your license situation is confirmed, booking is straightforward. Choose the vehicle and rental time on the [online booking page](https://www.nexarentals.es/en), then bring the original documents to pickup in Magaluf. Remember that the person who will ride should be the person whose license has been checked, unless the rental company has approved an additional rider.",
       "A correct license, original ID, deposit payment method, and realistic riding plan are the foundation of a good rental. After that, the practical extras from NEXA Rentals make the day easier: helmets included, a phone holder for navigation, and a lock for stops. The legal side may not be the most exciting part of travel, but getting it right lets the enjoyable part start smoothly.",
     ],
   },

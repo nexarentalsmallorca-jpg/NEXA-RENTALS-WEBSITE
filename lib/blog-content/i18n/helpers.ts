@@ -33,7 +33,7 @@ export function blogBookLink(locale: Locale, label?: string) {
       pt: "reserve o seu scooter online",
       sv: "boka din scooter online",
     }[locale] ?? "book online");
-  return `[${text}](https://www.nexarentals.es/${locale}/vehicles)`;
+  return `[${text}](https://www.nexarentals.es/${locale})`;
 }
 
 export function blogContactLink(locale: Locale, label?: string) {

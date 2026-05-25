@@ -32,7 +32,7 @@ export default function ScooterRentalMallorcaPage() {
 
             <div className="mt-8 flex flex-wrap gap-4">
               <Link
-                href="/vehicles"
+                href="/"
                 className="inline-flex min-h-[52px] items-center justify-center rounded-xl px-6 text-sm font-semibold text-black transition hover:scale-[1.02]"
                 style={{
                   background: `linear-gradient(135deg, ${ORANGE} 0%, #ff9a3d 100%)`,
@@ -167,7 +167,7 @@ export default function ScooterRentalMallorcaPage() {
 
           <div className="mt-8 flex flex-wrap gap-4">
             <Link
-              href="/vehicles"
+              href="/"
               className="inline-flex min-h-[52px] items-center justify-center rounded-xl px-6 text-sm font-semibold text-black transition hover:scale-[1.02]"
               style={{
                 background: `linear-gradient(135deg, ${ORANGE} 0%, #ff9a3d 100%)`,

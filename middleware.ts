@@ -101,6 +101,16 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl, 308);
   }
 
+  // Legacy fleet page — booking lives on the localized homepage
+  if (cleanPathWithoutLocale === "/vehicles") {
+    const redirectUrl = request.nextUrl.clone();
+    const localeToUse = hasLocalePrefix ? firstSegment : defaultLocale;
+
+    redirectUrl.pathname = `/${localeToUse}`;
+
+    return NextResponse.redirect(redirectUrl, 308);
+  }
+
   /*
     Admin must stay outside language routes.
 

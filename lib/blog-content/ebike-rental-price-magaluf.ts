@@ -6,7 +6,7 @@ export const ebikeRentalPriceMagalufSections: BlogSection[] = [
     paragraphs: [
       "E-bike rental in Magaluf is often the simplest option for visitors who want local freedom without renting a scooter. At NEXA Rentals, the prices are clear: €9 for 1 hour, €16 for 2 hours, €20 for 3 hours, €25 for 4 hours, and €28 for one day. One day is the maximum e-bike rental duration, which keeps the service focused on short, practical use around Magaluf, Palmanova, and nearby coastal areas.",
       "Those prices make e-bikes useful for different types of plans. One hour works for a quick ride along the seafront or a short errand. Two or three hours gives you time for a beach stop and a relaxed return. Four hours suits a half-day route without feeling rushed. The €28 day option is best when you want the bike available for several separate trips across the day.",
-      "You can check vehicles and booking options through [NEXA Rentals vehicles](https://www.nexarentals.es/en/vehicles), or use the [contact page](https://www.nexarentals.es/en/contact) if you want to confirm availability before walking over. In summer, e-bikes can be popular because they solve a very common holiday problem: moving comfortably between nearby places without waiting in heat or relying on taxis.",
+      "You can check vehicles and booking options through [NEXA Rentals vehicles](https://www.nexarentals.es/en), or use the [contact page](https://www.nexarentals.es/en/contact) if you want to confirm availability before walking over. In summer, e-bikes can be popular because they solve a very common holiday problem: moving comfortably between nearby places without waiting in heat or relying on taxis.",
     ],
   },
   {
@@ -46,7 +46,7 @@ export const ebikeRentalPriceMagalufSections: BlogSection[] = [
     paragraphs: [
       "An e-bike is ideal when your route is local, your pace is relaxed, and you do not want to deal with motorcycle license questions. It is quiet, easy to park, and friendly for short distances. Around Magaluf, that can be enough for many visitors. You can move between the beach, your accommodation, restaurants, and nearby areas without turning every small journey into a taxi decision.",
       "A 125cc scooter is better for longer distances, bigger hills, and wider Mallorca exploring. If you want to visit several coves, go beyond the immediate resort area, or carry a passenger comfortably, the scooter becomes more suitable. NEXA Rentals offers both options, so the better choice depends on your documents, confidence, route, and how much time you want to spend on the road.",
-      "Do not choose a scooter simply because it sounds more exciting, and do not choose an e-bike if your route is too ambitious for one. Honest travel planning saves money and stress. If your day is Magaluf to Palmanova and back, the e-bike may be perfect. If your day includes several towns and longer roads, check the [125cc scooter options](/en/vehicles) instead.",
+      "Do not choose a scooter simply because it sounds more exciting, and do not choose an e-bike if your route is too ambitious for one. Honest travel planning saves money and stress. If your day is Magaluf to Palmanova and back, the e-bike may be perfect. If your day includes several towns and longer roads, check the [125cc scooter options](/en) instead.",
     ],
   },
   {

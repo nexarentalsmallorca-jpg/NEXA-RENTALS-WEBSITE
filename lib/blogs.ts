@@ -147,7 +147,7 @@ export const blogPosts: BlogPost[] = [
           {
             heading: "How much does scooter rental cost in Magaluf?",
             paragraphs: [
-              "Price depends on duration, scooter type, season, deposit, insurance, and inclusions. NEXA commonly: half day €34–39, full day €42–49, multi-day lower per day — check the [live booking page](https://www.nexarentals.es/en/vehicles).",
+              "Price depends on duration, scooter type, season, deposit, insurance, and inclusions. NEXA commonly: half day €34–39, full day €42–49, multi-day lower per day — check the [live booking page](https://www.nexarentals.es/en).",
               "Cheapest is not always best — check deposit, helmets, holder, lock, fuel, kilometres, late fees. NEXA: 125cc automatic, 2 helmets, phone holder, security lock included.",
             ],
           },
@@ -399,7 +399,7 @@ export const blogPosts: BlogPost[] = [
             paragraphs: [
               "NEXA Rentals: 1 hour €9, 2 hours €16, 3 hours €22, 4 hours €25, 1 day €28. Cheapest flexible way to explore Magaluf, Palmanova, and Son Maties without a scooter licence.",
               "Standard pedal-assist e-bikes: motor assists while pedalling, assistance typically capped at 25 km/h and around 250W — treated differently from motor scooters.",
-              "Pickup Carrer Galeón 13, Magaluf, 09:00–20:00. Book via [vehicles page](https://www.nexarentals.es/en/vehicles) or WhatsApp.",
+              "Pickup Carrer Galeón 13, Magaluf, 09:00–20:00. Book via [vehicles page](https://www.nexarentals.es/en) or WhatsApp.",
             ],
           },
           {
@@ -447,7 +447,7 @@ export const blogPosts: BlogPost[] = [
             paragraphs: [
               "Worth it for Magaluf, Palmanova, Son Maties, couples, solo travellers, no scooter licence, low-cost exploring. Not ideal for long cross-island trips, luggage, or night after drinking.",
               "Final prices: €9 / €16 / €22 / €25 / €28. Best value: 1 day for €28. NEXA pickup Carrer Galeón 13, 09:00–20:00.",
-              "[NEXA e-bike rental Magaluf](https://www.nexarentals.es/en/vehicles) — city and mountain e-bikes (Moema city, Cecotec mountain) available.",
+              "[NEXA e-bike rental Magaluf](https://www.nexarentals.es/en) — city and mountain e-bikes (Moema city, Cecotec mountain) available.",
             ],
           },
         ],
@@ -578,7 +578,7 @@ export const blogPosts: BlogPost[] = [
             paragraphs: [
               "Palmanova is calmer; Magaluf usually better for fast tourist pickup and Cala Vinyes access. Both are close — pick clearest terms and easiest pickup. [Magaluf vs Palmanova rental](https://www.nexarentals.es/en/blog/magaluf-vs-palmanova-scooter-rental).",
               "Safety: helmet always, no alcohol, photos at pickup, lock when parked, return on time, no unauthorised riders.",
-              "Best place = central, transparent, full package. NEXA Rentals: 125cc, 2 helmets, holder, lock. Book at [NEXA scooter rental Magaluf](https://www.nexarentals.es/en/scooter-rental-magaluf) or [vehicles page](https://www.nexarentals.es/en/vehicles).",
+              "Best place = central, transparent, full package. NEXA Rentals: 125cc, 2 helmets, holder, lock. Book at [NEXA scooter rental Magaluf](https://www.nexarentals.es/en/scooter-rental-magaluf) or [vehicles page](https://www.nexarentals.es/en).",
             ],
           },
         ],
@@ -711,7 +711,7 @@ export const blogPosts: BlogPost[] = [
               "Tourists can rent in Magaluf, Palmanova, Palma, Alcúdia, Cala d'Or with correct documents. 125cc suits Magaluf → Palmanova, Cala Vinyes, Santa Ponça, Portals — see [best places](https://www.nexarentals.es/en/blog/best-places-to-visit-by-scooter-from-magaluf), [best rental location](https://www.nexarentals.es/en/blog/best-place-to-rent-a-scooter-in-magaluf), [125cc tourists](https://www.nexarentals.es/en/blog/can-tourists-rent-a-125cc-scooter-in-mallorca).",
               "Avoid: no physical licence, assuming B is enough, no IDP, ignoring deposit/excess, no helmet check, alcohol, friend riding, late return, illegal parking.",
               "Safety: helmet always, no alcohol, indicators, careful roundabouts, holder for nav only, legal parking, lock scooter, return on time.",
-              "Book at [NEXA scooter rental Magaluf](https://www.nexarentals.es/en/scooter-rental-magaluf) or [vehicles page](https://www.nexarentals.es/en/vehicles) when documents are ready.",
+              "Book at [NEXA scooter rental Magaluf](https://www.nexarentals.es/en/scooter-rental-magaluf) or [vehicles page](https://www.nexarentals.es/en) when documents are ready.",
             ],
           },
         ],

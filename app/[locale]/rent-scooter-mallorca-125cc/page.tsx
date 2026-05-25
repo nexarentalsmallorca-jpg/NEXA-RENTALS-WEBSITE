@@ -28,7 +28,7 @@ export default function RentScooter125Page() {
 
           <div className="mt-8 flex gap-4 flex-wrap">
             <Link
-              href="/vehicles"
+              href="/"
               className="px-6 py-3 rounded-xl font-bold text-black"
               style={{
                 background: `linear-gradient(135deg, ${ORANGE}, #ff9a3d)`,
@@ -130,7 +130,7 @@ export default function RentScooter125Page() {
 
           <div className="mt-6 flex gap-4 flex-wrap">
             <Link
-              href="/vehicles"
+              href="/"
               className="px-6 py-3 rounded-xl font-bold text-black"
               style={{
                 background: `linear-gradient(135deg, ${ORANGE}, #ff9a3d)`,

@@ -1,7 +1,7 @@
 import type { BlogCategory, BlogFaq, BlogPost, BlogSection } from "../blogs";
 
 const BOOK =
-  "[book your scooter online](https://www.nexarentals.es/en/vehicles)";
+  "[book your scooter online](https://www.nexarentals.es/en)";
 const CONTACT = "[contact NEXA Rentals](https://www.nexarentals.es/en/contact)";
 
 type PostInput = {
@@ -2403,7 +2403,7 @@ export const additionalBlogPosts: BlogPost[] = [
         heading: "What is included when you rent a scooter in Magaluf?",
         paragraphs: [
           "The important inclusions are helmets, insurance terms, deposit, phone holder, lock, pickup and return times, fuel policy, mileage rules, and licence requirements — not only the scooter.",
-          "NEXA Rentals includes a 125cc automatic scooter, 2 helmets free, phone holder for navigation, and security lock. Live availability is shown on the [fleet page](https://www.nexarentals.es/en/vehicles).",
+          "NEXA Rentals includes a 125cc automatic scooter, 2 helmets free, phone holder for navigation, and security lock. Live availability is shown on the [fleet page](https://www.nexarentals.es/en).",
           "Many tourists compare price only — a cheap rental can cost more if you pay extra for a second helmet, lock, or holder. Know what is included before you pay.",
         ],
       },
@@ -2447,7 +2447,7 @@ export const additionalBlogPosts: BlogPost[] = [
       {
         heading: "7. Pickup, return, fuel, and mileage",
         paragraphs: [
-          "Pickup and return times are part of the rental — check half-day vs full-day, late fees, extensions, and closing times on [online booking](https://www.nexarentals.es/en/vehicles).",
+          "Pickup and return times are part of the rental — check half-day vs full-day, late fees, extensions, and closing times on [online booking](https://www.nexarentals.es/en).",
           "Fuel: usually return same level as pickup — note fuel type and level; photo at pickup if helpful. Scooters are efficient for local routes.",
           "Ask if kilometres are unlimited, daily limits, and whether Palma or wider Mallorca is allowed — never leave Mallorca with the vehicle.",
         ],
@@ -2536,7 +2536,7 @@ export const additionalBlogPosts: BlogPost[] = [
         paragraphs: [
           "Yes — half-day rental is one of the best ways to explore nearby places without a full-day price. Perfect for Palmanova, Cala Vinyes, Son Maties, beaches, restaurants, and moving around Magaluf in the heat.",
           "Magaluf suits short rentals — you do not need a full island trip. In a few hours: Magaluf → Palmanova → lunch → Cala Vinyes → return before evening.",
-          "NEXA Rentals half-day pricing is often around €34–39 depending on season — always check the [live booking page](https://www.nexarentals.es/en/vehicles). Good for short stays, testing riding, or a few local trips only.",
+          "NEXA Rentals half-day pricing is often around €34–39 depending on season — always check the [live booking page](https://www.nexarentals.es/en). Good for short stays, testing riding, or a few local trips only.",
         ],
       },
       {
@@ -2697,7 +2697,7 @@ export const additionalBlogPosts: BlogPost[] = [
         paragraphs: [
           "Enter name, phone, email, dates, vehicle — correct phone for WhatsApp questions.",
           "Before confirm: pickup/return times, total price, deposit, inclusions, cancellation, licence, pickup address. Do not rush.",
-          `${BOOK} on the [vehicles page](https://www.nexarentals.es/en/vehicles) when ready.`,
+          `${BOOK} on the [vehicles page](https://www.nexarentals.es/en) when ready.`,
         ],
       },
       {
@@ -2861,7 +2861,7 @@ export const additionalBlogPosts: BlogPost[] = [
           "E-bike if: no scooter licence, short local exploring, relaxed pace, lower cost hourly rental.",
           "Scooter if: correct licence, longer routes, more speed, passenger on one vehicle, Magaluf to Palma or multi-stop days.",
           "No licence = e-bike. Short local = e-bike. Longer routes = scooter. Relaxed beach = e-bike. Palma = scooter or bus.",
-          `NEXA Rentals Magaluf offers both — [e-bike and scooter options](https://www.nexarentals.es/en/vehicles), [scooter rental Magaluf](https://www.nexarentals.es/en/scooter-rental-magaluf). ${BOOK} or ${CONTACT} with your holiday plan.`,
+          `NEXA Rentals Magaluf offers both — [e-bike and scooter options](https://www.nexarentals.es/en), [scooter rental Magaluf](https://www.nexarentals.es/en/scooter-rental-magaluf). ${BOOK} or ${CONTACT} with your holiday plan.`,
         ],
       },
     ],
@@ -2986,7 +2986,7 @@ export const additionalBlogPosts: BlogPost[] = [
           "E-bike: Palmanova, Son Maties, promenade, sunset, no-licence tourists. Scooter: Cala Vinyes (faster), Santa Ponça, Portals, Palma, two-up — see [e-bike vs scooter](https://www.nexarentals.es/en/blog/ebike-rental-magaluf-is-it-better-than-a-scooter) and [scooter routes](https://www.nexarentals.es/en/blog/best-scooter-routes-from-magaluf-for-first-time-visitors).",
           "Beginners: Magaluf → Palmanova loop. Couples: Palmanova beach + sunset. Photos: stop safely — Magaluf Beach → Son Maties → Palmanova promenade.",
           "Avoid: routes too long, low battery, fast promenade riding, unlocked bike, Palma without planning.",
-          `${BOOK} at [NEXA Rentals](https://www.nexarentals.es/en/vehicles) or compare [e-bike vs taxi](https://www.nexarentals.es/en/blog/e-bike-vs-taxi-magaluf-cheapest-way-to-explore-mallorca). ${CONTACT} for route advice.`,
+          `${BOOK} at [NEXA Rentals](https://www.nexarentals.es/en) or compare [e-bike vs taxi](https://www.nexarentals.es/en/blog/e-bike-vs-taxi-magaluf-cheapest-way-to-explore-mallorca). ${CONTACT} for route advice.`,
         ],
       },
     ],
@@ -3280,7 +3280,7 @@ export const additionalBlogPosts: BlogPost[] = [
           "For tourists, the main benefit of an e-bike is that the price is clear before you start. You do not need to worry about the meter running, traffic, waiting time, or paying again every time you move.",
           "Typical e-bike rental prices at NEXA Rentals: 1 hour €9, 2 hours €16, 3 hours €22, 4 hours €25, 1 day €28.",
           "If you rent an e-bike for one full day, you can explore Magaluf and nearby areas for €28 total — beach, coffee, Palmanova, photos, back to your hotel, and out again later without a new transport cost each time.",
-          "That is the big difference: with an e-bike, you pay for time. With a taxi, you pay for each journey. You can [book an e-bike online](https://www.nexarentals.es/en/vehicles) and see live availability before you arrive.",
+          "That is the big difference: with an e-bike, you pay for time. With a taxi, you pay for each journey. You can [book an e-bike online](https://www.nexarentals.es/en) and see live availability before you arrive.",
         ],
       },
       {

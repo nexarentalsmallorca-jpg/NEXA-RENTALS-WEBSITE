@@ -33,7 +33,7 @@ export default function BestScooterRentalMagalufPage() {
 
             <div className="mt-8 flex gap-4 flex-wrap">
               <Link
-                href="/vehicles"
+                href="/"
                 className="px-6 py-3 rounded-xl text-black font-semibold"
                 style={{
                   background: `linear-gradient(135deg, ${ORANGE} 0%, #ff9a3d 100%)`,
