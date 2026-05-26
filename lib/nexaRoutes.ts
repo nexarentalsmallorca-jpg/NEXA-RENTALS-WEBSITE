@@ -1,47 +1,32 @@
-export type NexaRoute = {
-  id: string;
-  shortName: string;
-  name: string;
-  description: string;
-  mapUrl: string;
-  distance?: string;
-  duration?: string;
-};
-
-export const NEXA_ROUTES: NexaRoute[] = [
+const NEXA_SPECIAL_ROUTES: NexaSpecialRoute[] = [
   {
     id: "route-1",
     shortName: "Route 1",
-    name: "Route 1 — NEXA Secret Coves Route",
+    name: "Route 1 — Mallorca Coastal Ride",
     description:
-      "A beautiful easy route with sea views, Secret Coves, beaches, viewpoints and perfect stops for photos.",
-    mapUrl: "https://maps.app.goo.gl/W57mTK9SapPPS4wm7",
-    distance: "Approx. 23–25 km",
-    duration: "Approx. 55 min",
+      "A beautiful easy route with sea views, nice roads and perfect stops for photos.",
+    mapUrl: "PASTE_GOOGLE_MAPS_ROUTE_1_LINK_HERE",
+    distance: "Approx. 35–45 km",
+    duration: "Approx. 1.5–2 hours",
   },
   {
     id: "route-2",
     shortName: "Route 2",
-    name: "Route 2 — NEXA Palma City Route",
+    name: "Route 2 — Viewpoints & Villages",
     description:
-      "A scenic route through beautiful Mallorca roads, viewpoints and Famous Cathedral.",
-    mapUrl: "https://maps.app.goo.gl/qfAMYCbP4FprPssf8",
-    distance: "Approx. 36–40 km",
-    duration: "Approx. 42 mins",
+      "A scenic route through beautiful Mallorca roads, viewpoints and local village stops.",
+    mapUrl: "PASTE_GOOGLE_MAPS_ROUTE_2_LINK_HERE",
+    distance: "Approx. 45–60 km",
+    duration: "Approx. 2–3 hours",
   },
   {
     id: "route-3",
     shortName: "Route 3",
-    name: "Route 3 — NEXA Sunset Route",
+    name: "Route 3 — Sunset Experience",
     description:
       "A relaxed route designed for sunset views, photos and a premium rental experience.",
-    mapUrl: "https://maps.app.goo.gl/GKdTvU9kQmhe9ELX9",
-    distance: "Approx. 23–25 km",
+    mapUrl: "PASTE_GOOGLE_MAPS_ROUTE_3_LINK_HERE",
+    distance: "Approx. 30–40 km",
     duration: "Approx. 1.5–2 hours",
   },
 ];
-
-export function getNexaRouteById(routeId?: string | null) {
-  if (!routeId) return null;
-  return NEXA_ROUTES.find((route) => route.id === routeId) || null;
-}
