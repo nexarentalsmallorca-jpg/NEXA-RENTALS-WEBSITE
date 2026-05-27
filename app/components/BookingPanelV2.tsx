@@ -594,7 +594,24 @@ type BookingPanelCopy = Record<keyof typeof I18N.en, string>;
 function getSeasonalPricing(date = new Date()): SeasonalPricing {
   const month = date.getMonth();
 
-  if (month === 4 || month === 5) {
+  /*
+    Month index:
+    0 = January
+    1 = February
+    2 = March
+    3 = April
+    4 = May
+    5 = June
+    6 = July
+    7 = August
+    8 = September
+    9 = October
+
+    New rule:
+    Peak Season prices now start from 1st June instead of 1st July.
+  */
+
+  if (month === 4) {
     return {
       seasonName: "Early Season",
       halfDayPrice: 34,
@@ -604,7 +621,7 @@ function getSeasonalPricing(date = new Date()): SeasonalPricing {
     };
   }
 
-  if (month === 6 || month === 7) {
+  if (month === 5 || month === 6 || month === 7) {
     return {
       seasonName: "Peak Season",
       halfDayPrice: 39,
