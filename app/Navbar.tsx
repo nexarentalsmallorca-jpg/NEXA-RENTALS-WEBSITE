@@ -382,17 +382,21 @@ export default function Navbar() {
             >
               <div className="offer-left flex min-w-0 items-center gap-2 md:gap-3">
                 <span className="offer-month shrink-0 text-[10px] font-black uppercase tracking-[0.16em] text-black sm:text-[12px] md:text-[14px]">
-                  {copy.badge}
-                </span>
+  {copy.badge}
+</span>
 
-                <span className="hidden h-1 w-1 shrink-0 rounded-full bg-black/45 sm:block" />
+<span className="h-1 w-1 shrink-0 rounded-full bg-black/45" />
 
-                <div className="discount-line min-w-0 truncate">
-                  <span className="discount-main text-[11px] font-black uppercase tracking-[0.025em] text-black sm:text-[14px] md:text-[19px]">
-                    {copy.saveLabel}{" "}
-                    <span className="discount-price">{copy.priceValue}</span>
-                  </span>
-                </div>
+<div className="discount-line min-w-0">
+  <span className="discount-main hidden text-[11px] font-black uppercase tracking-[0.025em] text-black sm:inline sm:text-[14px] md:text-[19px]">
+    {copy.saveLabel}{" "}
+    <span className="discount-price">{copy.priceValue}</span>
+  </span>
+
+  <span className="discount-main-mobile text-[10px] font-black uppercase tracking-[0.035em] text-black sm:hidden">
+    From <span className="discount-price">{copy.priceValue}</span>
+  </span>
+</div>
 
                 <span className="hidden h-1 w-1 shrink-0 rounded-full bg-black/45 md:block" />
 
