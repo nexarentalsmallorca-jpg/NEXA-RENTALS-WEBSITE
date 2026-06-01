@@ -43,11 +43,11 @@ const SALES_BAR_COPY: Record<
   }
 > = {
   en: {
-    badge: "May Special",
-    saveLabel: "Save up to",
-    priceValue: "€13",
+    badge: "June Special",
+    saveLabel: "Online deal from",
+    priceValue: "€39",
     endsIn: "Ends in",
-    cta: "See prices",
+    cta: "Book online",
     days: "Days",
     hours: "Hrs",
     minutes: "Mins",
@@ -57,11 +57,11 @@ const SALES_BAR_COPY: Record<
     menu: "Menu",
   },
   es: {
-    badge: "Especial mayo",
-    saveLabel: "Ahorra hasta",
-    priceValue: "13€",
+    badge: "Especial junio",
+    saveLabel: "Oferta online desde",
+    priceValue: "39€",
     endsIn: "Termina en",
-    cta: "Ver precios",
+    cta: "Reservar online",
     days: "Días",
     hours: "Hrs",
     minutes: "Mins",
@@ -71,11 +71,11 @@ const SALES_BAR_COPY: Record<
     menu: "Menú",
   },
   de: {
-    badge: "Mai Special",
-    saveLabel: "Spare bis zu",
-    priceValue: "13€",
+    badge: "Juni Special",
+    saveLabel: "Online-Angebot ab",
+    priceValue: "39€",
     endsIn: "Endet in",
-    cta: "Preise sehen",
+    cta: "Online buchen",
     days: "Tage",
     hours: "Std",
     minutes: "Min",
@@ -85,11 +85,11 @@ const SALES_BAR_COPY: Record<
     menu: "Menü",
   },
   fr: {
-    badge: "Offre mai",
-    saveLabel: "Économisez",
-    priceValue: "13€",
+    badge: "Offre juin",
+    saveLabel: "Offre en ligne dès",
+    priceValue: "39€",
     endsIn: "Fin dans",
-    cta: "Voir prix",
+    cta: "Réserver",
     days: "Jours",
     hours: "Hrs",
     minutes: "Mins",
@@ -99,11 +99,11 @@ const SALES_BAR_COPY: Record<
     menu: "Menu",
   },
   it: {
-    badge: "Speciale maggio",
-    saveLabel: "Risparmia fino a",
-    priceValue: "13€",
+    badge: "Speciale giugno",
+    saveLabel: "Offerta online da",
+    priceValue: "39€",
     endsIn: "Termina tra",
-    cta: "Vedi prezzi",
+    cta: "Prenota online",
     days: "Giorni",
     hours: "Ore",
     minutes: "Min",
@@ -113,11 +113,11 @@ const SALES_BAR_COPY: Record<
     menu: "Menu",
   },
   pt: {
-    badge: "Especial maio",
-    saveLabel: "Poupe até",
-    priceValue: "13€",
+    badge: "Especial junho",
+    saveLabel: "Oferta online desde",
+    priceValue: "39€",
     endsIn: "Termina em",
-    cta: "Ver preços",
+    cta: "Reservar online",
     days: "Dias",
     hours: "Hrs",
     minutes: "Mins",
@@ -127,11 +127,11 @@ const SALES_BAR_COPY: Record<
     menu: "Menu",
   },
   sv: {
-    badge: "Majerbjudande",
-    saveLabel: "Spara upp till",
-    priceValue: "13€",
+    badge: "Junierbjudande",
+    saveLabel: "Onlinepris från",
+    priceValue: "39€",
     endsIn: "Slutar om",
-    cta: "Se priser",
+    cta: "Boka online",
     days: "Dagar",
     hours: "Tim",
     minutes: "Min",
@@ -157,7 +157,10 @@ function safeGetLocaleFromPath(pathname: string): Locale {
 
 function getOfferEndDate() {
   const now = new Date();
-  return new Date(now.getFullYear(), 4, 31, 23, 59, 59, 999);
+
+  // June offer ends on 30 June at 23:59:59.
+  // Month index 5 = June.
+  return new Date(now.getFullYear(), 5, 30, 23, 59, 59, 999);
 }
 
 function getTimeLeft() {
@@ -365,9 +368,11 @@ export default function Navbar() {
       <div ref={salesBarRef} className="fixed inset-x-0 top-0 z-[10000]">
         <div className="sales-bar relative overflow-hidden border-b border-black/10 shadow-[0_10px_26px_rgba(0,0,0,0.22)]">
           <div className="sales-bar-waves sales-bar-waves-one" />
-          <div className="sales-bar-waves sales-bar-waves-two" />
-          <div className="sales-bar-waves sales-bar-waves-three" />
-          <div className="sales-bar-overlay" />
+<div className="sales-bar-waves sales-bar-waves-two" />
+<div className="sales-bar-waves sales-bar-waves-three" />
+<div className="sales-bar-premium-shine" />
+<div className="sales-bar-premium-shine sales-bar-premium-shine-second" />
+<div className="sales-bar-overlay" />
 
           <div className="relative mx-auto flex min-h-[44px] max-w-[1480px] items-center justify-between gap-2 px-[clamp(8px,2vw,32px)] py-1.5 md:min-h-[50px]">
             <Link
