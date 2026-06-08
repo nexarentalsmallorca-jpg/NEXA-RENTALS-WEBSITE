@@ -1,6 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense } from "react";
+import { Suspense, type ReactNode } from "react";
 import Navbar from "@/app/Navbar";
 import BlogParagraph from "@/app/components/blog/BlogParagraph";
 import BlogQuickAnswer from "@/app/components/blog/BlogQuickAnswer";
@@ -14,6 +14,7 @@ import {
 } from "@/lib/blogs";
 import { blogCanonicalUrl, SITE_URL } from "@/lib/blog-seo";
 import type { Locale } from "@/i18n/routing";
+
 const PAGE_BG = "#F9F8F7";
 const ORANGE = "#FF7A00";
 const INSTAGRAM_URL = "https://www.instagram.com/nexarentalsmallorca/";
@@ -41,13 +42,11 @@ function formatPublishedDateLong(iso: string, locale: Locale) {
   }).format(new Date(iso));
 }
 
-function MetaLabel({ children }: { children: React.ReactNode }) {
-  return (
-    <p className="text-sm leading-none text-stone-500">{children}</p>
-  );
+function MetaLabel({ children }: { children: ReactNode }) {
+  return <p className="text-sm leading-none text-stone-500">{children}</p>;
 }
 
-function MetaValue({ children }: { children: React.ReactNode }) {
+function MetaValue({ children }: { children: ReactNode }) {
   return (
     <p className="mt-2 text-[15px] font-medium leading-snug text-stone-900">
       {children}
@@ -62,7 +61,7 @@ function SocialIconButton({
 }: {
   href: string;
   label: string;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   return (
     <a
@@ -85,6 +84,52 @@ function InstagramIcon() {
   );
 }
 
+function getArticleWordCount(blog: BlogTranslation) {
+  const allText = [
+    blog.title,
+    blog.excerpt,
+    blog.quickAnswer,
+    blog.ctaTitle,
+    blog.ctaText,
+    ...blog.sections.flatMap((section) => [
+      section.heading,
+      ...section.paragraphs,
+    ]),
+    ...blog.faqs.flatMap((faq) => [faq.question, faq.answer]),
+  ]
+    .join(" ")
+    .trim();
+
+  if (!allText) return undefined;
+
+  return allText.split(/\s+/).filter(Boolean).length;
+}
+
+function getSeoRentalLinks(locale: Locale) {
+  return [
+    {
+      href: `/${locale}/scooter-rental-magaluf`,
+      label: "Scooter rental Magaluf",
+      description: "125cc scooters near Magaluf with helmets, lock and phone holder included.",
+    },
+    {
+      href: `/${locale}/scooter-rental-mallorca`,
+      label: "Scooter rental Mallorca",
+      description: "Explore Mallorca with flexible scooter rental from NEXA Rentals.",
+    },
+    {
+      href: `/${locale}/rent-scooter-mallorca-125cc`,
+      label: "125cc scooter rental",
+      description: "Check licence rules and rent a 125cc scooter for your trip.",
+    },
+    {
+      href: `/${locale}/ebike-rental-mallorca`,
+      label: "E-bike rental Mallorca",
+      description: "Easy e-bike rental for short rides, beach routes and city exploring.",
+    },
+  ];
+}
+
 export default async function BlogArticle({
   locale,
   blog,
@@ -97,8 +142,11 @@ export default async function BlogArticle({
   const categoryLabel = tCat(blog.category);
 
   const articleUrl = blogCanonicalUrl(locale, blog.slug);
-  const bookHref = `/${locale}`;
+  const bookHref = `/${locale}/scooter-rental-magaluf`;
   const publishedLong = formatPublishedDateLong(blog.publishedAt, locale);
+  const rentalLinks = getSeoRentalLinks(locale);
+  const articleWordCount = getArticleWordCount(blog);
+  const hasFaqs = blog.faqs.length > 0;
 
   const articleJsonLd = {
     "@context": "https://schema.org",
@@ -124,23 +172,23 @@ export default async function BlogArticle({
     },
     articleSection: blog.category,
     inLanguage: locale,
+    ...(articleWordCount ? { wordCount: articleWordCount } : {}),
   };
 
-  const faqJsonLd =
-    blog.faqs.length > 0
-      ? {
-          "@context": "https://schema.org",
-          "@type": "FAQPage",
-          mainEntity: blog.faqs.map((faq) => ({
-            "@type": "Question",
-            name: faq.question,
-            acceptedAnswer: {
-              "@type": "Answer",
-              text: faq.answer,
-            },
-          })),
-        }
-      : null;
+  const faqJsonLd = hasFaqs
+    ? {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        mainEntity: blog.faqs.map((faq) => ({
+          "@type": "Question",
+          name: faq.question,
+          acceptedAnswer: {
+            "@type": "Answer",
+            text: faq.answer,
+          },
+        })),
+      }
+    : null;
 
   const breadcrumbJsonLd = {
     "@context": "https://schema.org",
@@ -188,12 +236,20 @@ export default async function BlogArticle({
         className="min-h-screen overflow-x-clip font-[family-name:var(--font-inter)] text-stone-900"
         style={{ backgroundColor: PAGE_BG }}
       >
-        <Suspense fallback={<div className="h-24 w-full" style={{ backgroundColor: PAGE_BG }} />}>
+        <Suspense
+          fallback={
+            <div
+              className="h-24 w-full"
+              style={{ backgroundColor: PAGE_BG }}
+            />
+          }
+        >
           <Navbar />
         </Suspense>
 
         <article className="nexa-prose-safe mx-auto w-full min-w-0 max-w-[1100px] px-4 pb-20 pt-24 sm:px-6 sm:pb-24 sm:pt-28 lg:px-10">
           <BlogViewTracker postId={blog.id} />
+
           <Link
             href={`/${locale}/blog`}
             className="mb-6 inline-flex min-h-11 items-center text-sm font-medium text-stone-500 transition hover:text-stone-800 sm:mb-8"
@@ -222,7 +278,7 @@ export default async function BlogArticle({
             />
           </div>
 
-          <div className="mt-6 rounded-2xl border border-stone-200/90 bg-white/70 p-4 shadow-[0_8px_32px_rgba(15,23,42,0.04)] sm:mt-10 sm:rounded-none sm:border-0 sm:border-b sm:border-stone-300/70 sm:bg-transparent sm:pb-8 sm:p-0 sm:shadow-none">
+          <div className="mt-6 rounded-2xl border border-stone-200/90 bg-white/70 p-4 shadow-[0_8px_32px_rgba(15,23,42,0.04)] sm:mt-10 sm:rounded-none sm:border-0 sm:border-b sm:border-stone-300/70 sm:bg-transparent sm:p-0 sm:pb-8 sm:shadow-none">
             <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:flex sm:flex-wrap sm:gap-10 md:gap-14">
               <div className="min-w-0">
                 <MetaLabel>{t("writtenBy")}</MetaLabel>
@@ -232,10 +288,12 @@ export default async function BlogArticle({
                   </span>
                 </MetaValue>
               </div>
+
               <div className="min-w-0">
                 <MetaLabel>{t("publishedOn")}</MetaLabel>
                 <MetaValue>{publishedLong}</MetaValue>
               </div>
+
               <div className="col-span-2 min-w-0 sm:col-span-1">
                 <MetaLabel>{t("views")}</MetaLabel>
                 <MetaValue>
@@ -296,12 +354,38 @@ export default async function BlogArticle({
           <div className="mt-12 w-full sm:mt-14">
             <BlogQuickAnswer text={blog.quickAnswer} />
 
+            <section className="mt-10 rounded-2xl border border-orange-200/70 bg-white p-5 shadow-[0_10px_32px_rgba(15,23,42,0.04)] sm:p-7">
+              <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-600">
+                NEXA Rentals
+              </p>
+              <h2 className="mt-3 font-[family-name:var(--font-playfair)] text-xl font-semibold text-stone-950 sm:text-2xl">
+                Useful rental pages for your trip
+              </h2>
+              <div className="mt-5 grid gap-3 sm:grid-cols-2">
+                {rentalLinks.map((link) => (
+                  <Link
+                    key={link.href}
+                    href={link.href}
+                    className="group rounded-xl border border-stone-200 bg-[#F9F8F7] p-4 transition hover:border-orange-300 hover:bg-orange-50/40"
+                  >
+                    <span className="block text-sm font-semibold text-stone-950 group-hover:text-[#c45f00]">
+                      {link.label}
+                    </span>
+                    <span className="mt-2 block text-sm leading-relaxed text-stone-600">
+                      {link.description}
+                    </span>
+                  </Link>
+                ))}
+              </div>
+            </section>
+
             <div className="mt-14 space-y-14 sm:mt-16 sm:space-y-16">
               {blog.sections.map((section) => (
                 <section key={section.heading} className="w-full">
                   <h2 className="max-w-[48ch] break-words font-[family-name:var(--font-playfair)] text-xl font-semibold tracking-tight text-stone-950 sm:text-3xl">
                     {section.heading}
                   </h2>
+
                   <div className="mt-6 max-w-[75ch] space-y-5">
                     {section.paragraphs.map((paragraph) => (
                       <BlogParagraph
@@ -315,33 +399,38 @@ export default async function BlogArticle({
               ))}
             </div>
 
-            <section className="mt-16 w-full border-t border-stone-200 pt-14 sm:mt-20">
-              <h2 className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-stone-950 sm:text-3xl">
-                {t("faqTitle")}
-              </h2>
-              <dl className="mt-10 max-w-[75ch] space-y-10">
-                {blog.faqs.map((faq) => (
-                  <div key={faq.question}>
-                    <dt className="text-lg font-semibold text-stone-950 sm:text-xl">
-                      {faq.question}
-                    </dt>
-                    <dd className="mt-4 text-[17px] leading-[1.9] text-stone-600 sm:text-lg">
-                      {faq.answer}
-                    </dd>
-                  </div>
-                ))}
-              </dl>
-            </section>
+            {hasFaqs ? (
+              <section className="mt-16 w-full border-t border-stone-200 pt-14 sm:mt-20">
+                <h2 className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-stone-950 sm:text-3xl">
+                  {t("faqTitle")}
+                </h2>
+
+                <dl className="mt-10 max-w-[75ch] space-y-10">
+                  {blog.faqs.map((faq) => (
+                    <div key={faq.question}>
+                      <dt className="text-lg font-semibold text-stone-950 sm:text-xl">
+                        {faq.question}
+                      </dt>
+                      <dd className="mt-4 text-[17px] leading-[1.9] text-stone-600 sm:text-lg">
+                        {faq.answer}
+                      </dd>
+                    </div>
+                  ))}
+                </dl>
+              </section>
+            ) : null}
 
             <section className="mt-12 flex flex-col items-stretch gap-4 rounded-2xl border border-stone-200 bg-white/80 p-5 sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:p-8">
               <div>
                 <h2 className="font-[family-name:var(--font-playfair)] text-lg font-semibold text-stone-950 sm:text-xl">
                   {blog.ctaTitle}
                 </h2>
+
                 <p className="mt-2 max-w-md text-sm leading-relaxed text-stone-600 sm:text-[15px]">
                   {blog.ctaText}
                 </p>
               </div>
+
               <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row sm:flex-wrap sm:gap-3">
                 <Link
                   href={bookHref}
@@ -352,14 +441,13 @@ export default async function BlogArticle({
                 >
                   {t("rentOnline")}
                 </Link>
-                <a
-                  href="https://wa.me/34971482342"
-                  target="_blank"
-                  rel="noopener noreferrer"
+
+                <Link
+                  href={`/${locale}/vehicles`}
                   className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-stone-300 bg-white px-5 text-sm font-medium text-stone-800 transition hover:border-stone-400 sm:h-11 sm:w-auto sm:rounded-lg"
                 >
-                  WhatsApp
-                </a>
+                  View vehicles
+                </Link>
               </div>
             </section>
 
@@ -368,6 +456,7 @@ export default async function BlogArticle({
                 <h2 className="font-[family-name:var(--font-playfair)] text-lg font-semibold text-stone-950">
                   {t("continueReading")}
                 </h2>
+
                 <ul className="mt-6 divide-y divide-stone-200">
                   {related.map((post) => (
                     <li key={post.slug}>
