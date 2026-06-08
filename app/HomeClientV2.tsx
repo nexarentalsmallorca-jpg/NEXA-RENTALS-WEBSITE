@@ -84,7 +84,7 @@ function buildSlides(t: ReturnType<typeof useTranslations>): ScooterSlide[] {
       image: "/images/piaggio.png",
       imageAlt: "Piaggio Liberty 125",
       imageStyle: {
-        transform: "translateX(-115px) translateY(-35px) scale(1.8)",
+       transform: "translateX(-76px) translateY(-8px) scale(1.38)",
         pointerEvents: "none",
         userSelect: "none",
       },
@@ -455,55 +455,61 @@ export default function HomeClientV2() {
 
         @media (min-width: 1024px) and (max-width: 1320px) {
           .nexa-hero-grid {
-            grid-template-columns: 330px minmax(520px, 1fr) 350px;
+            grid-template-columns: 270px minmax(360px, 1fr) 300px;
+            column-gap: 16px;
           }
 
           .nexa-hero-left {
-            padding-left: 28px !important;
+            padding-left: 18px !important;
           }
 
           .nexa-hero-booking {
-            transform: translateX(-8px) !important;
+            transform: translateX(0) scale(0.9) !important;
+            transform-origin: right center;
           }
 
           .nexa-hero-scooter-img {
-            max-width: 980px !important;
+            max-width: 820px !important;
           }
         }
 
         @media (min-width: 1321px) and (max-width: 1600px) {
           .nexa-hero-grid {
-            grid-template-columns: 410px minmax(620px, 1fr) 380px;
+            grid-template-columns: 325px minmax(440px, 1fr) 325px;
+            column-gap: 18px;
           }
 
           .nexa-hero-left {
-            padding-left: 72px !important;
+            padding-left: 38px !important;
           }
 
           .nexa-hero-booking {
-            transform: translateX(-28px) !important;
+            transform: translateX(-6px) scale(0.92) !important;
+            transform-origin: right center;
           }
 
           .nexa-hero-scooter-img {
-            max-width: 1080px !important;
+            max-width: 900px !important;
           }
         }
 
         @media (min-width: 1601px) {
           .nexa-hero-grid {
-            grid-template-columns: 500px minmax(720px, 1fr) 390px;
+            grid-template-columns: 470px minmax(640px, 1fr) 390px;
+            column-gap: 30px;
           }
 
           .nexa-hero-left {
-            padding-left: 160px !important;
+            padding-left: 130px !important;
           }
 
           .nexa-hero-booking {
-            transform: translateX(-40px) !important;
+            transform: translateX(-28px) scale(0.98) !important;
+            transform-origin: right center;
           }
 
           .nexa-hero-scooter-img {
-            max-width: 1180px !important;
+            max-width: 1120px !important;
           }
         }
 
@@ -550,13 +556,13 @@ export default function HomeClientV2() {
               </div>
 
               <div className="relative z-10 mx-auto w-full max-w-[1720px] px-3 sm:px-5 lg:px-8 2xl:px-10">
-                <div className="py-2 sm:py-4 lg:min-h-[720px] lg:py-8 xl:min-h-[760px] 2xl:min-h-[820px]">
-                  <div className="nexa-hero-grid grid grid-cols-1 gap-0 lg:min-h-[680px] lg:grid-cols-[410px_minmax(620px,1fr)_380px] lg:items-stretch lg:justify-between lg:gap-8 xl:min-h-[720px] 2xl:min-h-[780px]">
+                <div className="py-2 sm:py-4 lg:min-h-[600px] lg:py-6 xl:min-h-[650px] 2xl:min-h-[780px]">
+                  <div className="nexa-hero-grid grid grid-cols-1 gap-0 lg:min-h-[570px] lg:grid-cols-[325px_minmax(440px,1fr)_325px] lg:items-stretch lg:justify-between lg:gap-5 xl:min-h-[620px] 2xl:min-h-[740px]">
                     <div className="nexa-hero-left relative z-10 order-1 w-full pt-2 lg:shrink-0 lg:pt-4">
                       <div className="rounded-[26px] bg-white/55 px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.10)] backdrop-blur-sm lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-0">
                         <h1
                           key={`heading-${motionKey}`}
-                          className={`${poppins.className} nexa-animate-heading min-h-[42px] text-center text-[30px] font-black uppercase leading-none tracking-[-0.04em] text-[#111111] sm:text-[36px] lg:min-h-[68px] lg:text-left lg:text-[44px] xl:min-h-[74px] xl:text-[50px]`}
+                          className={`${poppins.className} nexa-animate-heading min-h-[42px] text-center text-[30px] font-black uppercase leading-none tracking-[-0.04em] text-[#111111] sm:text-[36px] lg:min-h-[56px] lg:text-left lg:text-[34px] xl:min-h-[64px] xl:text-[42px] 2xl:min-h-[74px] 2xl:text-[50px]`}
                         >
                           {activeSlide.name}
                         </h1>
@@ -585,26 +591,26 @@ export default function HomeClientV2() {
                       {!isEbike && (
                         <div
                           key={`prices-${motionKey}`}
-                          className="nexa-animate-prices mt-7 hidden items-start gap-4 xl:ml-1 lg:flex"
+                          className="nexa-animate-prices mt-5 hidden items-start gap-3 xl:ml-1 lg:flex"
                         >
                           <button
                             type="button"
                             data-nexa-step="plan-half-day"
                             onClick={() => triggerBookingPlan("half")}
-                            className="relative w-[128px] rounded-[24px] border-2 border-[#ff5a2a] bg-white px-3 pb-3 pt-6 text-left shadow-sm transition duration-200 hover:-translate-y-[2px] hover:shadow-[0_14px_28px_rgba(255,106,0,0.14)] active:scale-[0.985] sm:w-[140px] xl:w-[150px]"
+                            className="relative w-[108px] rounded-[22px] border-2 border-[#ff5a2a] bg-white px-2.5 pb-3 pt-6 text-left shadow-sm transition duration-200 hover:-translate-y-[2px] hover:shadow-[0_14px_28px_rgba(255,106,0,0.14)] active:scale-[0.985] sm:w-[118px] xl:w-[128px] 2xl:w-[150px]"
                           >
                             <div className="absolute left-1/2 top-1 -translate-x-1/2 whitespace-nowrap rounded-full bg-gradient-to-r from-[#ff3b30] to-[#ff9b3d] px-2.5 py-[3px] text-[9px] font-extrabold uppercase tracking-[0.04em] text-black">
                               {t("hero.plans.mostPopular")}
                             </div>
 
                             <div className="text-center">
-                              <div className="text-[24px] font-black text-[#ff3b30] line-through">
+                              <div className="text-[20px] font-black text-[#ff3b30] line-through">
                                 {heroPricing.halfOldPrice}€
                               </div>
-                              <div className="mt-1 text-[40px] font-black text-[#ff7a00]">
+                              <div className="mt-1 text-[34px] font-black text-[#ff7a00] 2xl:text-[40px]">
                                 {heroPricing.halfDay}€
                               </div>
-                              <div className="mt-1 text-[14px] font-semibold text-[#222]">
+                              <div className="mt-1 text-[13px] font-semibold text-[#222]">
                                 {t("hero.plans.halfDay")}
                               </div>
                             </div>
@@ -614,16 +620,16 @@ export default function HomeClientV2() {
                             type="button"
                             data-nexa-step="plan-full-day"
                             onClick={() => triggerBookingPlan("full")}
-                            className="w-[122px] rounded-[22px] bg-white px-3 pb-3 pt-5 text-left shadow-sm ring-1 ring-black/6 transition duration-200 hover:-translate-y-[2px] hover:shadow-[0_14px_28px_rgba(0,0,0,0.10)] active:scale-[0.985] sm:w-[132px] xl:w-[140px]"
+                            className="w-[104px] rounded-[20px] bg-white px-2.5 pb-3 pt-5 text-left shadow-sm ring-1 ring-black/6 transition duration-200 hover:-translate-y-[2px] hover:shadow-[0_14px_28px_rgba(0,0,0,0.10)] active:scale-[0.985] sm:w-[114px] xl:w-[124px] 2xl:w-[140px]"
                           >
                             <div className="text-center">
-                              <div className="text-[24px] font-black text-[#ff3b30] line-through">
+                              <div className="text-[20px] font-black text-[#ff3b30] line-through">
                                 {heroPricing.fullOldPrice}€
                               </div>
-                              <div className="mt-1 text-[40px] font-black text-black">
+                              <div className="mt-1 text-[34px] font-black text-black 2xl:text-[40px]">
                                 {heroPricing.fullDay}€
                               </div>
-                              <div className="mt-1 text-[14px] font-semibold text-[#222]">
+                              <div className="mt-1 text-[13px] font-semibold text-[#222]">
                                 {t("hero.plans.fullDay")}
                               </div>
                             </div>
@@ -633,12 +639,12 @@ export default function HomeClientV2() {
 
                       <ul
                         key={`features-${motionKey}`}
-                        className="nexa-animate-features mt-8 hidden list-disc space-y-[4px] pl-5 text-[15px] text-[#222] marker:text-black lg:block"
+                        className="nexa-animate-features mt-6 hidden list-disc space-y-[3px] pl-5 text-[13px] leading-5 text-[#222] marker:text-black xl:text-[14px] 2xl:text-[15px] lg:block"
                       >
                         {activeSlide.features.map((feature, index) => (
                           <li
                             key={`${activeSlide.id}-${index}`}
-                            className="min-h-[24px]"
+                            className="min-h-[20px]"
                           >
                             {feature}
                           </li>
@@ -646,7 +652,7 @@ export default function HomeClientV2() {
                       </ul>
                     </div>
 
-                    <div className="relative z-[1] order-2 flex min-h-[282px] flex-1 items-center justify-center pt-0 lg:min-h-[650px] lg:items-end xl:min-h-[690px] 2xl:min-h-[740px]">
+                    <div className="relative z-[1] order-2 flex min-h-[282px] flex-1 items-center justify-center pt-0 lg:min-h-[540px] lg:items-end xl:min-h-[590px] 2xl:min-h-[720px]">
                       <div className="pointer-events-none relative flex h-full w-full items-center justify-center overflow-visible lg:items-end">
                         <div className="nexa-mobile-image-stage flex w-full items-center justify-center lg:min-h-0 lg:overflow-visible">
                           <div
@@ -660,7 +666,7 @@ export default function HomeClientV2() {
                             <img
                               src={activeSlide.image}
                               alt={activeSlide.imageAlt}
-                              className="nexa-hero-scooter-img relative z-10 hidden w-full max-w-[1040px] select-none object-contain drop-shadow-[0_34px_42px_rgba(0,0,0,0.24)] lg:block"
+                              className="nexa-hero-scooter-img relative z-10 hidden w-full max-w-[860px] 2xl:max-w-[1040px] select-none object-contain drop-shadow-[0_34px_42px_rgba(0,0,0,0.24)] lg:block"
                               style={activeSlide.imageStyle}
                               draggable={false}
                             />
@@ -714,7 +720,7 @@ export default function HomeClientV2() {
                     <div className="relative z-[50] order-3 w-full lg:flex lg:min-w-0 lg:items-center lg:justify-end">
                       <div
                         key={`right-${motionKey}`}
-                        className="nexa-animate-panel nexa-hero-booking nexa-mobile-booking-overlap relative z-[60] mx-auto w-full max-w-[390px] lg:ml-auto"
+                        className="nexa-animate-panel nexa-hero-booking nexa-mobile-booking-overlap relative z-[60] mx-auto w-full max-w-[390px] lg:max-w-[345px] xl:max-w-[360px] 2xl:max-w-[390px] lg:ml-auto"
                         ref={bookingPanelHostRef}
                       >
                         {!isEbike ? (
@@ -809,7 +815,7 @@ export default function HomeClientV2() {
                 <div className="pointer-events-none absolute left-0 right-0 top-1/2 z-[100] hidden -translate-y-1/2 lg:block">
                   <button
                     onClick={goPrev}
-                    className="pointer-events-auto absolute left-6 z-[110] text-[90px] font-light text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.6)] transition hover:scale-110 hover:text-[#FF6A00]"
+                    className="pointer-events-auto absolute left-3 z-[110] text-[64px] 2xl:text-[90px] font-light text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.6)] transition hover:scale-110 hover:text-[#FF6A00]"
                     aria-label={t("hero.slider.previous")}
                     type="button"
                   >
@@ -818,7 +824,7 @@ export default function HomeClientV2() {
 
                   <button
                     onClick={goNext}
-                    className="pointer-events-auto absolute right-0 z-[110] text-[90px] font-light text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.6)] transition hover:scale-110 hover:text-[#FF6A00]"
+                    className="pointer-events-auto absolute right-2 z-[110] text-[64px] 2xl:text-[90px] font-light text-white drop-shadow-[0_6px_12px_rgba(0,0,0,0.6)] transition hover:scale-110 hover:text-[#FF6A00]"
                     aria-label={t("hero.slider.next")}
                     type="button"
                   >
