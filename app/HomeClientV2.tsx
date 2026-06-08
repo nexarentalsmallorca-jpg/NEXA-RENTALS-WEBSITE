@@ -84,7 +84,7 @@ function buildSlides(t: ReturnType<typeof useTranslations>): ScooterSlide[] {
       image: "/images/piaggio.png",
       imageAlt: "Piaggio Liberty 125",
       imageStyle: {
-       transform: "translateX(-76px) translateY(-8px) scale(1.38)",
+        transform: "translateX(-115px) translateY(-35px) scale(1.8)",
         pointerEvents: "none",
         userSelect: "none",
       },
@@ -556,7 +556,7 @@ export default function HomeClientV2() {
               </div>
 
               <div className="relative z-10 mx-auto w-full max-w-[1720px] px-3 sm:px-5 lg:px-8 2xl:px-10">
-                <div className="py-2 sm:py-4 lg:min-h-[600px] lg:py-6 xl:min-h-[650px] 2xl:min-h-[780px]">
+                <div className="nexa-hero-shell py-2 sm:py-4 lg:min-h-[600px] lg:py-6 xl:min-h-[650px] 2xl:min-h-[780px]">
                   <div className="nexa-hero-grid grid grid-cols-1 gap-0 lg:min-h-[570px] lg:grid-cols-[325px_minmax(440px,1fr)_325px] lg:items-stretch lg:justify-between lg:gap-5 xl:min-h-[620px] 2xl:min-h-[740px]">
                     <div className="nexa-hero-left relative z-10 order-1 w-full pt-2 lg:shrink-0 lg:pt-4">
                       <div className="rounded-[26px] bg-white/55 px-4 py-3 shadow-[0_12px_30px_rgba(0,0,0,0.10)] backdrop-blur-sm lg:bg-transparent lg:p-0 lg:shadow-none lg:backdrop-blur-0">
@@ -652,7 +652,7 @@ export default function HomeClientV2() {
                       </ul>
                     </div>
 
-                    <div className="relative z-[1] order-2 flex min-h-[282px] flex-1 items-center justify-center pt-0 lg:min-h-[540px] lg:items-end xl:min-h-[590px] 2xl:min-h-[720px]">
+                    <div className="nexa-hero-stage relative z-[1] order-2 flex min-h-[282px] flex-1 items-center justify-center pt-0 lg:min-h-[540px] lg:items-end xl:min-h-[590px] 2xl:min-h-[720px]">
                       <div className="pointer-events-none relative flex h-full w-full items-center justify-center overflow-visible lg:items-end">
                         <div className="nexa-mobile-image-stage flex w-full items-center justify-center lg:min-h-0 lg:overflow-visible">
                           <div
