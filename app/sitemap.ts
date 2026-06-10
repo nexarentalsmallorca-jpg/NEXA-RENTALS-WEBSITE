@@ -3,16 +3,24 @@ import { getBlogsForLocale } from "../lib/blogs";
 import { locales, type Locale } from "../i18n/routing";
 
 const baseUrl = "https://www.nexarentals.es";
-
 const DEFAULT_LAST_MODIFIED = new Date("2026-06-08");
 
-const routes = [
+/**
+ * NEXA Rentals sitemap strategy:
+ * - Keep ALL important pages and ALL blogs visible to Google.
+ * - Give strongest priority to real booking/money pages.
+ * - Give hub/blog pages enough priority so Google crawls the full content cluster.
+ * - Avoid using new Date() on every deploy because that makes every URL look freshly changed.
+ */
+
+const staticRoutes = [
   "",
 
   // Core pages
   "/about",
   "/vehicles",
   "/blog",
+  "/blog/scooter-rental-guides",
 
   // Main money pages
   "/scooter-rental-magaluf",
@@ -40,6 +48,10 @@ function getStaticPriority(route: string) {
     return 0.95;
   }
 
+  if (route === "/blog/scooter-rental-guides") {
+    return 0.9;
+  }
+
   if (
     route === "/best-scooter-rental-magaluf" ||
     route === "/best-scooter-rental-mallorca" ||
@@ -51,7 +63,7 @@ function getStaticPriority(route: string) {
   }
 
   if (route === "/vehicles") return 0.85;
-  if (route === "/blog") return 0.75;
+  if (route === "/blog") return 0.8;
   if (route === "/about") return 0.7;
 
   return 0.7;
@@ -61,37 +73,107 @@ function getStaticChangeFrequency(
   route: string
 ): MetadataRoute.Sitemap[number]["changeFrequency"] {
   if (route === "") return "daily";
-  if (route === "/blog") return "weekly";
+  if (route === "/blog" || route === "/blog/scooter-rental-guides") {
+    return "weekly";
+  }
 
   return "monthly";
 }
 
 function getBlogPriority(slug: string) {
-  const highIntentKeywords = [
+  const normalizedSlug = slug.toLowerCase();
+
+  const veryHighIntentKeywords = [
     "license",
     "licence",
+    "korkort",
+    "patente",
+    "carta",
+    "permis",
     "125cc",
-    "car-licence",
-    "car-license",
-    "tourists",
-    "price",
-    "cost",
     "deposit",
+    "deposito",
+    "caution",
+    "caucao",
+    "deposition",
+    "price",
+    "prices",
+    "cost",
+    "precio",
+    "prix",
+    "preco",
+    "prezzo",
+    "kostar",
     "online",
-    "magaluf",
-    "palmanova",
-    "routes",
-    "places",
-    "scooter-rental",
-    "ebike",
-    "e-bike",
+    "book",
+    "rent",
+    "alquilar",
+    "louer",
+    "mieten",
+    "noleggiare",
+    "alugar",
+    "hyra",
   ];
 
-  const isHighIntent = highIntentKeywords.some((keyword) =>
-    slug.toLowerCase().includes(keyword)
+  const localIntentKeywords = [
+    "magaluf",
+    "palmanova",
+    "mallorca",
+    "majorque",
+    "maiorca",
+    "spain",
+    "spanien",
+    "spagna",
+    "espana",
+  ];
+
+  const contentClusterKeywords = [
+    "scooter",
+    "skoter",
+    "ebike",
+    "e-bike",
+    "elcykel",
+    "routes",
+    "rutas",
+    "rotas",
+    "itinerari",
+    "places",
+    "lugares",
+    "lieux",
+    "luoghi",
+    "platser",
+    "helmet",
+    "helmets",
+    "casco",
+    "casques",
+    "caschi",
+    "hjalmar",
+    "taxi",
+    "car",
+    "coche",
+    "voiture",
+    "auto",
+    "carro",
+  ];
+
+  const hasVeryHighIntent = veryHighIntentKeywords.some((keyword) =>
+    normalizedSlug.includes(keyword)
   );
 
-  return isHighIntent ? 0.75 : 0.65;
+  const hasLocalIntent = localIntentKeywords.some((keyword) =>
+    normalizedSlug.includes(keyword)
+  );
+
+  const hasClusterIntent = contentClusterKeywords.some((keyword) =>
+    normalizedSlug.includes(keyword)
+  );
+
+  if (hasVeryHighIntent && hasLocalIntent) return 0.78;
+  if (hasVeryHighIntent) return 0.75;
+  if (hasLocalIntent && hasClusterIntent) return 0.72;
+  if (hasClusterIntent) return 0.68;
+
+  return 0.65;
 }
 
 export default function sitemap(): MetadataRoute.Sitemap {
@@ -103,7 +185,7 @@ export default function sitemap(): MetadataRoute.Sitemap {
   };
 
   const staticEntries: MetadataRoute.Sitemap = locales.flatMap((locale) =>
-    routes.map((route) => ({
+    staticRoutes.map((route) => ({
       url: `${baseUrl}/${locale}${route}`,
       lastModified: DEFAULT_LAST_MODIFIED,
       changeFrequency: getStaticChangeFrequency(route),

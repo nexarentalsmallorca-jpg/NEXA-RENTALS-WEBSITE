@@ -108,14 +108,22 @@ function getArticleWordCount(blog: BlogTranslation) {
 function getSeoRentalLinks(locale: Locale) {
   return [
     {
+      href: `/${locale}/blog/scooter-rental-guides`,
+      label: "All scooter rental guides",
+      description:
+        "See all NEXA guides about licences, prices, deposits, routes, helmets and booking.",
+    },
+    {
       href: `/${locale}/scooter-rental-magaluf`,
       label: "Scooter rental Magaluf",
-      description: "125cc scooters near Magaluf with helmets, lock and phone holder included.",
+      description:
+        "125cc scooters near Magaluf with helmets, lock and phone holder included.",
     },
     {
       href: `/${locale}/scooter-rental-mallorca`,
       label: "Scooter rental Mallorca",
-      description: "Explore Mallorca with flexible scooter rental from NEXA Rentals.",
+      description:
+        "Explore Mallorca with flexible scooter rental from NEXA Rentals.",
     },
     {
       href: `/${locale}/rent-scooter-mallorca-125cc`,
@@ -125,7 +133,8 @@ function getSeoRentalLinks(locale: Locale) {
     {
       href: `/${locale}/ebike-rental-mallorca`,
       label: "E-bike rental Mallorca",
-      description: "Easy e-bike rental for short rides, beach routes and city exploring.",
+      description:
+        "Easy e-bike rental for short rides, beach routes and city exploring.",
     },
   ];
 }
@@ -143,6 +152,7 @@ export default async function BlogArticle({
 
   const articleUrl = blogCanonicalUrl(locale, blog.slug);
   const bookHref = `/${locale}/scooter-rental-magaluf`;
+  const guidesHref = `/${locale}/blog/scooter-rental-guides`;
   const publishedLong = formatPublishedDateLong(blog.publishedAt, locale);
   const rentalLinks = getSeoRentalLinks(locale);
   const articleWordCount = getArticleWordCount(blog);
@@ -221,12 +231,14 @@ export default async function BlogArticle({
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(articleJsonLd) }}
       />
+
       {faqJsonLd ? (
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       ) : null}
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbJsonLd) }}
@@ -250,12 +262,21 @@ export default async function BlogArticle({
         <article className="nexa-prose-safe mx-auto w-full min-w-0 max-w-[1100px] px-4 pb-20 pt-24 sm:px-6 sm:pb-24 sm:pt-28 lg:px-10">
           <BlogViewTracker postId={blog.id} />
 
-          <Link
-            href={`/${locale}/blog`}
-            className="mb-6 inline-flex min-h-11 items-center text-sm font-medium text-stone-500 transition hover:text-stone-800 sm:mb-8"
-          >
-            ← {t("back")}
-          </Link>
+          <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
+            <Link
+              href={`/${locale}/blog`}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-stone-500 transition hover:text-stone-800"
+            >
+              ← {t("back")}
+            </Link>
+
+            <Link
+              href={guidesHref}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-orange-200 bg-white px-4 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-50"
+            >
+              All scooter rental guides →
+            </Link>
+          </div>
 
           <div
             className={`relative aspect-[2/1] w-full overflow-hidden rounded-2xl sm:aspect-[16/9] ${
@@ -358,9 +379,17 @@ export default async function BlogArticle({
               <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-600">
                 NEXA Rentals
               </p>
+
               <h2 className="mt-3 font-[family-name:var(--font-playfair)] text-xl font-semibold text-stone-950 sm:text-2xl">
                 Useful rental pages for your trip
               </h2>
+
+              <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
+                Explore our main rental pages and full guide hub so Google and
+                customers can easily reach every important scooter, e-bike,
+                licence, deposit, price and route page.
+              </p>
+
               <div className="mt-5 grid gap-3 sm:grid-cols-2">
                 {rentalLinks.map((link) => (
                   <Link
@@ -371,6 +400,7 @@ export default async function BlogArticle({
                     <span className="block text-sm font-semibold text-stone-950 group-hover:text-[#c45f00]">
                       {link.label}
                     </span>
+
                     <span className="mt-2 block text-sm leading-relaxed text-stone-600">
                       {link.description}
                     </span>
@@ -411,6 +441,7 @@ export default async function BlogArticle({
                       <dt className="text-lg font-semibold text-stone-950 sm:text-xl">
                         {faq.question}
                       </dt>
+
                       <dd className="mt-4 text-[17px] leading-[1.9] text-stone-600 sm:text-lg">
                         {faq.answer}
                       </dd>
@@ -443,6 +474,13 @@ export default async function BlogArticle({
                 </Link>
 
                 <Link
+                  href={guidesHref}
+                  className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-orange-200 bg-orange-50 px-5 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-100 sm:h-11 sm:w-auto sm:rounded-lg"
+                >
+                  All guides
+                </Link>
+
+                <Link
                   href={`/${locale}/vehicles`}
                   className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-stone-300 bg-white px-5 text-sm font-medium text-stone-800 transition hover:border-stone-400 sm:h-11 sm:w-auto sm:rounded-lg"
                 >
@@ -467,9 +505,11 @@ export default async function BlogArticle({
                         <span className="text-[10px] font-semibold uppercase tracking-[0.2em] text-stone-400">
                           {tCat(post.category)}
                         </span>
+
                         <span className="mt-2 block font-medium text-stone-900 transition group-hover:text-[#c45f00]">
                           {post.title}
                         </span>
+
                         <span className="mt-1 block text-sm text-stone-500">
                           {post.readTime}
                         </span>
