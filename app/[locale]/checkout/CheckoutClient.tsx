@@ -1080,46 +1080,77 @@ export default function CheckoutClient() {
         }
 
         @media (max-width: 1023px) {
-          .nexa-mobile-flip-scene {
-            min-height: 1240px;
-          }
+  html,
+  body {
+    height: auto !important;
+    min-height: 100% !important;
+    overflow-y: auto !important;
+    overscroll-behavior-y: auto !important;
+  }
 
-          .nexa-mobile-flip-card {
-            min-height: 1240px;
-          }
+  .nexa-mobile-flip-scene {
+    min-height: 0 !important;
+    height: auto !important;
+    perspective: none !important;
+    overflow: visible !important;
+  }
 
-          .nexa-mobile-flip-card .nexa-card-face {
-            min-height: 1240px;
-          }
-        }
+  .nexa-mobile-flip-card {
+    position: relative !important;
+    min-height: 0 !important;
+    height: auto !important;
+    transform: none !important;
+    transition: none !important;
+    transform-style: flat !important;
+    overflow: visible !important;
+  }
 
-        @media (max-width: 640px) {
-          .nexa-mobile-flip-scene {
-            min-height: 1320px;
-          }
+  .nexa-mobile-flip-card.nexa-flipped {
+    transform: none !important;
+  }
 
-          .nexa-mobile-flip-card {
-            min-height: 1320px;
-          }
+  .nexa-mobile-flip-card .nexa-card-face {
+    position: relative !important;
+    inset: auto !important;
+    min-height: 0 !important;
+    height: auto !important;
+    transform: none !important;
+    backface-visibility: visible !important;
+    -webkit-backface-visibility: visible !important;
+    overflow: visible !important;
+  }
 
-          .nexa-mobile-flip-card .nexa-card-face {
-            min-height: 1320px;
-          }
-        }
+  .nexa-mobile-flip-card:not(.nexa-flipped) .nexa-card-front {
+    display: block !important;
+  }
 
-        @media (max-width: 390px) {
-          .nexa-mobile-flip-scene {
-            min-height: 1380px;
-          }
+  .nexa-mobile-flip-card:not(.nexa-flipped) .nexa-card-back {
+    display: none !important;
+  }
 
-          .nexa-mobile-flip-card {
-            min-height: 1380px;
-          }
+  .nexa-mobile-flip-card.nexa-flipped .nexa-card-front {
+    display: none !important;
+  }
 
-          .nexa-mobile-flip-card .nexa-card-face {
-            min-height: 1380px;
-          }
-        }
+  .nexa-mobile-flip-card.nexa-flipped .nexa-card-back {
+    display: block !important;
+    padding-bottom: 160px !important;
+  }
+
+  #nexa-payment-card {
+    scroll-margin-top: 18px !important;
+  }
+
+  #stripe-embedded {
+    overflow: visible !important;
+    padding-bottom: 180px !important;
+  }
+
+  .nexa-card-back [data-testid],
+  .nexa-card-back iframe {
+    max-width: 100% !important;
+  }
+}
       `}</style>
     </div>
   );
