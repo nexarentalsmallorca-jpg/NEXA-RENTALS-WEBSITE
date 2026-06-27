@@ -417,8 +417,8 @@ function detectStepFromElement(
 ): Tip | null {
   if (!element) return null;
 
-  if (isPlanButton(element, "half")) return copy.halfHover;
-  if (isPlanButton(element, "full")) return copy.fullHover;
+  if (isPlanButton(element, "half")) return null;
+  if (isPlanButton(element, "full")) return null;
 
   return null;
 }
@@ -429,8 +429,8 @@ function detectClickStep(
 ): Tip | null {
   if (!element) return null;
 
-  if (isPlanButton(element, "half")) return copy.halfClick;
-  if (isPlanButton(element, "full")) return copy.fullClick;
+  if (isPlanButton(element, "half")) return null;
+  if (isPlanButton(element, "full")) return null;
 
   return null;
 }
@@ -743,6 +743,10 @@ export default function NeroBookingCopilot() {
       const target = getTargetElement(rawElement);
       if (!target) return;
 
+      if (isPlanButton(target, "half") || isPlanButton(target, "full")) {
+        return;
+      }
+
       const detected = detectStepFromElement(target, copy);
 
       if (detected) {
@@ -783,11 +787,15 @@ export default function NeroBookingCopilot() {
       if (isPlanButton(element, "half")) {
         setSelectedPlan("half");
         selectedPlanRef.current = "half";
+        closeTipImmediately();
+        return;
       }
 
       if (isPlanButton(element, "full")) {
         setSelectedPlan("full");
         selectedPlanRef.current = "full";
+        closeTipImmediately();
+        return;
       }
 
       if (isMobileLikeNow()) {

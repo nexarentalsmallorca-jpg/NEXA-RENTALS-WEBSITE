@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
 
 import BlogRentalGuides from "@/app/components/blog/BlogRentalGuides";
-import HomeClientV2 from "../HomeClientV2";
+import HomeClientV3 from "../HomeClientV3";
 import { defaultLocale, isValidLocale, type Locale } from "../../i18n/routing";
 
 type PageProps = {
@@ -28,7 +28,7 @@ export default async function Page({ params }: PageProps) {
   return (
     <>
       <Suspense fallback={null}>
-        <HomeClientV2 key={locale} />
+        <HomeClientV3 key={locale} />
       </Suspense>
       <div className="bg-[#0f1115] px-4 py-10 sm:px-6">
         <div className="mx-auto max-w-6xl">
