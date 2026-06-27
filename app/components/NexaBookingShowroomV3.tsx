@@ -13,6 +13,8 @@ import NavbarV3 from "../NavbarV3";
 import BookingPanelV3 from "./BookingPanelV3";
 import GoogleReviewsV3 from "./GoogleReviewsV3";
 import NexaStatsStripV3 from "./NexaStatsStripV3";
+import MallorcaScooterRentalGuideHub from "../components/MallorcaScooterRentalGuideHub";
+
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -988,11 +990,11 @@ export default function NexaBookingShowroomV3() {
 
         <div
           className={[
-            "booking-panel-shell absolute right-6 top-[116px] z-40 hidden w-[min(420px,28vw)] max-w-[420px] lg:block",
+            "booking-panel-shell absolute right-6 top-[102px] z-40 hidden w-[410px] max-w-[410px] lg:block",
             bookingPanelAttention ? "booking-panel-attention" : "",
           ].join(" ")}
         >
-          <div className="max-h-[calc(100vh-148px)] overflow-y-auto rounded-[34px] border border-white/12 bg-black/24 p-3 shadow-[0_28px_90px_rgba(0,0,0,0.38)] backdrop-blur-2xl">
+          <div className="rounded-[28px] border border-white/12 bg-black/24 p-2 shadow-[0_28px_90px_rgba(0,0,0,0.38)] backdrop-blur-2xl">
             {isActiveVehicleEbike ? (
               <EbikeWhatsAppPanel
                 key={`desktop-ebike-${activeVehicle.id}`}
@@ -1054,7 +1056,7 @@ export default function NexaBookingShowroomV3() {
           type="button"
           onClick={goToNext}
           aria-label="Next vehicle"
-          className="showroom-arrow showroom-arrow-right group absolute right-[calc(min(420px,28vw)+48px)] top-1/2 z-40 hidden h-24 w-16 -translate-y-1/2 items-center justify-center text-white/75 transition-all duration-300 hover:text-white active:scale-95 lg:flex"
+          className="showroom-arrow showroom-arrow-right group absolute right-[390px] top-1/2 z-40 hidden h-24 w-16 -translate-y-1/2 items-center justify-center text-white/75 transition-all duration-300 hover:text-white active:scale-95 lg:flex"
         >
           <svg
             viewBox="0 0 34 64"
@@ -1125,6 +1127,15 @@ export default function NexaBookingShowroomV3() {
             background: rgba(255, 255, 255, 0.16);
             filter: blur(10px);
             opacity: 0.42;
+          }
+
+          .booking-panel-shell {
+            transform: scale(0.88);
+            transform-origin: top right;
+          }
+
+          .booking-panel-shell > div {
+            overflow: visible;
           }
 
           .booking-panel-shell :global(*) {
@@ -1261,13 +1272,20 @@ export default function NexaBookingShowroomV3() {
             }
 
             .booking-panel-shell {
-              top: 96px;
-              right: 5px;
-              width: min(400px, 27vw);
+              top: 88px;
+              right: 10px;
+              width: 410px;
+              max-width: 410px;
+              transform: scale(0.8);
             }
 
             .booking-panel-shell > div {
-              max-height: calc(100vh - 112px);
+              padding: 8px;
+              border-radius: 26px;
+            }
+
+            .showroom-arrow-right {
+              right: 350px;
             }
           }
 
@@ -1283,12 +1301,14 @@ export default function NexaBookingShowroomV3() {
             }
 
             .booking-panel-shell {
-              right: 8px;
-              width: min(382px, 30vw);
+              right: 12px;
+              width: 410px;
+              max-width: 410px;
+              transform: scale(0.82);
             }
 
             .showroom-arrow-right {
-              right: calc(min(382px, 30vw) + 26px);
+              right: 360px;
             }
           }
 
@@ -1352,6 +1372,7 @@ export default function NexaBookingShowroomV3() {
       <GoogleReviewsV3 />
       <LocationV3 />
       <NexaStatsStripV3 />
+      <MallorcaScooterRentalGuideHub />
     </>
   );
 }
