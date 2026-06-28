@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 
@@ -421,6 +421,10 @@ const I18N: Record<Locale, BookingPanelCopy> = {
 
 const DEFAULT_PICKUP_LOCATION = "NEXA Rentals, Magaluf";
 const MAX_ONLINE_DAYS = 6;
+
+const PLAN_ATTENTION_ACTIVE_MS = 3000;
+const PLAN_ATTENTION_REST_MS = 3000;
+const PLAN_ATTENTION_RESTART_DELAY_MS = 20;
 
 const SEASONAL_PRICING: SeasonalPricing[] = [
   {
@@ -1098,7 +1102,9 @@ export default function BookingPanelV3({
   const [viewMonth, setViewMonth] = useState(startOfMonth(minBookableDate));
   const [activeTimeField, setActiveTimeField] = useState<ActiveTimeField>(null);
   const [planAttention, setPlanAttention] = useState(false);
-  const planAttentionTimeoutRef = useRef<number | null>(null);
+  const planAttentionActiveTimeoutRef = useRef<number | null>(null);
+  const planAttentionRestTimeoutRef = useRef<number | null>(null);
+  const planAttentionRestartTimeoutRef = useRef<number | null>(null);
 
   const activePricing = useMemo(() => {
     return getSeasonalPricing(pickupDate || minBookableDate);
@@ -1379,29 +1385,77 @@ export default function BookingPanelV3({
     tt.availabilityError,
   ]);
 
-  useEffect(() => {
-    return () => {
-      if (planAttentionTimeoutRef.current) {
-        window.clearTimeout(planAttentionTimeoutRef.current);
-      }
-    };
-  }, []);
-
-  function triggerPlanAttention() {
-    if (planAttentionTimeoutRef.current) {
-      window.clearTimeout(planAttentionTimeoutRef.current);
+  const clearPlanAttentionTimers = useCallback(() => {
+    if (planAttentionActiveTimeoutRef.current) {
+      window.clearTimeout(planAttentionActiveTimeoutRef.current);
+      planAttentionActiveTimeoutRef.current = null;
     }
 
-    setPlanAttention(false);
+    if (planAttentionRestTimeoutRef.current) {
+      window.clearTimeout(planAttentionRestTimeoutRef.current);
+      planAttentionRestTimeoutRef.current = null;
+    }
 
-    window.setTimeout(() => {
-      setPlanAttention(true);
-    }, 20);
+    if (planAttentionRestartTimeoutRef.current) {
+      window.clearTimeout(planAttentionRestartTimeoutRef.current);
+      planAttentionRestartTimeoutRef.current = null;
+    }
+  }, []);
 
-    planAttentionTimeoutRef.current = window.setTimeout(() => {
+  const beginPlanAttentionCycle = useCallback(
+    (initialDelay = 0) => {
+      clearPlanAttentionTimers();
+
+      if (plan) {
+        setPlanAttention(false);
+        return;
+      }
+
+      const runPulse = () => {
+        setPlanAttention(false);
+
+        planAttentionRestartTimeoutRef.current = window.setTimeout(() => {
+          setPlanAttention(true);
+        }, PLAN_ATTENTION_RESTART_DELAY_MS);
+
+        planAttentionActiveTimeoutRef.current = window.setTimeout(() => {
+          setPlanAttention(false);
+
+          planAttentionRestTimeoutRef.current = window.setTimeout(() => {
+            runPulse();
+          }, PLAN_ATTENTION_REST_MS);
+        }, PLAN_ATTENTION_ACTIVE_MS);
+      };
+
+      if (initialDelay > 0) {
+        planAttentionRestTimeoutRef.current = window.setTimeout(() => {
+          runPulse();
+        }, initialDelay);
+
+        return;
+      }
+
+      runPulse();
+    },
+    [clearPlanAttentionTimers, plan]
+  );
+
+  useEffect(() => {
+    if (plan) {
+      clearPlanAttentionTimers();
       setPlanAttention(false);
-      planAttentionTimeoutRef.current = null;
-    }, 3000);
+      return;
+    }
+
+    beginPlanAttentionCycle(0);
+
+    return () => {
+      clearPlanAttentionTimers();
+    };
+  }, [plan, beginPlanAttentionCycle, clearPlanAttentionTimers]);
+
+  function triggerPlanAttention() {
+    beginPlanAttentionCycle(0);
   }
 
   function openCalendar(field: ActiveDateField) {
@@ -1442,11 +1496,7 @@ export default function BookingPanelV3({
   }
 
   function handlePlanSelect(nextPlan: Exclude<RentalPlan, null>) {
-    if (planAttentionTimeoutRef.current) {
-      window.clearTimeout(planAttentionTimeoutRef.current);
-      planAttentionTimeoutRef.current = null;
-    }
-
+    clearPlanAttentionTimers();
     setPlanAttention(false);
     setPlan(nextPlan);
     setPickupDate(undefined);

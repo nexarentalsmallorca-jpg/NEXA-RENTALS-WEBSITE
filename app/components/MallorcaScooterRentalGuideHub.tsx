@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Montserrat } from "next/font/google";
 
@@ -131,7 +131,34 @@ const guideQuestions: GuideQuestion[] = [
 ];
 
 export default function MallorcaScooterRentalGuideHub({ locale = "en" }: Props) {
-  const [openIndex, setOpenIndex] = useState<number>(0);
+  const sectionRef = useRef<HTMLElement | null>(null);
+  const [openIndex, setOpenIndex] = useState<number>(-1);
+  const [sectionInView, setSectionInView] = useState(false);
+  const [animationRun, setAnimationRun] = useState(0);
+
+  useEffect(() => {
+    const section = sectionRef.current;
+    if (!section) return;
+
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setSectionInView(true);
+          setAnimationRun((current) => current + 1);
+        } else {
+          setSectionInView(false);
+        }
+      },
+      {
+        threshold: 0.18,
+        rootMargin: "0px 0px -8% 0px",
+      }
+    );
+
+    observer.observe(section);
+
+    return () => observer.disconnect();
+  }, []);
 
   const schemaData = {
     "@context": "https://schema.org",
@@ -164,9 +191,10 @@ export default function MallorcaScooterRentalGuideHub({ locale = "en" }: Props) 
 
   return (
     <section
+      ref={sectionRef}
       id="mallorca-scooter-rental-guide"
       aria-labelledby="mallorca-scooter-rental-guide-title"
-      className={`${montserrat.className} relative overflow-hidden bg-white px-4 py-14 text-black sm:px-6 lg:px-8 lg:py-20`}
+      className={`${montserrat.className} bg-white px-4 py-12 text-black sm:px-6 lg:px-8 lg:py-16`}
       style={{ fontFamily: montserrat.style.fontFamily }}
     >
       <script
@@ -176,55 +204,88 @@ export default function MallorcaScooterRentalGuideHub({ locale = "en" }: Props) 
         }}
       />
 
-      <div className="pointer-events-none absolute inset-0">
-        <div className="absolute left-1/2 top-0 h-[280px] w-[720px] -translate-x-1/2 rounded-full bg-black/[0.025] blur-[100px]" />
-        <div className="absolute bottom-0 right-0 h-[260px] w-[520px] rounded-full bg-black/[0.035] blur-[110px]" />
-      </div>
+      <style jsx>{`
+        @keyframes guideQuestionReveal {
+          0% {
+            opacity: 0;
+            transform: translateY(18px);
+          }
 
-      <div className="relative mx-auto max-w-5xl">
+          100% {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        .guide-question-animate {
+          opacity: 0;
+          animation-name: guideQuestionReveal;
+          animation-duration: 560ms;
+          animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
+          animation-fill-mode: forwards;
+        }
+      `}</style>
+
+      <div className="mx-auto max-w-6xl">
         <h2
           id="mallorca-scooter-rental-guide-title"
-          className="mx-auto max-w-4xl text-center text-3xl font-black uppercase leading-[0.95] tracking-[-0.055em] text-black sm:text-5xl lg:text-6xl"
-          style={{ fontFamily: montserrat.style.fontFamily }}
+          className="mx-auto max-w-4xl text-center text-3xl font-black uppercase leading-[0.95] tracking-[-0.055em] text-black sm:text-5xl lg:text-[58px]"
         >
           Mallorca Scooter Rental Guide
         </h2>
 
-        <div className="mt-12 space-y-3 sm:mt-14">
+        <div className="mt-10 grid gap-x-12 border-t border-black/10 sm:mt-12 lg:grid-cols-2">
           {guideQuestions.map((item, index) => {
             const isOpen = openIndex === index;
             const number = String(index + 1).padStart(2, "0");
             const href = `/${locale}/blog/${item.slug}`;
+            const delay = `${Math.min(index, 14) * 85}ms`;
 
             return (
               <article
-                key={item.question}
-                className="overflow-hidden rounded-[24px] border border-black bg-black text-white shadow-[0_18px_55px_rgba(0,0,0,0.13)] transition duration-300 hover:shadow-[0_24px_70px_rgba(0,0,0,0.2)]"
+                key={`${animationRun}-${item.slug}`}
+                className={`border-b border-black/10 bg-white ${
+                  sectionInView ? "guide-question-animate" : "opacity-0"
+                }`}
+                style={{
+                  animationDelay: sectionInView ? delay : "0ms",
+                }}
               >
                 <button
                   type="button"
                   onClick={() => setOpenIndex(isOpen ? -1 : index)}
-                  className="flex w-full items-center justify-between gap-5 px-5 py-5 text-left sm:px-7 sm:py-6"
+                  className="group flex w-full items-center justify-between gap-5 bg-white py-4 text-left transition sm:py-[18px]"
                   aria-expanded={isOpen}
                   aria-controls={`guide-answer-${index}`}
                 >
-                  <span className="flex min-w-0 items-center gap-4 sm:gap-5">
-                    <span className="shrink-0 text-[11px] font-black uppercase tracking-[0.22em] text-white/35 sm:text-xs">
+                  <span className="flex min-w-0 items-start gap-4">
+                    <span className="mt-[3px] shrink-0 text-[10px] font-black uppercase tracking-[0.24em] text-black/35">
                       {number}
                     </span>
 
-                    <span className="text-base font-black leading-snug tracking-[-0.035em] text-white sm:text-lg lg:text-xl">
+                    <span className="text-[14px] font-extrabold leading-snug tracking-[-0.025em] text-black sm:text-[15px] lg:text-[16px]">
                       {item.question}
                     </span>
                   </span>
 
                   <span
-                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-full border border-white/15 text-lg font-black text-white transition duration-300 ${
-                      isOpen ? "rotate-45 bg-white text-black" : "bg-white/[0.04]"
+                    className={`grid h-8 w-8 shrink-0 place-items-center rounded-full bg-black/[0.045] text-black transition duration-300 group-hover:bg-black group-hover:text-white ${
+                      isOpen ? "rotate-180 bg-black text-white" : ""
                     }`}
                     aria-hidden
                   >
-                    +
+                    <svg
+                      width="15"
+                      height="15"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2.6"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <path d="M6 9l6 6 6-6" />
+                    </svg>
                   </span>
                 </button>
 
@@ -237,14 +298,14 @@ export default function MallorcaScooterRentalGuideHub({ locale = "en" }: Props) 
                   }`}
                 >
                   <div className="overflow-hidden">
-                    <div className="border-t border-white/10 px-5 pb-6 pt-5 sm:px-7 sm:pb-7">
-                      <p className="max-w-3xl text-sm font-medium leading-7 tracking-[-0.01em] text-white/62 sm:text-[15px]">
+                    <div className="pb-5 pl-[42px] pr-12">
+                      <p className="max-w-2xl text-[13px] font-medium leading-6 tracking-[-0.01em] text-black/58 sm:text-sm">
                         {item.answer}
                       </p>
 
                       <Link
                         href={href}
-                        className="mt-5 inline-flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.22em] text-white transition hover:text-white/60"
+                        className="mt-4 inline-flex items-center gap-2 text-[10px] font-black uppercase tracking-[0.22em] text-black transition hover:text-black/55"
                         aria-label={`${item.linkText}: ${item.question}`}
                       >
                         {item.linkText}
@@ -258,17 +319,17 @@ export default function MallorcaScooterRentalGuideHub({ locale = "en" }: Props) 
           })}
         </div>
 
-        <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+        <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <Link
             href={`/${locale}#booking`}
-            className="inline-flex min-h-[52px] items-center justify-center rounded-full bg-black px-7 text-[11px] font-black uppercase tracking-[0.22em] text-white shadow-[0_18px_50px_rgba(0,0,0,0.16)] transition hover:-translate-y-0.5 hover:bg-black/85"
+            className="inline-flex min-h-[50px] items-center justify-center rounded-full bg-black px-7 text-[10px] font-black uppercase tracking-[0.22em] text-white shadow-[0_18px_50px_rgba(0,0,0,0.12)] transition hover:-translate-y-0.5 hover:bg-black/85"
           >
             Book online now
           </Link>
 
           <Link
             href={`/${locale}/blog`}
-            className="inline-flex min-h-[52px] items-center justify-center rounded-full border border-black/15 bg-white px-7 text-[11px] font-black uppercase tracking-[0.22em] text-black transition hover:-translate-y-0.5 hover:border-black hover:bg-black hover:text-white"
+            className="inline-flex min-h-[50px] items-center justify-center rounded-full border border-black/15 bg-white px-7 text-[10px] font-black uppercase tracking-[0.22em] text-black transition hover:-translate-y-0.5 hover:border-black hover:bg-black hover:text-white"
           >
             View all guides
           </Link>

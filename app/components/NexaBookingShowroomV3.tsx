@@ -14,6 +14,7 @@ import BookingPanelV3 from "./BookingPanelV3";
 import GoogleReviewsV3 from "./GoogleReviewsV3";
 import NexaStatsStripV3 from "./NexaStatsStripV3";
 import MallorcaScooterRentalGuideHub from "../components/MallorcaScooterRentalGuideHub";
+import NeroWebsiteAssistant from "../components/NeroWebsiteAssistant";
 
 const poppins = Poppins({
   subsets: ["latin"],
@@ -241,16 +242,19 @@ function ClockIcon() {
 
 function TypedLine({
   text,
-  typingIndex,
   className,
+  delayMs = 0,
 }: {
   text: string;
-  typingIndex: number;
   className: string;
+  delayMs?: number;
 }) {
   return (
-    <span className={className}>
-      {text.slice(0, Math.min(typingIndex, text.length))}
+    <span
+      className={`typed-unpack ${className}`}
+      style={{ animationDelay: `${delayMs}ms` }}
+    >
+      {text}
     </span>
   );
 }
@@ -760,7 +764,6 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
 export default function NexaBookingShowroomV3() {
   const [activeIndex, setActiveIndex] = useState(0);
   const [bookingPanelAttention, setBookingPanelAttention] = useState(false);
-  const [typingIndex, setTypingIndex] = useState(0);
   const bookingAttentionTimeoutRef = useRef<number | null>(null);
 
   const slideCount = VEHICLE_SLIDES.length;
@@ -770,16 +773,6 @@ export default function NexaBookingShowroomV3() {
   }, [activeIndex]);
 
   const isActiveVehicleEbike = activeVehicle.id.startsWith("ebike");
-
-  const longestTypingLength = useMemo(() => {
-    const lines = [
-      "SCOOTER",
-      activeVehicle.displayName.toUpperCase(),
-      ...activeVehicle.features.map((feature) => feature.label),
-    ];
-
-    return Math.max(...lines.map((line) => line.length));
-  }, [activeVehicle]);
 
   const goToPrevious = () => {
     setActiveIndex((current) => (current === 0 ? slideCount - 1 : current - 1));
@@ -818,27 +811,6 @@ export default function NexaBookingShowroomV3() {
 
     triggerBookingPanelAttention();
   };
-
-  useEffect(() => {
-    setTypingIndex(0);
-
-    const startDelay = window.setTimeout(() => {
-      const typingInterval = window.setInterval(() => {
-        setTypingIndex((current) => {
-          if (current >= longestTypingLength) {
-            window.clearInterval(typingInterval);
-            return current;
-          }
-
-          return current + 1;
-        });
-      }, 24);
-    }, 180);
-
-    return () => {
-      window.clearTimeout(startDelay);
-    };
-  }, [activeVehicle.id, longestTypingLength]);
 
   useEffect(() => {
     const handleGlobalBookClick = () => {
@@ -935,8 +907,8 @@ export default function NexaBookingShowroomV3() {
           >
             <TypedLine
               text="SCOOTER"
-              typingIndex={typingIndex}
               className="font-black uppercase"
+              delayMs={0}
             />
           </div>
 
@@ -949,16 +921,17 @@ export default function NexaBookingShowroomV3() {
           >
             <TypedLine
               text={activeVehicle.displayName.toUpperCase()}
-              typingIndex={typingIndex}
               className="font-black uppercase"
+              delayMs={45}
             />
           </h2>
 
           <div className="mt-7 space-y-3.5">
-            {activeVehicle.features.map((feature) => (
+            {activeVehicle.features.map((feature, featureIndex) => (
               <div
                 key={`${activeVehicle.id}-${feature.label}`}
                 className="vehicle-feature-row flex items-center gap-4"
+                style={{ animationDelay: `${90 + featureIndex * 38}ms` }}
               >
                 <span className="vehicle-feature-icon relative flex h-9 w-9 shrink-0 items-center justify-center">
                   <Image
@@ -979,7 +952,6 @@ export default function NexaBookingShowroomV3() {
                 >
                   <TypedLine
                     text={feature.label}
-                    typingIndex={typingIndex}
                     className="font-black uppercase"
                   />
                 </span>
@@ -1115,8 +1087,50 @@ export default function NexaBookingShowroomV3() {
             animation-delay: 4s;
           }
 
+          .typed-unpack {
+            display: inline-block;
+            opacity: 0;
+            clip-path: inset(0 100% 0 0);
+            transform: translate3d(-10px, 0, 0);
+            animation: showroom-text-unpack 360ms cubic-bezier(0.16, 1, 0.3, 1)
+              forwards;
+            will-change: opacity, transform, clip-path;
+            backface-visibility: hidden;
+          }
+
           .vehicle-feature-row {
-            transform: translateZ(0);
+            opacity: 0;
+            transform: translate3d(-12px, 0, 0);
+            animation: showroom-feature-unpack 360ms
+              cubic-bezier(0.16, 1, 0.3, 1) forwards;
+            will-change: opacity, transform;
+            backface-visibility: hidden;
+          }
+
+          @keyframes showroom-text-unpack {
+            0% {
+              opacity: 0;
+              clip-path: inset(0 100% 0 0);
+              transform: translate3d(-10px, 0, 0);
+            }
+
+            100% {
+              opacity: 1;
+              clip-path: inset(0 0 0 0);
+              transform: translate3d(0, 0, 0);
+            }
+          }
+
+          @keyframes showroom-feature-unpack {
+            0% {
+              opacity: 0;
+              transform: translate3d(-12px, 0, 0);
+            }
+
+            100% {
+              opacity: 1;
+              transform: translate3d(0, 0, 0);
+            }
           }
 
           .vehicle-feature-icon::before {
@@ -1360,10 +1374,15 @@ export default function NexaBookingShowroomV3() {
 
           @media (prefers-reduced-motion: reduce) {
             .light-smoke,
+            .typed-unpack,
+            .vehicle-feature-row,
             .booking-panel-attention :global(.plan-choice-button),
             .booking-panel-attention :global(.plan-choice-button)::before,
             .booking-panel-attention :global(.plan-choice-button)::after {
               animation: none !important;
+              opacity: 1 !important;
+              transform: none !important;
+              clip-path: none !important;
             }
           }
         `}</style>
@@ -1373,6 +1392,7 @@ export default function NexaBookingShowroomV3() {
       <LocationV3 />
       <NexaStatsStripV3 />
       <MallorcaScooterRentalGuideHub />
+      <NeroWebsiteAssistant />
     </>
   );
 }
