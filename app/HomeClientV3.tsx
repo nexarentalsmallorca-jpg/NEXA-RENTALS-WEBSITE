@@ -23,8 +23,6 @@ const uiFont = Manrope({
 const FRAME_COUNT = 684;
 const FRAME_EXTENSION = "webp";
 const FRAME_PATH = "/nexa-v3/frames";
-const SCROLL_SMOOTHING = 0.14;
-const SCROLL_SNAP_THRESHOLD = 0.00035;
 
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
@@ -410,12 +408,20 @@ function getLineStyle(scene: Scene, opacity: number): CSSProperties {
 export default function HomeClientV3() {
   const sectionRef = useRef<HTMLElement | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
+
   const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
-  const loadedRef = useRef<Set<number>>(new Set());
-  const rafRef = useRef<number | null>(null);
-  const targetProgressRef = useRef(0);
-  const smoothedProgressRef = useRef(0);
+  const loadedFramesRef = useRef<Set<number>>(new Set());
+  const failedFramesRef = useRef<Set<number>>(new Set());
+
+  const animationFrameRef = useRef<number | null>(null);
+  const imageLoadFrameRef = useRef<number | null>(null);
+  const preloadTimerRef = useRef<number | null>(null);
+
   const lastDrawnFrameRef = useRef(0);
+  const wantedFrameRef = useRef(1);
+  const lastCanvasWidthRef = useRef(0);
+  const lastCanvasHeightRef = useRef(0);
+
   const showBookingShowroomRef = useRef(false);
   const openingShowroomRef = useRef(false);
   const autoShowroomLockRef = useRef(false);
@@ -432,7 +438,7 @@ export default function HomeClientV3() {
   const copy = V3_COPY[currentLocale] || V3_COPY.en;
 
   const [hasResolvedMobileMode, setHasResolvedMobileMode] = useState(false);
-const [isMobileDirectShowroom, setIsMobileDirectShowroom] = useState(false);
+  const [isMobileDirectShowroom, setIsMobileDirectShowroom] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(1);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [firstFrameReady, setFirstFrameReady] = useState(false);
@@ -445,7 +451,7 @@ const [isMobileDirectShowroom, setIsMobileDirectShowroom] = useState(false);
     return (
       SCENES.find(
         (scene) =>
-          currentFrame >= scene.startFrame && currentFrame <= scene.endFrame
+          currentFrame >= scene.startFrame && currentFrame <= scene.endFrame,
       ) || null
     );
   }, [currentFrame]);
@@ -457,7 +463,7 @@ const [isMobileDirectShowroom, setIsMobileDirectShowroom] = useState(false);
   const introHeroOpacity = clamp(
     1 - smoothStep((currentFrame - 58) / 54),
     0,
-    1
+    1,
   );
 
   const shouldShowCallout =
@@ -465,89 +471,47 @@ const [isMobileDirectShowroom, setIsMobileDirectShowroom] = useState(false);
 
   const finalCtaProgress = smoothStep((currentFrame - 630) / 34);
 
-  useEffect(() => {
-  if (typeof window === "undefined") return;
+  function getPageScrollY() {
+    if (typeof window === "undefined") return 0;
 
-  const mediaQuery = window.matchMedia("(max-width: 1023px)");
+    return (
+      window.scrollY ||
+      document.documentElement.scrollTop ||
+      document.body.scrollTop ||
+      0
+    );
+  }
 
-  const updateMobileShowroom = () => {
-    setIsMobileDirectShowroom(mediaQuery.matches);
-    setHasResolvedMobileMode(true);
-  };
+  function getScrollProgress() {
+    const section = sectionRef.current;
 
-  updateMobileShowroom();
+    if (!section || typeof window === "undefined") return 0;
 
-  mediaQuery.addEventListener("change", updateMobileShowroom);
-
-  return () => {
-    mediaQuery.removeEventListener("change", updateMobileShowroom);
-  };
-}, []);
-useEffect(() => {
-  if (!hasResolvedMobileMode) return;
-  if (isMobileDirectShowroom) return;
-  if (showBookingShowroom) return;
-
-  const redrawDesktopFirstFrame = () => {
-    lastDrawnFrameRef.current = 0;
-
-    const initialProgress = getScrollProgress();
-
-    targetProgressRef.current = initialProgress;
-    smoothedProgressRef.current = initialProgress;
-
-    renderFrameFromProgress(initialProgress, true);
-  };
-
-  const frameId = window.requestAnimationFrame(() => {
-    redrawDesktopFirstFrame();
-  });
-
-  return () => {
-    window.cancelAnimationFrame(frameId);
-  };
-}, [
-  hasResolvedMobileMode,
-  isMobileDirectShowroom,
-  showBookingShowroom,
-  firstFrameReady,
-]);
-  function openBookingShowroom() {
-    if (showBookingShowroomRef.current || openingShowroomRef.current) return;
-
-    openingShowroomRef.current = true;
-    autoShowroomLockRef.current = true;
-    setIsOpeningShowroom(true);
-    setShowroomEntered(false);
-
-    window.history.pushState(
-      { nexaView: "showroom" },
-      "",
-      window.location.href
+    const scrollableDistance = Math.max(
+      1,
+      section.offsetHeight - window.innerHeight,
     );
 
-    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+    return clamp(
+      (getPageScrollY() - section.offsetTop) / scrollableDistance,
+      0,
+      1,
+    );
+  }
 
-    window.setTimeout(() => {
-      setShowBookingShowroom(true);
-
-      window.requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-
-        window.requestAnimationFrame(() => {
-          setIsOpeningShowroom(false);
-          setShowroomEntered(true);
-          openingShowroomRef.current = false;
-        });
-      });
-    }, 520);
+  function getFrameFromProgress(progress: number) {
+    return clamp(
+      Math.round(progress * (FRAME_COUNT - 1)) + 1,
+      1,
+      FRAME_COUNT,
+    );
   }
 
   function drawImageCover(
     context: CanvasRenderingContext2D,
     image: HTMLImageElement,
     canvasWidth: number,
-    canvasHeight: number
+    canvasHeight: number,
   ) {
     const imageAspect = image.naturalWidth / image.naturalHeight;
     const canvasAspect = canvasWidth / canvasHeight;
@@ -577,7 +541,7 @@ useEffect(() => {
     image: HTMLImageElement,
     canvasWidth: number,
     canvasHeight: number,
-    frame: number
+    frame: number,
   ) {
     const imageAspect = image.naturalWidth / image.naturalHeight;
     const canvasAspect = canvasWidth / canvasHeight;
@@ -614,11 +578,11 @@ useEffect(() => {
     context.drawImage(image, finalX, finalY, finalWidth, finalHeight);
   }
 
-  function drawFrame(frame: number) {
+  function drawFrame(frame: number, forceDraw = false) {
     const canvas = canvasRef.current;
     const image = imagesRef.current[frame];
 
-    if (!canvas || !image || !image.complete) return;
+    if (!canvas || !image || !image.complete || image.naturalWidth <= 0) return;
 
     const context = canvas.getContext("2d");
     if (!context) return;
@@ -627,14 +591,26 @@ useEffect(() => {
     const width = window.innerWidth;
     const height = window.innerHeight;
 
-    const targetWidth = Math.floor(width * dpr);
-    const targetHeight = Math.floor(height * dpr);
+    const targetWidth = Math.max(1, Math.floor(width * dpr));
+    const targetHeight = Math.max(1, Math.floor(height * dpr));
 
-    if (canvas.width !== targetWidth || canvas.height !== targetHeight) {
+    const canvasSizeChanged =
+      canvas.width !== targetWidth ||
+      canvas.height !== targetHeight ||
+      lastCanvasWidthRef.current !== targetWidth ||
+      lastCanvasHeightRef.current !== targetHeight;
+
+    if (!forceDraw && !canvasSizeChanged && frame === lastDrawnFrameRef.current) {
+      return;
+    }
+
+    if (canvasSizeChanged) {
       canvas.width = targetWidth;
       canvas.height = targetHeight;
       canvas.style.width = `${width}px`;
       canvas.style.height = `${height}px`;
+      lastCanvasWidthRef.current = targetWidth;
+      lastCanvasHeightRef.current = targetHeight;
     }
 
     context.clearRect(0, 0, canvas.width, canvas.height);
@@ -655,7 +631,7 @@ useEffect(() => {
       canvas.width * 0.05,
       canvas.width * 0.5,
       canvas.height * 0.46,
-      canvas.width * 0.76
+      canvas.width * 0.76,
     );
 
     gradient.addColorStop(0, "rgba(0,0,0,0)");
@@ -670,93 +646,347 @@ useEffect(() => {
     context.filter = "brightness(1.12) contrast(1.04)";
     drawImageContain(context, image, canvas.width, canvas.height, frame);
     context.restore();
+
+    lastDrawnFrameRef.current = frame;
+    setCurrentFrame(frame);
+  }
+
+  function requestRedrawFromImageLoad(frame: number) {
+    const wantedFrame = wantedFrameRef.current;
+
+    if (frame !== 1 && Math.abs(frame - wantedFrame) > 120) return;
+    if (imageLoadFrameRef.current !== null) return;
+
+    imageLoadFrameRef.current = window.requestAnimationFrame(() => {
+      imageLoadFrameRef.current = null;
+
+      const progress = getScrollProgress();
+      const targetFrame = getFrameFromProgress(progress);
+      const readyFrame = getBestReadyFrame(targetFrame);
+
+      if (readyFrame !== null) {
+        drawFrame(readyFrame, true);
+      }
+    });
   }
 
   function ensureFrameLoaded(frame: number) {
-    if (imagesRef.current[frame]) return;
+    const safeFrame = clamp(Math.round(frame), 1, FRAME_COUNT);
+
+    if (imagesRef.current[safeFrame]) return;
+    if (failedFramesRef.current.has(safeFrame)) return;
 
     const image = new window.Image();
-    image.src = frameSrc(frame);
+
     image.decoding = "async";
+    image.loading = "eager";
 
     image.onload = () => {
-      loadedRef.current.add(frame);
+      loadedFramesRef.current.add(safeFrame);
 
-      if (frame === 1) {
+      if (safeFrame === 1) {
         setFirstFrameReady(true);
-        drawFrame(1);
+        drawFrame(1, true);
       }
 
       setLoadingProgress(
-        Math.round((loadedRef.current.size / FRAME_COUNT) * 100)
+        Math.min(
+          100,
+          Math.round((loadedFramesRef.current.size / FRAME_COUNT) * 100),
+        ),
       );
+
+      requestRedrawFromImageLoad(safeFrame);
     };
 
-    imagesRef.current[frame] = image;
+    image.onerror = () => {
+      failedFramesRef.current.add(safeFrame);
+      imagesRef.current[safeFrame] = null;
+
+      if (process.env.NODE_ENV !== "production") {
+        console.warn(`NEXA V3 frame failed to load: ${frameSrc(safeFrame)}`);
+      }
+    };
+
+    imagesRef.current[safeFrame] = image;
+    image.src = frameSrc(safeFrame);
   }
 
   function preloadAround(frame: number) {
-    const priorityBefore = 30;
-    const priorityAfter = 64;
+    const safeFrame = clamp(Math.round(frame), 1, FRAME_COUNT);
 
-    for (
-      let i = Math.max(1, frame - priorityBefore);
-      i <= Math.min(FRAME_COUNT, frame + priorityAfter);
-      i++
-    ) {
-      ensureFrameLoaded(i);
+    ensureFrameLoaded(safeFrame);
+
+    for (let offset = 1; offset <= 90; offset++) {
+      const before = safeFrame - offset;
+      const after = safeFrame + offset;
+
+      if (before >= 1) ensureFrameLoaded(before);
+      if (after <= FRAME_COUNT) ensureFrameLoaded(after);
     }
   }
 
-  function getScrollProgress() {
-    const section = sectionRef.current;
-    if (!section) return 0;
-
-    const rect = section.getBoundingClientRect();
-    const scrollableDistance = section.offsetHeight - window.innerHeight;
-
-    return clamp(-rect.top / Math.max(1, scrollableDistance), 0, 1);
-  }
-
-  function renderFrameFromProgress(progress: number, forceDraw = false) {
-    const targetFrame = clamp(
-      Math.round(progress * (FRAME_COUNT - 1)) + 1,
-      1,
-      FRAME_COUNT
-    );
-
-    preloadAround(targetFrame);
-
+  function getBestReadyFrame(targetFrame: number) {
     const targetImage = imagesRef.current[targetFrame];
-    let frameToDraw = targetFrame;
 
-    if (!targetImage?.complete) {
-      for (let offset = 1; offset <= 18; offset++) {
-        const before = targetFrame - offset;
-        const after = targetFrame + offset;
+    if (targetImage?.complete && targetImage.naturalWidth > 0) {
+      return targetFrame;
+    }
 
-        if (before >= 1 && imagesRef.current[before]?.complete) {
-          frameToDraw = before;
-          break;
+    for (let offset = 1; offset <= 160; offset++) {
+      const before = targetFrame - offset;
+      const after = targetFrame + offset;
+
+      if (before >= 1) {
+        const beforeImage = imagesRef.current[before];
+
+        if (beforeImage?.complete && beforeImage.naturalWidth > 0) {
+          return before;
         }
+      }
 
-        if (after <= FRAME_COUNT && imagesRef.current[after]?.complete) {
-          frameToDraw = after;
-          break;
+      if (after <= FRAME_COUNT) {
+        const afterImage = imagesRef.current[after];
+
+        if (afterImage?.complete && afterImage.naturalWidth > 0) {
+          return after;
         }
       }
     }
 
-    if (!forceDraw && frameToDraw === lastDrawnFrameRef.current) return;
+    const firstImage = imagesRef.current[1];
 
-    drawFrame(frameToDraw);
-    lastDrawnFrameRef.current = frameToDraw;
-    setCurrentFrame(frameToDraw);
+    if (firstImage?.complete && firstImage.naturalWidth > 0) {
+      return 1;
+    }
+
+    return null;
   }
+
+  function drawCurrentScrollFrame(forceDraw = false) {
+    const progress = getScrollProgress();
+    const targetFrame = getFrameFromProgress(progress);
+
+    wantedFrameRef.current = targetFrame;
+
+    preloadAround(targetFrame);
+
+    const frameToDraw = getBestReadyFrame(targetFrame);
+
+    if (frameToDraw !== null) {
+      drawFrame(frameToDraw, forceDraw);
+    }
+  }
+
+  function startFrameLoop() {
+    if (animationFrameRef.current !== null) return;
+
+    const loop = () => {
+      drawCurrentScrollFrame(false);
+      animationFrameRef.current = window.requestAnimationFrame(loop);
+    };
+
+    animationFrameRef.current = window.requestAnimationFrame(loop);
+  }
+
+  function stopFrameLoop() {
+    if (animationFrameRef.current !== null) {
+      window.cancelAnimationFrame(animationFrameRef.current);
+      animationFrameRef.current = null;
+    }
+  }
+
+  function openBookingShowroom() {
+    if (showBookingShowroomRef.current || openingShowroomRef.current) return;
+
+    openingShowroomRef.current = true;
+    autoShowroomLockRef.current = true;
+    setIsOpeningShowroom(true);
+    setShowroomEntered(false);
+
+    window.history.pushState(
+      { nexaView: "showroom" },
+      "",
+      window.location.href,
+    );
+
+    window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+    window.setTimeout(() => {
+      setShowBookingShowroom(true);
+
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+        window.requestAnimationFrame(() => {
+          setIsOpeningShowroom(false);
+          setShowroomEntered(true);
+          openingShowroomRef.current = false;
+        });
+      });
+    }, 520);
+  }
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const mediaQuery = window.matchMedia("(max-width: 1023px)");
+
+    const updateMobileShowroom = () => {
+      setIsMobileDirectShowroom(mediaQuery.matches);
+      setHasResolvedMobileMode(true);
+    };
+
+    updateMobileShowroom();
+
+    if (typeof mediaQuery.addEventListener === "function") {
+      mediaQuery.addEventListener("change", updateMobileShowroom);
+    } else {
+      mediaQuery.addListener(updateMobileShowroom);
+    }
+
+    return () => {
+      if (typeof mediaQuery.removeEventListener === "function") {
+        mediaQuery.removeEventListener("change", updateMobileShowroom);
+      } else {
+        mediaQuery.removeListener(updateMobileShowroom);
+      }
+    };
+  }, []);
 
   useEffect(() => {
     showBookingShowroomRef.current = showBookingShowroom;
   }, [showBookingShowroom]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    if ("scrollRestoration" in window.history) {
+      window.history.scrollRestoration = "manual";
+    }
+
+    if (!window.location.hash) {
+      window.requestAnimationFrame(() => {
+        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+      });
+    }
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasResolvedMobileMode) return;
+    if (isMobileDirectShowroom) return;
+    if (showBookingShowroom) return;
+
+    ensureFrameLoaded(1);
+
+    for (let i = 2; i <= Math.min(FRAME_COUNT, 96); i++) {
+      ensureFrameLoaded(i);
+    }
+
+    let cancelled = false;
+    let nextFrame = 97;
+
+    const preloadChunk = () => {
+      if (cancelled) return;
+
+      const endFrame = Math.min(FRAME_COUNT, nextFrame + 22);
+
+      for (; nextFrame <= endFrame; nextFrame++) {
+        ensureFrameLoaded(nextFrame);
+      }
+
+      if (nextFrame <= FRAME_COUNT) {
+        preloadTimerRef.current = window.setTimeout(preloadChunk, 180);
+      }
+    };
+
+    preloadTimerRef.current = window.setTimeout(preloadChunk, 500);
+
+    const emergencyDraw = window.setTimeout(() => {
+      drawCurrentScrollFrame(true);
+    }, 850);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(emergencyDraw);
+
+      if (preloadTimerRef.current !== null) {
+        window.clearTimeout(preloadTimerRef.current);
+        preloadTimerRef.current = null;
+      }
+    };
+  }, [hasResolvedMobileMode, isMobileDirectShowroom, showBookingShowroom]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    if (!hasResolvedMobileMode) return;
+    if (isMobileDirectShowroom) return;
+    if (showBookingShowroom) return;
+
+    let resizeTimer: number | null = null;
+
+    const forceDraw = () => {
+      drawCurrentScrollFrame(true);
+    };
+
+    const handleScrollOrWheel = () => {
+      drawCurrentScrollFrame(false);
+    };
+
+    const handleResize = () => {
+      lastCanvasWidthRef.current = 0;
+      lastCanvasHeightRef.current = 0;
+
+      if (resizeTimer !== null) {
+        window.clearTimeout(resizeTimer);
+      }
+
+      resizeTimer = window.setTimeout(() => {
+        drawCurrentScrollFrame(true);
+      }, 80);
+    };
+
+    window.addEventListener("scroll", handleScrollOrWheel, { passive: true });
+    window.addEventListener("wheel", handleScrollOrWheel, { passive: true });
+    window.addEventListener("touchmove", handleScrollOrWheel, { passive: true });
+    window.addEventListener("resize", handleResize);
+
+    const firstDrawFrame = window.requestAnimationFrame(() => {
+      forceDraw();
+      startFrameLoop();
+    });
+
+    const secondDrawTimer = window.setTimeout(() => {
+      forceDraw();
+    }, 650);
+
+    return () => {
+      window.cancelAnimationFrame(firstDrawFrame);
+      window.clearTimeout(secondDrawTimer);
+
+      if (resizeTimer !== null) {
+        window.clearTimeout(resizeTimer);
+      }
+
+      window.removeEventListener("scroll", handleScrollOrWheel);
+      window.removeEventListener("wheel", handleScrollOrWheel);
+      window.removeEventListener("touchmove", handleScrollOrWheel);
+      window.removeEventListener("resize", handleResize);
+
+      stopFrameLoop();
+
+      if (imageLoadFrameRef.current !== null) {
+        window.cancelAnimationFrame(imageLoadFrameRef.current);
+        imageLoadFrameRef.current = null;
+      }
+    };
+  }, [
+    hasResolvedMobileMode,
+    isMobileDirectShowroom,
+    showBookingShowroom,
+    firstFrameReady,
+  ]);
 
   useEffect(() => {
     if (showBookingShowroom) return;
@@ -773,7 +1003,6 @@ useEffect(() => {
 
     function openShowroomFromEnd() {
       if (!canOpenShowroomFromEnd()) return;
-
       openBookingShowroom();
     }
 
@@ -854,38 +1083,8 @@ useEffect(() => {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-
-    if ("scrollRestoration" in window.history) {
-      window.history.scrollRestoration = "manual";
-    }
-
-    if (!window.location.hash) {
-      window.requestAnimationFrame(() => {
-        window.scrollTo({ top: 0, left: 0, behavior: "auto" });
-      });
-    }
-  }, []);
-
-  useEffect(() => {
-    ensureFrameLoaded(1);
-
-    for (let i = 1; i <= Math.min(FRAME_COUNT, 110); i++) {
-      ensureFrameLoaded(i);
-    }
-
-    const idlePreload = window.setTimeout(() => {
-      for (let i = 111; i <= FRAME_COUNT; i++) {
-        ensureFrameLoaded(i);
-      }
-    }, 450);
-
-    return () => window.clearTimeout(idlePreload);
-  }, []);
-
-  useEffect(() => {
     function hideScrollHintOnFirstScroll() {
-      if (window.scrollY > 8) {
+      if (getPageScrollY() > 8) {
         setScrollHintVisible(false);
         window.removeEventListener("scroll", hideScrollHintOnFirstScroll);
         window.removeEventListener("wheel", hideScrollHintOnFirstScroll);
@@ -910,103 +1109,45 @@ useEffect(() => {
     };
   }, []);
 
-  useEffect(() => {
-    function animateScrollFrame() {
-      const targetProgress = targetProgressRef.current;
-      const currentProgress = smoothedProgressRef.current;
-      const distance = targetProgress - currentProgress;
-
-      const nextProgress =
-        Math.abs(distance) < SCROLL_SNAP_THRESHOLD
-          ? targetProgress
-          : currentProgress + distance * SCROLL_SMOOTHING;
-
-      smoothedProgressRef.current = nextProgress;
-      renderFrameFromProgress(nextProgress);
-
-      if (Math.abs(targetProgress - nextProgress) > SCROLL_SNAP_THRESHOLD) {
-        rafRef.current = window.requestAnimationFrame(animateScrollFrame);
-        return;
-      }
-
-      rafRef.current = null;
-    }
-
-    function requestSmoothFrame() {
-      targetProgressRef.current = getScrollProgress();
-
-      if (rafRef.current) return;
-
-      rafRef.current = window.requestAnimationFrame(animateScrollFrame);
-    }
-
-    function onResize() {
-      targetProgressRef.current = getScrollProgress();
-      lastDrawnFrameRef.current = 0;
-
-      if (rafRef.current) return;
-
-      rafRef.current = window.requestAnimationFrame(() => {
-        smoothedProgressRef.current = targetProgressRef.current;
-        renderFrameFromProgress(smoothedProgressRef.current, true);
-        rafRef.current = null;
-      });
-    }
-
-    const initialProgress = getScrollProgress();
-    targetProgressRef.current = initialProgress;
-    smoothedProgressRef.current = initialProgress;
-    renderFrameFromProgress(initialProgress, true);
-
-    window.addEventListener("scroll", requestSmoothFrame, { passive: true });
-    window.addEventListener("resize", onResize);
-
-    return () => {
-      window.removeEventListener("scroll", requestSmoothFrame);
-      window.removeEventListener("resize", onResize);
-
-      if (rafRef.current) {
-        window.cancelAnimationFrame(rafRef.current);
-        rafRef.current = null;
-      }
-    };
-  }, [firstFrameReady]);
-
   if (!hasResolvedMobileMode) {
-  return (
-    <main
-      className="fixed inset-0 z-[2147483000] min-h-[100svh] bg-black"
-      aria-hidden="true"
-    />
-  );
-}
+    return (
+      <main
+        className="fixed inset-0 z-[2147483000] min-h-[100svh] bg-black"
+        aria-hidden="true"
+      />
+    );
+  }
 
-if (isMobileDirectShowroom) {
-  return (
-    <main className="min-h-[100svh] overflow-hidden bg-black text-white">
-      <NexaBookingShowroomV3 />
-    </main>
-  );
-}
-
-if (showBookingShowroom) {
-  return (
-    <main className="min-h-screen overflow-hidden bg-black text-white">
-      <div
-        className="min-h-screen transition-opacity duration-[850ms] ease-out"
-        style={{ opacity: showroomEntered ? 1 : 0 }}
-      >
+  if (isMobileDirectShowroom) {
+    return (
+      <main className="min-h-[100svh] overflow-hidden bg-black text-white">
         <NexaBookingShowroomV3 />
-      </div>
-    </main>
-  );
-}
+      </main>
+    );
+  }
+
+  if (showBookingShowroom) {
+    return (
+      <main className="min-h-screen overflow-hidden bg-black text-white">
+        <div
+          className="min-h-screen transition-opacity duration-[850ms] ease-out"
+          style={{ opacity: showroomEntered ? 1 : 0 }}
+        >
+          <NexaBookingShowroomV3 />
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="bg-black text-white">
       <style jsx global>{`
         html {
           scroll-behavior: auto !important;
+        }
+
+        body {
+          background: #000000;
         }
 
         .nexa-v3-canvas {
@@ -1095,7 +1236,11 @@ if (showBookingShowroom) {
         }
       `}</style>
 
-      <section ref={sectionRef} className="relative h-[1250vh] bg-black">
+      <section
+        ref={sectionRef}
+        className="relative bg-black"
+        style={{ height: "1250vh" }}
+      >
         <div className="sticky top-0 h-screen overflow-hidden bg-black">
           <canvas
             ref={canvasRef}

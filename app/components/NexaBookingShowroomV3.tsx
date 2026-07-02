@@ -859,7 +859,37 @@ export default function NexaBookingShowroomV3() {
 
   const isActiveVehicleEbike = activeVehicle.id.startsWith("ebike");
 
-  const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
+const isDesktopShowroomViewport = () => {
+  if (typeof window === "undefined") return false;
+
+  return window.matchMedia("(min-width: 1024px)").matches;
+};
+
+const forceDesktopShowroomTop = () => {
+  if (!isDesktopShowroomViewport()) return;
+
+  document.documentElement.style.scrollBehavior = "auto";
+  document.body.style.scrollBehavior = "auto";
+
+  window.scrollTo({ top: 0, left: 0, behavior: "auto" });
+
+  document.documentElement.scrollTop = 0;
+  document.body.scrollTop = 0;
+
+  const bookingSection = document.getElementById("booking");
+
+  if (bookingSection) {
+    bookingSection.scrollIntoView({
+      behavior: "auto",
+      block: "start",
+    });
+  }
+
+  window.dispatchEvent(new Event("scroll"));
+  window.dispatchEvent(new Event("resize"));
+};
+
+const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
     const mobileSlide =
       MOBILE_DIRECT_HERO_SLIDES[mobileIndex] || MOBILE_DIRECT_HERO_SLIDES[0];
 
@@ -951,37 +981,62 @@ export default function NexaBookingShowroomV3() {
 };
 
   useEffect(() => {
-    const handleGlobalBookClick = () => {
-      const bookingElement = getBookingTargetElement();
+  const runDesktopTopReset = () => {
+    forceDesktopShowroomTop();
+  };
 
-      if (bookingElement) {
-        bookingElement.scrollIntoView({
-          behavior: "smooth",
-          block: "start",
-        });
-      }
+  const handleGlobalBookClick = () => {
+    const bookingElement = getBookingTargetElement();
 
-      triggerBookingPanelAttention();
-    };
-
-    window.addEventListener("nexa:book-now-clicked", handleGlobalBookClick);
-
-    if (window.__nexaTriggerBookingPanelAttention) {
-      window.__nexaTriggerBookingPanelAttention = false;
-
-      window.setTimeout(() => {
-        triggerBookingPanelAttention();
-      }, 450);
+    if (bookingElement) {
+      bookingElement.scrollIntoView({
+        behavior: isDesktopShowroomViewport() ? "auto" : "smooth",
+        block: "start",
+      });
     }
 
-    return () => {
-      window.removeEventListener("nexa:book-now-clicked", handleGlobalBookClick);
+    forceDesktopShowroomTop();
+    triggerBookingPanelAttention();
+  };
 
-      if (bookingAttentionTimeoutRef.current) {
-        window.clearTimeout(bookingAttentionTimeoutRef.current);
-      }
-    };
-  }, []);
+  forceDesktopShowroomTop();
+
+  const frameOne = window.requestAnimationFrame(() => {
+    forceDesktopShowroomTop();
+
+    window.requestAnimationFrame(() => {
+      forceDesktopShowroomTop();
+    });
+  });
+
+  const timerOne = window.setTimeout(runDesktopTopReset, 120);
+  const timerTwo = window.setTimeout(runDesktopTopReset, 350);
+  const timerThree = window.setTimeout(runDesktopTopReset, 700);
+
+  window.addEventListener("nexa:book-now-clicked", handleGlobalBookClick);
+
+  if (window.__nexaTriggerBookingPanelAttention) {
+    window.__nexaTriggerBookingPanelAttention = false;
+
+    window.setTimeout(() => {
+      forceDesktopShowroomTop();
+      triggerBookingPanelAttention();
+    }, 450);
+  }
+
+  return () => {
+    window.cancelAnimationFrame(frameOne);
+    window.clearTimeout(timerOne);
+    window.clearTimeout(timerTwo);
+    window.clearTimeout(timerThree);
+
+    window.removeEventListener("nexa:book-now-clicked", handleGlobalBookClick);
+
+    if (bookingAttentionTimeoutRef.current) {
+      window.clearTimeout(bookingAttentionTimeoutRef.current);
+    }
+  };
+}, []);
 
  return (
   <div id="nexa-showroom-v3" className="bg-black">

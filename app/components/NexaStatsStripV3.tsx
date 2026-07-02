@@ -219,7 +219,7 @@ export default function NexaStatsStripV3() {
         value: riders,
         suffix: "+",
         label: "Satisfied Riders",
-        image: "/images/C1.png",
+        image: "/images/c1.png",
       },
       {
         id: "kilometres",
@@ -227,7 +227,7 @@ export default function NexaStatsStripV3() {
         suffix: "+",
         label: "Kilometres Explored",
         compact: true,
-        image: "/images/C2.png",
+        image: "/images/c2.png",
       },
       {
         id: "rating",
