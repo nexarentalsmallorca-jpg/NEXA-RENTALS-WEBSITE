@@ -4,7 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { Poppins } from "next/font/google";
 import { useLocale } from "next-intl";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
 const navFont = Poppins({
@@ -63,6 +63,40 @@ const LANGUAGES: {
   { code: "cs", label: "Čeština", short: "CS", flagSrc: "/images/CS.png" },
   { code: "uk", label: "Українська", short: "UK", flagSrc: "/images/UK.png" },
 ];
+
+/*
+  DESKTOP ONLY:
+  Change this value if you want the desktop logo bigger/smaller.
+  Mobile logo is NOT controlled by this.
+*/
+const DESKTOP_LOGO_HEIGHT_PX = 72;
+
+/*
+  MOBILE ONLY:
+  This controls how much the page starts lower under the mobile navbar.
+  Increase it if the navbar is covering the hero.
+  Decrease it if the hero/image is too low.
+
+  0  = no push
+  20 = small push
+  42 = balanced
+  60 = more push
+  80 = a lot
+*/
+const MOBILE_PAGE_TOP_OFFSET_PX = 42;
+
+/*
+  MOBILE ONLY:
+  This controls when the mobile navbar becomes fully black.
+  1 means as soon as the customer starts scrolling.
+*/
+const MOBILE_NAV_BLACK_SCROLL_TRIGGER_PX = 1;
+
+const ANNOUNCEMENT_DESKTOP =
+  "Website upgrade in progress — we’re improving NEXA Rentals for a faster and smoother booking experience. Online bookings remain secure and available. Some visual changes may appear during maintenance. Scheduled completion: 6 July.";
+
+const ANNOUNCEMENT_MOBILE =
+  "Website upgrade in progress · Online bookings remain secure and available · Scheduled completion: 6 July";
 
 const NAV_COPY: Record<
   Locale,
@@ -249,16 +283,29 @@ function getLocaleFromPath(pathname: string): Locale {
   return "en";
 }
 
-function replaceLocaleInPath(pathname: string, nextLocale: Locale) {
-  const parts = pathname.split("/").filter(Boolean);
-  const firstPart = parts[0];
+function AnnouncementBar() {
+  return (
+    <div className="nexa-announcement-bar pointer-events-auto relative z-[120] h-[30px] overflow-hidden bg-[linear-gradient(90deg,#ff6500_0%,#ff8a00_48%,#ffb347_100%)] text-black lg:h-[34px]">
+      <div className="nexa-announcement-shine hidden lg:block" />
+      <div className="nexa-announcement-fade nexa-announcement-fade-left hidden lg:block" />
+      <div className="nexa-announcement-fade nexa-announcement-fade-right hidden lg:block" />
 
-  if (isLocale(firstPart)) {
-    parts[0] = nextLocale;
-    return `/${parts.join("/")}`;
-  }
-
-  return `/${nextLocale}${pathname === "/" ? "" : pathname}`;
+      <div className="nexa-announcement-track">
+        <span className="nexa-announcement-text hidden lg:inline-flex">
+          {ANNOUNCEMENT_DESKTOP}
+        </span>
+        <span className="nexa-announcement-text hidden lg:inline-flex">
+          {ANNOUNCEMENT_DESKTOP}
+        </span>
+        <span className="nexa-announcement-text inline-flex lg:hidden">
+          {ANNOUNCEMENT_MOBILE}
+        </span>
+        <span className="nexa-announcement-text inline-flex lg:hidden">
+          {ANNOUNCEMENT_MOBILE}
+        </span>
+      </div>
+    </div>
+  );
 }
 
 export default function NavbarV3({
@@ -269,10 +316,14 @@ export default function NavbarV3({
   const providerLocale = useLocale();
   const pathname = usePathname() || "/";
   const router = useRouter();
-  const searchParams = useSearchParams();
 
   const pathLocale = getLocaleFromPath(pathname);
   const locale: Locale = isLocale(providerLocale) ? providerLocale : pathLocale;
+
+  const normalizedPathname = pathname.replace(/\/+$/, "") || "/";
+  const isMainLandingPage =
+    normalizedPathname === "/" || normalizedPathname === `/${locale}`;
+  const showAngledLogoPanel = !isMainLandingPage;
 
   const copy = NAV_COPY[locale] || NAV_COPY.en;
 
@@ -284,16 +335,15 @@ export default function NavbarV3({
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [autoLightTone, setAutoLightTone] = useState(false);
   const [bookNowClicked, setBookNowClicked] = useState(false);
+  const [mobileScrolled, setMobileScrolled] = useState(false);
 
-  const homeHref = `/${locale}`;
-  const fleetHref = `/${locale}/fleet`;
+  const homeHref = `/${locale}/home`;
   const blogHref = `/${locale}/blog`;
   const aboutHref = `/${locale}/about`;
   const contactHref = `/${locale}/contact`;
 
   const navItems = [
     { label: copy.home, href: homeHref },
-    { label: copy.fleet, href: fleetHref },
     { label: copy.blog, href: blogHref },
     { label: copy.about, href: aboutHref },
     { label: copy.contact, href: contactHref },
@@ -304,6 +354,39 @@ export default function NavbarV3({
 
     setBookNowClicked(Boolean(window.__nexaBookNowClicked));
   }, []);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    function getScrollTop() {
+      return Math.max(
+        window.scrollY || 0,
+        document.documentElement.scrollTop || 0,
+        document.body.scrollTop || 0
+      );
+    }
+
+    function updateMobileScrolled() {
+      setMobileScrolled(getScrollTop() > MOBILE_NAV_BLACK_SCROLL_TRIGGER_PX);
+    }
+
+    updateMobileScrolled();
+
+    window.addEventListener("scroll", updateMobileScrolled, { passive: true });
+    window.addEventListener("resize", updateMobileScrolled);
+    document.addEventListener("scroll", updateMobileScrolled, {
+      passive: true,
+      capture: true,
+    });
+
+    return () => {
+      window.removeEventListener("scroll", updateMobileScrolled);
+      window.removeEventListener("resize", updateMobileScrolled);
+      document.removeEventListener("scroll", updateMobileScrolled, {
+        capture: true,
+      } as AddEventListenerOptions);
+    };
+  }, [pathname]);
 
   useEffect(() => {
     if (tone !== "auto") return;
@@ -385,15 +468,21 @@ export default function NavbarV3({
     ? "bg-[#24262b] text-white shadow-[0_22px_62px_rgba(24,25,30,0.30)] hover:bg-[#2b2e34] hover:shadow-[0_28px_80px_rgba(24,25,30,0.40)]"
     : "bg-white text-black shadow-[0_22px_62px_rgba(0,0,0,0.42)] hover:shadow-[0_28px_80px_rgba(255,255,255,0.20)]";
 
-  const mobileMenuButtonClass = isLightTone
-    ? "border border-[#202226]/14 bg-white/14 shadow-[0_18px_42px_rgba(255,255,255,0.16)] hover:bg-white/24"
-    : "border border-white/14 bg-black/14 shadow-[0_18px_42px_rgba(0,0,0,0.44)] hover:bg-white/[0.07]";
+  const mobileNavShellClass = mobileScrolled
+    ? "bg-black shadow-[0_18px_46px_rgba(0,0,0,0.58)] backdrop-blur-none"
+    : "bg-transparent shadow-none backdrop-blur-0";
 
-  const mobileMenuLineClass = isLightTone ? "bg-[#202226]" : "bg-white";
+  const mobileLanguageButtonClass = mobileScrolled
+    ? "border border-white/16 bg-white/[0.09] text-white shadow-[0_14px_34px_rgba(0,0,0,0.44)] hover:bg-white/[0.13]"
+    : "border border-white/[0.16] bg-black/[0.28] text-white/94 shadow-[0_14px_34px_rgba(0,0,0,0.28)] hover:bg-black/[0.34]";
+
+  const mobileLanguageDropdownClass = mobileScrolled
+    ? "border-white/10 bg-black/94 text-white shadow-[0_26px_90px_rgba(0,0,0,0.72)]"
+    : "border-white/10 bg-black/86 text-white shadow-[0_26px_90px_rgba(0,0,0,0.62)]";
 
   const mobilePanelClass = isLightTone
     ? "border border-[#202226]/10 bg-white/88 text-[#202226]/82 shadow-[0_26px_90px_rgba(0,0,0,0.30)]"
-    : "border border-white/10 bg-black/76 text-white/82 shadow-[0_26px_90px_rgba(0,0,0,0.62)]";
+    : "border border-white/10 bg-black/88 text-white/82 shadow-[0_26px_90px_rgba(0,0,0,0.72)]";
 
   function closeMenus() {
     setLangOpen(false);
@@ -426,34 +515,23 @@ export default function NavbarV3({
       return;
     }
 
-    router.push(`/${locale}#booking`);
+    router.push(`/${locale}/home#booking`);
   }
 
-  function handleLanguageChange(nextLocale: Locale) {
-    closeMenus();
-
-    const nextPath = replaceLocaleInPath(pathname, nextLocale);
-    const queryString = searchParams?.toString() || "";
-    const finalPath = queryString ? `${nextPath}?${queryString}` : nextPath;
-
-    router.push(finalPath);
-
-    window.setTimeout(() => {
-      router.refresh();
-    }, 50);
-  }
-
-  const headerPosition = fixed ? "fixed" : "absolute";
+  const headerPositionClass = fixed ? "fixed" : "fixed lg:absolute";
 
   return (
     <header
-      className={`${navFont.className} ${headerPosition} pointer-events-none left-0 right-0 top-0 z-[80] bg-transparent`}
+      data-mobile-scrolled={mobileScrolled ? "true" : "false"}
+      className={`${navFont.className} ${headerPositionClass} nexa-navbar-shell pointer-events-none left-0 right-0 top-0 z-[90] bg-transparent`}
     >
-      {isLightTone ? (
-        <div className="nexa-logo-strip pointer-events-none absolute top-0 hidden bg-black shadow-[0_20px_54px_rgba(0,0,0,0.28)] lg:block" />
+      <AnnouncementBar />
+
+      {showAngledLogoPanel ? (
+        <div className="nexa-angled-logo-panel pointer-events-none absolute left-0 top-[34px] hidden lg:block" />
       ) : null}
 
-      <div className="pointer-events-auto mx-auto hidden h-[96px] max-w-[1510px] items-center justify-between bg-transparent px-[clamp(28px,4vw,66px)] transition-all duration-300 lg:flex">
+      <div className="nexa-desktop-nav pointer-events-auto mx-auto hidden h-[96px] max-w-[1510px] items-center justify-between bg-transparent px-[clamp(28px,4vw,66px)] transition-all duration-300 lg:flex">
         <Link
           href={homeHref}
           aria-label="NEXA Rentals home"
@@ -466,9 +544,10 @@ export default function NavbarV3({
             width={340}
             height={116}
             priority
+            style={{ height: DESKTOP_LOGO_HEIGHT_PX, width: "auto" }}
             className={[
-              "h-[58px] w-auto object-contain transition duration-300 group-hover:scale-[1.03]",
-              isLightTone
+              "nexa-desktop-logo object-contain transition duration-300 group-hover:scale-[1.03]",
+              showAngledLogoPanel || isLightTone
                 ? "drop-shadow-[0_14px_28px_rgba(0,0,0,0.55)]"
                 : "drop-shadow-[0_18px_34px_rgba(0,0,0,0.72)]",
             ].join(" ")}
@@ -520,7 +599,9 @@ export default function NavbarV3({
                 height={18}
                 className="rounded-full"
               />
+
               <span>{currentLanguage.short}</span>
+
               <span
                 className={[
                   "text-[10px] transition-transform duration-300",
@@ -560,16 +641,16 @@ export default function NavbarV3({
                     <button
                       key={language.code}
                       type="button"
-                      onClick={() => handleLanguageChange(language.code)}
+                      disabled
                       className={[
-                        "group flex w-full items-center justify-between rounded-[18px] px-3 py-2.5 text-left transition active:scale-[0.98]",
+                        "group flex w-full cursor-not-allowed items-center justify-between rounded-[18px] px-3 py-2.5 text-left opacity-80 transition",
                         isLightTone
                           ? active
                             ? "bg-[#202226]/8 text-[#202226]"
-                            : "text-[#202226]/68 hover:bg-[#202226]/[0.055] hover:text-black"
+                            : "text-[#202226]/68"
                           : active
                             ? "bg-white/[0.10] text-white"
-                            : "text-white/68 hover:bg-white/[0.065] hover:text-white",
+                            : "text-white/68",
                       ].join(" ")}
                     >
                       <span className="flex items-center gap-3">
@@ -585,6 +666,7 @@ export default function NavbarV3({
                               : "shadow-[0_0_0_1px_rgba(255,255,255,0.16)]",
                           ].join(" ")}
                         />
+
                         <span className="text-sm font-semibold">
                           {language.label}
                         </span>
@@ -596,11 +678,11 @@ export default function NavbarV3({
                           active
                             ? "text-[#ff7a00]"
                             : isLightTone
-                              ? "text-[#202226]/34 group-hover:text-[#202226]/52"
-                              : "text-white/34 group-hover:text-white/52",
+                              ? "text-[#202226]/34"
+                              : "text-white/34",
                         ].join(" ")}
                       >
-                        {active ? copy.active : language.short}
+                        {active ? copy.active : "Coming soon"}
                       </span>
                     </button>
                   );
@@ -619,28 +701,31 @@ export default function NavbarV3({
             ].join(" ")}
           >
             <span className="absolute inset-0 translate-x-[-120%] bg-[linear-gradient(90deg,transparent,rgba(255,157,61,0.34),transparent)] transition duration-700 group-hover:translate-x-[120%]" />
+
             <span
               className={[
                 "absolute inset-0 rounded-full ring-1 ring-inset",
                 isLightTone ? "ring-white/16" : "ring-black/10",
               ].join(" ")}
             />
+
             <span className="relative">{copy.book}</span>
           </button>
         </div>
       </div>
 
-      <div className="pointer-events-auto flex h-[76px] items-center justify-between bg-transparent px-5 transition-all duration-300 lg:hidden">
+      <div
+        className={[
+          "nexa-mobile-nav pointer-events-auto flex h-[76px] items-center justify-between px-5 transition-all duration-300 lg:hidden",
+          mobileNavShellClass,
+        ].join(" ")}
+      >
         <Link
           href={homeHref}
           aria-label="NEXA Rentals home"
           onClick={closeMenus}
-          className="group relative flex items-center"
+          className="group relative z-10 flex items-center"
         >
-          {isLightTone ? (
-            <span className="pointer-events-none absolute left-[8px] top-[-14px] h-[86px] w-[158px] rounded-b-[16px] bg-black shadow-[0_16px_44px_rgba(0,0,0,0.28)]" />
-          ) : null}
-
           <Image
             src="/images/reallogo.png"
             alt="NEXA Rentals"
@@ -649,55 +734,145 @@ export default function NavbarV3({
             priority
             className={[
               "relative h-[48px] w-auto object-contain",
-              isLightTone
+              showAngledLogoPanel || isLightTone
                 ? "drop-shadow-[0_12px_28px_rgba(0,0,0,0.55)]"
                 : "drop-shadow-[0_18px_34px_rgba(0,0,0,0.72)]",
             ].join(" ")}
           />
         </Link>
 
-        <button
-          type="button"
-          onClick={() => {
-            setMobileMenuOpen((current) => !current);
-            setLangOpen(false);
-          }}
-          className={[
-            "inline-flex h-11 w-11 items-center justify-center rounded-full backdrop-blur-xl transition active:scale-95",
-            mobileMenuButtonClass,
-          ].join(" ")}
-          aria-label={mobileMenuOpen ? copy.close : copy.menu}
-          aria-expanded={mobileMenuOpen}
-        >
-          <span className="relative h-4 w-5">
-            <span
+        <div className="relative z-20 flex items-center gap-4">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setLangOpen((current) => !current);
+                setMobileMenuOpen(false);
+              }}
               className={[
-                "absolute left-0 block h-px w-5 transition duration-300",
-                mobileMenuLineClass,
-                mobileMenuOpen ? "top-2 rotate-45" : "top-0 rotate-0",
+                "inline-flex h-10 items-center justify-center gap-1.5 rounded-[14px] px-3 text-[11px] font-black uppercase tracking-[0.14em] backdrop-blur-xl transition active:scale-95",
+                mobileLanguageButtonClass,
               ].join(" ")}
-            />
-            <span
+              aria-label={copy.selectLanguage}
+              aria-expanded={langOpen}
+            >
+              <Image
+                src={currentLanguage.flagSrc}
+                alt={currentLanguage.label}
+                width={17}
+                height={17}
+                className="rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.16)]"
+              />
+
+              <span>{currentLanguage.short}</span>
+
+              <span
+                className={[
+                  "text-[10px] text-white/72 transition-transform duration-300",
+                  langOpen ? "rotate-180" : "rotate-0",
+                ].join(" ")}
+              >
+                ▾
+              </span>
+            </button>
+
+            <div
               className={[
-                "absolute left-0 top-2 block h-px w-5 transition duration-300",
-                mobileMenuLineClass,
-                mobileMenuOpen ? "opacity-0" : "opacity-100",
+                "absolute right-0 top-[calc(100%+12px)] z-[110] w-[224px] overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-300",
+                mobileLanguageDropdownClass,
+                langOpen
+                  ? "translate-y-0 scale-100 opacity-100"
+                  : "pointer-events-none -translate-y-2 scale-[0.98] opacity-0",
               ].join(" ")}
-            />
-            <span
-              className={[
-                "absolute left-0 block h-px w-5 transition duration-300",
-                mobileMenuLineClass,
-                mobileMenuOpen ? "top-2 -rotate-45" : "top-4 rotate-0",
-              ].join(" ")}
-            />
-          </span>
-        </button>
+            >
+              <div className="px-4 pb-2 pt-4 text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/42">
+                {copy.selectLanguage}
+              </div>
+
+              <div className="max-h-[360px] overflow-y-auto p-2">
+                {LANGUAGES.map((language) => {
+                  const active = language.code === locale;
+
+                  return (
+                    <button
+                      key={language.code}
+                      type="button"
+                      disabled
+                      className={[
+                        "group flex w-full cursor-not-allowed items-center justify-between rounded-[18px] px-3 py-2.5 text-left opacity-80 transition",
+                        active ? "bg-white/[0.12] text-white" : "text-white/68",
+                      ].join(" ")}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Image
+                          src={language.flagSrc}
+                          alt={language.label}
+                          width={21}
+                          height={21}
+                          className="rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.16)]"
+                        />
+
+                        <span className="text-sm font-semibold">
+                          {language.label}
+                        </span>
+                      </span>
+
+                      <span
+                        className={[
+                          "text-[10px] font-extrabold uppercase tracking-[0.16em]",
+                          active ? "text-[#ff7a00]" : "text-white/34",
+                        ].join(" ")}
+                      >
+                        {active ? copy.active : "Soon"}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen((current) => !current);
+              setLangOpen(false);
+            }}
+            className="nexa-hamburger-button"
+            aria-label={mobileMenuOpen ? copy.close : copy.menu}
+            aria-expanded={mobileMenuOpen}
+          >
+            <span className="nexa-hamburger-lines">
+              <span
+                className={[
+                  "nexa-hamburger-line",
+                  mobileMenuOpen ? "top-[10px] rotate-45" : "top-0 rotate-0",
+                ].join(" ")}
+              />
+
+              <span
+                className={[
+                  "nexa-hamburger-line top-[10px]",
+                  mobileMenuOpen ? "opacity-0" : "opacity-100",
+                ].join(" ")}
+              />
+
+              <span
+                className={[
+                  "nexa-hamburger-line",
+                  mobileMenuOpen
+                    ? "top-[10px] -rotate-45"
+                    : "top-[20px] rotate-0",
+                ].join(" ")}
+              />
+            </span>
+          </button>
+        </div>
       </div>
 
       <div
         className={[
-          "pointer-events-auto fixed inset-x-4 top-[84px] z-[90] overflow-hidden rounded-[30px] backdrop-blur-2xl transition-all duration-300 lg:hidden",
+          "pointer-events-auto fixed inset-x-4 top-[116px] z-[90] overflow-hidden rounded-[30px] backdrop-blur-2xl transition-all duration-300 lg:hidden",
           mobilePanelClass,
           mobileMenuOpen
             ? "translate-y-0 scale-100 opacity-100"
@@ -744,16 +919,16 @@ export default function NavbarV3({
                   <button
                     key={language.code}
                     type="button"
-                    onClick={() => handleLanguageChange(language.code)}
+                    disabled
                     className={[
-                      "flex items-center gap-2 rounded-[18px] px-3 py-2.5 text-left text-xs transition active:scale-[0.98]",
+                      "flex cursor-not-allowed items-center justify-between gap-2 rounded-[18px] px-3 py-2.5 text-left text-xs opacity-80 transition",
                       isLightTone
                         ? active
                           ? "bg-[#202226]/8 text-[#202226]"
-                          : "text-[#202226]/66 hover:bg-[#202226]/[0.055] hover:text-black"
+                          : "text-[#202226]/66"
                         : active
                           ? "bg-white/[0.12] text-white"
-                          : "text-white/66 hover:bg-white/[0.065] hover:text-white",
+                          : "text-white/66",
                     ].join(" ")}
                   >
                     <Image
@@ -763,6 +938,7 @@ export default function NavbarV3({
                       height={18}
                       className="rounded-full"
                     />
+
                     <span className="font-extrabold uppercase tracking-[0.14em]">
                       {language.short}
                     </span>
@@ -788,15 +964,195 @@ export default function NavbarV3({
         </nav>
       </div>
 
-      <style jsx>{`
-        .nexa-logo-strip {
-          left: max(
-            calc(((100vw - 1510px) / 2) + clamp(28px, 4vw, 66px) - 22px),
-            calc(clamp(28px, 4vw, 66px) + 16px)
+      <style jsx global>{`
+        html,
+        body {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+
+        @media (max-width: 1023px) {
+          body {
+            padding-top: ${MOBILE_PAGE_TOP_OFFSET_PX}px !important;
+          }
+        }
+
+        .nexa-navbar-shell[data-mobile-scrolled="true"] .nexa-mobile-nav {
+          background: #000000 !important;
+          box-shadow: 0 18px 46px rgba(0, 0, 0, 0.58) !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+        }
+
+        .nexa-navbar-shell[data-mobile-scrolled="false"] .nexa-mobile-nav {
+          background: transparent !important;
+          box-shadow: none !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+        }
+
+        .nexa-announcement-bar {
+          margin-bottom: 0 !important;
+          box-shadow: none !important;
+        }
+
+        .nexa-announcement-shine {
+          position: absolute;
+          inset: 0;
+          pointer-events: none;
+          background:
+            radial-gradient(
+              circle at 18% 50%,
+              rgba(255, 255, 255, 0.38),
+              transparent 34%
+            ),
+            radial-gradient(
+              circle at 84% 50%,
+              rgba(255, 255, 255, 0.22),
+              transparent 32%
+            );
+          opacity: 0.75;
+        }
+
+        .nexa-announcement-track {
+          position: absolute;
+          top: 0;
+          left: 0;
+          display: flex;
+          height: 100%;
+          width: max-content;
+          align-items: center;
+          animation: nexa-announcement-marquee 28s linear infinite;
+          will-change: transform;
+        }
+
+        .nexa-announcement-text {
+          align-items: center;
+          height: 100%;
+          padding-right: 5rem;
+          white-space: nowrap;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.12em;
+          text-transform: uppercase;
+          color: rgba(0, 0, 0, 0.86);
+          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.32);
+        }
+
+        .nexa-announcement-fade {
+          position: absolute;
+          top: 0;
+          bottom: 0;
+          z-index: 2;
+          width: 84px;
+          pointer-events: none;
+        }
+
+        .nexa-announcement-fade-left {
+          left: 0;
+          background: linear-gradient(
+            90deg,
+            #ff6500 0%,
+            rgba(255, 101, 0, 0) 100%
           );
-          width: clamp(188px, 13.6vw, 226px);
-          height: 90px;
-          border-radius: 0 0 18px 18px;
+        }
+
+        .nexa-announcement-fade-right {
+          right: 0;
+          background: linear-gradient(
+            270deg,
+            #ffb347 0%,
+            rgba(255, 179, 71, 0) 100%
+          );
+        }
+
+        @keyframes nexa-announcement-marquee {
+          0% {
+            transform: translateX(100vw);
+          }
+
+          100% {
+            transform: translateX(-100%);
+          }
+        }
+
+        .nexa-angled-logo-panel {
+          width: min(48vw, 760px);
+          min-width: 500px;
+          height: 96px;
+          background: #000000;
+          clip-path: polygon(0 0, 100% 0, calc(100% - 92px) 100%, 0 100%);
+          box-shadow: 0 20px 54px rgba(0, 0, 0, 0.28);
+        }
+
+        .nexa-desktop-logo {
+          max-height: 86px;
+        }
+
+        .nexa-hamburger-button {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 34px;
+          height: 34px;
+          padding: 0;
+          margin: 0;
+          border: none !important;
+          outline: none !important;
+          background: none !important;
+          background-color: transparent !important;
+          background-image: none !important;
+          box-shadow: none !important;
+          appearance: none;
+          -webkit-appearance: none;
+          -webkit-tap-highlight-color: transparent;
+          cursor: pointer;
+        }
+
+        .nexa-hamburger-button::before,
+        .nexa-hamburger-button::after {
+          display: none !important;
+          content: none !important;
+        }
+
+        .nexa-hamburger-button:hover,
+        .nexa-hamburger-button:focus,
+        .nexa-hamburger-button:active,
+        .nexa-hamburger-button:focus-visible {
+          border: none !important;
+          outline: none !important;
+          background: none !important;
+          background-color: transparent !important;
+          background-image: none !important;
+          box-shadow: none !important;
+        }
+
+        .nexa-hamburger-lines {
+          position: relative;
+          display: block;
+          width: 31px;
+          height: 23px;
+          background: transparent !important;
+          box-shadow: none !important;
+        }
+
+        .nexa-hamburger-line {
+          position: absolute;
+          left: 0;
+          display: block;
+          width: 31px;
+          height: 3.2px;
+          border-radius: 999px;
+          background: #ffffff;
+          box-shadow:
+            0 0 10px rgba(255, 255, 255, 0.7),
+            0 2px 5px rgba(0, 0, 0, 0.35);
+          transform-origin: center;
+          transition:
+            top 260ms ease,
+            transform 260ms ease,
+            opacity 200ms ease;
         }
 
         .book-now-pulse {
@@ -834,43 +1190,94 @@ export default function NavbarV3({
           }
         }
 
+        @media (max-width: 1023px) {
+          .nexa-announcement-bar {
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            box-shadow: none !important;
+            filter: none !important;
+            outline: 0 !important;
+            background: #ff7a00 !important;
+            background-image: none !important;
+          }
+
+          .nexa-announcement-bar::before,
+          .nexa-announcement-bar::after {
+            display: none !important;
+            content: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            background: none !important;
+            box-shadow: none !important;
+            filter: none !important;
+          }
+
+          .nexa-announcement-shine,
+          .nexa-announcement-fade,
+          .nexa-announcement-fade-left,
+          .nexa-announcement-fade-right {
+            display: none !important;
+            opacity: 0 !important;
+            visibility: hidden !important;
+            background: none !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            filter: none !important;
+          }
+
+          .nexa-mobile-nav {
+            margin-top: 0 !important;
+            border-top: 0 !important;
+          }
+
+          .nexa-announcement-track {
+            animation-duration: 18s;
+          }
+
+          .nexa-announcement-text {
+            padding-right: 3.25rem;
+            font-size: 9px;
+            letter-spacing: 0.1em;
+            text-shadow: none !important;
+          }
+        }
+
         @media (min-width: 1024px) and (max-height: 700px) {
-          header > div:first-child {
+          .nexa-desktop-nav {
             height: 78px;
           }
 
-          header img {
-            height: 44px;
+          .nexa-desktop-logo {
+            height: 52px !important;
           }
 
-          header > div:first-child + div {
+          .nexa-angled-logo-panel {
             height: 78px;
-          }
-
-          .nexa-logo-strip {
-            height: 74px;
-            width: clamp(172px, 12.5vw, 204px);
-            border-radius: 0 0 16px 16px;
+            width: min(47vw, 680px);
+            min-width: 430px;
+            clip-path: polygon(0 0, 100% 0, calc(100% - 74px) 100%, 0 100%);
           }
         }
 
         @media (min-width: 1024px) and (max-width: 1220px) {
-          header nav {
+          .nexa-desktop-nav nav {
             gap: 16px;
           }
 
-          header nav a {
+          .nexa-desktop-nav nav a {
             font-size: 10.5px;
             letter-spacing: 0.145em;
           }
 
-          header nav a:hover {
+          .nexa-desktop-nav nav a:hover {
             letter-spacing: 0.155em;
           }
 
-          .nexa-logo-strip {
-            left: calc(clamp(28px, 4vw, 66px) + 12px);
-            width: clamp(176px, 16vw, 210px);
+          .nexa-angled-logo-panel {
+            width: min(50vw, 650px);
+            min-width: 420px;
+            clip-path: polygon(0 0, 100% 0, calc(100% - 72px) 100%, 0 100%);
           }
         }
 

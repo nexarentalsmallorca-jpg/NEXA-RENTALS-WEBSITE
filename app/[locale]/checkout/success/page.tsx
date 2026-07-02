@@ -1,175 +1,404 @@
 import Link from "next/link";
 
-type RawSearchParams = Promise<{
-  paid?: string | string[];
-  remaining?: string | string[];
-  pickupDate?: string | string[];
-  pickupTime?: string | string[];
-  dropoffDate?: string | string[];
-  dropoffTime?: string | string[];
-  customerName?: string | string[];
+type SearchValue = string | string[] | undefined;
+
+type RawSearchParams = Promise<
+  Record<string, SearchValue> & {
+    paid?: SearchValue;
+    amountPaid?: SearchValue;
+    payNow?: SearchValue;
+    total?: SearchValue;
+    totalAmount?: SearchValue;
+    rentalTotal?: SearchValue;
+    pickupDate?: SearchValue;
+    pickupTime?: SearchValue;
+    dropoffDate?: SearchValue;
+    dropoffTime?: SearchValue;
+    customerName?: SearchValue;
+    vehicleName?: SearchValue;
+    assignedVehicleName?: SearchValue;
+    vehicle?: SearchValue;
+    plan?: SearchValue;
+  }
+>;
+
+type RawParams = Promise<{
+  locale?: string;
 }>;
 
-function getValue(value?: string | string[]) {
+const MAPS_LINK = "https://maps.app.goo.gl/GhkgjNk72jRC1vus8";
+
+const MONTHS = [
+  "January",
+  "February",
+  "March",
+  "April",
+  "May",
+  "June",
+  "July",
+  "August",
+  "September",
+  "October",
+  "November",
+  "December",
+];
+
+function getValue(value?: SearchValue) {
   if (Array.isArray(value)) return value[0] ?? "";
   return value ?? "";
 }
 
+function getFirstValue(params: Record<string, SearchValue>, keys: string[]) {
+  for (const key of keys) {
+    const value = getValue(params[key]).trim();
+    if (value) return value;
+  }
+
+  return "";
+}
+
+function getValueByKeySearch(
+  params: Record<string, SearchValue>,
+  mustInclude: string[],
+  valueType: "date" | "time"
+) {
+  for (const [key, rawValue] of Object.entries(params)) {
+    const lowerKey = key.toLowerCase();
+    const value = getValue(rawValue).trim();
+
+    if (!value) continue;
+    if (!mustInclude.every((part) => lowerKey.includes(part))) continue;
+
+    if (valueType === "date" && extractDate(value)) return value;
+    if (valueType === "time" && extractTime(value)) return value;
+  }
+
+  return "";
+}
+
 function formatMoney(value?: string) {
-  const num = Number(value);
-  if (!value || Number.isNaN(num)) return "—";
+  const cleanValue = value?.replace("€", "").replace(",", ".").trim() || "";
+  const num = Number(cleanValue);
+
+  if (!cleanValue || Number.isNaN(num)) return "";
   return `€${num.toFixed(2)}`;
 }
 
-function formatDate(value?: string) {
-  if (!value) return "—";
+function extractDate(value?: string) {
+  if (!value) return "";
 
-  const parts = value.split("-");
-  if (parts.length !== 3) return value;
+  const isoMatch = value.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if (isoMatch) {
+    const year = isoMatch[1];
+    const month = Number(isoMatch[2]);
+    const day = Number(isoMatch[3]);
 
-  const [year, month, day] = parts;
-  return `${day}/${month}/${year}`;
+    if (year && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${day} ${MONTHS[month - 1]} ${year}`;
+    }
+  }
+
+  const slashMatch = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  if (slashMatch) {
+    const day = Number(slashMatch[1]);
+    const month = Number(slashMatch[2]);
+    const year = slashMatch[3];
+
+    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+      return `${day} ${MONTHS[month - 1]} ${year}`;
+    }
+  }
+
+  return "";
 }
 
-function safeText(value?: string) {
-  return value && value.trim() ? value : "—";
+function extractTime(value?: string) {
+  if (!value) return "";
+
+  const timeMatch = value.match(/(\d{1,2}):(\d{2})(?:\s?(AM|PM|am|pm))?/);
+  if (!timeMatch) return "";
+
+  const hour = timeMatch[1];
+  const minute = timeMatch[2];
+  const suffix = timeMatch[3];
+
+  return suffix ? `${hour}:${minute} ${suffix.toUpperCase()}` : `${hour}:${minute}`;
+}
+
+function joinDateTime(date?: string, time?: string) {
+  if (date && time) return `${date} · ${time}`;
+  if (date) return date;
+  if (time) return time;
+  return "";
+}
+
+function DetailRow({ label, value }: { label: string; value?: string }) {
+  if (!value) return null;
+
+  return (
+    <div className="grid grid-cols-[84px_1fr] gap-3 border-b border-black/10 py-2 last:border-b-0 sm:grid-cols-[104px_1fr]">
+      <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/38">
+        {label}
+      </p>
+      <p className="text-[12px] font-black leading-5 text-black sm:text-[13px]">
+        {value}
+      </p>
+    </div>
+  );
+}
+
+function PickupLine({
+  number,
+  title,
+  text,
+}: {
+  number: string;
+  title: string;
+  text: string;
+}) {
+  return (
+    <div className="flex gap-3">
+      <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-black/10 bg-[#f4f4f1] text-[10px] font-black text-black">
+        {number}
+      </div>
+
+      <div>
+        <p className="text-[12px] font-black leading-5 text-black">{title}</p>
+        <p className="text-[11px] font-semibold leading-5 text-black/55">
+          {text}
+        </p>
+      </div>
+    </div>
+  );
 }
 
 export default async function SuccessPage({
+  params,
   searchParams,
 }: {
+  params: RawParams;
   searchParams: RawSearchParams;
 }) {
-  const params = await searchParams;
+  const routeParams = await params;
+  const query = await searchParams;
 
-  const customerName = safeText(getValue(params.customerName));
-  const amountPaid = formatMoney(getValue(params.paid));
-  const remainingAmount = formatMoney(getValue(params.remaining));
-  const pickupDate = formatDate(getValue(params.pickupDate));
-  const pickupTime = safeText(getValue(params.pickupTime));
-  const dropoffDate = formatDate(getValue(params.dropoffDate));
-  const dropoffTime = safeText(getValue(params.dropoffTime));
+  const locale = routeParams.locale || "en";
+
+  const customerName = getFirstValue(query, ["customerName", "name"]);
+
+  const vehicleName = getFirstValue(query, [
+    "vehicleName",
+    "assignedVehicleName",
+    "vehicle",
+    "scooter",
+    "model",
+  ]);
+
+  const plan = getFirstValue(query, [
+    "plan",
+    "rentalPlan",
+    "duration",
+    "selectedPlan",
+  ]);
+
+  const amountPaid = formatMoney(
+    getFirstValue(query, [
+      "paid",
+      "amountPaid",
+      "payNow",
+      "total",
+      "totalAmount",
+      "rentalTotal",
+      "price",
+      "fullAmount",
+      "amount",
+    ])
+  );
+
+  const pickupDate =
+    extractDate(
+      getFirstValue(query, [
+        "pickupDate",
+        "pickUpDate",
+        "pickupdate",
+        "pickup_date",
+        "startDate",
+        "start_date",
+        "fromDate",
+        "dateFrom",
+      ])
+    ) || extractDate(getValueByKeySearch(query, ["pickup", "date"], "date"));
+
+  const pickupTime =
+    extractTime(
+      getFirstValue(query, [
+        "pickupTime",
+        "pickUpTime",
+        "pickuptime",
+        "pickup_time",
+        "startTime",
+        "start_time",
+        "fromTime",
+        "timeFrom",
+      ])
+    ) || extractTime(getValueByKeySearch(query, ["pickup", "time"], "time"));
+
+  const dropoffDate =
+    extractDate(
+      getFirstValue(query, [
+        "dropoffDate",
+        "dropOffDate",
+        "dropoffdate",
+        "dropoff_date",
+        "returnDate",
+        "return_date",
+        "endDate",
+        "end_date",
+        "toDate",
+        "dateTo",
+      ])
+    ) || extractDate(getValueByKeySearch(query, ["drop", "date"], "date"));
+
+  const dropoffTime =
+    extractTime(
+      getFirstValue(query, [
+        "dropoffTime",
+        "dropOffTime",
+        "dropofftime",
+        "dropoff_time",
+        "returnTime",
+        "return_time",
+        "endTime",
+        "end_time",
+        "toTime",
+        "timeTo",
+      ])
+    ) || extractTime(getValueByKeySearch(query, ["drop", "time"], "time"));
+
+  const pickup = joinDateTime(pickupDate, pickupTime);
+  const dropoff = joinDateTime(dropoffDate, dropoffTime);
+
+  const hasAnyBookingDetail =
+    customerName || vehicleName || pickup || dropoff || plan || amountPaid;
 
   return (
-    <main className="relative min-h-screen overflow-hidden bg-[#070708] text-white">
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,122,0,0.18),transparent_58%)]" />
-      <div className="absolute inset-0 bg-[linear-gradient(180deg,rgba(255,255,255,0.02),transparent_30%,transparent_70%,rgba(255,122,0,0.04))]" />
-
-      <div className="relative z-10 flex min-h-screen items-center justify-center px-5 py-10">
-        <div className="w-full max-w-2xl rounded-[30px] border border-white/10 bg-white/[0.04] p-6 shadow-[0_20px_90px_rgba(0,0,0,0.65)] backdrop-blur-xl md:p-8">
-          <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-full border border-orange-500/30 bg-orange-500/10 shadow-[0_0_40px_rgba(255,122,0,0.35)]">
-            <span className="text-4xl text-white">✓</span>
-          </div>
-
-          <div className="mt-6 text-center">
-            <div className="inline-flex rounded-full border border-orange-500/25 bg-orange-500/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-[0.22em] text-orange-300">
-              Reservation Paid 50%
+    <main className="min-h-screen bg-[#f4f4f1] px-4 py-6 font-sans text-black">
+      <section className="mx-auto flex min-h-[calc(100vh-48px)] w-full max-w-3xl items-center justify-center">
+        <div className="w-full max-w-[740px] rounded-[12px] border border-black/10 bg-white px-5 py-5 shadow-[0_24px_90px_rgba(0,0,0,0.12)] sm:px-7 sm:py-6">
+          <div className="text-center">
+            <div className="text-[52px] font-black leading-none text-[#149447] sm:text-[60px]">
+              ✓
             </div>
 
-            <h1 className="mt-5 text-4xl font-extrabold tracking-tight text-white md:text-5xl">
-              Booking Confirmed
+            <p className="mt-1 text-[9px] font-black uppercase tracking-[0.28em] text-black/40">
+              Payment received
+            </p>
+
+            <h1 className="mt-2 font-sans text-3xl font-black leading-none tracking-[-0.055em] text-black sm:text-4xl">
+              Booking confirmed
             </h1>
 
-            <p className="mt-3 text-base text-white/75 md:text-lg">
-              Your reservation has been secured successfully. We look forward to
-              welcoming you to NEXA RENTALS in Mallorca.
+            <p className="mx-auto mt-2 max-w-lg text-[12px] font-semibold leading-5 text-black/55 sm:text-[13px]">
+              Your payment was received and your booking is now confirmed.
             </p>
           </div>
 
-          <div className="my-7 h-px bg-white/10" />
+          <div className="my-4 h-px bg-black/10" />
 
-          <div className="grid gap-4 md:grid-cols-2">
-            <div className="rounded-2xl border border-white/10 bg-black/35 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                Payment Summary
+          <div className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-black/38">
+                Booking details
               </p>
 
-              <div className="mt-4 space-y-3">
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-white/65">Amount Paid</span>
-                  <span className="text-base font-semibold text-white">
-                    {amountPaid}
-                  </span>
-                </div>
+              <h2 className="mt-1 font-sans text-lg font-black tracking-[-0.035em] text-black">
+                Your ride is reserved
+              </h2>
 
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-white/65">Remaining Amount</span>
-                  <span className="text-base font-semibold text-white">
-                    {remainingAmount}
-                  </span>
-                </div>
+              <div className="mt-3">
+                {hasAnyBookingDetail ? (
+                  <>
+                    <DetailRow label="Vehicle" value={vehicleName} />
+                    <DetailRow label="Customer" value={customerName} />
+                    <DetailRow label="Pickup" value={pickup} />
+                    <DetailRow label="Return" value={dropoff} />
+                    <DetailRow label="Plan" value={plan} />
+                    <DetailRow label="Paid" value={amountPaid} />
+                  </>
+                ) : (
+                  <p className="rounded-[10px] border border-black/10 bg-[#fafafa] px-4 py-3 text-[12px] font-semibold leading-5 text-black/60">
+                    Your booking is confirmed. The full booking details are saved with your confirmation email.
+                  </p>
+                )}
+              </div>
 
-                <div className="flex items-center justify-between gap-4 text-sm">
-                  <span className="text-white/65">Customer Name</span>
-                  <span className="text-base font-semibold text-white">
-                    {customerName}
-                  </span>
+              <div className="mt-4">
+                <p className="text-[9px] font-black uppercase tracking-[0.24em] text-black/38">
+                  Pickup location
+                </p>
+
+                <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                  <p className="text-[12px] font-black leading-5 text-black">
+                    NEXA Rentals, Magaluf
+                  </p>
+
+                  <a
+                    href={MAPS_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center rounded-[9px] bg-black px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#222]"
+                  >
+                    Open location
+                  </a>
                 </div>
               </div>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-black/35 p-5">
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-                Rental Schedule
+            <div>
+              <p className="text-[9px] font-black uppercase tracking-[0.24em] text-black/38">
+                Bring these at pickup
               </p>
 
-              <div className="mt-4 space-y-3">
-                <div className="flex items-start justify-between gap-4 text-sm">
-                  <span className="text-white/65">Pickup</span>
-                  <span className="text-right text-base font-semibold text-white">
-                    {pickupDate}
-                    <br />
-                    <span className="text-sm font-medium text-white/75">
-                      {pickupTime}
-                    </span>
-                  </span>
-                </div>
+              <h2 className="mt-1 font-sans text-lg font-black tracking-[-0.035em] text-black">
+                Pickup notes
+              </h2>
 
-                <div className="flex items-start justify-between gap-4 text-sm">
-                  <span className="text-white/65">Drop-off</span>
-                  <span className="text-right text-base font-semibold text-white">
-                    {dropoffDate}
-                    <br />
-                    <span className="text-sm font-medium text-white/75">
-                      {dropoffTime}
-                    </span>
-                  </span>
-                </div>
+              <div className="mt-3 space-y-3.5">
+                <PickupLine
+                  number="1"
+                  title="Passport / ID"
+                  text="Bring your original passport or national ID."
+                />
+
+                <PickupLine
+                  number="2"
+                  title="Valid driving licence"
+                  text="A, A1, A2 or B licence held for 3+ years."
+                />
+
+                <PickupLine
+                  number="3"
+                  title="€150 refundable deposit"
+                  text="Handled at pickup by cash or card."
+                />
               </div>
+
+              <p className="mt-4 rounded-[10px] border border-black/10 bg-[#fafafa] px-4 py-3 text-[11px] font-semibold leading-5 text-black/58">
+                Please arrive at your pickup time so we can prepare your scooter and make the handover fast.
+              </p>
             </div>
           </div>
 
-          <div className="mt-5 rounded-2xl border border-white/10 bg-black/30 p-5">
-            <p className="text-xs font-semibold uppercase tracking-[0.18em] text-white/45">
-              Important For Pickup
-            </p>
-
-            <div className="mt-4 space-y-3 text-sm leading-relaxed text-white/80">
-              <p>• A refundable security deposit of €150 is required at pickup.</p>
-              <p>• Valid driving licence required: Category B held for 3+ years or A1.</p>
-              <p>• Please bring your passport or national ID.</p>
-              <p>• Remaining rental amount will be paid at pickup.</p>
-              <p>• Please arrive at the agreed pickup time to avoid delays.</p>
-            </div>
-          </div>
-
-          <div className="mt-7 flex flex-col gap-3 sm:flex-row">
+          <div className="mt-4 border-t border-black/10 pt-3 text-center">
             <Link
-              href="/"
-              className="flex-1 rounded-2xl bg-[#ff7a00] px-6 py-3.5 text-center text-base font-bold text-black shadow-[0_0_35px_rgba(255,122,0,0.38)] transition hover:brightness-110"
+              href={`/${locale}/home`}
+              className="text-[11px] font-black uppercase tracking-[0.14em] text-black/40 transition hover:text-black"
             >
-              Back to Home
-            </Link>
-
-            <Link
-              href="/fleet"
-              className="flex-1 rounded-2xl border border-white/12 bg-white/[0.03] px-6 py-3.5 text-center text-base font-semibold text-white transition hover:bg-white/[0.06]"
-            >
-              View Fleet
+              Back to home
             </Link>
           </div>
         </div>
-      </div>
+      </section>
     </main>
   );
 }

@@ -1,6 +1,12 @@
 "use client";
 
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useLocale } from "next-intl";
 import { useRouter } from "next/navigation";
 
@@ -55,6 +61,7 @@ type BookingPanelCopy = {
   returnTime: string;
   dropoffDate: string;
   selectDate: string;
+  selectDates: string;
   selectTime: string;
   choosePlanFirst: string;
   chooseDateFirst: string;
@@ -86,56 +93,63 @@ type BookingPanelCopy = {
   noTimesToday: string;
 };
 
+const EN_COPY: BookingPanelCopy = {
+  vehicle: "Vehicle",
+  sameDayRental: "Same Day Rental",
+  fullDay: "Full Day",
+  chooseQuantity: "Select how many scooters you need",
+  multiDayDiscount: "Discounted price on multiple-day rentals",
+  mostPopular: "Most Popular",
+  pickupDate: "Pickup Date",
+  pickupTime: "Pickup Time",
+  returnTime: "Return Time",
+  dropoffDate: "Drop-off Date",
+  selectDate: "Select date",
+  selectDates: "Select",
+  selectTime: "Select time",
+  choosePlanFirst: "Please select Same Day Rental or Full Day first.",
+  chooseDateFirst: "Please choose your pickup date first.",
+  fullMin24: "Full Day booking must be at least 24 hours.",
+  maxOnline6:
+    "Maximum rental is 6 days. You can only rent up to 6 days online.",
+  checkingWait: "Checking availability. Please wait a moment.",
+  unavailableNotice:
+    "This vehicle is not available for the selected date/time. Please change the dates or choose another vehicle.",
+  availabilityRequired:
+    "Live availability must be confirmed before checkout. Please wait a moment.",
+  completeDetails: "Please complete your booking details first.",
+  availabilityError:
+    "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
+  checkingLive: "Checking live availability...",
+  availableCount: "{available} available",
+  notEnoughQuantity:
+    "Only {available} available. Please lower the quantity or contact us on WhatsApp.",
+  summary: "Summary",
+  choosePlanBegin: "Choose plan to begin",
+  day: "day",
+  days: "days",
+  hour: "hour",
+  hours: "hours",
+  total: "Total",
+  normalPrice: "Normal price",
+  nowPrice: "Now",
+  checkout: "Proceed to Checkout",
+  checkingAvailability: "Checking availability...",
+  notAvailable: "Not available",
+  confirmingAvailability: "Confirming availability...",
+  close: "Close",
+  sameDropoffTime: "Drop-off time is the same as pickup time.",
+  noTimesToday:
+    "No more pickup times are available today. Please choose another date.",
+};
+
+function copy(overrides: Partial<BookingPanelCopy>): BookingPanelCopy {
+  return { ...EN_COPY, ...overrides };
+}
+
 const I18N: Record<Locale, BookingPanelCopy> = {
-  en: {
-    vehicle: "Vehicle",
-    sameDayRental: "Same Day Rental",
-    fullDay: "Full Day",
-    chooseQuantity: "Select how many scooters you need",
-    multiDayDiscount: "Discounted price on multiple-day rentals",
-    mostPopular: "Most Popular",
-    pickupDate: "Pickup Date",
-    pickupTime: "Pickup Time",
-    returnTime: "Return Time",
-    dropoffDate: "Drop-off Date",
-    selectDate: "Select date",
-    selectTime: "Select time",
-    choosePlanFirst: "Please select Same Day Rental or Full Day first.",
-    chooseDateFirst: "Please choose your pickup date first.",
-    fullMin24: "Full Day booking must be at least 24 hours.",
-    maxOnline6:
-      "Maximum rental is 6 days. You can only rent up to 6 days online.",
-    checkingWait: "Checking availability. Please wait a moment.",
-    unavailableNotice:
-      "This vehicle is not available for the selected date/time. Please change the dates or choose another vehicle.",
-    availabilityRequired:
-      "Live availability must be confirmed before checkout. Please wait a moment.",
-    completeDetails: "Please complete your booking details first.",
-    availabilityError:
-      "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
-    checkingLive: "Checking live availability...",
-    availableCount: "{available} available",
-    notEnoughQuantity:
-      "Only {available} available. Please lower the quantity or contact us on WhatsApp.",
-    summary: "Summary",
-    choosePlanBegin: "Choose plan to begin",
-    day: "day",
-    days: "days",
-    hour: "hour",
-    hours: "hours",
-    total: "Total",
-    normalPrice: "Normal price",
-    nowPrice: "Now",
-    checkout: "Proceed to Checkout",
-    checkingAvailability: "Checking availability...",
-    notAvailable: "Not available",
-    confirmingAvailability: "Confirming availability...",
-    close: "Close",
-    sameDropoffTime: "Drop-off time is the same as pickup time.",
-    noTimesToday:
-      "No more pickup times are available today. Please choose another date.",
-  },
-  es: {
+  en: EN_COPY,
+  es: copy({
     vehicle: "Vehículo",
     sameDayRental: "Alquiler mismo día",
     fullDay: "Día completo",
@@ -147,6 +161,7 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     returnTime: "Hora de devolución",
     dropoffDate: "Fecha de devolución",
     selectDate: "Seleccionar fecha",
+    selectDates: "Seleccionar",
     selectTime: "Seleccionar hora",
     choosePlanFirst:
       "Por favor selecciona Alquiler mismo día o Día completo primero.",
@@ -183,8 +198,8 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     sameDropoffTime:
       "La hora de devolución es la misma que la hora de recogida.",
     noTimesToday: "Ya no hay horas disponibles para hoy. Elige otra fecha.",
-  },
-  de: {
+  }),
+  de: copy({
     vehicle: "Fahrzeug",
     sameDayRental: "Gleicher Tag",
     fullDay: "Ganzer Tag",
@@ -196,6 +211,7 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     returnTime: "Rückgabezeit",
     dropoffDate: "Rückgabedatum",
     selectDate: "Datum wählen",
+    selectDates: "Auswählen",
     selectTime: "Zeit wählen",
     choosePlanFirst: "Bitte wähle zuerst Gleicher Tag oder Ganzer Tag.",
     chooseDateFirst: "Bitte wähle zuerst das Abholdatum.",
@@ -229,8 +245,8 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     close: "Schließen",
     sameDropoffTime: "Die Rückgabezeit ist gleich wie die Abholzeit.",
     noTimesToday: "Für heute sind keine Abholzeiten mehr verfügbar.",
-  },
-  fr: {
+  }),
+  fr: copy({
     vehicle: "Véhicule",
     sameDayRental: "Même journée",
     fullDay: "Journée complète",
@@ -242,6 +258,7 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     returnTime: "Heure de retour",
     dropoffDate: "Date de retour",
     selectDate: "Sélectionner une date",
+    selectDates: "Sélectionner",
     selectTime: "Sélectionner l’heure",
     choosePlanFirst:
       "Veuillez d’abord choisir Même journée ou Journée complète.",
@@ -277,8 +294,8 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     close: "Fermer",
     sameDropoffTime: "L’heure de retour est la même que l’heure de retrait.",
     noTimesToday: "Plus d’heures de retrait disponibles aujourd’hui.",
-  },
-  it: {
+  }),
+  it: copy({
     vehicle: "Veicolo",
     sameDayRental: "Stesso giorno",
     fullDay: "Giornata intera",
@@ -290,6 +307,7 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     returnTime: "Orario riconsegna",
     dropoffDate: "Data riconsegna",
     selectDate: "Seleziona data",
+    selectDates: "Seleziona",
     selectTime: "Seleziona ora",
     choosePlanFirst: "Scegli prima Stesso giorno o Giornata intera.",
     chooseDateFirst: "Scegli prima la data di ritiro.",
@@ -324,8 +342,8 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     close: "Chiudi",
     sameDropoffTime: "L’orario di riconsegna è uguale all’orario di ritiro.",
     noTimesToday: "Non ci sono più orari disponibili per oggi.",
-  },
-  pt: {
+  }),
+  pt: copy({
     vehicle: "Veículo",
     sameDayRental: "Mesmo dia",
     fullDay: "Dia completo",
@@ -337,6 +355,7 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     returnTime: "Hora de devolução",
     dropoffDate: "Data de devolução",
     selectDate: "Selecionar data",
+    selectDates: "Selecionar",
     selectTime: "Selecionar hora",
     choosePlanFirst: "Escolha primeiro Mesmo dia ou Dia completo.",
     chooseDateFirst: "Escolha primeiro a data de levantamento.",
@@ -370,8 +389,8 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     close: "Fechar",
     sameDropoffTime: "A hora de devolução é igual à hora de levantamento.",
     noTimesToday: "Não há mais horários disponíveis hoje.",
-  },
-  sv: {
+  }),
+  sv: copy({
     vehicle: "Fordon",
     sameDayRental: "Samma dag",
     fullDay: "Heldag",
@@ -383,6 +402,7 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     returnTime: "Återlämningstid",
     dropoffDate: "Återlämningsdatum",
     selectDate: "Välj datum",
+    selectDates: "Välj",
     selectTime: "Välj tid",
     choosePlanFirst: "Välj först Samma dag eller Heldag.",
     chooseDateFirst: "Välj först upphämtningsdatum.",
@@ -416,7 +436,7 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     close: "Stäng",
     sameDropoffTime: "Återlämningstiden är samma som upphämtningstiden.",
     noTimesToday: "Inga fler tider finns tillgängliga idag.",
-  },
+  }),
 };
 
 const DEFAULT_PICKUP_LOCATION = "NEXA Rentals, Magaluf";
@@ -569,7 +589,9 @@ function buildMonthDays(month: Date) {
   const daysInMonth = getDaysInMonth(month);
   const first = startOfMonth(month);
   const mondayOffset = (first.getDay() + 6) % 7;
-  const leadingEmptyCells = Array.from({ length: mondayOffset }).map(() => null);
+  const leadingEmptyCells = Array.from({ length: mondayOffset }).map(
+    () => null
+  );
   const monthDays = Array.from({ length: daysInMonth }).map(
     (_, index) => new Date(month.getFullYear(), month.getMonth(), index + 1)
   );
@@ -813,10 +835,11 @@ function CalendarModal({
   pickupDate,
   dropoffDate,
   minBookableDate,
+  notice,
+  noticeIsWarning,
   onClose,
   onPick,
-  onPreviousMonth,
-  onNextMonth,
+  onConfirmDates,
   onSetViewMonth,
   viewMonth,
 }: {
@@ -828,39 +851,68 @@ function CalendarModal({
   pickupDate?: Date;
   dropoffDate?: Date;
   minBookableDate: Date;
+  notice: string;
+  noticeIsWarning: boolean;
   onClose: () => void;
   onPick: (day: Date) => void;
-  onPreviousMonth: () => void;
-  onNextMonth: () => void;
+  onConfirmDates: () => void;
   onSetViewMonth: (month: Date) => void;
   viewMonth: Date;
 }) {
   const monthsScrollerRef = useRef<HTMLDivElement | null>(null);
+  const wasOpenRef = useRef(false);
 
   const monthsList = useMemo(() => {
     const base = startOfMonth(minBookableDate);
     return Array.from({ length: 72 }).map((_, index) => addMonths(base, index));
   }, [minBookableDate]);
 
+  const scrollToMonth = useCallback(
+    (month: Date, behavior: ScrollBehavior = "smooth") => {
+      const currentIndex = monthsList.findIndex(
+        (itemMonth) =>
+          itemMonth.getFullYear() === month.getFullYear() &&
+          itemMonth.getMonth() === month.getMonth()
+      );
+
+      const scroller = monthsScrollerRef.current;
+      const item = scroller?.querySelector<HTMLDivElement>(
+        `[data-calendar-month-index="${currentIndex}"]`
+      );
+
+      if (scroller && item) {
+        const top = Math.max(0, item.offsetTop - 12);
+        scroller.scrollTo({ top, behavior });
+      }
+    },
+    [monthsList]
+  );
+
   useEffect(() => {
-    if (!open) return;
-
-    const currentIndex = monthsList.findIndex(
-      (month) =>
-        month.getFullYear() === viewMonth.getFullYear() &&
-        month.getMonth() === viewMonth.getMonth()
-    );
-
-    const scroller = monthsScrollerRef.current;
-    const item = scroller?.querySelector<HTMLDivElement>(
-      `[data-calendar-month-index="${currentIndex}"]`
-    );
-
-    if (scroller && item) {
-      const top = Math.max(0, item.offsetTop - 12);
-      scroller.scrollTo({ top, behavior: "smooth" });
+    if (!open) {
+      wasOpenRef.current = false;
+      return;
     }
-  }, [open, viewMonth, monthsList]);
+
+    if (!wasOpenRef.current) {
+      window.requestAnimationFrame(() => {
+        scrollToMonth(viewMonth, "auto");
+      });
+    }
+
+    wasOpenRef.current = true;
+  }, [open, scrollToMonth, viewMonth]);
+
+  const canConfirmFullRange = plan === "full" && !!pickupDate && !!dropoffDate;
+
+  function handleMonthJump(amount: number) {
+    const nextMonth = addMonths(viewMonth, amount);
+    onSetViewMonth(nextMonth);
+
+    window.requestAnimationFrame(() => {
+      scrollToMonth(nextMonth, "smooth");
+    });
+  }
 
   function handleCalendarScroll() {
     const scroller = monthsScrollerRef.current;
@@ -929,7 +981,7 @@ function CalendarModal({
           <div className="flex items-center justify-between">
             <button
               type="button"
-              onClick={onPreviousMonth}
+              onClick={() => handleMonthJump(-1)}
               className="rounded-full bg-black/[0.04] px-4 py-2 text-[13px] font-black transition hover:bg-black hover:text-white"
             >
               ←
@@ -941,13 +993,26 @@ function CalendarModal({
 
             <button
               type="button"
-              onClick={onNextMonth}
+              onClick={() => handleMonthJump(1)}
               className="rounded-full bg-black/[0.04] px-4 py-2 text-[13px] font-black transition hover:bg-black hover:text-white"
             >
               →
             </button>
           </div>
         </div>
+
+        {notice ? (
+          <div
+            className={[
+              "mx-5 mt-3 rounded-[14px] border px-3 py-2 text-[11px] font-bold leading-5",
+              noticeIsWarning
+                ? "border-red-200 bg-red-50 text-red-700"
+                : "border-black/10 bg-black/[0.03] text-black/70",
+            ].join(" ")}
+          >
+            {notice}
+          </div>
+        ) : null}
 
         <div
           ref={monthsScrollerRef}
@@ -1000,27 +1065,18 @@ function CalendarModal({
                           startOfDay(dropoffDate).getTime();
 
                       const selected =
-                        (activeField === "pickup" && isPickupSelected) ||
-                        (activeField === "dropoff" &&
-                          (isDropoffSelected || isPickupSelected));
+                        plan === "full"
+                          ? isPickupSelected || isDropoffSelected
+                          : activeField === "pickup" && isPickupSelected;
 
                       const inRange =
                         plan === "full" &&
                         pickupDate &&
                         dropoffDate &&
-                        startOfDay(day) >= startOfDay(pickupDate) &&
-                        startOfDay(day) <= startOfDay(dropoffDate);
+                        startOfDay(day) > startOfDay(pickupDate) &&
+                        startOfDay(day) < startOfDay(dropoffDate);
 
-                      let disabled = unavailable;
-
-                      if (
-                        plan === "full" &&
-                        activeField === "dropoff" &&
-                        pickupDate &&
-                        startOfDay(day) < startOfDay(addDays(pickupDate, 1))
-                      ) {
-                        disabled = true;
-                      }
+                      const disabled = unavailable;
 
                       return (
                         <button
@@ -1033,7 +1089,7 @@ function CalendarModal({
                             selected
                               ? "bg-black text-white shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
                               : inRange
-                                ? "bg-black/[0.08] text-black"
+                                ? "bg-black/[0.13] text-black"
                                 : "bg-black/[0.035] text-black hover:bg-black/[0.09]",
                             disabled && !selected
                               ? "cursor-not-allowed bg-black/[0.02] text-black/18"
@@ -1053,6 +1109,19 @@ function CalendarModal({
             })}
           </div>
         </div>
+
+        {plan === "full" ? (
+          <div className="border-t border-black/10 bg-white px-5 py-4">
+            <button
+              type="button"
+              disabled={!canConfirmFullRange}
+              onClick={onConfirmDates}
+              className="w-full rounded-[18px] bg-black px-5 py-4 text-[12px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#222] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-black/32"
+            >
+              {tt.selectDates}
+            </button>
+          </div>
+        ) : null}
       </div>
     </div>
   );
@@ -1515,16 +1584,6 @@ export default function BookingPanelV3({
     }, 90);
   }
 
-  function openDropoffCalendarAfterPickup(day: Date) {
-    setCalendarOpen(false);
-
-    window.setTimeout(() => {
-      setActiveDateField("dropoff");
-      setViewMonth(startOfMonth(day));
-      setCalendarOpen(true);
-    }, 160);
-  }
-
   function handleCalendarPick(day: Date) {
     if (!plan) return;
 
@@ -1555,7 +1614,7 @@ export default function BookingPanelV3({
       }
 
       setDropoffDate(undefined);
-      openDropoffCalendarAfterPickup(day);
+      setActiveDateField("dropoff");
       return;
     }
 
@@ -1578,6 +1637,39 @@ export default function BookingPanelV3({
     }
 
     setDropoffDate(day);
+    setNotice("");
+    setViewMonth(startOfMonth(day));
+  }
+
+  function handleConfirmCalendarDates() {
+    if (plan !== "full") return;
+
+    if (!pickupDate) {
+      setNotice(tt.chooseDateFirst);
+      setActiveDateField("pickup");
+      return;
+    }
+
+    if (!dropoffDate) {
+      setNotice(tt.fullMin24);
+      setActiveDateField("dropoff");
+      return;
+    }
+
+    const days = dayDiff(pickupDate, dropoffDate);
+
+    if (days < 1) {
+      setNotice(tt.fullMin24);
+      setActiveDateField("dropoff");
+      return;
+    }
+
+    if (days > MAX_ONLINE_DAYS) {
+      setNotice(tt.maxOnline6);
+      setActiveDateField("dropoff");
+      return;
+    }
+
     setNotice("");
     setCalendarOpen(false);
 
@@ -2154,11 +2246,12 @@ export default function BookingPanelV3({
         dropoffDate={dropoffDate}
         minBookableDate={minBookableDate}
         viewMonth={viewMonth}
+        notice={notice}
+        noticeIsWarning={noticeIsWarning}
         onClose={() => setCalendarOpen(false)}
-        onPreviousMonth={() => setViewMonth((current) => addMonths(current, -1))}
-        onNextMonth={() => setViewMonth((current) => addMonths(current, 1))}
         onSetViewMonth={(month) => setViewMonth(startOfMonth(month))}
         onPick={handleCalendarPick}
+        onConfirmDates={handleConfirmCalendarDates}
       />
     </div>
   );

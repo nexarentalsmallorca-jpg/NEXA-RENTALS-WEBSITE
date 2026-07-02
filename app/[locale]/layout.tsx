@@ -98,8 +98,6 @@ export default async function RootLayout({ children, params }: Props) {
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
 
-          <NeroBookingCopilot />
-
           <WhatsAppSupport
             phone="34971482342"
             messages={[
@@ -110,9 +108,77 @@ export default async function RootLayout({ children, params }: Props) {
             ]}
           />
 
+          <NeroBookingCopilot />
+
           <FooterMoneyBlogLinks locale={locale} />
           <NexaFooter />
         </NextIntlClientProvider>
+
+        <style
+          dangerouslySetInnerHTML={{
+            __html: `
+              @media (max-width: 1023px) {
+                /*
+                  MOBILE ONLY:
+                  Move Nero AI icon to the right side.
+                  Desktop is not touched.
+                */
+               /*
+  MOBILE ONLY:
+  Move Nero AI icon to the right side.
+  This targets the fixed AI wrapper by its z-index.
+*/
+div[style*="2147483647"] {
+  left: auto !important;
+  right: 18px !important;
+  bottom: 84px !important;
+  align-items: flex-end !important;
+  gap: 10px !important;
+}
+
+/*
+  MOBILE ONLY:
+  Make the AI icon slightly smaller without breaking the inside design.
+*/
+
+
+                /*
+                  MOBILE ONLY:
+                  Move WhatsApp floating wrapper to the right side.
+                  This targets the WhatsApp portal wrapper by its z-index.
+                */
+                div[style*="2147483400"] {
+                  left: auto !important;
+                  right: 18px !important;
+                  bottom: 20px !important;
+                  flex-direction: row-reverse !important;
+                  align-items: flex-end !important;
+                  gap: 9px !important;
+                }
+
+                /*
+                  MOBILE ONLY:
+                  Make WhatsApp icon slightly smaller.
+                */
+                div[style*="2147483400"] > a[style*="border-radius: 50%"] {
+                  width: 58px !important;
+                  height: 58px !important;
+                  min-width: 58px !important;
+                  min-height: 58px !important;
+                }
+
+                /*
+                  MOBILE ONLY:
+                  Make WhatsApp bubble open from the right side.
+                */
+                div[style*="2147483400"] > a:not([style*="border-radius: 50%"]) {
+                  max-width: 230px !important;
+                  font-size: 12px !important;
+                }
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );

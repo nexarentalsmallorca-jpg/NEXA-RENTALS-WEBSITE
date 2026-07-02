@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo, useState } from "react";
 import { Elements } from "@stripe/react-stripe-js";
 import type { StripeElementsOptions } from "@stripe/stripe-js";
 import { stripePromise } from "@/lib/stripeClient";
@@ -7,90 +8,167 @@ import CheckoutForm from "./CheckoutForm";
 
 export default function CheckoutShell({
   clientSecret,
+  customerName = "",
+  customerEmail = "",
+  customerPhone = "",
 }: {
   clientSecret: string;
+  customerName?: string;
+  customerEmail?: string;
+  customerPhone?: string;
 }) {
-  const options: StripeElementsOptions = {
-    clientSecret,
-    appearance: {
-      theme: "flat",
-      variables: {
-        colorPrimary: "#FF7A00",
-        colorBackground: "#FBF7EF",
-        colorText: "#111111",
-        colorDanger: "#D92D20",
-        colorTextSecondary: "rgba(17,17,17,0.58)",
-        colorTextPlaceholder: "rgba(17,17,17,0.35)",
-        fontFamily:
-          "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
-        fontSizeBase: "15px",
-        spacingUnit: "5px",
-        borderRadius: "18px",
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  const options = useMemo<StripeElementsOptions>(() => {
+    return {
+      clientSecret,
+      appearance: {
+        theme: "flat",
+        variables: {
+          colorPrimary: "#111111",
+          colorBackground: "#FFFFFF",
+          colorText: "#111111",
+          colorDanger: "#D92D20",
+          colorTextSecondary: "rgba(17,17,17,0.58)",
+          colorTextPlaceholder: "rgba(17,17,17,0.34)",
+          fontFamily:
+            "Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, Segoe UI, sans-serif",
+          fontSizeBase: "15px",
+          spacingUnit: "5px",
+          borderRadius: "0px",
+        },
+        rules: {
+          ".Tab": {
+            backgroundColor: "#FFFFFF",
+            border: "1px solid rgba(17,17,17,0.13)",
+            boxShadow: "none",
+            color: "#111111",
+            fontWeight: "700",
+          },
+          ".Tab:hover": {
+            backgroundColor: "rgba(17,17,17,0.035)",
+            border: "1px solid rgba(17,17,17,0.35)",
+            color: "#111111",
+          },
+          ".Tab--selected": {
+            backgroundColor: "#111111",
+            border: "1px solid #111111",
+            color: "#FFFFFF",
+            boxShadow: "none",
+          },
+          ".TabIcon": {
+            color: "currentColor",
+          },
+          ".Label": {
+            color: "rgba(17,17,17,0.58)",
+            fontWeight: "800",
+            fontSize: "11px",
+            letterSpacing: "0.12em",
+            textTransform: "uppercase",
+          },
+          ".Input": {
+            backgroundColor: "#FFFFFF",
+            border: "1px solid rgba(17,17,17,0.16)",
+            color: "#111111",
+            boxShadow: "none",
+            padding: "14px 15px",
+            fontWeight: "600",
+          },
+          ".Input:hover": {
+            border: "1px solid rgba(17,17,17,0.34)",
+            backgroundColor: "#FFFFFF",
+          },
+          ".Input:focus": {
+            border: "1px solid #111111",
+            boxShadow: "0 0 0 3px rgba(17,17,17,0.08)",
+          },
+          ".Input--invalid": {
+            border: "1px solid #D92D20",
+            boxShadow: "0 0 0 3px rgba(217,45,32,0.08)",
+          },
+          ".Block": {
+            backgroundColor: "#FFFFFF",
+            border: "1px solid rgba(17,17,17,0.12)",
+            boxShadow: "none",
+          },
+          ".AccordionItem": {
+            backgroundColor: "#FFFFFF",
+            border: "1px solid rgba(17,17,17,0.12)",
+            boxShadow: "none",
+          },
+          ".AccordionItem--selected": {
+            backgroundColor: "#FFFFFF",
+            border: "1px solid #111111",
+            boxShadow: "0 0 0 3px rgba(17,17,17,0.06)",
+          },
+          ".Error": {
+            color: "#D92D20",
+            fontWeight: "700",
+          },
+          ".TermsText": {
+            color: "rgba(17,17,17,0.52)",
+            fontSize: "11px",
+            lineHeight: "1.5",
+          },
+        },
       },
-      rules: {
-        ".Tab": {
-          backgroundColor: "rgba(255,255,255,0.82)",
-          border: "1px solid rgba(0,0,0,0.10)",
-          boxShadow: "0 10px 24px rgba(0,0,0,0.08)",
-          color: "#111111",
-        },
-        ".Tab:hover": {
-          backgroundColor: "#FFFFFF",
-          border: "1px solid rgba(255,122,0,0.35)",
-          color: "#111111",
-        },
-        ".Tab--selected": {
-          backgroundColor: "#FF7A00",
-          border: "1px solid rgba(255,122,0,0.60)",
-          color: "#111111",
-          boxShadow:
-            "0 16px 34px rgba(255,122,0,0.28), 0 0 0 4px rgba(255,122,0,0.10)",
-        },
-        ".TabIcon": {
-          color: "#111111",
-        },
-        ".Label": {
-          color: "rgba(17,17,17,0.58)",
-          fontWeight: "700",
-          fontSize: "12px",
-          letterSpacing: "0.02em",
-        },
-        ".Input": {
-          backgroundColor: "rgba(255,255,255,0.92)",
-          border: "1px solid rgba(0,0,0,0.10)",
-          color: "#111111",
-          boxShadow: "0 8px 18px rgba(0,0,0,0.06)",
-          padding: "14px 15px",
-        },
-        ".Input:hover": {
-          border: "1px solid rgba(255,122,0,0.32)",
-          backgroundColor: "#FFFFFF",
-        },
-        ".Input:focus": {
-          border: "1px solid rgba(255,122,0,0.65)",
-          boxShadow:
-            "0 0 0 4px rgba(255,122,0,0.11), 0 10px 24px rgba(0,0,0,0.08)",
-        },
-        ".Block": {
-          backgroundColor: "rgba(255,255,255,0.68)",
-          border: "1px solid rgba(0,0,0,0.08)",
-          boxShadow: "0 10px 30px rgba(0,0,0,0.06)",
-        },
-        ".AccordionItem": {
-          backgroundColor: "rgba(255,255,255,0.68)",
-          border: "1px solid rgba(0,0,0,0.08)",
-        },
-        ".AccordionItem--selected": {
-          backgroundColor: "#FFFFFF",
-          border: "1px solid rgba(255,122,0,0.34)",
-        },
-      },
-    },
-  };
+    };
+  }, [clientSecret]);
+
+  if (!mounted) {
+    return (
+      <div className="nexa-stripe-shell">
+        <div className="rounded-none border border-black/10 bg-white px-4 py-4 text-[13px] font-bold text-black/45">
+          Preparing secure checkout...
+        </div>
+      </div>
+    );
+  }
+
+  if (!clientSecret) {
+    return (
+      <div className="nexa-stripe-shell">
+        <div className="rounded-none border border-black/10 bg-white px-4 py-4 text-[13px] font-bold text-black/45">
+          Preparing secure checkout...
+        </div>
+      </div>
+    );
+  }
 
   return (
-    <Elements stripe={stripePromise} options={options}>
-      <CheckoutForm />
-    </Elements>
+    <div className="nexa-stripe-shell">
+      <Elements key={clientSecret} stripe={stripePromise} options={options}>
+        <CheckoutForm
+          customerName={customerName}
+          customerEmail={customerEmail}
+          customerPhone={customerPhone}
+        />
+      </Elements>
+
+      <style jsx global>{`
+        .nexa-stripe-shell {
+          width: 100%;
+          min-width: 0;
+          overflow: visible;
+        }
+
+        @media (max-width: 767px) {
+          .nexa-stripe-shell {
+            min-height: 720px;
+            overflow: visible !important;
+            padding-bottom: calc(env(safe-area-inset-bottom) + 48px);
+          }
+
+          .nexa-stripe-shell iframe {
+            width: 100% !important;
+            display: block !important;
+          }
+        }
+      `}</style>
+    </div>
   );
 }

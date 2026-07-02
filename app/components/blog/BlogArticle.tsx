@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
-import { Suspense, type ReactNode } from "react";
-import Navbar from "@/app/Navbar";
+import { type ReactNode } from "react";
+import { Roboto } from "next/font/google";
 import BlogParagraph from "@/app/components/blog/BlogParagraph";
 import BlogQuickAnswer from "@/app/components/blog/BlogQuickAnswer";
 import BlogViewCount from "@/app/components/blog/BlogViewCount";
@@ -15,8 +15,13 @@ import {
 import { blogCanonicalUrl, SITE_URL } from "@/lib/blog-seo";
 import type { Locale } from "@/i18n/routing";
 
-const PAGE_BG = "#F9F8F7";
-const ORANGE = "#FF7A00";
+const pageFont = Roboto({
+  subsets: ["latin"],
+  weight: ["400", "500", "700"],
+  display: "swap",
+});
+
+const PAGE_BG = "#ffffff";
 const INSTAGRAM_URL = "https://www.instagram.com/nexarentalsmallorca/";
 const INSTAGRAM_HANDLE = "@nexarentalsmallorca";
 
@@ -33,6 +38,29 @@ type Props = {
   initialViewCount?: number;
   related: RelatedPost[];
 };
+
+type LanguageItem = {
+  code: string;
+  label: string;
+  short: string;
+  flagSrc: string;
+};
+
+const LANGUAGES: LanguageItem[] = [
+  { code: "en", label: "English", short: "EN", flagSrc: "/images/en.png" },
+  { code: "es", label: "Español", short: "ES", flagSrc: "/images/es.png" },
+  { code: "de", label: "Deutsch", short: "DE", flagSrc: "/images/de.png" },
+  { code: "fr", label: "Français", short: "FR", flagSrc: "/images/fr.png" },
+  { code: "it", label: "Italiano", short: "IT", flagSrc: "/images/it.png" },
+  { code: "nl", label: "Nederlands", short: "NL", flagSrc: "/images/NL.png" },
+  { code: "pl", label: "Polski", short: "PL", flagSrc: "/images/PL.png" },
+  { code: "sv", label: "Svenska", short: "SV", flagSrc: "/images/sv.png" },
+  { code: "da", label: "Dansk", short: "DA", flagSrc: "/images/DA.png" },
+  { code: "no", label: "Norsk", short: "NO", flagSrc: "/images/NO.png" },
+  { code: "pt", label: "Português", short: "PT", flagSrc: "/images/pt.png" },
+  { code: "cs", label: "Čeština", short: "CS", flagSrc: "/images/CS.png" },
+  { code: "uk", label: "Українська", short: "UK", flagSrc: "/images/UK.png" },
+];
 
 function formatPublishedDateLong(iso: string, locale: Locale) {
   return new Intl.DateTimeFormat(locale, {
@@ -69,7 +97,7 @@ function SocialIconButton({
       target="_blank"
       rel="noopener noreferrer"
       aria-label={label}
-      className="flex h-11 w-11 items-center justify-center rounded-lg border border-stone-300/90 bg-white text-stone-700 transition hover:border-stone-400 hover:bg-stone-50 hover:text-stone-900"
+      className="flex h-11 w-11 items-center justify-center border border-stone-300/90 bg-white text-stone-700 transition hover:border-stone-500 hover:bg-stone-50 hover:text-black"
     >
       {children}
     </a>
@@ -105,40 +133,6 @@ function getArticleWordCount(blog: BlogTranslation) {
   return allText.split(/\s+/).filter(Boolean).length;
 }
 
-function getSeoRentalLinks(locale: Locale) {
-  return [
-    {
-      href: `/${locale}/blog/scooter-rental-guides`,
-      label: "All scooter rental guides",
-      description:
-        "See all NEXA guides about licences, prices, deposits, routes, helmets and booking.",
-    },
-    {
-      href: `/${locale}/scooter-rental-magaluf`,
-      label: "Scooter rental Magaluf",
-      description:
-        "125cc scooters near Magaluf with helmets, lock and phone holder included.",
-    },
-    {
-      href: `/${locale}/scooter-rental-mallorca`,
-      label: "Scooter rental Mallorca",
-      description:
-        "Explore Mallorca with flexible scooter rental from NEXA Rentals.",
-    },
-    {
-      href: `/${locale}/rent-scooter-mallorca-125cc`,
-      label: "125cc scooter rental",
-      description: "Check licence rules and rent a 125cc scooter for your trip.",
-    },
-    {
-      href: `/${locale}/ebike-rental-mallorca`,
-      label: "E-bike rental Mallorca",
-      description:
-        "Easy e-bike rental for short rides, beach routes and city exploring.",
-    },
-  ];
-}
-
 export default async function BlogArticle({
   locale,
   blog,
@@ -151,12 +145,14 @@ export default async function BlogArticle({
   const categoryLabel = tCat(blog.category);
 
   const articleUrl = blogCanonicalUrl(locale, blog.slug);
-  const bookHref = `/${locale}/scooter-rental-magaluf`;
-  const guidesHref = `/${locale}/blog/scooter-rental-guides`;
+  const homeHref = `/${locale}/home`;
+  const blogHref = `/${locale}/blog`;
   const publishedLong = formatPublishedDateLong(blog.publishedAt, locale);
-  const rentalLinks = getSeoRentalLinks(locale);
   const articleWordCount = getArticleWordCount(blog);
   const hasFaqs = blog.faqs.length > 0;
+
+  const currentLanguage =
+    LANGUAGES.find((language) => language.code === locale) || LANGUAGES[0];
 
   const articleJsonLd = {
     "@context": "https://schema.org",
@@ -208,7 +204,7 @@ export default async function BlogArticle({
         "@type": "ListItem",
         position: 1,
         name: tBlog("breadcrumbHome"),
-        item: `${SITE_URL}/${locale}`,
+        item: `${SITE_URL}/${locale}/home`,
       },
       {
         "@type": "ListItem",
@@ -245,43 +241,100 @@ export default async function BlogArticle({
       />
 
       <div
-        className="min-h-screen overflow-x-clip font-[family-name:var(--font-inter)] text-stone-900"
+        className={`${pageFont.className} min-h-screen overflow-x-clip text-stone-900`}
         style={{ backgroundColor: PAGE_BG }}
       >
-        <Suspense
-          fallback={
-            <div
-              className="h-24 w-full"
-              style={{ backgroundColor: PAGE_BG }}
-            />
-          }
-        >
-          <Navbar />
-        </Suspense>
+        <div className="fixed left-5 top-5 z-[100] md:left-8 md:top-8">
+          <Link
+            href={homeHref}
+            className="inline-flex min-h-[46px] items-center justify-center gap-2 border border-stone-300 bg-white/90 px-5 text-[12px] font-bold uppercase tracking-[0.18em] text-stone-900 shadow-[0_18px_50px_rgba(0,0,0,0.08)] backdrop-blur-xl transition duration-300 hover:border-black hover:bg-black hover:text-white"
+          >
+            <span className="text-lg leading-none">←</span>
+            <span>{t("back")}</span>
+          </Link>
+        </div>
+
+        <div className="fixed right-5 top-5 z-[100] md:right-8 md:top-8">
+          <details className="group relative">
+            <summary className="inline-flex min-h-[46px] min-w-[96px] cursor-pointer list-none items-center justify-center gap-2 border border-stone-300 bg-white/90 px-4 text-[12px] font-bold uppercase tracking-[0.16em] text-stone-900 shadow-[0_18px_50px_rgba(0,0,0,0.08)] backdrop-blur-xl transition duration-300 hover:border-black hover:bg-white [&::-webkit-details-marker]:hidden">
+              <Image
+                src={currentLanguage.flagSrc}
+                alt={currentLanguage.label}
+                width={18}
+                height={18}
+                className="rounded-full"
+              />
+              <span>{currentLanguage.short}</span>
+              <span className="text-[10px] transition-transform duration-300 group-open:rotate-180">
+                ▾
+              </span>
+            </summary>
+
+            <div className="absolute right-0 top-[calc(100%+10px)] z-[110] w-[245px] border border-stone-200 bg-white/95 p-2 text-stone-900 shadow-[0_26px_90px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
+              <div className="px-3 pb-2 pt-2 text-[10px] font-bold uppercase tracking-[0.22em] text-stone-400">
+                Select language
+              </div>
+
+              <div className="max-h-[430px] overflow-y-auto">
+                {LANGUAGES.map((language) => {
+                  const active = language.code === locale;
+
+                  return (
+                    <Link
+                      key={language.code}
+                      href={`/${language.code}/blog`}
+                      className={[
+                        "flex w-full items-center justify-between px-3 py-2.5 text-left transition active:scale-[0.98]",
+                        active
+                          ? "bg-black text-white"
+                          : "text-stone-700 hover:bg-stone-100 hover:text-black",
+                      ].join(" ")}
+                    >
+                      <span className="flex items-center gap-3">
+                        <Image
+                          src={language.flagSrc}
+                          alt={language.label}
+                          width={22}
+                          height={22}
+                          className="rounded-full shadow-[0_0_0_1px_rgba(0,0,0,0.12)]"
+                        />
+                        <span className="text-sm font-medium">
+                          {language.label}
+                        </span>
+                      </span>
+
+                      <span
+                        className={[
+                          "text-[10px] font-bold uppercase tracking-[0.16em]",
+                          active ? "text-white" : "text-stone-400",
+                        ].join(" ")}
+                      >
+                        {active ? "Active" : language.short}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </div>
+          </details>
+        </div>
 
         <article className="nexa-prose-safe mx-auto w-full min-w-0 max-w-[1100px] px-4 pb-20 pt-24 sm:px-6 sm:pb-24 sm:pt-28 lg:px-10">
           <BlogViewTracker postId={blog.id} />
 
           <div className="mb-6 flex flex-col gap-3 sm:mb-8 sm:flex-row sm:items-center sm:justify-between">
             <Link
-              href={`/${locale}/blog`}
-              className="inline-flex min-h-11 items-center text-sm font-medium text-stone-500 transition hover:text-stone-800"
+              href={blogHref}
+              className="inline-flex min-h-11 items-center text-sm font-medium text-stone-500 transition hover:text-black"
             >
-              ← {t("back")}
-            </Link>
-
-            <Link
-              href={guidesHref}
-              className="inline-flex min-h-11 items-center justify-center rounded-full border border-orange-200 bg-white px-4 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-50"
-            >
-              All scooter rental guides →
+              ← {tBlog("breadcrumbBlog")}
             </Link>
           </div>
 
           <div
-            className={`relative aspect-[2/1] w-full overflow-hidden rounded-2xl sm:aspect-[16/9] ${
+            className={`relative aspect-[2/1] w-full overflow-hidden sm:aspect-[16/9] ${
               isBlogPlaceholderImage(blog.heroImage)
-                ? "bg-[#F9F8F7]"
+                ? "bg-white"
                 : "bg-stone-200"
             }`}
           >
@@ -299,12 +352,12 @@ export default async function BlogArticle({
             />
           </div>
 
-          <div className="mt-6 rounded-2xl border border-stone-200/90 bg-white/70 p-4 shadow-[0_8px_32px_rgba(15,23,42,0.04)] sm:mt-10 sm:rounded-none sm:border-0 sm:border-b sm:border-stone-300/70 sm:bg-transparent sm:p-0 sm:pb-8 sm:shadow-none">
+          <div className="mt-6 border border-stone-200 bg-white p-4 shadow-[0_8px_32px_rgba(15,23,42,0.04)] sm:mt-10 sm:border-0 sm:border-b sm:border-stone-300/70 sm:bg-transparent sm:p-0 sm:pb-8 sm:shadow-none">
             <div className="grid grid-cols-2 gap-x-4 gap-y-5 sm:flex sm:flex-wrap sm:gap-10 md:gap-14">
               <div className="min-w-0">
                 <MetaLabel>{t("writtenBy")}</MetaLabel>
                 <MetaValue>
-                  <span className="font-semibold" style={{ color: ORANGE }}>
+                  <span className="font-semibold text-black">
                     {t("publishedByTeam")}
                   </span>
                 </MetaValue>
@@ -339,19 +392,15 @@ export default async function BlogArticle({
                   href={INSTAGRAM_URL}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="min-w-0 truncate text-sm font-medium text-stone-600 underline-offset-2 transition hover:text-stone-900 hover:underline"
+                  className="min-w-0 truncate text-sm font-medium text-stone-600 underline-offset-2 transition hover:text-black hover:underline"
                 >
                   {INSTAGRAM_HANDLE}
                 </a>
               </div>
 
               <Link
-                href={bookHref}
-                className="inline-flex h-12 w-full items-center justify-center rounded-xl px-6 text-sm font-semibold text-white transition hover:brightness-105 sm:h-11 sm:w-auto sm:rounded-lg"
-                style={{
-                  background: `linear-gradient(135deg, ${ORANGE} 0%, #ff9a3d 100%)`,
-                  boxShadow: "0 8px 24px rgba(255,122,0,0.25)",
-                }}
+                href={homeHref}
+                className="inline-flex h-12 w-full items-center justify-center bg-black px-6 text-sm font-semibold text-white transition hover:bg-stone-800 sm:h-11 sm:w-auto"
               >
                 {t("rentOnline")}
               </Link>
@@ -363,7 +412,7 @@ export default async function BlogArticle({
               {categoryLabel} · {blog.readTime}
             </p>
 
-            <h1 className="mt-4 max-w-[52ch] break-words font-[family-name:var(--font-playfair)] text-[1.55rem] font-semibold leading-[1.12] tracking-[-0.02em] text-stone-950 sm:text-[2.5rem] lg:text-[2.85rem]">
+            <h1 className="mt-4 max-w-[52ch] break-words text-[1.55rem] font-bold leading-[1.12] tracking-[-0.02em] text-stone-950 sm:text-[2.5rem] lg:text-[2.85rem]">
               {blog.title}
             </h1>
 
@@ -375,44 +424,10 @@ export default async function BlogArticle({
           <div className="mt-12 w-full sm:mt-14">
             <BlogQuickAnswer text={blog.quickAnswer} />
 
-            <section className="mt-10 rounded-2xl border border-orange-200/70 bg-white p-5 shadow-[0_10px_32px_rgba(15,23,42,0.04)] sm:p-7">
-              <p className="text-xs font-bold uppercase tracking-[0.22em] text-orange-600">
-                NEXA Rentals
-              </p>
-
-              <h2 className="mt-3 font-[family-name:var(--font-playfair)] text-xl font-semibold text-stone-950 sm:text-2xl">
-                Useful rental pages for your trip
-              </h2>
-
-              <p className="mt-3 max-w-2xl text-sm leading-6 text-stone-600">
-                Explore our main rental pages and full guide hub so Google and
-                customers can easily reach every important scooter, e-bike,
-                licence, deposit, price and route page.
-              </p>
-
-              <div className="mt-5 grid gap-3 sm:grid-cols-2">
-                {rentalLinks.map((link) => (
-                  <Link
-                    key={link.href}
-                    href={link.href}
-                    className="group rounded-xl border border-stone-200 bg-[#F9F8F7] p-4 transition hover:border-orange-300 hover:bg-orange-50/40"
-                  >
-                    <span className="block text-sm font-semibold text-stone-950 group-hover:text-[#c45f00]">
-                      {link.label}
-                    </span>
-
-                    <span className="mt-2 block text-sm leading-relaxed text-stone-600">
-                      {link.description}
-                    </span>
-                  </Link>
-                ))}
-              </div>
-            </section>
-
             <div className="mt-14 space-y-14 sm:mt-16 sm:space-y-16">
               {blog.sections.map((section) => (
                 <section key={section.heading} className="w-full">
-                  <h2 className="max-w-[48ch] break-words font-[family-name:var(--font-playfair)] text-xl font-semibold tracking-tight text-stone-950 sm:text-3xl">
+                  <h2 className="max-w-[48ch] break-words text-xl font-bold tracking-tight text-stone-950 sm:text-3xl">
                     {section.heading}
                   </h2>
 
@@ -431,14 +446,14 @@ export default async function BlogArticle({
 
             {hasFaqs ? (
               <section className="mt-16 w-full border-t border-stone-200 pt-14 sm:mt-20">
-                <h2 className="font-[family-name:var(--font-playfair)] text-2xl font-semibold text-stone-950 sm:text-3xl">
+                <h2 className="text-2xl font-bold text-stone-950 sm:text-3xl">
                   {t("faqTitle")}
                 </h2>
 
                 <dl className="mt-10 max-w-[75ch] space-y-10">
                   {blog.faqs.map((faq) => (
                     <div key={faq.question}>
-                      <dt className="text-lg font-semibold text-stone-950 sm:text-xl">
+                      <dt className="text-lg font-bold text-stone-950 sm:text-xl">
                         {faq.question}
                       </dt>
 
@@ -451,9 +466,9 @@ export default async function BlogArticle({
               </section>
             ) : null}
 
-            <section className="mt-12 flex flex-col items-stretch gap-4 rounded-2xl border border-stone-200 bg-white/80 p-5 sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:p-8">
+            <section className="mt-12 flex flex-col items-stretch gap-4 border border-stone-200 bg-white p-5 sm:mt-14 sm:flex-row sm:items-center sm:justify-between sm:p-8">
               <div>
-                <h2 className="font-[family-name:var(--font-playfair)] text-lg font-semibold text-stone-950 sm:text-xl">
+                <h2 className="text-lg font-bold text-stone-950 sm:text-xl">
                   {blog.ctaTitle}
                 </h2>
 
@@ -464,25 +479,15 @@ export default async function BlogArticle({
 
               <div className="flex w-full flex-col gap-2.5 sm:w-auto sm:flex-row sm:flex-wrap sm:gap-3">
                 <Link
-                  href={bookHref}
-                  className="inline-flex h-12 w-full items-center justify-center rounded-xl px-6 text-sm font-semibold text-white transition hover:brightness-105 sm:h-11 sm:w-auto sm:rounded-lg"
-                  style={{
-                    background: `linear-gradient(135deg, ${ORANGE} 0%, #ff9a3d 100%)`,
-                  }}
+                  href={homeHref}
+                  className="inline-flex h-12 w-full items-center justify-center bg-black px-6 text-sm font-semibold text-white transition hover:bg-stone-800 sm:h-11 sm:w-auto"
                 >
                   {t("rentOnline")}
                 </Link>
 
                 <Link
-                  href={guidesHref}
-                  className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-orange-200 bg-orange-50 px-5 text-sm font-semibold text-orange-700 transition hover:border-orange-300 hover:bg-orange-100 sm:h-11 sm:w-auto sm:rounded-lg"
-                >
-                  All guides
-                </Link>
-
-                <Link
-                  href={`/${locale}/vehicles`}
-                  className="inline-flex h-12 w-full items-center justify-center rounded-xl border border-stone-300 bg-white px-5 text-sm font-medium text-stone-800 transition hover:border-stone-400 sm:h-11 sm:w-auto sm:rounded-lg"
+                  href={homeHref}
+                  className="inline-flex h-12 w-full items-center justify-center border border-stone-300 bg-white px-5 text-sm font-medium text-stone-800 transition hover:border-black hover:bg-black hover:text-white sm:h-11 sm:w-auto"
                 >
                   View vehicles
                 </Link>
@@ -491,7 +496,7 @@ export default async function BlogArticle({
 
             {related.length > 0 && (
               <section className="mt-16 border-t border-stone-200 pb-8 pt-12">
-                <h2 className="font-[family-name:var(--font-playfair)] text-lg font-semibold text-stone-950">
+                <h2 className="text-lg font-bold text-stone-950">
                   {t("continueReading")}
                 </h2>
 
@@ -506,7 +511,7 @@ export default async function BlogArticle({
                           {tCat(post.category)}
                         </span>
 
-                        <span className="mt-2 block font-medium text-stone-900 transition group-hover:text-[#c45f00]">
+                        <span className="mt-2 block font-medium text-stone-900 transition group-hover:text-black">
                           {post.title}
                         </span>
 

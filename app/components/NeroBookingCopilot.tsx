@@ -514,13 +514,13 @@ export default function NeroBookingCopilot() {
 
   const eyeStyle = useMemo(() => {
     if (isMobileLike) {
-      return { transform: "translate(0px, 0px)" };
+      return { transform: "translate(-50%, -50%)" };
     }
 
     const button = buttonRef.current;
 
     if (!button) {
-      return { transform: "translate(0px, 0px)" };
+      return { transform: "translate(-50%, -50%)" };
     }
 
     const rect = button.getBoundingClientRect();
@@ -531,7 +531,7 @@ export default function NeroBookingCopilot() {
     const dy = Math.max(-1, Math.min(1, (mouse.y - centerY) / 190));
 
     return {
-      transform: `translate(${dx * 6}px, ${dy * 5}px)`,
+      transform: `translate(-50%, -50%) translate(${dx * 6}px, ${dy * 5}px)`,
     };
   }, [mouse, isMobileLike]);
 
@@ -833,8 +833,9 @@ export default function NeroBookingCopilot() {
       onMouseLeave={handleCopilotMouseLeave}
       style={{
         position: "fixed",
-        right: isMobileLike ? "14px" : "clamp(14px, 1.6vw, 24px)",
-        bottom: isMobileLike ? "96px" : "104px",
+        left: isMobileLike ? "auto" : "auto",
+        right: isMobileLike ? "18px" : "clamp(14px, 1.6vw, 24px)",
+        bottom: isMobileLike ? "84px" : "104px",
         zIndex: 2147483647,
         display: "flex",
         flexDirection: "column",
@@ -909,11 +910,11 @@ export default function NeroBookingCopilot() {
           }
         }}
         className={[
-          "group relative overflow-hidden rounded-full border border-white/12 bg-[#06070c] shadow-[0_0_24px_rgba(59,130,246,0.22),0_0_44px_rgba(124,58,237,0.24),0_0_60px_rgba(249,115,22,0.18)] transition duration-300 hover:scale-110 active:scale-95",
-          isMobileLike
-            ? "h-[62px] w-[62px] nero-mobile-idle"
-            : "h-[clamp(64px,5vw,72px)] w-[clamp(64px,5vw,72px)]",
-        ].join(" ")}
+  "group relative overflow-hidden rounded-full border border-white/12 bg-[#06070c] shadow-[0_0_24px_rgba(59,130,246,0.22),0_0_44px_rgba(124,58,237,0.24),0_0_60px_rgba(249,115,22,0.18)] transition duration-300",
+  isMobileLike
+    ? "h-[62px] w-[62px] origin-bottom-right scale-[0.90] active:scale-[0.86]"
+    : "h-[clamp(64px,5vw,72px)] w-[clamp(64px,5vw,72px)] hover:scale-110 active:scale-95",
+].join(" ")}
         aria-label={copy.chatWithNeroAria}
       >
         <div className="absolute inset-0 bg-[conic-gradient(from_180deg_at_50%_50%,rgba(96,165,250,0.85),rgba(124,58,237,0.95),rgba(249,115,22,0.92),rgba(96,165,250,0.85))]" />
@@ -926,43 +927,22 @@ export default function NeroBookingCopilot() {
         />
 
         <div className="absolute left-1/2 top-[29%] flex -translate-x-1/2 gap-3">
-          <span
-            className={[
-              "relative h-4 w-4 rounded-full bg-gradient-to-br from-white to-[#dbeafe] shadow-[0_0_16px_rgba(191,219,254,1)]",
-              isMobileLike ? "nero-mobile-eye" : "",
-            ].join(" ")}
-          >
+          <span className="nero-eye-blink relative h-4 w-4 rounded-full bg-gradient-to-br from-white to-[#dbeafe] shadow-[0_0_16px_rgba(191,219,254,1)]">
             <span
               style={eyeStyle}
-              className={[
-                "absolute left-1/2 top-1/2 h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#05060a] transition-transform duration-75",
-                isMobileLike ? "nero-mobile-pupil" : "",
-              ].join(" ")}
+              className="absolute left-1/2 top-1/2 h-[7px] w-[7px] rounded-full bg-[#05060a] transition-transform duration-75"
             />
           </span>
 
-          <span
-            className={[
-              "relative h-4 w-4 rounded-full bg-gradient-to-br from-white to-[#ffedd5] shadow-[0_0_16px_rgba(255,237,213,1)]",
-              isMobileLike ? "nero-mobile-eye" : "",
-            ].join(" ")}
-          >
+          <span className="nero-eye-blink nero-eye-blink-delay relative h-4 w-4 rounded-full bg-gradient-to-br from-white to-[#ffedd5] shadow-[0_0_16px_rgba(255,237,213,1)]">
             <span
               style={eyeStyle}
-              className={[
-                "absolute left-1/2 top-1/2 h-[7px] w-[7px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[#05060a] transition-transform duration-75",
-                isMobileLike ? "nero-mobile-pupil" : "",
-              ].join(" ")}
+              className="absolute left-1/2 top-1/2 h-[7px] w-[7px] rounded-full bg-[#05060a] transition-transform duration-75"
             />
           </span>
         </div>
 
-        <div
-          className={[
-            "absolute bottom-[28%] left-1/2 h-3.5 w-8 -translate-x-1/2 rounded-b-full border-b-[3px] border-[#fde68a] shadow-[0_0_14px_rgba(251,191,36,0.28)] transition-all duration-200 group-hover:w-9 group-hover:border-b-[4px]",
-            isMobileLike ? "nero-mobile-mouth" : "",
-          ].join(" ")}
-        />
+        <div className="nero-soft-smile absolute bottom-[28%] left-1/2 h-3.5 w-8 -translate-x-1/2 rounded-b-full border-b-[3px] border-[#fde68a] shadow-[0_0_14px_rgba(251,191,36,0.28)] transition-all duration-200 group-hover:w-9 group-hover:border-b-[4px]" />
 
         <div className="absolute bottom-[7px] left-1/2 -translate-x-1/2 rounded-full border border-white/10 bg-black/40 px-2 py-[2px] text-[9px] font-black tracking-[0.25em] text-white/90 shadow-[0_0_14px_rgba(124,58,237,0.35)]">
           AI
@@ -986,94 +966,65 @@ export default function NeroBookingCopilot() {
           }
         }
 
-        @keyframes neroMobileFloat {
+        @keyframes neroSmoothBlink {
           0%,
-          100% {
-            transform: translateY(0px) rotate(0deg);
-          }
-          25% {
-            transform: translateY(-2px) rotate(-1deg);
-          }
-          50% {
-            transform: translateY(-5px) rotate(0.8deg);
-          }
-          75% {
-            transform: translateY(-2px) rotate(-0.6deg);
-          }
-        }
-
-        @keyframes neroMobileBlink {
-          0%,
-          43%,
-          47%,
+          37%,
+          41%,
+          86%,
           90%,
           100% {
             transform: scaleY(1);
           }
-          45%,
-          46% {
+
+          39% {
             transform: scaleY(0.14);
           }
-          92%,
-          93% {
+
+          88% {
             transform: scaleY(0.18);
           }
         }
 
-        @keyframes neroMobilePupilDance {
-          0%,
-          100% {
-            transform: translate(-50%, -50%) translate(0px, 0px);
-          }
-          20% {
-            transform: translate(-50%, -50%) translate(1px, -1px);
-          }
-          40% {
-            transform: translate(-50%, -50%) translate(-1px, 0px);
-          }
-          60% {
-            transform: translate(-50%, -50%) translate(1px, 1px);
-          }
-          80% {
-            transform: translate(-50%, -50%) translate(0px, -1px);
-          }
-        }
-
-        @keyframes neroMobileSmile {
+        @keyframes neroSoftSmile {
           0%,
           100% {
             width: 32px;
-            border-bottom-width: 3px;
-            transform: translateX(-50%) scaleX(1);
           }
+
           50% {
-            width: 36px;
-            border-bottom-width: 4px;
-            transform: translateX(-50%) scaleX(1.04);
+            width: 34px;
           }
         }
 
-        .nero-mobile-idle {
-          animation: neroMobileFloat 3.2s ease-in-out infinite;
-        }
-
-        .nero-mobile-eye {
+        .nero-eye-blink {
           transform-origin: center center;
-          animation: neroMobileBlink 4.8s ease-in-out infinite;
         }
 
-        .nero-mobile-pupil {
-          animation: neroMobilePupilDance 3.6s ease-in-out infinite;
-        }
-
-        .nero-mobile-mouth {
-          animation: neroMobileSmile 2.8s ease-in-out infinite;
+        .nero-eye-blink-delay {
+          animation-delay: 0.08s;
         }
 
         @media (max-width: 768px) {
           .nero-copilot-wrap {
-            right: 14px !important;
-            bottom: 96px !important;
+            left: auto !important;
+            right: 18px !important;
+            bottom: 84px !important;
+            align-items: flex-end !important;
+          }
+
+          .nero-eye-blink {
+            animation: neroSmoothBlink 6.2s ease-in-out infinite;
+          }
+
+          .nero-soft-smile {
+            animation: neroSoftSmile 5.6s ease-in-out infinite;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nero-eye-blink,
+          .nero-soft-smile {
+            animation: none !important;
           }
         }
       `}</style>

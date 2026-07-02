@@ -8,7 +8,7 @@ import {
   type MouseEvent,
 } from "react";
 import Image from "next/image";
-import { Montserrat, Poppins } from "next/font/google";
+import { Inter, Manrope, Montserrat, Poppins } from "next/font/google";
 import NavbarV3 from "../NavbarV3";
 import BookingPanelV3 from "./BookingPanelV3";
 import GoogleReviewsV3 from "./GoogleReviewsV3";
@@ -19,6 +19,14 @@ import NeroWebsiteAssistant from "../components/NeroWebsiteAssistant";
 const poppins = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
+});
+const inter = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+});
+const manrope = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
 });
 
 const montserrat = Montserrat({
@@ -38,6 +46,20 @@ type VehicleSlide = {
   image: string;
   alt: string;
   features: VehicleFeature[];
+};
+
+type MobileDirectHeroSpec = {
+  image: string;
+  label: string;
+};
+
+type MobileDirectHeroSlide = {
+  id: string;
+  vehicleId: string;
+  name: string;
+  image: string;
+  alt: string;
+  specs: MobileDirectHeroSpec[];
 };
 
 type OpenStatus = {
@@ -123,6 +145,61 @@ const VEHICLE_SLIDES: VehicleSlide[] = [
     image: "/images/ebike2.0.png",
     alt: "NEXA Rentals premium electric bike",
     features: CECOTEC_EBIKE_FEATURES,
+  },
+];
+
+const MOBILE_DIRECT_HERO_SLIDES: MobileDirectHeroSlide[] = [
+  {
+  id: "mobile-piaggio-liberty",
+  vehicleId: "piaggio-liberty",
+  name: "Piaggio Liberty 125",
+  image: "/images/piaggiomobile1.png",
+  alt: "Piaggio Liberty 125 scooter rental NEXA Rentals Magaluf",
+  specs: [
+    { image: "/images/engine.png", label: "125CC" },
+    { image: "/images/people.png", label: "2 Riders" },
+    { image: "/images/speed.png", label: "100 KM/H" },
+    { image: "/images/1111.png", label: "All Inclusive" },
+  ],
+},
+{
+  id: "mobile-sym-symphony",
+  vehicleId: "sym-symphony",
+  name: "SYM Symphony 125",
+  image: "/images/symmobile1.png",
+  alt: "SYM Symphony 125 scooter rental NEXA Rentals Magaluf",
+  specs: [
+    { image: "/images/engine.png", label: "125CC" },
+    { image: "/images/people.png", label: "2 Riders" },
+    { image: "/images/speed.png", label: "110 KM/H" },
+    { image: "/images/1111.png", label: "All Inclusive" },
+  ],
+},
+  {
+    id: "mobile-ebike-one",
+    vehicleId: "ebike-one",
+    name: "MOMA CITY E-Bike",
+    image: "/images/ebikemobile1.png",
+    alt: "E Bike rental NEXA Rentals Magaluf",
+    specs: [
+      { image: "/images/people.png", label: "1 Rider" },
+      { image: "/images/speed.png", label: "25 KM/H" },
+      { image: "/images/1111.png", label: "100KM Range" },
+      { image: "/images/lock.png", label: "Lock Included" },
+    ],
+  },
+  {
+    id: "mobile-ebike-two",
+    vehicleId: "ebike-two",
+    name: "CECOTEC light MTB E-Bike",
+    image: "/images/ebikemobile2.png",
+    alt: "E Bike rental NEXA Rentals Magaluf",
+    specs: [
+      { image: "/images/people.png", label: "1 Rider" },
+      { image: "/images/speed.png", label: "25 KM/H" },
+      { image: "/images/1111.png", label: "60KM Range" },
+      { image: "/images/lock.png", label: "Lock Included" },
+    ],
   },
 ];
 
@@ -658,7 +735,7 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
 
   return (
     <div className="nexa-ebike-panel relative z-20 w-full rounded-[28px] border border-black/10 bg-white p-4 text-black shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
-      <div className="rounded-[18px] border border-black/10 bg-black/[0.03] px-3 py-3">
+      <div className="rounded-[18px] border border-black/10 bg-[linear-gradient(135deg,#ff7a00_0%,#ff9f1c_45%,#ffc15a_100%)]/[0.03] px-3 py-3">
         <div className="text-[9px] font-black uppercase tracking-[0.16em] text-black/46">
           Vehicle
         </div>
@@ -690,7 +767,7 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
         </div>
       </div>
 
-      <div className="mt-3 rounded-[16px] border border-emerald-500/20 bg-emerald-50 px-3 py-3 text-[11px] font-black leading-5 text-emerald-700">
+      <div className="mt-3 rounded-[16px] border border-emerald-500/20 bg-emerald-50 px-3 py-3 text-[17px] font-black leading-5 text-emerald-700">
         For e-bike rentals, please contact us on WhatsApp to confirm live
         availability. Looking to rent more days? Message us on WhatsApp.
       </div>
@@ -763,16 +840,37 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
 
 export default function NexaBookingShowroomV3() {
   const [activeIndex, setActiveIndex] = useState(0);
+  const [mobileHeroIndex, setMobileHeroIndex] = useState(0);
   const [bookingPanelAttention, setBookingPanelAttention] = useState(false);
   const bookingAttentionTimeoutRef = useRef<number | null>(null);
 
   const slideCount = VEHICLE_SLIDES.length;
+  const mobileHeroSlideCount = MOBILE_DIRECT_HERO_SLIDES.length;
 
   const activeVehicle = useMemo(() => {
     return VEHICLE_SLIDES[activeIndex] || VEHICLE_SLIDES[0];
   }, [activeIndex]);
 
+  const activeMobileHeroSlide = useMemo(() => {
+    return (
+      MOBILE_DIRECT_HERO_SLIDES[mobileHeroIndex] || MOBILE_DIRECT_HERO_SLIDES[0]
+    );
+  }, [mobileHeroIndex]);
+
   const isActiveVehicleEbike = activeVehicle.id.startsWith("ebike");
+
+  const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
+    const mobileSlide =
+      MOBILE_DIRECT_HERO_SLIDES[mobileIndex] || MOBILE_DIRECT_HERO_SLIDES[0];
+
+    const matchedVehicleIndex = VEHICLE_SLIDES.findIndex(
+      (vehicle) => vehicle.id === mobileSlide.vehicleId
+    );
+
+    if (matchedVehicleIndex >= 0) {
+      setActiveIndex(matchedVehicleIndex);
+    }
+  };
 
   const goToPrevious = () => {
     setActiveIndex((current) => (current === 0 ? slideCount - 1 : current - 1));
@@ -780,6 +878,22 @@ export default function NexaBookingShowroomV3() {
 
   const goToNext = () => {
     setActiveIndex((current) => (current === slideCount - 1 ? 0 : current + 1));
+  };
+
+  const goToPreviousMobileHero = () => {
+    setMobileHeroIndex((current) => {
+      const nextIndex = current === 0 ? mobileHeroSlideCount - 1 : current - 1;
+      syncMobileVehicleToDesktopVehicle(nextIndex);
+      return nextIndex;
+    });
+  };
+
+  const goToNextMobileHero = () => {
+    setMobileHeroIndex((current) => {
+      const nextIndex = current === mobileHeroSlideCount - 1 ? 0 : current + 1;
+      syncMobileVehicleToDesktopVehicle(nextIndex);
+      return nextIndex;
+    });
   };
 
   const triggerBookingPanelAttention = () => {
@@ -799,22 +913,46 @@ export default function NexaBookingShowroomV3() {
     }, 3000);
   };
 
-  const handleBookNowClick = () => {
-    const bookingElement = document.getElementById("booking");
-
-    if (bookingElement) {
-      bookingElement.scrollIntoView({
-        behavior: "smooth",
-        block: "start",
-      });
+  const getBookingTargetElement = () => {
+    if (typeof window !== "undefined" && window.innerWidth < 1024) {
+      return (
+        document.getElementById("mobile-booking-panel") ||
+        document.getElementById("booking")
+      );
     }
 
-    triggerBookingPanelAttention();
+    return document.getElementById("booking");
   };
+
+  const handleBookNowClick = () => {
+  if (typeof window !== "undefined" && window.innerWidth < 1024) {
+    const locale =
+      window.location.pathname.split("/").filter(Boolean)[0] || "en";
+
+    const vehicleId = activeMobileHeroSlide.vehicleId;
+
+    window.location.href = `/${locale}/mobile-booking?vehicle=${encodeURIComponent(
+      vehicleId,
+    )}`;
+
+    return;
+  }
+
+  const bookingElement = getBookingTargetElement();
+
+  if (bookingElement) {
+    bookingElement.scrollIntoView({
+      behavior: "smooth",
+      block: "start",
+    });
+  }
+
+  triggerBookingPanelAttention();
+};
 
   useEffect(() => {
     const handleGlobalBookClick = () => {
-      const bookingElement = document.getElementById("booking");
+      const bookingElement = getBookingTargetElement();
 
       if (bookingElement) {
         bookingElement.scrollIntoView({
@@ -845,15 +983,15 @@ export default function NexaBookingShowroomV3() {
     };
   }, []);
 
-  return (
-    <>
+ return (
+  <div id="nexa-showroom-v3" className="bg-black">
       <section
         id="booking"
-        className="relative isolate h-screen min-h-[640px] w-full overflow-hidden bg-black text-white"
+        className="relative isolate min-h-[100svh] w-full overflow-hidden bg-black text-white lg:h-screen lg:min-h-[640px]"
       >
         <NavbarV3 onBookClick={handleBookNowClick} />
 
-        <div className="absolute inset-0 z-0">
+        <div className="absolute inset-0 z-0 hidden lg:block">
           {VEHICLE_SLIDES.map((vehicle, index) => {
             const isActive = index === activeIndex;
 
@@ -875,8 +1013,126 @@ export default function NexaBookingShowroomV3() {
           })}
         </div>
 
-        <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(180deg,rgba(0,0,0,0.16)_0%,rgba(0,0,0,0.00)_22%,rgba(0,0,0,0.02)_70%,rgba(0,0,0,0.24)_100%)]" />
-        <div className="pointer-events-none absolute inset-0 z-10 bg-[linear-gradient(90deg,rgba(0,0,0,0.20)_0%,rgba(0,0,0,0.00)_26%,rgba(0,0,0,0.00)_58%,rgba(0,0,0,0.50)_100%)]" />
+        <div className="mobile-direct-hero-stage absolute inset-0 z-0 overflow-hidden bg-black lg:hidden">
+          {MOBILE_DIRECT_HERO_SLIDES.map((vehicle, index) => {
+            const isActive = index === mobileHeroIndex;
+
+            return (
+              <Image
+                key={vehicle.id}
+                src={vehicle.image}
+                alt={vehicle.alt}
+                fill
+                priority={index === 0}
+                sizes="100vw"
+                draggable={false}
+                className={[
+                  "mobile-direct-hero-image select-none object-contain object-center transition-opacity duration-200 ease-out",
+                  isActive ? "opacity-100" : "opacity-0",
+                ].join(" ")}
+              />
+            );
+          })}
+        </div>
+
+        <div
+  key={activeMobileHeroSlide.id}
+  className={[
+    inter.className,
+    "mobile-scooter-selector pointer-events-none absolute inset-x-0 top-[92px] z-40 px-5 text-center text-white lg:hidden",
+  ].join(" ")}
+>
+  <div className="mobile-selector-kicker mx-auto block text-[9px] font-extrabold uppercase tracking-[0.36em] text-white/64 drop-shadow-[0_8px_22px_rgba(0,0,0,0.88)]">
+    Choose Your Ride
+  </div>
+
+    <h1
+    className="mobile-selector-title mx-auto mt-2 max-w-[350px] text-[23px] font-extrabold uppercase leading-[0.98] tracking-[-0.01em] text-white drop-shadow-[0_10px_28px_rgba(0,0,0,0.92)]"
+    style={{
+      fontFamily: `${inter.style.fontFamily}, "SF Pro Display", "Helvetica Neue", Arial, sans-serif`,
+      fontWeight: 800,
+      letterSpacing: "-0.01em",
+    }}
+  >
+    {activeMobileHeroSlide.name}
+  </h1>
+
+  <div className="mobile-price-line pointer-events-none mx-auto mt-1.5 flex w-full max-w-[350px] items-center justify-center gap-1.5 text-center lg:hidden">
+  <span className="text-[8px] font-black uppercase leading-none tracking-[0.24em] text-white/62 drop-shadow-[0_8px_20px_rgba(0,0,0,0.9)]">
+    From
+  </span>
+
+  <span className="bg-[linear-gradient(180deg,#fff6c8_0%,#ffd166_38%,#ff9d2e_72%,#ff7a00_100%)] bg-clip-text text-[30px] font-black leading-none tracking-[-0.065em] text-transparent drop-shadow-[0_8px_18px_rgba(0,0,0,0.85)]">
+    {activeMobileHeroSlide.vehicleId === "ebike-one" ||
+    activeMobileHeroSlide.vehicleId === "ebike-two"
+      ? "9€"
+      : "39€"}
+  </span>
+
+  <span className="text-[8.5px] font-black uppercase leading-none tracking-[0.14em] text-white/78 drop-shadow-[0_8px_20px_rgba(0,0,0,0.9)]">
+    All inclusive
+  </span>
+</div>
+</div>
+
+<div
+  className="mobile-scooter-bottom-panel absolute inset-x-0 z-40 pl-5 pr-[88px] lg:hidden"
+  style={{ bottom: "clamp(96px, 13svh, 136px)" }}
+>
+  <div className="ml-1 flex max-w-[300px] flex-col items-start">
+    <div className="mobile-select-button-position flex w-full justify-center">
+  <button
+    type="button"
+    onClick={handleBookNowClick}
+    className={[
+      inter.className,
+      "mobile-select-button relative flex h-[52px] min-w-[196px] items-center justify-center overflow-hidden rounded-full border border-[#ff7a00]/70 bg-[linear-gradient(135deg,#050505_0%,#171717_48%,#000000_100%)] px-10 text-[15px] font-black uppercase tracking-[0.3em] text-white transition duration-300 active:scale-[0.96]",
+    ].join(" ")}
+    style={{
+      fontFamily: `${inter.style.fontFamily}, "SF Pro Display", "Helvetica Neue", Arial, sans-serif`,
+      fontWeight: 900,
+    }}
+  >
+    <span className="relative z-10">Select</span>
+  </button>
+</div>
+
+    <div className="mobile-spec-grid mt-5 grid w-full grid-cols-2 gap-x-4 gap-y-3 pr-1">
+      {activeMobileHeroSlide.specs.map((spec) => (
+        <div
+          key={`${activeMobileHeroSlide.id}-${spec.label}`}
+          className="mobile-spec-card flex items-center justify-start gap-2 px-0 py-1"
+        >
+          <span className="relative flex h-6 w-6 shrink-0 items-center justify-center">
+            <Image
+              src={spec.image}
+              alt=""
+              width={24}
+              height={24}
+              className="h-6 w-6 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.65)]"
+            />
+          </span>
+
+          <span
+            className={[
+              inter.className,
+              "text-left text-[9.5px] font-black uppercase leading-[1.1] tracking-[0.045em] text-white/90 drop-shadow-[0_7px_18px_rgba(0,0,0,0.88)]",
+            ].join(" ")}
+            style={{
+              fontFamily: `${inter.style.fontFamily}, "SF Pro Display", "Helvetica Neue", Arial, sans-serif`,
+              fontWeight: 900,
+            }}
+          >
+            {spec.label}
+          </span>
+        </div>
+      ))}
+    </div>
+  </div>
+</div>
+
+        <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block bg-[linear-gradient(180deg,rgba(0,0,0,0.16)_0%,rgba(0,0,0,0.00)_22%,rgba(0,0,0,0.02)_70%,rgba(0,0,0,0.24)_100%)]" />
+        <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block bg-[linear-gradient(90deg,rgba(0,0,0,0.20)_0%,rgba(0,0,0,0.00)_26%,rgba(0,0,0,0.00)_58%,rgba(0,0,0,0.50)_100%)]" />
 
         <div
           className="pointer-events-none absolute inset-0 z-20"
@@ -889,6 +1145,50 @@ export default function NexaBookingShowroomV3() {
 
         <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-[34%] bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,rgba(0,0,0,0.18)_58%,rgba(0,0,0,0.46)_100%)]" />
 
+        <button
+          type="button"
+          onClick={goToPreviousMobileHero}
+          aria-label="Previous mobile vehicle"
+          className="mobile-direct-arrow mobile-direct-arrow-left group absolute left-2 top-1/2 z-40 flex h-20 w-12 -translate-y-1/2 items-center justify-center text-white/82 transition duration-300 hover:text-white active:scale-95 sm:left-5 lg:hidden"
+        >
+          <svg
+            viewBox="0 0 34 64"
+            aria-hidden="true"
+            className="h-14 w-8 drop-shadow-[0_10px_30px_rgba(0,0,0,0.72)] transition-transform duration-300 group-hover:-translate-x-1"
+            fill="none"
+          >
+            <path
+              d="M25 7L8 32L25 57"
+              stroke="currentColor"
+              strokeWidth="3.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
+        <button
+          type="button"
+          onClick={goToNextMobileHero}
+          aria-label="Next mobile vehicle"
+          className="mobile-direct-arrow mobile-direct-arrow-right group absolute right-2 top-1/2 z-40 flex h-20 w-12 -translate-y-1/2 items-center justify-center text-white/82 transition duration-300 hover:text-white active:scale-95 sm:right-5 lg:hidden"
+        >
+          <svg
+            viewBox="0 0 34 64"
+            aria-hidden="true"
+            className="h-14 w-8 drop-shadow-[0_10px_30px_rgba(0,0,0,0.72)] transition-transform duration-300 group-hover:translate-x-1"
+            fill="none"
+          >
+            <path
+              d="M9 7L26 32L9 57"
+              stroke="currentColor"
+              strokeWidth="3.4"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            />
+          </svg>
+        </button>
+
         <div
           key={activeVehicle.id}
           className={[
@@ -900,7 +1200,7 @@ export default function NexaBookingShowroomV3() {
           }}
         >
           <div
-            className="text-[11px] font-black uppercase tracking-[0.28em] text-black/42 drop-shadow-[0_3px_12px_rgba(255,255,255,0.55)]"
+            className="text-[17px] font-black uppercase tracking-[0.28em] text-black/42 drop-shadow-[0_3px_12px_rgba(255,255,255,0.55)]"
             style={{
               fontFamily: poppins.style.fontFamily,
             }}
@@ -982,8 +1282,9 @@ export default function NexaBookingShowroomV3() {
         </div>
 
         <div
+          id="mobile-booking-panel"
           className={[
-            "booking-panel-mobile absolute inset-x-4 bottom-4 z-40 block lg:hidden",
+            "booking-panel-mobile hidden",
             bookingPanelAttention ? "booking-panel-attention" : "",
           ].join(" ")}
         >
@@ -1050,7 +1351,7 @@ export default function NexaBookingShowroomV3() {
           type="button"
           onClick={goToNext}
           aria-label="Next vehicle"
-          className="showroom-arrow showroom-arrow-right group absolute right-5 top-[44%] z-40 flex h-20 w-12 -translate-y-1/2 items-center justify-center text-white/75 transition-all duration-300 hover:text-white active:scale-95 sm:right-8 lg:hidden"
+          className="showroom-arrow showroom-arrow-right group hidden"
         >
           <svg
             viewBox="0 0 34 64"
@@ -1069,6 +1370,41 @@ export default function NexaBookingShowroomV3() {
         </button>
 
         <style jsx>{`
+          #booking :global(nav),
+          #booking :global(header) {
+            --nexa-mobile-nav-icon: #ffffff;
+          }
+
+          #booking :global(button[aria-label="Open menu"]),
+          #booking :global(button[aria-label="Toggle menu"]),
+          #booking :global(button[aria-label="Menu"]),
+          #booking :global(button[aria-expanded]) {
+            color: #ffffff !important;
+            border-color: rgba(255, 255, 255, 0.18) !important;
+            background: rgba(0, 0, 0, 0.18) !important;
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+          }
+
+          #booking :global(button.nexa-hamburger-button[aria-expanded]) {
+            border: none !important;
+            outline: none !important;
+            background: none !important;
+            background-color: transparent !important;
+            background-image: none !important;
+            box-shadow: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+
+          #booking :global(button[aria-label="Open menu"] svg),
+          #booking :global(button[aria-label="Toggle menu"] svg),
+          #booking :global(button[aria-label="Menu"] svg),
+          #booking :global(button[aria-expanded] svg) {
+            color: #ffffff !important;
+            stroke: #ffffff !important;
+          }
+
           .light-smoke {
             opacity: 0.65;
             animation: nexa-light-smoke 12s ease-in-out infinite alternate;
@@ -1085,6 +1421,147 @@ export default function NexaBookingShowroomV3() {
 
           .smoke-three {
             animation-delay: 4s;
+          }
+
+          .mobile-direct-hero-stage {
+            -webkit-tap-highlight-color: transparent;
+          }
+
+          .mobile-direct-hero-image {
+            object-fit: contain !important;
+            object-position: center center !important;
+            background: #000000;
+            will-change: opacity;
+          }
+
+          .mobile-scooter-selector {
+            animation: mobileSelectorIn 360ms cubic-bezier(0.16, 1, 0.3, 1)
+              both;
+          }
+
+          .mobile-selector-title {
+            text-wrap: balance;
+          }
+
+          .mobile-scooter-bottom-panel {
+            bottom: 70px;
+          }
+
+          .mobile-select-button {
+            -webkit-tap-highlight-color: transparent;
+            animation: mobileSelectPulse 1.95s ease-in-out infinite;
+          }
+.mobile-select-button-position {
+  --select-x: 20px;
+  --select-y: 0px;
+  transform: translate3d(var(--select-x), var(--select-y), 0);
+}
+          .mobile-select-button::before {
+            content: "";
+            position: absolute;
+            inset: 1px;
+            border-radius: inherit;
+            background: linear-gradient(
+              180deg,
+              rgba(255, 255, 255, 0.46),
+              rgba(255, 255, 255, 0.08) 42%,
+              rgba(0, 0, 0, 0.1)
+            );
+            pointer-events: none;
+          }
+
+          .mobile-select-button::after {
+            content: "";
+            position: absolute;
+            inset: -80% auto -80% -55%;
+            width: 34%;
+            transform: rotate(18deg);
+            background: linear-gradient(
+              90deg,
+              transparent,
+              rgba(255, 255, 255, 0.9),
+              transparent
+            );
+            opacity: 0.7;
+            animation: mobileSelectShine 2.4s ease-in-out infinite;
+            pointer-events: none;
+          }
+
+          .mobile-spec-card {
+            animation: mobileSpecIn 380ms cubic-bezier(0.16, 1, 0.3, 1) both;
+          }
+
+          .mobile-spec-card:nth-child(1) {
+            animation-delay: 40ms;
+          }
+
+          .mobile-spec-card:nth-child(2) {
+            animation-delay: 80ms;
+          }
+
+          .mobile-spec-card:nth-child(3) {
+            animation-delay: 120ms;
+          }
+
+          .mobile-spec-card:nth-child(4) {
+            animation-delay: 160ms;
+          }
+
+          @keyframes mobileSelectorIn {
+            0% {
+              opacity: 0;
+              transform: translate3d(0, -10px, 0);
+            }
+
+            100% {
+              opacity: 1;
+              transform: translate3d(0, 0, 0);
+            }
+          }
+
+          @keyframes mobileSpecIn {
+            0% {
+              opacity: 0;
+              transform: translate3d(0, 10px, 0) scale(0.98);
+            }
+
+            100% {
+              opacity: 1;
+              transform: translate3d(0, 0, 0) scale(1);
+            }
+          }
+
+          @keyframes mobileSelectPulse {
+            0% {
+              transform: scale(1);
+              box-shadow: 0 18px 54px rgba(255, 106, 0, 0.42);
+            }
+
+            18% {
+              transform: scale(1.035);
+              box-shadow: 0 22px 68px rgba(255, 106, 0, 0.54);
+            }
+
+            34%,
+            100% {
+              transform: scale(1);
+              box-shadow: 0 18px 54px rgba(255, 106, 0, 0.42);
+            }
+          }
+
+          @keyframes mobileSelectShine {
+            0% {
+              left: -55%;
+            }
+
+            48%,
+            100% {
+              left: 125%;
+            }
+          }
+
+          .mobile-direct-arrow {
+            -webkit-tap-highlight-color: transparent;
           }
 
           .typed-unpack {
@@ -1327,48 +1804,97 @@ export default function NexaBookingShowroomV3() {
           }
 
           @media (max-width: 1023px) {
-            #booking {
-              min-height: 760px;
-            }
+  :global(html),
+  :global(body) {
+    background: #000000 !important;
+  }
 
-            .showroom-arrow {
-              top: 45%;
-            }
-          }
+  #nexa-showroom-v3 {
+    background: #000000 !important;
+    min-height: 100svh;
+  }
+
+  #booking {
+    height: 100svh;
+    min-height: 100svh;
+    overflow: hidden;
+    background: #000000 !important;
+  }
+
+  .mobile-direct-hero-stage,
+  .mobile-direct-hero-image {
+    background: #000000 !important;
+  }
+
+  .showroom-arrow,
+  .booking-panel-mobile,
+  .light-smoke {
+    display: none !important;
+  }
+}
 
           @media (max-width: 640px) {
             #booking {
-              min-height: 720px;
+              height: 100svh;
+              min-height: 100svh;
+            }
+          }
+
+          @media (max-width: 390px) {
+            .mobile-scooter-selector {
+              top: 86px;
+              padding-left: 18px;
+              padding-right: 18px;
             }
 
-            .light-smoke {
-              opacity: 0.42;
-              animation: none;
+            .mobile-selector-kicker {
+              font-size: 8px;
+              letter-spacing: 0.36em;
             }
 
-            .showroom-arrow {
-              top: 42%;
-              height: 64px;
-              width: 42px;
+            .mobile-selector-title {
+              font-size: 22px;
             }
 
-            .showroom-arrow-left {
-              left: 6px;
+            .mobile-scooter-bottom-panel {
+              bottom: 40px;
+              padding-left: 18px;
+              padding-right: 18px;
             }
 
-            .showroom-arrow-right {
-              right: 6px;
+            .mobile-select-button {
+              height: 48px;
+              min-width: 172px;
+              font-size: 13px;
             }
 
-            .booking-panel-mobile {
-              inset-left: 12px;
-              inset-right: 12px;
-              bottom: 12px;
+            .mobile-spec-grid {
+              margin-top: 13px;
+              row-gap: 9px;
+              column-gap: 10px;
             }
 
-            .booking-panel-mobile > div {
-              max-height: 45vh;
-              border-radius: 24px;
+            .mobile-spec-card span:last-child {
+              font-size: 9px;
+            }
+          }
+
+          @media (max-height: 760px) and (max-width: 1023px) {
+            .mobile-scooter-selector {
+              top: 78px;
+            }
+
+            .mobile-selector-title {
+              font-size: 22px;
+            }
+
+            .mobile-scooter-bottom-panel {
+              bottom: 28px;
+            }
+
+            .mobile-spec-grid {
+              margin-top: 12px;
+              row-gap: 8px;
             }
           }
 
@@ -1376,10 +1902,17 @@ export default function NexaBookingShowroomV3() {
             .light-smoke,
             .typed-unpack,
             .vehicle-feature-row,
+            .mobile-direct-hero-image,
+            .mobile-direct-arrow svg,
+            .mobile-scooter-selector,
+            .mobile-select-button,
+            .mobile-select-button::after,
+            .mobile-spec-card,
             .booking-panel-attention :global(.plan-choice-button),
             .booking-panel-attention :global(.plan-choice-button)::before,
             .booking-panel-attention :global(.plan-choice-button)::after {
               animation: none !important;
+              transition: none !important;
               opacity: 1 !important;
               transform: none !important;
               clip-path: none !important;
@@ -1393,6 +1926,6 @@ export default function NexaBookingShowroomV3() {
       <NexaStatsStripV3 />
       <MallorcaScooterRentalGuideHub />
       <NeroWebsiteAssistant />
-    </>
+    </div>
   );
 }

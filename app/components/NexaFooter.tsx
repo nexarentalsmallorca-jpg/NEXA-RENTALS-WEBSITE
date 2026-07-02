@@ -9,123 +9,84 @@ export default function NexaFooter() {
   const t = useTranslations("footer");
   const locale = useLocale();
 
-  const THEME = {
-    bg: "#0f1115",
-    bg2: "#0c0e12",
-    surface: "rgba(255,255,255,0.035)",
-    borderSoft: "rgba(255,255,255,0.08)",
-    textSoft: "rgba(255,255,255,0.65)",
-    textDim: "rgba(255,255,255,0.50)",
-  };
-
-  const ORANGE = "#FF7A00";
-
   return (
-    <footer className="relative overflow-x-clip text-white" style={{ background: THEME.bg }}>
-      {/* Background effects */}
-      <div className="pointer-events-none absolute inset-0">
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(900px 520px at 50% 0%, rgba(255,255,255,0.045) 0%, rgba(255,255,255,0) 62%), linear-gradient(180deg, #0f1115 0%, #0f1115 45%, #0c0e12 100%)",
-          }}
-        />
+    <footer className="relative w-full overflow-hidden border-t border-white/10 bg-black text-white">
+      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+        {/* MAIN FOOTER */}
+        <div className="grid gap-12 py-12 md:grid-cols-[1.1fr_1fr_1fr] md:items-start lg:py-14">
+          {/* LEFT — LOGO + INFO */}
+          <div>
+            <Link href={`/${locale}`} className="inline-flex items-center">
+              <img
+                src="/images/reallogo.png"
+                alt="NEXA Rentals"
+                className="h-10 w-auto object-contain"
+              />
+            </Link>
 
-        <div
-          className="absolute -top-44 left-1/2 h-[520px] w-[520px] -translate-x-1/2 rounded-full blur-[110px] opacity-30"
-          style={{
-            background: "radial-gradient(circle, rgba(255,122,0,0.18) 0%, rgba(255,122,0,0) 70%)",
-          }}
-        />
-        <div
-          className="absolute -bottom-44 right-[-140px] h-[520px] w-[520px] rounded-full blur-[120px] opacity-16"
-          style={{
-            background: "radial-gradient(circle, rgba(255,180,116,0.14) 0%, rgba(255,180,116,0) 72%)",
-          }}
-        />
-
-        <div
-          className="absolute inset-0"
-          style={{
-            background:
-              "radial-gradient(ellipse at center, rgba(0,0,0,0.00), rgba(0,0,0,0.38) 70%, rgba(0,0,0,0.55) 100%)",
-          }}
-        />
-
-        <div
-          className="absolute inset-0 opacity-[0.11] mix-blend-overlay"
-          style={{
-            backgroundImage:
-              "url('data:image/svg+xml,%3Csvg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22 viewBox=%220 0 120 120%22%3E%3Cfilter id=%22n%22%3E%3CfeTurbulence type=%22fractalNoise%22 baseFrequency=%220.9%22 numOctaves=%222%22 stitchTiles=%22stitch%22/%3E%3C/filter%3E%3Crect width=%22120%22 height=%22120%22 filter=%22url(%23n)%22 opacity=%220.35%22/%3E%3C/svg%3E')",
-          }}
-        />
-      </div>
-
-      <div className="relative mx-auto max-w-7xl px-6">
-        {/* MAIN ROW */}
-        <div className="grid gap-8 py-10 md:grid-cols-3 md:items-center">
-          {/* LEFT */}
-          <div className="space-y-4">
-            <div className="flex items-center gap-3">
-              <img src="./images/reallogo.png" alt="NEXA Rentals" className="h-10 w-auto" />
-            </div>
-
-            <div className="space-y-1 text-sm" style={{ color: THEME.textSoft }}>
-              <p className="font-medium text-white/85">{t("pickup")}</p>
+            <div className="mt-6 space-y-2 text-sm leading-6 text-white/70">
+              <p className="font-semibold text-white">{t("pickup")}</p>
               <p>{t("address")}</p>
               <p>{t("hours")}</p>
+
+              <p className="pt-2">
+                <a
+                  href="tel:+34971482342"
+                  className="text-white/70 transition hover:text-white"
+                >
+                  +34 971 482 342
+                </a>
+              </p>
+
               <p>
-                <a className="transition hover:text-white" href="tel:+34 971482342">
-                  +34 971482342
-                </a>{" "}
-                ·{" "}
-                <a className="transition hover:text-white" href="mailto:info@nexarentals.es">
+                <a
+                  href="mailto:info@nexarentals.es"
+                  className="text-white/70 transition hover:text-white"
+                >
                   info@nexarentals.es
                 </a>
               </p>
             </div>
           </div>
 
-          {/* MIDDLE */}
-          <div className="md:text-center">
-            <p className="text-sm font-semibold tracking-wide">{t("getUpdates")}</p>
-            <p className="mt-1 text-sm" style={{ color: THEME.textSoft }}>
+          {/* MIDDLE — EMAIL */}
+          <div>
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white">
+              {t("getUpdates")}
+            </p>
+
+            <p className="mt-3 max-w-sm text-sm leading-6 text-white/60">
               {t("dealsText")}
             </p>
 
-            <form className="mt-4 flex w-full max-w-md gap-2 md:mx-auto" onSubmit={(e) => e.preventDefault()}>
+            <form
+              className="mt-5 flex w-full max-w-md overflow-hidden rounded-full border border-white/15 bg-white/[0.04]"
+              onSubmit={(e) => e.preventDefault()}
+            >
               <input
                 type="email"
                 placeholder={t("yourEmail")}
-                className="w-full rounded-2xl px-4 py-3 text-sm text-white placeholder:text-white/40 ring-1 ring-white/10 outline-none transition focus:ring-orange-500/40"
-                style={{
-                  background: THEME.surface,
-                  boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)",
-                }}
+                className="min-w-0 flex-1 bg-transparent px-5 py-3 text-sm text-white outline-none placeholder:text-white/35"
               />
+
               <button
                 type="submit"
-                className="rounded-2xl px-4 py-3 text-sm font-semibold text-black transition hover:brightness-110"
-                style={{
-                  background: `linear-gradient(180deg, ${ORANGE} 0%, rgba(255,122,0,0.85) 100%)`,
-                  boxShadow: "0 18px 44px rgba(255,122,0,0.18)",
-                }}
+                className="m-1 rounded-full bg-white px-5 py-2.5 text-sm font-semibold text-black transition hover:bg-white/85"
               >
                 {t("join")}
               </button>
             </form>
 
-            <p className="mt-3 text-xs" style={{ color: THEME.textDim }}>
-              {t("noSpam")}
-            </p>
+            <p className="mt-3 text-xs text-white/40">{t("noSpam")}</p>
           </div>
 
-          {/* RIGHT */}
-          <div className="md:justify-self-end">
-            <p className="text-sm font-semibold tracking-wide md:text-right">{t("follow")}</p>
+          {/* RIGHT — SOCIALS */}
+          <div className="md:justify-self-end md:text-right">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-white">
+              {t("follow")}
+            </p>
 
-            <div className="mt-4 flex gap-3 md:justify-end">
+            <div className="mt-5 flex gap-3 md:justify-end">
               <SocialIcon label="Instagram" href="#" icon="instagram" />
               <SocialIcon label="Pinterest" href="#" icon="pinterest" />
               <SocialIcon label="TikTok" href="#" icon="tiktok" />
@@ -135,42 +96,62 @@ export default function NexaFooter() {
         </div>
 
         {/* BOTTOM BAR */}
-        <div
-          className="flex flex-col gap-4 py-6 md:flex-row md:items-center md:justify-between"
-          style={{ borderTop: `1px solid ${THEME.borderSoft}` }}
-        >
-          <p className="text-xs" style={{ color: THEME.textDim }}>
-            © {year} NEXA Rentals. {t("allRightsReserved")}
-          </p>
+        <div className="border-t border-white/10 py-6">
+          <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
+            <p className="text-xs text-white/45">
+              © {year} NEXA Rentals. {t("allRightsReserved")}
+            </p>
 
-          <div className="flex flex-wrap gap-x-4 gap-y-2 text-xs md:justify-end" style={{ color: THEME.textDim }}>
-            <Link href={`/${locale}/terms-and-conditions`} className="transition hover:text-white">
-              {t("terms")}
-            </Link>
+            <div className="flex flex-wrap gap-x-5 gap-y-2 text-xs text-white/45 md:justify-end">
+              <Link
+                href={`/${locale}/terms-and-conditions`}
+                className="transition hover:text-white"
+              >
+                {t("terms")}
+              </Link>
 
-            <Link href={`/${locale}/privacy-policy`} className="transition hover:text-white">
-              {t("privacy")}
-            </Link>
+              <Link
+                href={`/${locale}/privacy-policy`}
+                className="transition hover:text-white"
+              >
+                {t("privacy")}
+              </Link>
 
-            <Link href={`/${locale}/deposit-policy`} className="transition hover:text-white">
-              {t("depositPolicy")}
-            </Link>
+              <Link
+                href={`/${locale}/deposit-policy`}
+                className="transition hover:text-white"
+              >
+                {t("depositPolicy")}
+              </Link>
 
-            <Link href={`/${locale}/refund-policy`} className="transition hover:text-white">
-              {t("refundPolicy")}
-            </Link>
+              <Link
+                href={`/${locale}/refund-policy`}
+                className="transition hover:text-white"
+              >
+                {t("refundPolicy")}
+              </Link>
 
-            <Link href={`/${locale}/cookies`} className="transition hover:text-white">
-              {t("cookies")}
-            </Link>
+              <Link
+                href={`/${locale}/cookies`}
+                className="transition hover:text-white"
+              >
+                {t("cookies")}
+              </Link>
 
-            <Link href={`/${locale}/about-nexa`} className="transition hover:text-white">
-              {t("aboutNexa")}
-            </Link>
+              <Link
+                href={`/${locale}/about-nexa`}
+                className="transition hover:text-white"
+              >
+                {t("aboutNexa")}
+              </Link>
 
-            <Link href={`/${locale}/blog`} className="transition hover:text-white">
-              {t("blog")}
-            </Link>
+              <Link
+                href={`/${locale}/blog`}
+                className="transition hover:text-white"
+              >
+                {t("blog")}
+              </Link>
+            </div>
           </div>
         </div>
       </div>
@@ -189,25 +170,20 @@ function SocialIcon({ label, href, icon }: SocialIconProps) {
     <a
       href={href}
       aria-label={label}
-      className="group grid h-10 w-10 place-items-center rounded-2xl ring-1 ring-white/10 transition
-                 bg-white/[0.035] hover:bg-white/[0.05] hover:shadow-[0_16px_40px_rgba(255,122,0,0.10)]
-                 focus:outline-none focus:ring-2 focus:ring-orange-500/40"
-      style={{ boxShadow: "inset 0 1px 0 rgba(255,255,255,0.04)" }}
+      className="group grid h-10 w-10 place-items-center rounded-full border border-white/15 bg-white/[0.03] text-white/70 transition hover:border-white/35 hover:bg-white/[0.08] hover:text-white focus:outline-none focus:ring-2 focus:ring-white/25"
     >
-      <span className="transition group-hover:brightness-110" style={{ color: "rgba(255,180,116,0.95)" }}>
-        {getIcon(icon)}
-      </span>
+      {getIcon(icon)}
       <span className="sr-only">{label}</span>
     </a>
   );
 }
 
 function getIcon(name: SocialIconProps["icon"]) {
-  const common = "h-5 w-5";
+  const common = "h-[18px] w-[18px]";
   const base = {
     fill: "none",
     stroke: "currentColor",
-    strokeWidth: 1.8,
+    strokeWidth: 1.75,
     strokeLinecap: "round" as const,
     strokeLinejoin: "round" as const,
   };
@@ -221,13 +197,16 @@ function getIcon(name: SocialIconProps["icon"]) {
           <circle cx="16.2" cy="7.8" r="0.7" fill="currentColor" stroke="none" />
         </svg>
       );
+
     case "pinterest":
       return (
         <svg className={common} viewBox="0 0 24 24" {...base}>
           <path d="M12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9c0 3.95 2.55 7.31 6.1 8.5" />
           <path d="M10.6 19.6l1.25-5.25" />
+          <path d="M11.85 14.35c.55.35 1.2.55 1.95.55 2.35 0 4.2-1.85 4.2-4.25 0-2.85-2.15-4.65-5.15-4.65-3.4 0-5.75 2.25-5.75 5.25 0 1.35.5 2.45 1.55 3.05" />
         </svg>
       );
+
     case "tiktok":
       return (
         <svg className={common} viewBox="0 0 24 24" {...base}>
@@ -235,12 +214,14 @@ function getIcon(name: SocialIconProps["icon"]) {
           <path d="M14 7.2c1.1 1.7 2.9 2.8 5 3V7.1c-1.9-.1-3.6-1-5-2.6" />
         </svg>
       );
+
     case "facebook":
       return (
         <svg className={common} viewBox="0 0 24 24" {...base}>
           <path d="M14 9h3V6h-3c-2.2 0-4 1.3-4 4v3H7v3h3v6h3v-6h3l1-3h-4v-3c0-.85.25-1 1-1Z" />
         </svg>
       );
+
     default:
       return null;
   }

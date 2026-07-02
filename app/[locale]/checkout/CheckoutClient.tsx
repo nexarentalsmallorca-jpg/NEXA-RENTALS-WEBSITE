@@ -1,22 +1,28 @@
 "use client";
+
 export const dynamic = "force-dynamic";
 
 import React, { useEffect, useMemo, useRef, useState } from "react";
+import { Manrope } from "next/font/google";
+import { useLocale } from "next-intl";
 import { useRouter, useSearchParams } from "next/navigation";
-import Navbar from "../../Navbar";
-import { useLocale, useTranslations } from "next-intl";
 import CheckoutShell from "./CheckoutShell";
 
-/* ---------------- types ---------------- */
+const manrope = Manrope({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+});
+
 type VehicleType = "Scooter" | "E-Bike";
 
 type Vehicle = {
   id: string;
+  aliases?: string[];
   name: string;
   type: VehicleType;
   pricePerDay: number;
   imageUrl: string;
-  badges: string[];
   spec1?: string;
   spec2?: string;
 };
@@ -51,67 +57,70 @@ type AvailabilityResult = {
   assignedVehicleDisplayName?: string | null;
 };
 
-/* ---------------- fleet ---------------- */
 const VEHICLES: Vehicle[] = [
   {
     id: "s1",
-    name: "ZONTES 125E",
+    aliases: ["zontes-125e", "zontes_125e"],
+    name: "Zontes 125E",
     type: "Scooter",
     pricePerDay: 49,
     imageUrl: "/images/zontes125.png",
-    badges: ["Premium", "Performance"],
-    spec1: "125cc • Automatic",
-    spec2: "Phone holder • 2 Helmets",
+    spec1: "125cc · Automatic",
+    spec2: "Phone holder · 2 helmets",
   },
   {
     id: "s2",
-    name: "PIAGGIO LIBERTY 125",
+    aliases: ["piaggio-liberty-125", "piaggio_liberty_125"],
+    name: "Piaggio Liberty 125",
     type: "Scooter",
     pricePerDay: 39,
-    imageUrl: "/images/liberty125.png",
-    badges: ["Popular", "Best Seller"],
-    spec1: "125cc • Automatic",
-    spec2: "Smooth + easy handling",
+    imageUrl: "/images/checkouts1.png",
+    spec1: "125cc · Automatic",
+    spec2: "Easy handling",
   },
   {
     id: "s3",
-    name: "SYM SYMPHONY 125",
+    aliases: ["sym-symphony-125", "sym_symphony_125"],
+    name: "SYM Symphony 125",
     type: "Scooter",
     pricePerDay: 39,
-    imageUrl: "/images/sym1.png",
-    badges: ["Comfort", "Practical"],
-    spec1: "125cc • Automatic",
-    spec2: "Stable city ride",
+    imageUrl: "/images/checkouts2.png",
+    spec1: "125cc · Automatic",
+    spec2: "Stable ride",
   },
   {
     id: "e2",
-    name: "ENGWE M20 (JOY)",
+    aliases: ["engwe-m20", "engwe_m20"],
+    name: "ENGWE M20",
     type: "E-Bike",
     pricePerDay: 28,
     imageUrl: "/images/e20.png",
-    badges: ["Practical", "Power"],
     spec1: "Up to 60km range",
-    spec2: "Great value",
+    spec2: "Electric bike",
   },
   {
     id: "e3",
-    name: "P275 SE (Comfort)",
+    aliases: ["p275-se", "p275_se"],
+    name: "P275 SE",
     type: "E-Bike",
     pricePerDay: 28,
     imageUrl: "/images/ebike-urban.png",
-    badges: ["Comfort", "Stable"],
     spec1: "Up to 45km range",
-    spec2: "Easy for everyone",
+    spec2: "Electric bike",
   },
 ];
 
-/* ---------------- theme ---------------- */
-const ORANGE = "#FF7A00";
-const BLUE = "#00D9FF";
-const PURPLE = "#8B5CF6";
-const BG = "#050505";
+const INCLUDED_ITEMS = [
+  { label: "2 Helmets", image: "/images/ex4.png" },
+  { label: "Top Case", image: "/images/ex1.jpg" },
+  { label: "Phone Mount", image: "/images/ex2.jpg" },
+  { label: "Lock", image: "/images/ex3.png" },
+  { label: "Insurance", image: "/images/ex5.png" },
+];
+const PICKUP_LOCATION_MAP_URL = "https://maps.app.goo.gl/L7bRwgirZLcjQqT37";
+const MAX_IMAGE_WIDTH = 1600;
+const JPEG_QUALITY = 0.72;
 
-/* ---------------- helpers ---------------- */
 function startOfDay(d: Date) {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate());
 }
@@ -124,6 +133,7 @@ function parseISO(v?: string | null) {
 
 function fmtDate(d?: Date, locale?: string) {
   if (!d) return "--/--/----";
+
   return d.toLocaleDateString(locale || undefined, {
     day: "2-digit",
     month: "short",
@@ -202,6 +212,7 @@ function resolveFleetGroupFromVehicle(vehicleId: string, vehicleName: string) {
 
   if (
     cleanId === "s3" ||
+    cleanId.includes("sym") ||
     cleanName.includes("sym") ||
     cleanName.includes("symphony")
   ) {
@@ -209,6 +220,29 @@ function resolveFleetGroupFromVehicle(vehicleId: string, vehicleName: string) {
   }
 
   return "piaggio_liberty_125";
+}
+
+function checkoutImageForVehicle(vehicle: Vehicle, publicVehicleName: string) {
+  const cleanId = vehicle.id.toLowerCase();
+  const cleanName = publicVehicleName.toLowerCase();
+
+  if (
+    cleanId === "s2" ||
+    cleanName.includes("piaggio") ||
+    cleanName.includes("liberty")
+  ) {
+    return "/images/checkouts1.png";
+  }
+
+  if (
+    cleanId === "s3" ||
+    cleanName.includes("sym") ||
+    cleanName.includes("symphony")
+  ) {
+    return "/images/checkouts2.png";
+  }
+
+  return vehicle.imageUrl;
 }
 
 async function checkCheckoutAvailability({
@@ -249,16 +283,11 @@ async function checkCheckoutAvailability({
       cache: "no-store",
     });
 
-    const data = (await res.json()) as AvailabilityResult;
-    return data;
+    return (await res.json()) as AvailabilityResult;
   } catch {
     return null;
   }
 }
-
-/* ---------------- compression ---------------- */
-const MAX_IMAGE_WIDTH = 1600;
-const JPEG_QUALITY = 0.72;
 
 async function compressImage(file: File): Promise<File> {
   if (!file.type.startsWith("image/")) return file;
@@ -302,18 +331,16 @@ async function compressImage(file: File): Promise<File> {
   });
 }
 
-/* ---------------- page ---------------- */
 export default function CheckoutClient() {
   const sp = useSearchParams();
   const router = useRouter();
-
-  const t = useTranslations("checkout");
   const locale = useLocale();
 
   const firstNameRef = useRef<HTMLInputElement | null>(null);
   const surnameRef = useRef<HTMLInputElement | null>(null);
   const phoneRef = useRef<HTMLInputElement | null>(null);
   const emailRef = useRef<HTMLInputElement | null>(null);
+  const homeAddressRef = useRef<HTMLTextAreaElement | null>(null);
   const notesRef = useRef<HTMLTextAreaElement | null>(null);
 
   const [checkoutSide, setCheckoutSide] = useState<"details" | "payment">(
@@ -333,12 +360,13 @@ export default function CheckoutClient() {
     nextRef?: React.RefObject<HTMLInputElement | HTMLTextAreaElement | null>
   ) => {
     if (e.key !== "Enter") return;
+
     e.preventDefault();
     nextRef?.current?.focus();
   };
 
   const pickupLocation =
-    safeParam(sp, "pickupLocation") ?? t("defaultPickupLocation");
+    safeParam(sp, "pickupLocation") ?? "NEXA Rentals, Magaluf";
 
   const from = parseISO(safeParam(sp, "from"));
   const to = parseISO(safeParam(sp, "to"));
@@ -350,7 +378,8 @@ export default function CheckoutClient() {
   const totalFleetFromPanel = safeParam(sp, "totalFleet");
 
   const vehicleId = safeParam(sp, "vehicleId") ?? "s2";
-  const urlVehicleName = safeParam(sp, "vehicleName") || safeParam(sp, "vehicle");
+  const urlVehicleName =
+    safeParam(sp, "vehicleName") || safeParam(sp, "vehicle");
 
   const assignedVehicleCodeFromPanel =
     safeParam(sp, "assignedVehicleCode") || "";
@@ -362,15 +391,22 @@ export default function CheckoutClient() {
     safeParam(sp, "assignedVehicleDisplayName") || "";
   const fleetGroupFromPanel = safeParam(sp, "fleetGroup") || "";
 
-  const vehicle = useMemo(
-    () => VEHICLES.find((v) => v.id === vehicleId) ?? VEHICLES[1],
-    [vehicleId]
-  );
+  const vehicle =
+    VEHICLES.find((item) => {
+      const idMatch = item.id === vehicleId;
+      const aliasMatch = item.aliases?.includes(vehicleId);
+      const nameMatch =
+        urlVehicleName &&
+        item.name.toLowerCase() === urlVehicleName.toLowerCase();
+
+      return idMatch || aliasMatch || nameMatch;
+    }) || VEHICLES[1];
 
   const publicVehicleName = urlVehicleName || vehicle.name;
 
   const resolvedFleetGroup =
-    fleetGroupFromPanel || resolveFleetGroupFromVehicle(vehicle.id, publicVehicleName);
+    fleetGroupFromPanel ||
+    resolveFleetGroupFromVehicle(vehicle.id, publicVehicleName);
 
   const rentalDaysFromParams = Number(safeParam(sp, "days") ?? "");
   const rateFromParams = Number(safeParam(sp, "rate") ?? "");
@@ -401,29 +437,22 @@ export default function CheckoutClient() {
   }, [totalFromParams, discountedPerDayEur, rentalDays]);
 
   const totalCents = Math.round(totalEur * 100);
-  const payNowCents = Math.round(totalCents * 0.5);
-  const payPickupCents = totalCents - payNowCents;
+  const payNowCents = totalCents;
 
   const isHalfDay = plan === "half";
   const planLabel = isHalfDay ? "Half Day" : "Full Day";
-
   const durationLabel = isHalfDay
-    ? "Half Day"
-    : `${rentalDays} ${t(rentalDays > 1 ? "daysPlural" : "daysSingular")}`;
-
-  const referencePrice = isHalfDay ? 45 : 55;
-
-  const discountPct = Math.max(
-    0,
-    Math.round(((referencePrice - discountedPerDayEur) / referencePrice) * 100)
-  );
+    ? "Same day"
+    : `${rentalDays} ${rentalDays > 1 ? "days" : "day"}`;
 
   const deposit = 150;
+  const checkoutImage = checkoutImageForVehicle(vehicle, publicVehicleName);
 
   const [firstName, setFirstName] = useState("");
   const [surname, setSurname] = useState("");
   const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
+  const [homeAddress, setHomeAddress] = useState("");
   const [notes, setNotes] = useState("");
 
   const [dlFront, setDlFront] = useState<File | null>(null);
@@ -440,6 +469,7 @@ export default function CheckoutClient() {
     surname.trim().length >= 2 &&
     phoneOk(phone) &&
     emailOk(email) &&
+    homeAddress.trim().length >= 8 &&
     contractReadyOk &&
     agreeTerms;
 
@@ -448,15 +478,15 @@ export default function CheckoutClient() {
   const [payError, setPayError] = useState<string | null>(null);
 
   const backToVehicles = () => {
-    router.push(`/${locale}`);
-  };
+  router.push(`/${locale}/home`);
+};
 
   async function uploadBookingDocuments(
     bookingId: string
   ): Promise<UploadedDocumentPaths> {
     const emptyDocs = {
       dlFrontPath: "",
-      dlBackPath: "",
+      dlBackPath: "", 
       idFrontPath: "",
       idBackPath: "",
       dlFrontName: "",
@@ -485,6 +515,7 @@ export default function CheckoutClient() {
     const rawText = await res.text();
 
     let data: any = {};
+
     try {
       data = rawText ? JSON.parse(rawText) : {};
     } catch {
@@ -514,11 +545,13 @@ export default function CheckoutClient() {
 
     if (clientSecret) {
       setCheckoutSide("payment");
+
       window.setTimeout(() => {
         document
           .getElementById("nexa-payment-card")
           ?.scrollIntoView({ behavior: "smooth", block: "start" });
       }, 120);
+
       return;
     }
 
@@ -580,10 +613,19 @@ export default function CheckoutClient() {
         );
       }
 
-      const bookingId = `bk_${finalAssignedVehicleCode || vehicle.id}_${Date.now()}`;
+      const bookingId = `bk_${
+        finalAssignedVehicleCode || vehicle.id
+      }_${Date.now()}`;
       const customerName = `${firstName.trim()} ${surname.trim()}`.trim();
 
       const uploadedDocs = await uploadBookingDocuments(bookingId);
+
+      const finalNotes = [
+        homeAddress.trim() ? `Home address: ${homeAddress.trim()}` : "",
+        notes.trim() ? `Notes: ${notes.trim()}` : "",
+      ]
+        .filter(Boolean)
+        .join("\n\n");
 
       const res = await fetch("/api/stripe/create-payment-intent", {
         method: "POST",
@@ -592,9 +634,14 @@ export default function CheckoutClient() {
           bookingId,
           totalAmount: totalCents,
           currency: "eur",
+
           customerEmail: email.trim(),
           customerName,
           phone: phone.trim(),
+
+          homeAddress: homeAddress.trim(),
+          customerAddress: homeAddress.trim(),
+          address: homeAddress.trim(),
 
           pickupDateISO: from ? from.toLocaleDateString("en-CA") : "",
           returnDateISO: to ? to.toLocaleDateString("en-CA") : "",
@@ -630,12 +677,14 @@ export default function CheckoutClient() {
               ? String(liveAvailability.totalFleet)
               : totalFleetFromPanel || "",
 
-          notes: notes.trim(),
+          notes: finalNotes,
+          customerNotes: notes.trim(),
 
           dlFrontName: uploadedDocs.dlFrontName,
           dlBackName: uploadedDocs.dlBackName,
           idFrontName: uploadedDocs.idFrontName,
           idBackName: uploadedDocs.idBackName,
+
           dlFrontPath: uploadedDocs.dlFrontPath,
           dlBackPath: uploadedDocs.dlBackPath,
           idFrontPath: uploadedDocs.idFrontPath,
@@ -652,513 +701,137 @@ export default function CheckoutClient() {
       }
 
       setClientSecret(data.clientSecret);
+      setCheckoutSide("payment");
 
       window.setTimeout(() => {
-        setCheckoutSide("payment");
-
-        window.setTimeout(() => {
-          document
-            .getElementById("nexa-payment-card")
-            ?.scrollIntoView({ behavior: "smooth", block: "start" });
-        }, 350);
-      }, 160);
+        document
+          .getElementById("nexa-payment-card")
+          ?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 180);
     } catch (e: any) {
-      setPayError(e.message || "Something went wrong.");
+      setPayError(e?.message || "Something went wrong.");
     } finally {
       setPayLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen text-white" style={{ background: BG }}>
-      <div className="pointer-events-none fixed inset-0 -z-10 overflow-hidden">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_10%_10%,rgba(255,122,0,0.10),transparent_25%),radial-gradient(circle_at_92%_12%,rgba(0,217,255,0.08),transparent_25%),radial-gradient(circle_at_50%_88%,rgba(139,92,246,0.08),transparent_28%),linear-gradient(180deg,#040404_0%,#090909_45%,#040404_100%)]" />
-        <div className="absolute inset-0 opacity-[0.10] [background-image:radial-gradient(rgba(255,255,255,0.75)_1px,transparent_1px)] [background-size:24px_24px]" />
-        <div className="absolute -left-24 top-32 h-[420px] w-[420px] rounded-full bg-orange-500/10 blur-[120px]" />
-        <div className="absolute right-[-140px] top-44 h-[520px] w-[520px] rounded-full bg-cyan-500/10 blur-[140px]" />
-        <div className="absolute bottom-0 left-1/2 h-[380px] w-[380px] -translate-x-1/2 rounded-full bg-purple-500/10 blur-[130px]" />
-      </div>
-
-      <Navbar />
-
-      <main className="mx-auto max-w-7xl px-4 pb-16 pt-5 sm:px-6 lg:px-8 lg:pt-6">
-        <header className="mb-5 lg:mb-7">
-          <div className="flex flex-col gap-5 lg:flex-row lg:items-end lg:justify-between">
-            <div>
-              <div className="inline-flex items-center gap-3 rounded-full border border-white/12 bg-white/6 px-4 py-2 text-[10px] font-black uppercase tracking-[0.14em] text-white/72 backdrop-blur-xl sm:text-xs sm:tracking-[0.18em]">
-                <span className="relative flex h-2.5 w-2.5">
-                  <span
-                    className="absolute inline-flex h-full w-full animate-ping rounded-full opacity-75"
-                    style={{ backgroundColor: ORANGE }}
-                  />
-                  <span
-                    className="relative inline-flex h-2.5 w-2.5 rounded-full"
-                    style={{ backgroundColor: ORANGE }}
-                  />
-                </span>
-                {t("step2of2")} • Secure Reservation
-              </div>
-
-              <h1 className="mt-4 max-w-4xl text-4xl font-black leading-[0.92] tracking-[-0.055em] text-white sm:text-5xl md:text-6xl lg:mt-5">
-                {t("confirmAndPay")}{" "}
-                <span
-                  className="bg-clip-text text-transparent"
-                  style={{
-                    backgroundImage: `linear-gradient(135deg, ${ORANGE}, ${PURPLE}, ${BLUE})`,
-                  }}
-                >
-                  {t("in60Seconds")}
-                </span>
-              </h1>
-
-              <p className="mt-4 max-w-3xl text-sm leading-7 text-white/58 md:text-base lg:mt-5">
-                Review your booking, add your details, upload documents if you
-                want faster pickup, and complete your 50% reservation payment
-                with a clean two-step checkout.
-              </p>
-            </div>
-
+    <div
+  className={`${manrope.className} nexa-checkout-root min-h-screen bg-white text-[#111]`}
+>
+      <main className="mx-auto flex min-h-screen w-full max-w-[1480px] flex-col bg-white px-4 py-4 sm:px-6 lg:px-8 2xl:max-w-[1600px]">
+        <section className="flex flex-1 flex-col bg-white px-0 py-0">
+          <div className="mb-5 flex items-center justify-between border-b border-black/10 pb-4">
             <button
+              type="button"
               onClick={backToVehicles}
-              className="group inline-flex min-h-[52px] items-center justify-center rounded-2xl border border-white/12 bg-white/8 px-6 text-sm font-black text-white shadow-sm backdrop-blur-xl transition duration-300 hover:-translate-y-1 hover:border-orange-400/35 hover:bg-white/12"
+              className="inline-flex items-center gap-2 text-[16px] font-extrabold tracking-[-0.01em] text-black transition duration-200 hover:-translate-x-1 hover:text-black/60 active:scale-[0.97] 2xl:text-[18px]"
             >
-              ← {t("backToVehicles")}
+              <span className="text-[21px] leading-none">←</span>
+              <span>Vehicles</span>
             </button>
           </div>
 
-          <div className="mt-6 hidden gap-3 sm:grid-cols-2 xl:grid-cols-5 lg:grid">
-            <Chip>{pickupLocation}</Chip>
-            <Chip>{planLabel}</Chip>
-            <Chip>
-              {fmtDate(from, locale)} • {formatTimeLabel(pickupTime, locale)}
-            </Chip>
-            <Chip>
-              {fmtDate(to, locale)} • {formatTimeLabel(dropoffTime, locale)}
-            </Chip>
-            {discountPct > 0 ? (
-              <Chip accent>{t("savePct", { pct: discountPct })}</Chip>
-            ) : (
-              <Chip>{durationLabel}</Chip>
-            )}
-          </div>
-        </header>
-
-        {/* ---------------- MOBILE CHECKOUT ---------------- */}
-        <div className="lg:hidden">
-          <MobileBookingSummary
-            vehicle={vehicle}
-            pickupLocation={pickupLocation}
-            from={from}
-            to={to}
-            pickupTime={pickupTime}
-            dropoffTime={dropoffTime}
-            locale={locale}
-            planLabel={planLabel}
-            durationLabel={durationLabel}
-            discountedPerDayEur={discountedPerDayEur}
-            totalEur={totalEur}
-            payNowCents={payNowCents}
-            payPickupCents={payPickupCents}
-            discountPct={discountPct}
-            t={t}
-          />
-
-          <section className="relative mt-4">
-            <div className="nexa-flip-scene nexa-mobile-flip-scene">
-              <div
-                className={[
-                  "nexa-flip-card nexa-mobile-flip-card",
-                  checkoutSide === "payment" ? "nexa-flipped" : "",
-                ].join(" ")}
-              >
-                <div className="nexa-card-face nexa-card-front">
-                  <GlassCard fullHeight mobile>
-                    <CheckoutDetailsSide
-                      t={t}
-                      firstName={firstName}
-                      setFirstName={setFirstName}
-                      surname={surname}
-                      setSurname={setSurname}
-                      phone={phone}
-                      setPhone={setPhone}
-                      email={email}
-                      setEmail={setEmail}
-                      notes={notes}
-                      setNotes={setNotes}
-                      firstNameRef={firstNameRef}
-                      surnameRef={surnameRef}
-                      phoneRef={phoneRef}
-                      emailRef={emailRef}
-                      notesRef={notesRef}
-                      moveToNextField={moveToNextField}
-                      dlFront={dlFront}
-                      dlBack={dlBack}
-                      idFront={idFront}
-                      idBack={idBack}
-                      setDlFront={setDlFront}
-                      setDlBack={setDlBack}
-                      setIdFront={setIdFront}
-                      setIdBack={setIdBack}
-                      contractReadyOk={contractReadyOk}
-                      setContractReadyOk={setContractReadyOk}
-                      agreeTerms={agreeTerms}
-                      setAgreeTerms={setAgreeTerms}
-                      marketingOptIn={marketingOptIn}
-                      setMarketingOptIn={setMarketingOptIn}
-                      planLabel={planLabel}
-                      payNowCents={payNowCents}
-                      payPickupCents={payPickupCents}
-                      totalCents={totalCents}
-                      deposit={deposit}
-                      canPay={canPay}
-                      payLoading={payLoading}
-                      payError={payError}
-                      onContinue={payNowAction}
-                      mobile
-                    />
-                  </GlassCard>
-                </div>
-
-                <div
-                  id="nexa-payment-card"
-                  className="nexa-card-face nexa-card-back"
-                >
-                  <GlassCard fullHeight mobile>
-                    <PaymentSide
-                      t={t}
-                      planLabel={planLabel}
-                      payNowCents={payNowCents}
-                      payPickupCents={payPickupCents}
-                      deposit={deposit}
-                      clientSecret={clientSecret}
-                      onEdit={() => setCheckoutSide("details")}
-                      mobile
-                    />
-                  </GlassCard>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
-
-        {/* ---------------- DESKTOP CHECKOUT ---------------- */}
-        <div className="hidden grid-cols-1 gap-6 lg:grid lg:grid-cols-[1.02fr_0.98fr] xl:grid-cols-[1.05fr_0.95fr]">
-          <section className="space-y-6">
-            <VehicleCard
+          <div className="grid flex-1 gap-8 lg:grid-cols-[0.92fr_1.08fr] xl:gap-10 2xl:grid-cols-[0.94fr_1.06fr] 2xl:gap-12">
+            <BookingSummary
               vehicle={vehicle}
-              discountPct={discountPct}
-              referencePrice={referencePrice}
-              discountedPerDayEur={discountedPerDayEur}
-              totalEur={totalEur}
+              publicVehicleName={publicVehicleName}
+              checkoutImage={checkoutImage}
+              pickupLocation={pickupLocation}
+              from={from}
+              to={to}
+              pickupTime={pickupTime}
+              dropoffTime={dropoffTime}
+              locale={locale}
               planLabel={planLabel}
               durationLabel={durationLabel}
-              t={t}
+              totalEur={totalEur}
+              deposit={deposit}
             />
 
-            <GlassCard compact>
-              <div className="flex items-end justify-between gap-4">
-                <div>
-                  <p className="text-xs font-black uppercase tracking-[0.28em] text-black/40">
-                    {t("included")}
-                  </p>
-                  <h2 className="mt-2 text-2xl font-black tracking-tight text-black">
-                    Premium pickup package
-                  </h2>
-                </div>
-
-                <div className="rounded-full border border-black/10 bg-black/[0.03] px-3 py-1 text-xs font-bold text-black/48">
-                  {t("noExtraFees")}
-                </div>
-              </div>
-
-              <div className="mt-5 grid gap-3 md:grid-cols-3">
-                <Included
-                  title={t("helmet")}
-                  sub={t("free")}
-                  badge={t("includedBadge")}
-                />
-                <Included
-                  title={t("lock")}
-                  sub={t("free")}
-                  badge={t("includedBadge")}
-                />
-                <Included
-                  title={t("cargoBox")}
-                  sub={t("free")}
-                  badge={t("includedBadge")}
-                />
-              </div>
-
-              <div className="mt-5 rounded-3xl border border-orange-400/25 bg-orange-400/8 p-5">
-                <div className="text-sm font-black text-black">
-                  {t("contractReadyTitle")}
-                </div>
-
-                <div className="mt-2 text-sm leading-7 text-black/62">
-                  {t("contractReadyDesc")}
-                </div>
-              </div>
-            </GlassCard>
-          </section>
-
-          <section className="relative">
-            <div className="nexa-flip-scene">
-              <div
-                className={[
-                  "nexa-flip-card",
-                  checkoutSide === "payment" ? "nexa-flipped" : "",
-                ].join(" ")}
-              >
-                <div className="nexa-card-face nexa-card-front">
-                  <GlassCard fullHeight>
-                    <CheckoutDetailsSide
-                      t={t}
-                      firstName={firstName}
-                      setFirstName={setFirstName}
-                      surname={surname}
-                      setSurname={setSurname}
-                      phone={phone}
-                      setPhone={setPhone}
-                      email={email}
-                      setEmail={setEmail}
-                      notes={notes}
-                      setNotes={setNotes}
-                      firstNameRef={firstNameRef}
-                      surnameRef={surnameRef}
-                      phoneRef={phoneRef}
-                      emailRef={emailRef}
-                      notesRef={notesRef}
-                      moveToNextField={moveToNextField}
-                      dlFront={dlFront}
-                      dlBack={dlBack}
-                      idFront={idFront}
-                      idBack={idBack}
-                      setDlFront={setDlFront}
-                      setDlBack={setDlBack}
-                      setIdFront={setIdFront}
-                      setIdBack={setIdBack}
-                      contractReadyOk={contractReadyOk}
-                      setContractReadyOk={setContractReadyOk}
-                      agreeTerms={agreeTerms}
-                      setAgreeTerms={setAgreeTerms}
-                      marketingOptIn={marketingOptIn}
-                      setMarketingOptIn={setMarketingOptIn}
-                      planLabel={planLabel}
-                      payNowCents={payNowCents}
-                      payPickupCents={payPickupCents}
-                      totalCents={totalCents}
-                      deposit={deposit}
-                      canPay={canPay}
-                      payLoading={payLoading}
-                      payError={payError}
-                      onContinue={payNowAction}
-                    />
-                  </GlassCard>
-                </div>
-
-                <div
-                  id="nexa-payment-card"
-                  className="nexa-card-face nexa-card-back"
-                >
-                  <GlassCard fullHeight>
-                    <PaymentSide
-                      t={t}
-                      planLabel={planLabel}
-                      payNowCents={payNowCents}
-                      payPickupCents={payPickupCents}
-                      deposit={deposit}
-                      clientSecret={clientSecret}
-                      onEdit={() => setCheckoutSide("details")}
-                    />
-                  </GlassCard>
-                </div>
-              </div>
-            </div>
-          </section>
-        </div>
+            {checkoutSide === "details" ? (
+              <CheckoutDetailsSide
+                firstName={firstName}
+                setFirstName={setFirstName}
+                surname={surname}
+                setSurname={setSurname}
+                phone={phone}
+                setPhone={setPhone}
+                email={email}
+                setEmail={setEmail}
+                homeAddress={homeAddress}
+                setHomeAddress={setHomeAddress}
+                notes={notes}
+                setNotes={setNotes}
+                firstNameRef={firstNameRef}
+                surnameRef={surnameRef}
+                phoneRef={phoneRef}
+                emailRef={emailRef}
+                homeAddressRef={homeAddressRef}
+                notesRef={notesRef}
+                moveToNextField={moveToNextField}
+                dlFront={dlFront}
+                dlBack={dlBack}
+                idFront={idFront}
+                idBack={idBack}
+                setDlFront={setDlFront}
+                setDlBack={setDlBack}
+                setIdFront={setIdFront}
+                setIdBack={setIdBack}
+                contractReadyOk={contractReadyOk}
+                setContractReadyOk={setContractReadyOk}
+                agreeTerms={agreeTerms}
+                setAgreeTerms={setAgreeTerms}
+                marketingOptIn={marketingOptIn}
+                setMarketingOptIn={setMarketingOptIn}
+                payNowCents={payNowCents}
+                canPay={canPay}
+                payLoading={payLoading}
+                payError={payError}
+                onContinue={payNowAction}
+              />
+            ) : (
+              <PaymentSide
+                planLabel={planLabel}
+                payNowCents={payNowCents}
+                deposit={deposit}
+                clientSecret={clientSecret}
+                customerName={`${firstName.trim()} ${surname.trim()}`.trim()}
+                customerEmail={email.trim()}
+                customerPhone={phone.trim()}
+                onEdit={() => setCheckoutSide("details")}
+              />
+            )}
+          </div>
+        </section>
       </main>
 
       <style jsx global>{`
-        .nexa-flip-scene {
-          width: 100%;
-          min-height: 1060px;
-          perspective: 1800px;
-        }
-
-        .nexa-flip-card {
-          position: relative;
-          width: 100%;
-          min-height: 1060px;
-          transform-style: preserve-3d;
-          transition: transform 1.05s cubic-bezier(0.18, 0.85, 0.24, 1);
-          will-change: transform;
-        }
-
-        .nexa-flip-card.nexa-flipped {
-          transform: rotateY(180deg);
-        }
-
-        .nexa-card-face {
-          position: absolute;
-          inset: 0;
-          min-height: 1060px;
-          backface-visibility: hidden;
-          -webkit-backface-visibility: hidden;
-          transform-style: preserve-3d;
-        }
-
-        .nexa-card-front {
-          transform: rotateY(0deg);
-        }
-
-        .nexa-card-back {
-          transform: rotateY(180deg);
-        }
-
-        .nexa-card-scroll {
-          max-height: none;
-          overflow: visible;
-          padding-right: 0;
-        }
-
-        .nexa-sticky-pay {
-          margin-top: 18px;
-          padding-top: 0;
-          padding-bottom: 0;
-          background: transparent;
-          backdrop-filter: none;
-        }
-
-        .nexa-desktop-payment-scroll {
-          max-height: 100%;
-          overflow-y: auto;
-          overflow-x: hidden;
-          padding-right: 10px;
-          overscroll-behavior: contain;
-          scrollbar-width: thin;
-          scrollbar-color: rgba(255, 122, 0, 0.55) rgba(0, 0, 0, 0.06);
-        }
-
-        .nexa-desktop-payment-scroll::-webkit-scrollbar {
-          width: 8px;
-        }
-
-        .nexa-desktop-payment-scroll::-webkit-scrollbar-track {
-          border-radius: 999px;
-          background: rgba(0, 0, 0, 0.06);
-        }
-
-        .nexa-desktop-payment-scroll::-webkit-scrollbar-thumb {
-          border-radius: 999px;
-          background: linear-gradient(
-            180deg,
-            rgba(255, 122, 0, 0.75),
-            rgba(139, 92, 246, 0.55),
-            rgba(0, 217, 255, 0.55)
-          );
-        }
-
-        .nexa-desktop-payment-scroll::-webkit-scrollbar-thumb:hover {
-          background: linear-gradient(
-            180deg,
-            rgba(255, 122, 0, 0.95),
-            rgba(139, 92, 246, 0.75),
-            rgba(0, 217, 255, 0.75)
-          );
-        }
-
-        @keyframes nexaPayBeat {
-          0%,
-          100% {
-            transform: translateY(0) scale(1);
-            filter: brightness(1);
-          }
-          50% {
-            transform: translateY(-3px) scale(1.012);
-            filter: brightness(1.08);
-          }
-        }
-
-        @media (max-width: 1023px) {
   html,
   body {
-    height: auto !important;
-    min-height: 100% !important;
-    overflow-y: auto !important;
-    overscroll-behavior-y: auto !important;
+    background: #ffffff !important;
   }
 
-  .nexa-mobile-flip-scene {
-    min-height: 0 !important;
-    height: auto !important;
-    perspective: none !important;
-    overflow: visible !important;
+  .nexa-checkout-root input,
+  .nexa-checkout-root textarea,
+  .nexa-checkout-root button {
+    border-radius: 0 !important;
   }
 
-  .nexa-mobile-flip-card {
-    position: relative !important;
-    min-height: 0 !important;
-    height: auto !important;
-    transform: none !important;
-    transition: none !important;
-    transform-style: flat !important;
-    overflow: visible !important;
+  .nexa-checkout-root input:-webkit-autofill,
+  .nexa-checkout-root textarea:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0px 1000px #fafaf8 inset !important;
+    -webkit-text-fill-color: #111111 !important;
   }
-
-  .nexa-mobile-flip-card.nexa-flipped {
-    transform: none !important;
-  }
-
-  .nexa-mobile-flip-card .nexa-card-face {
-    position: relative !important;
-    inset: auto !important;
-    min-height: 0 !important;
-    height: auto !important;
-    transform: none !important;
-    backface-visibility: visible !important;
-    -webkit-backface-visibility: visible !important;
-    overflow: visible !important;
-  }
-
-  .nexa-mobile-flip-card:not(.nexa-flipped) .nexa-card-front {
-    display: block !important;
-  }
-
-  .nexa-mobile-flip-card:not(.nexa-flipped) .nexa-card-back {
-    display: none !important;
-  }
-
-  .nexa-mobile-flip-card.nexa-flipped .nexa-card-front {
-    display: none !important;
-  }
-
-  .nexa-mobile-flip-card.nexa-flipped .nexa-card-back {
-    display: block !important;
-    padding-bottom: 160px !important;
-  }
-
-  #nexa-payment-card {
-    scroll-margin-top: 18px !important;
-  }
-
-  #stripe-embedded {
-    overflow: visible !important;
-    padding-bottom: 180px !important;
-  }
-
-  .nexa-card-back [data-testid],
-  .nexa-card-back iframe {
-    max-width: 100% !important;
-  }
-}
-      `}</style>
+`}</style>
     </div>
   );
 }
 
-/* ---------------- mobile booking summary ---------------- */
-function MobileBookingSummary({
+function BookingSummary({
   vehicle,
+  publicVehicleName,
+  checkoutImage,
   pickupLocation,
   from,
   to,
@@ -1167,14 +840,12 @@ function MobileBookingSummary({
   locale,
   planLabel,
   durationLabel,
-  discountedPerDayEur,
   totalEur,
-  payNowCents,
-  payPickupCents,
-  discountPct,
-  t,
+  deposit,
 }: {
   vehicle: Vehicle;
+  publicVehicleName: string;
+  checkoutImage: string;
   pickupLocation: string;
   from?: Date;
   to?: Date;
@@ -1183,258 +854,175 @@ function MobileBookingSummary({
   locale: string;
   planLabel: string;
   durationLabel: string;
-  discountedPerDayEur: number;
   totalEur: number;
-  payNowCents: number;
-  payPickupCents: number;
-  discountPct: number;
-  t: any;
+  deposit: number;
 }) {
   return (
-    <div className="relative overflow-hidden rounded-[30px] border border-white/10 bg-[#f7f4ef] p-4 text-black shadow-[0_22px_70px_rgba(0,0,0,0.28)]">
-      <div className="pointer-events-none absolute -right-20 -top-20 h-44 w-44 rounded-full bg-orange-400/20 blur-[70px]" />
-      <div className="pointer-events-none absolute -bottom-20 left-6 h-44 w-44 rounded-full bg-cyan-400/15 blur-[70px]" />
-
-      <div className="relative">
-        <div className="flex items-center justify-between gap-3">
-          <div className="min-w-0">
-            <div className="flex flex-wrap items-center gap-1.5">
-              {vehicle.badges.slice(0, 2).map((b) => (
-                <Tag key={b}>{b}</Tag>
-              ))}
-              <Tag>{planLabel}</Tag>
-            </div>
-
-            <h2 className="mt-2 truncate text-[23px] font-black leading-none tracking-[-0.045em] text-black">
-              {vehicle.name}
-            </h2>
-
-            <p className="mt-1 truncate text-xs font-semibold text-black/55">
-              {vehicle.type} • {vehicle.spec1}
-            </p>
-          </div>
-
-          <div className="shrink-0 rounded-2xl border border-black/10 bg-white/60 px-3 py-2 text-right shadow-sm">
-            {discountPct > 0 && (
-              <div className="mb-1 text-[10px] font-black uppercase tracking-[0.12em] text-orange-600">
-                Save {discountPct}%
-              </div>
-            )}
-
-            <div className="text-2xl font-black leading-none text-black">
-              €{eur(totalEur)}
-            </div>
-
-            <div className="mt-1 text-[10px] font-bold text-black/45">
-              Total rental
-            </div>
-          </div>
+    <aside className="flex h-full flex-col">
+      <div>
+        <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-black/28">
+          Selected vehicle
         </div>
 
-        <div className="relative mt-3 h-[155px] overflow-hidden rounded-[26px] border border-black/10 bg-white/55">
-          <div className="pointer-events-none absolute left-1/2 top-1/2 h-28 w-[80%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,122,0,0.20),rgba(139,92,246,0.12),rgba(0,217,255,0.10),transparent_70%)] blur-2xl" />
-          <div className="pointer-events-none absolute bottom-5 left-1/2 h-8 w-[70%] -translate-x-1/2 rounded-full bg-black/20 blur-xl" />
+        <h1
+          className="mt-1 text-[24px] font-extrabold leading-tight tracking-[-0.035em] text-black sm:text-[30px] 2xl:text-[34px]"
+          style={{ fontFamily: manrope.style.fontFamily }}
+        >
+          {publicVehicleName || vehicle.name}
+        </h1>
 
+        <p className="mt-1 text-sm font-medium text-black/42 2xl:text-[15px]">
+          {vehicle.type} · {vehicle.spec1}
+        </p>
+      </div>
+
+      <div className="mt-4 grid gap-5 md:grid-cols-[minmax(0,1fr)_200px] 2xl:grid-cols-[minmax(0,1fr)_230px] 2xl:gap-6">
+        <div className="flex h-[clamp(220px,30vh,385px)] items-center justify-center bg-white">
           <img
-            src={vehicle.imageUrl}
-            alt={vehicle.name}
-            className="absolute inset-0 mx-auto h-full w-full object-contain p-3 drop-shadow-[0_25px_32px_rgba(0,0,0,0.35)]"
+            src={checkoutImage}
+            alt={publicVehicleName || vehicle.name}
+            className="h-full w-full object-contain"
           />
         </div>
 
-        <div className="mt-3 grid grid-cols-2 gap-2">
-          <MiniInfo
-            label="Pickup"
-            value={`${fmtDate(from, locale)} • ${formatTimeLabel(
-              pickupTime,
-              locale
-            )}`}
-          />
-          <MiniInfo
-            label="Return"
-            value={`${fmtDate(to, locale)} • ${formatTimeLabel(
-              dropoffTime,
-              locale
-            )}`}
-          />
-          <MiniInfo label="Duration" value={durationLabel} />
-          <MiniInfo label="Location" value={pickupLocation} />
-        </div>
-
-        <div className="mt-3 rounded-2xl border border-black/10 bg-white/55 p-3">
-          <div className="flex items-end justify-between gap-3">
-            <div>
-              <div className="text-[10px] font-black uppercase tracking-[0.2em] text-black/38">
-                Price breakdown
-              </div>
-              <div className="mt-1 text-xs font-semibold text-black/52">
-                Pay 50% now and the rest at pickup.
-              </div>
-            </div>
-
-            <div className="text-right">
-              <div className="text-[11px] font-bold text-black/45">
-                €{eur(discountedPerDayEur)} / day
-              </div>
-              <div className="text-xl font-black text-black">
-                €{eurFromCents(payNowCents)} now
-              </div>
-            </div>
+        <div className="md:border-l md:border-black/10 md:pl-5 2xl:pl-6">
+          <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/30">
+            Includes
           </div>
 
-          <div className="mt-3 flex items-center justify-between rounded-xl bg-black/[0.035] px-3 py-2 text-xs">
-            <span className="font-semibold text-black/55">At pickup</span>
-            <span className="font-black text-black">
-              €{eurFromCents(payPickupCents)}
-            </span>
+          <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 md:block md:space-y-4 2xl:mt-4 2xl:space-y-5">
+            {INCLUDED_ITEMS.map((item) => (
+              <IncludedItem
+                key={item.label}
+                label={item.label}
+                image={item.image}
+              />
+            ))}
           </div>
-        </div>
-
-        <div className="mt-3 flex flex-wrap gap-2">
-          <SmallIncluded>Helmet included</SmallIncluded>
-          <SmallIncluded>Lock included</SmallIncluded>
-          <SmallIncluded>Phone mount</SmallIncluded>
-          <SmallIncluded>No extra fees</SmallIncluded>
         </div>
       </div>
-    </div>
+
+      <div className="mt-4 2xl:mt-5">
+        <PlainLine
+          label="Pickup"
+          value={`${fmtDate(from, locale)} · ${formatTimeLabel(
+            pickupTime,
+            locale
+          )}`}
+        />
+
+        <PlainLine
+          label="Return"
+          value={`${fmtDate(to, locale)} · ${formatTimeLabel(
+            dropoffTime,
+            locale
+          )}`}
+        />
+
+        <PlainLine label="Plan" value={`${planLabel} · ${durationLabel}`} />
+
+        <PlainLine
+          label="Pickup location"
+          value={pickupLocation}
+          href={PICKUP_LOCATION_MAP_URL}
+        />
+      </div>
+
+      <div className="mt-4 border-t border-black/10 pt-2 2xl:mt-5">
+        <PlainLine label="Rental total" value={`€${eur(totalEur)}`} strong />
+      </div>
+
+      <p className="mt-3 text-xs font-medium leading-5 text-black/45 2xl:text-[13px] 2xl:leading-6">
+        A €{eur(deposit)} refundable security deposit is handled at pickup by
+        cash or card.
+      </p>
+    </aside>
   );
 }
 
-/* ---------------- payment side ---------------- */
-function PaymentSide({
-  t,
-  planLabel,
-  payNowCents,
-  payPickupCents,
-  deposit,
-  clientSecret,
-  onEdit,
-  mobile,
-}: {
-  t: any;
-  planLabel: string;
-  payNowCents: number;
-  payPickupCents: number;
-  deposit: number;
-  clientSecret: string | null;
-  onEdit: () => void;
-  mobile?: boolean;
-}) {
+function IncludedItem({ label, image }: { label: string; image: string }) {
+  const mobileOrderClass =
+    label === "Lock"
+      ? "order-2"
+      : label === "Top Case"
+        ? "order-3"
+        : label === "Insurance"
+          ? "order-4"
+          : label === "Phone Mount"
+            ? "order-5 col-span-2"
+            : "order-1";
+
   return (
     <div
       className={[
-        "flex h-full flex-col",
-        !mobile ? "nexa-desktop-payment-scroll" : "",
+        "flex items-center gap-2.5 md:gap-3 2xl:gap-4",
+        mobileOrderClass,
       ].join(" ")}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div>
-          <p
-            className={[
-              "font-black uppercase text-black/40",
-              mobile
-                ? "text-[10px] tracking-[0.18em]"
-                : "text-xs tracking-[0.28em]",
-            ].join(" ")}
-          >
-            Secure card checkout
-          </p>
+      <img
+        src={image}
+        alt={label}
+        className="h-9 w-9 shrink-0 object-contain md:h-12 md:w-12 2xl:h-14 2xl:w-14"
+      />
 
-          <h2
-            className={[
-              "mt-2 font-black tracking-tight text-black",
-              mobile ? "text-[26px] leading-none" : "text-2xl",
-            ].join(" ")}
-          >
-            Complete your payment
-          </h2>
+      <div className="flex min-w-0 items-center gap-1.5 md:gap-2">
+        <span className="shrink-0 text-[14px] font-extrabold leading-none text-[#ff7a00] md:text-[16px] 2xl:text-[18px]">
+          ✓
+        </span>
 
-          <p className="mt-2 text-sm leading-6 text-black/58">
-            Pay{" "}
-            <span className="font-black text-black">
-              €{eurFromCents(payNowCents)}
-            </span>{" "}
-            now to secure your booking. Remaining{" "}
-            <span className="font-black text-black">
-              €{eurFromCents(payPickupCents)}
-            </span>{" "}
-            at pickup.
-          </p>
-        </div>
-
-        <button
-          type="button"
-          onClick={onEdit}
-          className="rounded-2xl border border-black/10 bg-white/70 px-4 py-2 text-xs font-black text-black/60 shadow-sm transition hover:-translate-y-0.5 hover:bg-white"
-        >
-          ← Edit
-        </button>
-      </div>
-
-      <div className="mt-5 rounded-3xl border border-black/10 bg-black/[0.02] p-4 text-sm shadow-sm">
-        <Row
-          left={<span className="text-black/60">Selected plan</span>}
-          right={<span className="font-black text-black">{planLabel}</span>}
-        />
-
-        <div className="mt-3">
-          <Row
-            left={<span className="text-black/60">Pay now</span>}
-            right={
-              <span className="font-black text-black">
-                €{eurFromCents(payNowCents)}
-              </span>
-            }
-          />
-        </div>
-
-        <div className="mt-3">
-          <Row
-            left={<span className="text-black/60">Pay at pickup</span>}
-            right={
-              <span className="font-black text-black">
-                €{eurFromCents(payPickupCents)}
-              </span>
-            }
-          />
-        </div>
-      </div>
-
-      <div id="stripe-embedded" className="mt-5">
-        {clientSecret ? (
-          <CheckoutShell clientSecret={clientSecret} />
-        ) : (
-          <div className="rounded-3xl border border-black/10 bg-black/[0.02] p-6 text-sm text-black/55">
-            Preparing secure checkout...
-          </div>
-        )}
-      </div>
-
-      <div className="mt-5 rounded-3xl border border-orange-400/25 bg-orange-400/8 p-4 text-sm leading-6">
-        <div className="font-black text-black">{t("depositImportantTitle")}</div>
-
-        <div className="mt-1 text-black/62">
-          {t("depositTextBefore")}{" "}
-          <span className="font-black text-black">€{eur(deposit)}</span>{" "}
-          {t("depositTextAfter")}
-        </div>
-      </div>
-
-      <div className="mt-5 flex flex-wrap items-center justify-center gap-2 text-xs text-black/45">
-        <span>{t("secureCheckout")}</span>
-        <span className="text-black/25">•</span>
-        <span>{t("localSupport")}</span>
-        <span className="text-black/25">•</span>
-        <span>{t("noHiddenFees")}</span>
+        <span className="truncate text-[12px] font-semibold leading-tight text-black/78 md:text-sm 2xl:text-[15px]">
+          {label}
+        </span>
       </div>
     </div>
   );
 }
 
-/* ---------------- checkout front side ---------------- */
+function PlainLine({
+  label,
+  value,
+  strong,
+  muted,
+  href,
+}: {
+  label: string;
+  value: string;
+  strong?: boolean;
+  muted?: boolean;
+  href?: string;
+}) {
+  const valueClassName = [
+    "max-w-[65%] text-right text-sm 2xl:text-[15px]",
+    strong ? "font-extrabold text-black" : "font-semibold text-black/72",
+    muted ? "text-black/42" : "",
+    href
+      ? "underline decoration-black/25 underline-offset-4 transition hover:text-black"
+      : "",
+  ].join(" ");
+
+  return (
+    <div className="flex items-start justify-between gap-5 border-b border-black/[0.07] py-2.5 last:border-b-0 2xl:py-3">
+      <div className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/28">
+        {label}
+      </div>
+
+      {href ? (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          className={valueClassName}
+        >
+          {value}
+        </a>
+      ) : (
+        <div className={valueClassName}>{value}</div>
+      )}
+    </div>
+  );
+}
+
 function CheckoutDetailsSide({
-  t,
   firstName,
   setFirstName,
   surname,
@@ -1443,12 +1031,15 @@ function CheckoutDetailsSide({
   setPhone,
   email,
   setEmail,
+  homeAddress,
+  setHomeAddress,
   notes,
   setNotes,
   firstNameRef,
   surnameRef,
   phoneRef,
   emailRef,
+  homeAddressRef,
   notesRef,
   moveToNextField,
   dlFront,
@@ -1465,18 +1056,12 @@ function CheckoutDetailsSide({
   setAgreeTerms,
   marketingOptIn,
   setMarketingOptIn,
-  planLabel,
   payNowCents,
-  payPickupCents,
-  totalCents,
-  deposit,
   canPay,
   payLoading,
   payError,
   onContinue,
-  mobile,
 }: {
-  t: any;
   firstName: string;
   setFirstName: (v: string) => void;
   surname: string;
@@ -1485,12 +1070,15 @@ function CheckoutDetailsSide({
   setPhone: (v: string) => void;
   email: string;
   setEmail: (v: string) => void;
+  homeAddress: string;
+  setHomeAddress: (v: string) => void;
   notes: string;
   setNotes: (v: string) => void;
   firstNameRef: React.RefObject<HTMLInputElement | null>;
   surnameRef: React.RefObject<HTMLInputElement | null>;
   phoneRef: React.RefObject<HTMLInputElement | null>;
   emailRef: React.RefObject<HTMLInputElement | null>;
+  homeAddressRef: React.RefObject<HTMLTextAreaElement | null>;
   notesRef: React.RefObject<HTMLTextAreaElement | null>;
   moveToNextField: (
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -1510,462 +1098,315 @@ function CheckoutDetailsSide({
   setAgreeTerms: (v: boolean) => void;
   marketingOptIn: boolean;
   setMarketingOptIn: (v: boolean) => void;
-  planLabel: string;
   payNowCents: number;
-  payPickupCents: number;
-  totalCents: number;
-  deposit: number;
   canPay: boolean;
   payLoading: boolean;
   payError: string | null;
   onContinue: () => void;
-  mobile?: boolean;
 }) {
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-start justify-between gap-3">
+    <section className="flex h-full flex-col">
+      <div className="flex items-end justify-between gap-4">
         <div>
-          <p
-            className={[
-              "font-black uppercase text-black/40",
-              mobile
-                ? "text-[10px] tracking-[0.18em]"
-                : "text-xs tracking-[0.28em]",
-            ].join(" ")}
-          >
-            Customer information
-          </p>
-
           <h2
-            className={[
-              "mt-2 font-black tracking-tight text-black",
-              mobile ? "text-[26px] leading-none" : "text-2xl",
-            ].join(" ")}
+            className="text-[24px] font-extrabold leading-tight tracking-[-0.035em] text-black sm:text-[30px] 2xl:text-[34px]"
+            style={{ fontFamily: manrope.style.fontFamily }}
           >
-            {t("yourDetails")}
+            Your details
           </h2>
 
-          <p className="mt-2 text-sm leading-6 text-black/58">
-            Fill in your details, check your booking, then continue to the
-            secure payment side.
+          <p className="mt-1 text-sm font-medium text-black/40 2xl:text-[15px]">
+            Fill the required fields.
           </p>
         </div>
 
-        <div className="rounded-full border border-black/10 bg-black/[0.03] px-3 py-1 text-xs text-black/48">
-          {t("required")} <span className="font-black text-black">*</span>
+        <div className="text-xs font-bold uppercase tracking-[0.18em] text-black/38">
+          * Required
         </div>
       </div>
 
-      <div className="mt-5 space-y-3.5">
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Field label={t("nameLabel")}>
-            <TextInput
-              ref={firstNameRef}
-              value={firstName}
-              onChange={(e) => setFirstName(e.target.value)}
-              onKeyDown={(e) => moveToNextField(e, surnameRef)}
-              placeholder={t("namePlaceholder")}
-              autoComplete="given-name"
-              autoFocus
-            />
-          </Field>
+      <div className="mt-5 grid gap-x-5 gap-y-4 sm:grid-cols-2 2xl:mt-6 2xl:gap-x-6 2xl:gap-y-5">
+        <Field label="First name *">
+          <TextInput
+            ref={firstNameRef}
+            value={firstName}
+            onChange={(e) => setFirstName(e.target.value)}
+            onKeyDown={(e) => moveToNextField(e, surnameRef)}
+            placeholder="John"
+            autoComplete="given-name"
+            autoFocus
+          />
+        </Field>
 
-          <Field label={t("surnameLabel")}>
-            <TextInput
-              ref={surnameRef}
-              value={surname}
-              onChange={(e) => setSurname(e.target.value)}
-              onKeyDown={(e) => moveToNextField(e, phoneRef)}
-              placeholder={t("surnamePlaceholder")}
-              autoComplete="family-name"
-            />
-          </Field>
-        </div>
+        <Field label="Surname *">
+          <TextInput
+            ref={surnameRef}
+            value={surname}
+            onChange={(e) => setSurname(e.target.value)}
+            onKeyDown={(e) => moveToNextField(e, phoneRef)}
+            placeholder="Smith"
+            autoComplete="family-name"
+          />
+        </Field>
 
-        <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
-          <Field label={t("phoneLabel")}>
-            <TextInput
-              ref={phoneRef}
-              value={phone}
-              onChange={(e) => setPhone(e.target.value)}
-              onKeyDown={(e) => moveToNextField(e, emailRef)}
-              placeholder={t("phonePlaceholder")}
-              autoComplete="tel"
-              inputMode="tel"
-            />
-          </Field>
+        <Field label="Phone / WhatsApp *">
+          <TextInput
+            ref={phoneRef}
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            onKeyDown={(e) => moveToNextField(e, emailRef)}
+            placeholder="+34 600 000 000"
+            autoComplete="tel"
+            inputMode="tel"
+          />
+        </Field>
 
-          <Field label={t("emailLabel")}>
-            <TextInput
-              ref={emailRef}
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              onKeyDown={(e) => moveToNextField(e, notesRef)}
-              placeholder={t("emailPlaceholder")}
-              autoComplete="email"
-              inputMode="email"
-            />
-          </Field>
-        </div>
+        <Field label="Email *">
+          <TextInput
+            ref={emailRef}
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            onKeyDown={(e) => moveToNextField(e, homeAddressRef)}
+            placeholder="you@email.com"
+            autoComplete="email"
+            inputMode="email"
+          />
+        </Field>
 
-        <details className="group rounded-3xl border border-black/10 bg-black/[0.02] p-4 shadow-sm transition duration-300 open:bg-white/45 hover:bg-white/30">
-          <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-black text-black">
-            <span>
-              {t("documentsOptional")}{" "}
-              <span className="text-xs font-semibold text-black/45">
-                — optional, faster pickup
-              </span>
-            </span>
-
-            <span className="rounded-full border border-black/10 bg-white/70 px-3 py-1 text-xs text-black/50 transition group-open:rotate-180">
-              ↓
-            </span>
-          </summary>
-
-          <div className="mt-3 text-xs leading-6 text-black/56">
-            Upload now to make the contract ready when you arrive. On mobile,
-            the upload button can open the camera directly.
-          </div>
-
-          <div className="mt-4 grid grid-cols-1 gap-3 md:grid-cols-2">
-            <UploadField
-              label={t("dlFront")}
-              buttonText="Front license"
-              file={dlFront}
-              onFile={(f) => setDlFront(f)}
-              chooseHint={t("chooseFilesHint")}
-              removeText={t("remove")}
-            />
-
-            <UploadField
-              label={t("dlBack")}
-              buttonText="Back license"
-              file={dlBack}
-              onFile={(f) => setDlBack(f)}
-              chooseHint={t("chooseFilesHint")}
-              removeText={t("remove")}
-            />
-
-            <UploadField
-              label={t("idFront")}
-              buttonText="Front ID / passport"
-              file={idFront}
-              onFile={(f) => setIdFront(f)}
-              chooseHint={t("chooseFilesHint")}
-              removeText={t("remove")}
-            />
-
-            <UploadField
-              label={t("idBack")}
-              buttonText="Back ID / passport"
-              file={idBack}
-              onFile={(f) => setIdBack(f)}
-              chooseHint={t("chooseFilesHint")}
-              removeText={t("remove")}
-            />
-          </div>
-        </details>
-
-        <Field label={t("notesLabel")}>
+        <Field label="Home address *" wide>
           <textarea
-            ref={notesRef}
-            value={notes}
-            onChange={(e) => setNotes(e.target.value)}
-            className="min-h-[72px] w-full resize-none rounded-2xl border border-black/10 bg-black/[0.02] px-4 py-3 text-sm font-semibold text-black outline-none transition duration-300 placeholder:text-black/35 focus:border-orange-400/60 focus:bg-white focus:shadow-[0_0_0_4px_rgba(255,122,0,0.10)]"
-            placeholder={t("notesPlaceholder")}
+            ref={homeAddressRef}
+            value={homeAddress}
+            onChange={(e) => setHomeAddress(e.target.value)}
+            className="min-h-[74px] w-full resize-none border border-black/18 bg-[#fafaf8] px-3 py-2 text-sm font-semibold text-black outline-none transition placeholder:text-black/35 focus:border-black 2xl:min-h-[82px] 2xl:px-4 2xl:py-3 2xl:text-[15px]"
+            placeholder="Street, city, postcode, country"
+            autoComplete="street-address"
           />
         </Field>
       </div>
 
-      <div className="mt-5 rounded-3xl border border-black/10 bg-black/[0.02] p-4 text-sm shadow-sm">
-        <Row
-          left={<span className="text-black/60">Selected plan</span>}
-          right={<span className="font-black text-black">{planLabel}</span>}
-        />
+      <details className="group mt-5 border-t border-black/10 pt-4 2xl:mt-6 2xl:pt-5">
+        <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-bold text-black 2xl:text-[15px]">
+          <span>
+            Upload documents{" "}
+            <span className="font-semibold text-black/38">(optional)</span>
+          </span>
 
-        <div className="mt-2">
-          <Row
-            left={<span className="text-black/60">{t("payNow50")}</span>}
-            right={
-              <span className="font-black text-black">
-                €{eurFromCents(payNowCents)}
-              </span>
-            }
+          <span className="text-lg font-semibold text-black transition group-open:rotate-180">
+            ↓
+          </span>
+        </summary>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2 2xl:gap-5">
+          <UploadField
+            label="Licence front"
+            file={dlFront}
+            onFile={(f) => setDlFront(f)}
+          />
+
+          <UploadField
+            label="Licence back"
+            file={dlBack}
+            onFile={(f) => setDlBack(f)}
+          />
+
+          <UploadField
+            label="ID / passport front"
+            file={idFront}
+            onFile={(f) => setIdFront(f)}
+          />
+
+          <UploadField
+            label="ID / passport back"
+            file={idBack}
+            onFile={(f) => setIdBack(f)}
           />
         </div>
+      </details>
 
-        <div className="mt-2">
-          <Row
-            left={<span className="text-black/60">{t("payPickup50")}</span>}
-            right={
-              <span className="font-black text-black">
-                €{eurFromCents(payPickupCents)}
-              </span>
-            }
+      <div className="mt-4 2xl:mt-5">
+        <Field label="Notes" wide>
+          <textarea
+            ref={notesRef}
+            value={notes}
+            onChange={(e) => setNotes(e.target.value)}
+            className="min-h-[60px] w-full resize-none border border-black/18 bg-[#fafaf8] px-3 py-2 text-sm font-semibold text-black outline-none transition placeholder:text-black/35 focus:border-black 2xl:min-h-[68px] 2xl:px-4 2xl:py-3 2xl:text-[15px]"
+            placeholder="Pickup request, helmet size, etc."
           />
-        </div>
-
-        <div className="mt-3 border-t border-black/10 pt-3">
-          <Row
-            left={<span className="text-black/48">{t("rentalTotal")}</span>}
-            right={
-              <span className="font-black text-black/80">
-                €{eurFromCents(totalCents)}
-              </span>
-            }
-          />
-        </div>
+        </Field>
       </div>
 
-      <div className="mt-4 space-y-3 rounded-3xl border border-black/10 bg-black/[0.02] p-4 shadow-sm">
+      <div className="mt-5 space-y-2.5 border-t border-black/10 pt-4 2xl:mt-6 2xl:space-y-3 2xl:pt-5">
         <CheckLine
           checked={contractReadyOk}
           onChange={setContractReadyOk}
-          text={t("checkContractReady")}
+          text="I have the correct driving licence."
         />
 
         <CheckLine
           checked={agreeTerms}
           onChange={setAgreeTerms}
-          text={t("checkAgreeTerms")}
+          text="I accept the rental terms."
         />
 
         <CheckLine
           checked={marketingOptIn}
           onChange={setMarketingOptIn}
-          text={t("checkMarketing")}
+          text="Send me offers by email."
           optional
         />
       </div>
 
-      <div className="mt-4 rounded-3xl border border-orange-400/25 bg-orange-400/8 p-4 text-sm leading-6">
-        <div className="font-black text-black">{t("depositImportantTitle")}</div>
+      {payError ? (
+        <div className="mt-4 border-l-2 border-red-500 bg-red-50 px-4 py-3 text-sm font-semibold text-red-700">
+          {payError}
+        </div>
+      ) : null}
 
-        <div className="mt-1 text-black/62">
-          {t("depositTextBefore")}{" "}
-          <span className="font-black text-black">€{eur(deposit)}</span>{" "}
-          {t("depositTextAfter")}
+      <button
+        type="button"
+        onClick={onContinue}
+        disabled={!canPay || payLoading}
+        className={[
+          "mt-5 min-h-[52px] w-full px-6 text-sm font-extrabold transition duration-200 2xl:mt-6 2xl:min-h-[56px] 2xl:text-[15px]",
+          canPay
+            ? "bg-black text-white shadow-[0_14px_34px_rgba(0,0,0,0.14)] hover:-translate-y-0.5 hover:bg-black/85 hover:shadow-[0_20px_46px_rgba(0,0,0,0.20)] active:translate-y-0 active:scale-[0.98]"
+            : "cursor-not-allowed bg-black/10 text-black/35",
+        ].join(" ")}
+      >
+        {payLoading
+          ? "Preparing payment..."
+          : `Pay online · €${eurFromCents(payNowCents)}`}
+      </button>
+
+      {!canPay ? (
+        <p className="mt-2 text-center text-xs font-medium text-black/35 2xl:text-[13px]">
+          Complete the required fields to continue.
+        </p>
+      ) : null}
+    </section>
+  );
+}
+
+function PaymentSide({
+  planLabel,
+  payNowCents,
+  deposit,
+  clientSecret,
+  customerName,
+  customerEmail,
+  customerPhone,
+  onEdit,
+}: {
+  planLabel: string;
+  payNowCents: number;
+  deposit: number;
+  clientSecret: string | null;
+  customerName: string;
+  customerEmail: string;
+  customerPhone: string;
+  onEdit: () => void;
+}) {
+  return (
+    <section id="nexa-payment-card" className="h-full">
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h2
+            className="text-[24px] font-extrabold leading-tight tracking-[-0.035em] text-black sm:text-[30px] 2xl:text-[34px]"
+            style={{ fontFamily: manrope.style.fontFamily }}
+          >
+            Payment
+          </h2>
+
+          <p className="mt-1 text-sm font-medium text-black/40 2xl:text-[15px]">
+            Secure payment.
+          </p>
+        </div>
+
+        <div className="flex shrink-0 items-center gap-2">
+          <button
+            type="button"
+            onClick={onEdit}
+            className="inline-flex items-center gap-2 border border-black/10 bg-white px-3 py-2 text-sm font-extrabold text-black/70 transition duration-200 hover:-translate-y-0.5 hover:border-black/25 hover:bg-black hover:text-white active:translate-y-0 active:scale-[0.97]"
+          >
+            <span className="text-[16px] leading-none">←</span>
+            Back
+          </button>
+
+          <button
+            type="button"
+            onClick={onEdit}
+            className="border border-black/10 bg-white px-3 py-2 text-sm font-bold text-black/55 transition duration-200 hover:-translate-y-0.5 hover:border-black/25 hover:text-black active:translate-y-0 active:scale-[0.97]"
+          >
+            Edit
+          </button>
         </div>
       </div>
 
-      {payError && (
-        <div className="mt-4 rounded-2xl border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-700">
-          {payError}
-        </div>
-      )}
+      <div className="mt-6 border-y border-black/10 py-3 2xl:mt-7 2xl:py-4">
+        <PlainPaymentLine label="Plan" value={planLabel} />
 
-      <div className="nexa-sticky-pay">
-        <button
-          type="button"
-          onClick={onContinue}
-          disabled={!canPay || payLoading}
-          className={[
-            "group relative min-h-[62px] w-full overflow-hidden rounded-2xl px-6 text-sm font-black text-black shadow-[0_20px_48px_rgba(255,122,0,0.28)] transition duration-300",
-            canPay
-              ? "animate-[nexaPayBeat_1.35s_ease-in-out_infinite] hover:-translate-y-1 hover:shadow-[0_26px_65px_rgba(255,122,0,0.36)]"
-              : "cursor-not-allowed opacity-55",
-          ].join(" ")}
-          style={{
-            background: canPay
-              ? `linear-gradient(135deg, ${ORANGE} 0%, #ffd3aa 32%, ${PURPLE} 66%, ${BLUE} 100%)`
-              : "rgba(0,0,0,0.12)",
-          }}
-        >
-          <span className="relative z-10 flex items-center justify-center">
-            {payLoading
-              ? "Checking availability and preparing checkout..."
-              : "Pay 50% reservation now"}
-          </span>
+        <PlainPaymentLine
+          label="Rental total"
+          value={`€${eurFromCents(payNowCents)}`}
+          strong
+        />
+      </div>
 
-          <span className="absolute inset-0 translate-x-[-120%] bg-white/40 transition duration-700 group-hover:translate-x-[120%]" />
-        </button>
+      <p className="mt-3 text-xs font-medium leading-5 text-black/45 2xl:text-[13px] 2xl:leading-6">
+        A €{eur(deposit)} refundable security deposit is handled at pickup by
+        cash or card.
+      </p>
 
-        {!canPay && (
-          <div className="mt-3 rounded-2xl border border-black/10 bg-black/[0.03] p-3 text-xs text-black/46">
-            {t("toContinue")}
+      <div id="stripe-embedded" className="mt-6 2xl:mt-7">
+        {clientSecret ? (
+          <CheckoutShell
+            clientSecret={clientSecret}
+            customerName={customerName}
+            customerEmail={customerEmail}
+            customerPhone={customerPhone}
+          />
+        ) : (
+          <div className="py-8 text-sm font-medium text-black/45">
+            Preparing secure checkout...
           </div>
         )}
       </div>
-    </div>
+    </section>
   );
 }
 
-/* ---------------- UI components ---------------- */
-const GlassCard = React.forwardRef<
-  HTMLDivElement,
-  {
-    children: React.ReactNode;
-    sticky?: boolean;
-    compact?: boolean;
-    fullHeight?: boolean;
-    mobile?: boolean;
-  }
->(function GlassCard({ children, sticky, compact, fullHeight, mobile }, ref) {
-  return (
-    <div
-      ref={ref}
-      className={[
-        "relative overflow-hidden border border-white/10 bg-[#f7f4ef] shadow-[0_24px_90px_rgba(0,0,0,0.18)]",
-        mobile ? "rounded-[30px] p-4" : "rounded-[34px]",
-        compact ? "p-5 md:p-6" : mobile ? "" : "p-5 md:p-6",
-        fullHeight ? "h-full" : "",
-        sticky ? "lg:sticky lg:top-6" : "",
-      ].join(" ")}
-    >
-      <div className="pointer-events-none absolute -right-24 -top-24 h-56 w-56 rounded-full bg-orange-400/12 blur-[90px]" />
-      <div className="pointer-events-none absolute -bottom-24 left-8 h-56 w-56 rounded-full bg-cyan-400/12 blur-[90px]" />
-      <div className="pointer-events-none absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-white/90 to-transparent" />
-
-      <div className="relative h-full">{children}</div>
-    </div>
-  );
-});
-
-function VehicleCard({
-  vehicle,
-  discountPct,
-  referencePrice,
-  discountedPerDayEur,
-  totalEur,
-  planLabel,
-  durationLabel,
-  t,
+function PlainPaymentLine({
+  label,
+  value,
+  strong,
+  muted,
 }: {
-  vehicle: Vehicle;
-  discountPct: number;
-  referencePrice: number;
-  discountedPerDayEur: number;
-  totalEur: number;
-  planLabel: string;
-  durationLabel: string;
-  t: any;
+  label: string;
+  value: string;
+  strong?: boolean;
+  muted?: boolean;
 }) {
   return (
-    <GlassCard>
-      <div className="flex flex-col gap-5 md:flex-row md:items-start md:justify-between">
-        <div className="min-w-0">
-          <div className="flex flex-wrap gap-2">
-            {vehicle.badges.slice(0, 2).map((b) => (
-              <Tag key={b}>{b}</Tag>
-            ))}
-            <Tag>{planLabel}</Tag>
-          </div>
-
-          <h2 className="mt-3 text-3xl font-black tracking-[-0.04em] text-black md:text-4xl">
-            {vehicle.name}
-          </h2>
-
-          <div className="mt-2 text-sm leading-6 text-black/60">
-            {vehicle.type} • {vehicle.spec1}
-            {vehicle.spec2 ? ` • ${vehicle.spec2}` : ""}
-          </div>
-        </div>
-
-        <div className="shrink-0 rounded-3xl border border-black/10 bg-black/[0.03] px-5 py-4 text-right shadow-sm">
-          {discountPct > 0 && (
-            <div className="text-xs font-black text-black/38">
-              <span className="line-through">€{eur(referencePrice)}</span>{" "}
-              {t("perDayShort")}
-            </div>
-          )}
-
-          <div className="mt-1 text-3xl font-black leading-none text-black">
-            €{eur(discountedPerDayEur)}
-            <span className="ml-1 text-xs text-black/50">
-              {t("perDayShort")}
-            </span>
-          </div>
-
-          <div className="mt-2 text-xs text-black/50">
-            {durationLabel} • {t("total")}:{" "}
-            <span className="font-black text-black/85">€{eur(totalEur)}</span>
-          </div>
-        </div>
-      </div>
-
-      <div className="relative mt-6 h-[230px] w-full md:h-[300px]">
-        <div className="pointer-events-none absolute left-1/2 top-1/2 h-[220px] w-[80%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[radial-gradient(circle,rgba(255,122,0,0.18),rgba(139,92,246,0.12),rgba(0,217,255,0.10),transparent_70%)] blur-3xl" />
-        <div className="pointer-events-none absolute bottom-8 left-1/2 h-10 w-[70%] -translate-x-1/2 rounded-full bg-black/22 blur-2xl" />
-
-        <img
-          src={vehicle.imageUrl}
-          alt={vehicle.name}
-          className="absolute inset-0 mx-auto h-full w-full object-contain drop-shadow-[0_35px_45px_rgba(0,0,0,0.35)] transition duration-500 hover:scale-[1.03]"
-        />
-      </div>
-    </GlassCard>
-  );
-}
-
-function Chip({
-  children,
-  accent,
-}: {
-  children: React.ReactNode;
-  accent?: boolean;
-}) {
-  return (
-    <span
-      className="inline-flex min-h-[44px] items-center rounded-2xl border px-4 py-2 text-xs font-black shadow-sm backdrop-blur-xl"
-      style={{
-        borderColor: accent
-          ? "rgba(255,122,0,0.34)"
-          : "rgba(255,255,255,0.12)",
-        background: accent ? "rgba(255,122,0,0.10)" : "rgba(255,255,255,0.06)",
-        color: accent ? "#FFB074" : "rgba(255,255,255,0.84)",
-      }}
-    >
-      {children}
-    </span>
-  );
-}
-
-function Tag({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-black/10 bg-black/[0.03] px-3 py-1 text-[10px] font-black uppercase tracking-[0.12em] text-black/60">
-      {children}
-    </span>
-  );
-}
-
-function MiniInfo({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 rounded-2xl border border-black/10 bg-white/55 px-3 py-2 shadow-sm">
-      <div className="text-[9px] font-black uppercase tracking-[0.16em] text-black/35">
+    <div className="flex items-center justify-between gap-5 py-2 2xl:py-2.5">
+      <span
+        className={[
+          "text-sm font-medium 2xl:text-[15px]",
+          muted ? "text-black/35" : "text-black/50",
+        ].join(" ")}
+      >
         {label}
-      </div>
-      <div className="mt-1 truncate text-xs font-black text-black/78">
+      </span>
+
+      <span
+        className={[
+          "text-sm 2xl:text-[15px]",
+          strong ? "font-extrabold text-black" : "font-bold text-black/75",
+          muted ? "text-black/42" : "",
+        ].join(" ")}
+      >
         {value}
-      </div>
-    </div>
-  );
-}
-
-function SmallIncluded({ children }: { children: React.ReactNode }) {
-  return (
-    <span className="inline-flex items-center rounded-full border border-black/10 bg-black/[0.035] px-3 py-2 text-[11px] font-black text-black/62">
-      ✓ {children}
-    </span>
-  );
-}
-
-function Included({
-  title,
-  sub,
-  badge,
-}: {
-  title: string;
-  sub: string;
-  badge: string;
-}) {
-  return (
-    <div className="group rounded-3xl border border-black/10 bg-black/[0.02] p-4 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-cyan-400/30 hover:bg-white">
-      <div className="text-sm font-black text-black">{title}</div>
-      <div className="mt-1 text-xs text-black/54">{sub}</div>
-
-      <div className="mt-4 inline-flex rounded-full bg-orange-400/12 px-3 py-1 text-[10px] font-black text-black">
-        {badge}
-      </div>
+      </span>
     </div>
   );
 }
@@ -1973,15 +1414,20 @@ function Included({
 function Field({
   label,
   children,
+  wide,
 }: {
   label: string;
   children: React.ReactNode;
+  wide?: boolean;
 }) {
   return (
-    <div>
-      <div className="text-xs font-black text-black/70">{label}</div>
-      <div className="mt-2">{children}</div>
-    </div>
+    <label className={wide ? "block sm:col-span-2" : "block"}>
+      <span className="text-[10px] font-bold uppercase tracking-[0.18em] text-black/45">
+        {label}
+      </span>
+
+      <span className="mt-1 block">{children}</span>
+    </label>
   );
 }
 
@@ -1993,25 +1439,10 @@ const TextInput = React.forwardRef<
     <input
       ref={ref}
       {...props}
-      className="w-full rounded-2xl border border-black/10 bg-black/[0.02] px-4 py-3 text-sm font-semibold text-black outline-none transition duration-300 placeholder:text-black/35 focus:border-orange-400/60 focus:bg-white focus:shadow-[0_0_0_4px_rgba(255,122,0,0.10)]"
+      className="h-11 w-full border border-black/18 bg-[#fafaf8] px-3 text-sm font-semibold text-black outline-none transition placeholder:text-black/35 focus:border-black 2xl:h-12 2xl:px-4 2xl:text-[15px]"
     />
   );
 });
-
-function Row({
-  left,
-  right,
-}: {
-  left: React.ReactNode;
-  right: React.ReactNode;
-}) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <div className="min-w-0 truncate">{left}</div>
-      <div className="shrink-0">{right}</div>
-    </div>
-  );
-}
 
 function CheckLine({
   checked,
@@ -2025,19 +1456,20 @@ function CheckLine({
   optional?: boolean;
 }) {
   return (
-    <label className="group flex cursor-pointer select-none items-start gap-3">
+    <label className="flex cursor-pointer select-none items-start gap-3">
       <input
         type="checkbox"
         checked={checked}
         onChange={(e) => onChange(e.target.checked)}
         className="mt-1 h-4 w-4"
-        style={{ accentColor: ORANGE }}
+        style={{ accentColor: "#111111" }}
       />
 
       <span
-        className={`text-xs leading-6 ${
-          optional ? "text-black/48" : "text-black/65"
-        }`}
+        className={[
+          "text-sm leading-6 2xl:text-[15px]",
+          optional ? "text-black/38" : "font-medium text-black/62",
+        ].join(" ")}
       >
         {text}
       </span>
@@ -2047,25 +1479,39 @@ function CheckLine({
 
 function UploadField({
   label,
-  buttonText,
   file,
   onFile,
-  chooseHint,
-  removeText,
 }: {
   label: string;
-  buttonText: string;
   file: File | null;
   onFile: (f: File | null) => void;
-  chooseHint: string;
-  removeText: string;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
   const [localError, setLocalError] = useState<string | null>(null);
 
   return (
-    <div className="rounded-2xl border border-black/10 bg-black/[0.02] p-3 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-orange-400/30 hover:bg-white">
-      <div className="text-xs font-black text-black/72">{label}</div>
+    <div className="border-b border-black/10 pb-3">
+      <div className="flex items-center justify-between gap-4">
+        <div className="min-w-0">
+          <div className="text-xs font-bold text-black/45 2xl:text-[13px]">
+            {label}
+          </div>
+
+          {file ? (
+            <div className="mt-1 truncate text-xs font-medium text-black/45">
+              {file.name}
+            </div>
+          ) : null}
+        </div>
+
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="shrink-0 bg-black px-4 py-2 text-xs font-bold text-white transition hover:bg-black/80 active:scale-[0.97] 2xl:px-5 2xl:py-2.5 2xl:text-[13px]"
+        >
+          {file ? "Change" : "Upload"}
+        </button>
+      </div>
 
       <input
         ref={inputRef}
@@ -2096,46 +1542,26 @@ function UploadField({
         }}
       />
 
-      <button
-        type="button"
-        onClick={() => inputRef.current?.click()}
-        className="group relative mt-2 min-h-[42px] w-full overflow-hidden rounded-xl px-3 text-xs font-black text-black transition duration-300 hover:-translate-y-0.5"
-        style={{
-          background: `linear-gradient(135deg, ${ORANGE} 0%, #ffd3aa 38%, ${PURPLE} 72%, ${BLUE} 100%)`,
-        }}
-      >
-        <span className="relative z-10 inline-flex items-center justify-center gap-2">
-          <span>📄</span>
-          {buttonText}
-        </span>
-
-        <span className="absolute inset-0 translate-x-[-100%] bg-white/35 transition duration-700 group-hover:translate-x-[100%]" />
-      </button>
-
       {file ? (
-        <div className="mt-2 flex items-center justify-between gap-3 text-xs">
-          <span className="truncate text-black/56">{file.name}</span>
+        <button
+          type="button"
+          onClick={() => {
+            setLocalError(null);
+            onFile(null);
 
-          <button
-            type="button"
-            onClick={() => {
-              setLocalError(null);
-              onFile(null);
+            if (inputRef.current) inputRef.current.value = "";
+          }}
+          className="mt-2 text-xs font-semibold text-black/38 transition hover:text-black"
+        >
+          Remove
+        </button>
+      ) : null}
 
-              if (inputRef.current) inputRef.current.value = "";
-            }}
-            className="rounded-full border border-black/10 bg-white px-3 py-1 font-black text-black transition hover:bg-black/[0.02]"
-          >
-            {removeText}
-          </button>
+      {localError ? (
+        <div className="mt-2 text-xs font-medium text-red-600">
+          {localError}
         </div>
-      ) : (
-        <div className="mt-2 text-xs text-black/46">{chooseHint}</div>
-      )}
-
-      {localError && (
-        <div className="mt-2 text-xs text-red-600">{localError}</div>
-      )}
+      ) : null}
     </div>
   );
 }

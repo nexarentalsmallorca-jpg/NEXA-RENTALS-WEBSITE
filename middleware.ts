@@ -101,12 +101,19 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl, 308);
   }
 
-  // Legacy fleet page — booking lives on the localized homepage
+  /*
+    Vehicles route should open the local Home showroom page.
+
+    Examples:
+    /en/vehicles -> /en/Home
+    /vehicles    -> /en/Home
+  */
   if (cleanPathWithoutLocale === "/vehicles") {
     const redirectUrl = request.nextUrl.clone();
     const localeToUse = hasLocalePrefix ? firstSegment : defaultLocale;
 
-    redirectUrl.pathname = `/${localeToUse}`;
+    redirectUrl.pathname = `/${localeToUse}/Home`;
+    redirectUrl.search = "";
 
     return NextResponse.redirect(redirectUrl, 308);
   }

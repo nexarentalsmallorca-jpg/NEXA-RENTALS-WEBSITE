@@ -146,6 +146,16 @@ function isDefaultEnglishBubbles(messages?: string[]) {
   );
 }
 
+function isMobileLikeNow() {
+  if (typeof window === "undefined") return false;
+
+  return (
+    window.matchMedia("(pointer: coarse)").matches ||
+    window.matchMedia("(hover: none)").matches ||
+    window.innerWidth <= 1023
+  );
+}
+
 export default function WhatsAppSupport({
   phone = "34971482342",
   message,
@@ -166,6 +176,7 @@ export default function WhatsAppSupport({
   }, [messages, copy.bubbles]);
 
   const [mounted, setMounted] = useState(false);
+  const [isMobileLike, setIsMobileLike] = useState(false);
   const [showBubble, setShowBubble] = useState(false);
   const [bubbleText, setBubbleText] = useState(finalMessages[0] ?? "");
 
@@ -173,6 +184,22 @@ export default function WhatsAppSupport({
 
   useEffect(() => {
     setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    const updateDeviceMode = () => {
+      setIsMobileLike(isMobileLikeNow());
+    };
+
+    updateDeviceMode();
+
+    window.addEventListener("resize", updateDeviceMode);
+    window.addEventListener("orientationchange", updateDeviceMode);
+
+    return () => {
+      window.removeEventListener("resize", updateDeviceMode);
+      window.removeEventListener("orientationchange", updateDeviceMode);
+    };
   }, []);
 
   useEffect(() => {
@@ -215,19 +242,53 @@ export default function WhatsAppSupport({
 
   const href = `https://wa.me/${phone}?text=${encodeURIComponent(finalMessage)}`;
 
+  const buttonSize = isMobileLike ? 58 : 72;
+
   const ui = (
     <div
       style={{
         position: "fixed",
-        right: 22,
+        left: isMobileLike ? 22 : "auto",
+        right: isMobileLike ? "auto" : 22,
         bottom: 22,
-        zIndex: 2147483647,
+        zIndex: 2147483400,
         display: "flex",
+        flexDirection: "row",
         alignItems: "flex-end",
         gap: 12,
         pointerEvents: "none",
       }}
     >
+      {isMobileLike && (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={copy.whatsappSupport}
+          style={{
+            pointerEvents: "auto",
+            width: buttonSize,
+            height: buttonSize,
+            borderRadius: "50%",
+            overflow: "hidden",
+            display: "block",
+            background: "transparent",
+            flexShrink: 0,
+          }}
+        >
+          <img
+            src="/images/whatsapp.png"
+            alt={copy.whatsappAlt}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        </a>
+      )}
+
       <a
         href={href}
         target="_blank"
@@ -235,7 +296,9 @@ export default function WhatsAppSupport({
         aria-label={copy.openChat}
         style={{
           pointerEvents: showBubble ? "auto" : "none",
-          transform: showBubble ? "translateX(0px)" : "translateX(18px)",
+          transform: showBubble
+  ? "translateX(0px)"
+  : "translateX(18px)",
           opacity: showBubble ? 1 : 0,
           transition: "all 320ms ease",
           background: "rgba(15,17,21,0.94)",
@@ -259,32 +322,34 @@ export default function WhatsAppSupport({
         {bubbleText}
       </a>
 
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={copy.whatsappSupport}
-        style={{
-          pointerEvents: "auto",
-          width: 72,
-          height: 72,
-          borderRadius: "50%",
-          overflow: "hidden",
-          display: "block",
-          background: "transparent",
-        }}
-      >
-        <img
-          src="/images/whatsapp.png"
-          alt={copy.whatsappAlt}
+      {!isMobileLike && (
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={copy.whatsappSupport}
           style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
+            pointerEvents: "auto",
+            width: buttonSize,
+            height: buttonSize,
+            borderRadius: "50%",
+            overflow: "hidden",
             display: "block",
+            background: "transparent",
           }}
-        />
-      </a>
+        >
+          <img
+            src="/images/whatsapp.png"
+            alt={copy.whatsappAlt}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              display: "block",
+            }}
+          />
+        </a>
+      )}
     </div>
   );
 

@@ -431,6 +431,8 @@ export default function HomeClientV3() {
 
   const copy = V3_COPY[currentLocale] || V3_COPY.en;
 
+  const [hasResolvedMobileMode, setHasResolvedMobileMode] = useState(false);
+const [isMobileDirectShowroom, setIsMobileDirectShowroom] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(1);
   const [loadingProgress, setLoadingProgress] = useState(0);
   const [firstFrameReady, setFirstFrameReady] = useState(false);
@@ -463,6 +465,53 @@ export default function HomeClientV3() {
 
   const finalCtaProgress = smoothStep((currentFrame - 630) / 34);
 
+  useEffect(() => {
+  if (typeof window === "undefined") return;
+
+  const mediaQuery = window.matchMedia("(max-width: 1023px)");
+
+  const updateMobileShowroom = () => {
+    setIsMobileDirectShowroom(mediaQuery.matches);
+    setHasResolvedMobileMode(true);
+  };
+
+  updateMobileShowroom();
+
+  mediaQuery.addEventListener("change", updateMobileShowroom);
+
+  return () => {
+    mediaQuery.removeEventListener("change", updateMobileShowroom);
+  };
+}, []);
+useEffect(() => {
+  if (!hasResolvedMobileMode) return;
+  if (isMobileDirectShowroom) return;
+  if (showBookingShowroom) return;
+
+  const redrawDesktopFirstFrame = () => {
+    lastDrawnFrameRef.current = 0;
+
+    const initialProgress = getScrollProgress();
+
+    targetProgressRef.current = initialProgress;
+    smoothedProgressRef.current = initialProgress;
+
+    renderFrameFromProgress(initialProgress, true);
+  };
+
+  const frameId = window.requestAnimationFrame(() => {
+    redrawDesktopFirstFrame();
+  });
+
+  return () => {
+    window.cancelAnimationFrame(frameId);
+  };
+}, [
+  hasResolvedMobileMode,
+  isMobileDirectShowroom,
+  showBookingShowroom,
+  firstFrameReady,
+]);
   function openBookingShowroom() {
     if (showBookingShowroomRef.current || openingShowroomRef.current) return;
 
@@ -923,18 +972,35 @@ export default function HomeClientV3() {
     };
   }, [firstFrameReady]);
 
-  if (showBookingShowroom) {
-    return (
-      <main className="min-h-screen overflow-hidden bg-black text-white">
-        <div
-          className="min-h-screen transition-opacity duration-[850ms] ease-out"
-          style={{ opacity: showroomEntered ? 1 : 0 }}
-        >
-          <NexaBookingShowroomV3 />
-        </div>
-      </main>
-    );
-  }
+  if (!hasResolvedMobileMode) {
+  return (
+    <main
+      className="fixed inset-0 z-[2147483000] min-h-[100svh] bg-black"
+      aria-hidden="true"
+    />
+  );
+}
+
+if (isMobileDirectShowroom) {
+  return (
+    <main className="min-h-[100svh] overflow-hidden bg-black text-white">
+      <NexaBookingShowroomV3 />
+    </main>
+  );
+}
+
+if (showBookingShowroom) {
+  return (
+    <main className="min-h-screen overflow-hidden bg-black text-white">
+      <div
+        className="min-h-screen transition-opacity duration-[850ms] ease-out"
+        style={{ opacity: showroomEntered ? 1 : 0 }}
+      >
+        <NexaBookingShowroomV3 />
+      </div>
+    </main>
+  );
+}
 
   return (
     <main className="bg-black text-white">
