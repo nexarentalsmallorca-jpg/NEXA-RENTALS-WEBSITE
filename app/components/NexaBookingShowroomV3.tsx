@@ -468,7 +468,8 @@ function LocationV3() {
         <div className="absolute inset-0 opacity-55 [background-image:radial-gradient(circle,rgba(255,255,255,0.26)_1px,transparent_1.5px)] [background-size:24px_24px]" />
       </div>
 
-      <div className="relative mx-auto grid max-w-[1180px] items-center gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10">
+      {/* DESKTOP ORIGINAL VERSION */}
+      <div className="nexa-location-desktop-layout relative mx-auto grid max-w-[1180px] items-center gap-8 lg:grid-cols-[1.08fr_0.92fr] lg:gap-10">
         <div className="relative">
           <div className="relative overflow-hidden rounded-[22px] border border-white/13 bg-white/[0.025] p-2 shadow-[0_22px_65px_rgba(0,0,0,0.5)]">
             <div className="relative overflow-hidden rounded-[16px] border border-white/10 bg-white">
@@ -601,6 +602,123 @@ function LocationV3() {
         </div>
       </div>
 
+      {/* MOBILE ONLY COMPACT VERSION */}
+      <div className="nexa-location-mobile-layout relative mx-auto hidden w-full max-w-[430px]">
+        <div className="nexa-location-mobile-top grid grid-cols-[44%_1fr] items-stretch gap-3">
+          <div className="nexa-location-mobile-map min-w-0">
+            <div className="relative h-full w-full overflow-hidden rounded-[16px] border border-white/12 bg-white p-[2px] shadow-[0_16px_38px_rgba(0,0,0,0.5)]">
+              <div className="relative h-full w-full overflow-hidden rounded-[14px] bg-white">
+                <iframe
+                  title="NEXA Rentals Magaluf location map mobile"
+                  src={GOOGLE_MAP_EMBED_URL}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="h-full w-full"
+                  style={{
+                    border: 0,
+                    filter: "brightness(1.06) contrast(0.98) saturate(1.1)",
+                  }}
+                  allowFullScreen
+                />
+
+                <div className="pointer-events-none absolute inset-0 rounded-[14px] shadow-[inset_0_0_16px_rgba(255,255,255,0.25),inset_0_0_8px_rgba(0,0,0,0.08)]" />
+
+                <div className="pointer-events-none absolute left-[7px] top-[7px] rounded-full border border-black/10 bg-white/92 px-[7px] py-[4px] text-[5.6px] font-black uppercase tracking-[0.14em] text-black/75 shadow-[0_8px_18px_rgba(0,0,0,0.13)] backdrop-blur-md">
+                  Interactive Map
+                </div>
+
+                <a
+                  href={GOOGLE_MAPS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="absolute bottom-[7px] left-[7px] rounded-full border border-black/10 bg-white/94 px-[7px] py-[4px] text-[5.6px] font-black uppercase tracking-[0.11em] text-black/80 shadow-[0_8px_18px_rgba(0,0,0,0.15)] backdrop-blur-md"
+                >
+                  View larger map
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="nexa-location-mobile-info min-w-0 border-b border-white/10 pb-1">
+            <div className="text-[6px] font-black uppercase tracking-[0.35em] text-white/42">
+              Location
+            </div>
+
+            <h2
+              className="mt-[6px] text-[21px] font-black leading-[0.94] tracking-[-0.07em] text-white"
+              style={{ fontFamily: montserrat.style.fontFamily }}
+            >
+              Find Us in Magaluf
+            </h2>
+
+            <div className="mt-[8px] h-px w-[32px] bg-white/45" />
+
+            <div className="mt-[10px] flex items-start gap-[7px]">
+              <div className="mt-[1px] flex h-[25px] w-[25px] shrink-0 items-center justify-center rounded-full border border-white/14 bg-white/[0.035] text-white">
+                <ClockIcon />
+              </div>
+
+              <div>
+                <div className="text-[11px] font-bold leading-[1.08] tracking-[-0.04em] text-white">
+                  09:00 – 14:00
+                </div>
+
+                <div className="mt-[2px] text-[11px] font-bold leading-[1.08] tracking-[-0.04em] text-white">
+                  15:00 – 20:00
+                </div>
+
+                <div className="mt-[4px] text-[6px] font-black uppercase tracking-[0.16em] text-white/36">
+                  Every day
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-[10px]">
+              <div
+                className={`inline-flex items-center gap-[5px] rounded-[7px] border px-[7px] py-[4px] text-[6.5px] font-black uppercase tracking-[0.15em] ${statusClasses}`}
+              >
+                <span
+                  className={`h-[5px] w-[5px] rounded-full ${
+                    status?.isOpen ? "bg-emerald-300" : "bg-red-300"
+                  }`}
+                />
+
+                {status?.label ?? "Checking"}
+              </div>
+
+              <div className="mt-[5px] text-[8px] font-semibold leading-[1.25] text-white/70">
+                {status?.subLabel ?? "Checking local time"}
+              </div>
+
+              <div className="mt-[2px] text-[7px] leading-[1.25] text-white/34">
+                Mallorca: {status?.localTime ?? "--:--"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <a
+          href={GOOGLE_DIRECTIONS_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="nexa-location-pulse group mt-[13px] flex w-full items-center justify-between rounded-[14px] bg-white px-[13px] py-[11px] text-black shadow-[0_0_26px_rgba(255,255,255,0.22)] transition duration-300 hover:bg-neutral-100"
+        >
+          <span className="flex items-center gap-[9px]">
+            <span className="flex h-[27px] w-[27px] items-center justify-center rounded-full bg-black text-white transition duration-300 group-hover:scale-110">
+              <MapIcon />
+            </span>
+
+            <span className="text-[12px] font-black tracking-[-0.035em]">
+              Open in your maps
+            </span>
+          </span>
+
+          <span className="text-[22px] font-light leading-none transition duration-300 group-hover:translate-x-1">
+            ›
+          </span>
+        </a>
+      </div>
+
       <style jsx>{`
         .nexa-location-cursor-active .nexa-location-reveal {
           opacity: 1;
@@ -621,6 +739,10 @@ function LocationV3() {
             rgba(0, 0, 0, 0.5) 58%,
             transparent 78%
           );
+        }
+
+        .nexa-location-mobile-layout {
+          display: none;
         }
 
         @keyframes nexaLocationPulse {
@@ -707,12 +829,53 @@ function LocationV3() {
 
         @media (max-width: 767px) {
           #location {
-            padding-top: 44px;
-            padding-bottom: 48px;
+            padding: 22px 12px 28px !important;
+          }
+
+          .nexa-location-desktop-layout {
+            display: none !important;
+          }
+
+          .nexa-location-mobile-layout {
+            display: block !important;
+          }
+
+          .nexa-location-mobile-map {
+            height: 184px !important;
           }
 
           .nexa-location-reveal {
-            display: none;
+            display: none !important;
+          }
+        }
+
+        @media (max-width: 390px) {
+          .nexa-location-mobile-top {
+            grid-template-columns: 42% 1fr !important;
+            gap: 10px !important;
+          }
+
+          .nexa-location-mobile-map {
+            height: 176px !important;
+          }
+
+          .nexa-location-mobile-info h2 {
+            font-size: 20px !important;
+          }
+        }
+
+        @media (max-width: 350px) {
+          .nexa-location-mobile-top {
+            grid-template-columns: 40% 1fr !important;
+            gap: 9px !important;
+          }
+
+          .nexa-location-mobile-map {
+            height: 168px !important;
+          }
+
+          .nexa-location-mobile-info h2 {
+            font-size: 18px !important;
           }
         }
 
@@ -1037,14 +1200,92 @@ const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
     }
   };
 }, []);
+useEffect(() => {
+  if (typeof window === "undefined") return;
+
+  let lastMobileScrollAt = 0;
+
+  const isMobileShowroom = () => {
+    return window.matchMedia("(max-width: 1023px)").matches;
+  };
+
+  const blurFocusedInputOnMobileScroll = () => {
+    if (!isMobileShowroom()) return;
+
+    const activeElement = document.activeElement as HTMLElement | null;
+
+    if (!activeElement) return;
+
+    const tagName = activeElement.tagName.toLowerCase();
+
+    const isTypingElement =
+      tagName === "input" ||
+      tagName === "textarea" ||
+      activeElement.isContentEditable;
+
+    if (!isTypingElement) return;
+
+    activeElement.blur();
+  };
+
+  const handleMobileScroll = () => {
+    if (!isMobileShowroom()) return;
+
+    lastMobileScrollAt = Date.now();
+
+    blurFocusedInputOnMobileScroll();
+
+    window.requestAnimationFrame(() => {
+      blurFocusedInputOnMobileScroll();
+    });
+
+    window.setTimeout(() => {
+      blurFocusedInputOnMobileScroll();
+    }, 120);
+  };
+
+  const handleMobileFocusIn = () => {
+    if (!isMobileShowroom()) return;
+
+    const justScrolled = Date.now() - lastMobileScrollAt < 1100;
+
+    if (!justScrolled) return;
+
+    window.setTimeout(() => {
+      blurFocusedInputOnMobileScroll();
+    }, 0);
+  };
+
+  window.addEventListener("scroll", handleMobileScroll, {
+    passive: true,
+  });
+
+  window.addEventListener("touchmove", handleMobileScroll, {
+    passive: true,
+  });
+
+  document.addEventListener("focusin", handleMobileFocusIn);
+
+  return () => {
+    window.removeEventListener("scroll", handleMobileScroll);
+    window.removeEventListener("touchmove", handleMobileScroll);
+    document.removeEventListener("focusin", handleMobileFocusIn);
+  };
+}, []);
 
  return (
   <div id="nexa-showroom-v3" className="bg-black">
+      <div className="nexa-showroom-mobile-fixed-nav lg:hidden">
+        <NavbarV3 onBookClick={handleBookNowClick} />
+      </div>
+
       <section
         id="booking"
         className="relative isolate min-h-[100svh] w-full overflow-hidden bg-black text-white lg:h-screen lg:min-h-[640px]"
       >
-        <NavbarV3 onBookClick={handleBookNowClick} />
+        <div className="nexa-showroom-desktop-nav hidden lg:block">
+          <NavbarV3 onBookClick={handleBookNowClick} />
+        </div>
 
         <div className="absolute inset-0 z-0 hidden lg:block">
           {VEHICLE_SLIDES.map((vehicle, index) => {
@@ -1425,6 +1666,62 @@ const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
         </button>
 
         <style jsx>{`
+
+                  .nexa-showroom-mobile-fixed-nav {
+            display: none;
+          }
+
+          .nexa-showroom-desktop-nav {
+            display: block;
+          }
+
+          @media (max-width: 1023px) {
+            .nexa-showroom-mobile-fixed-nav {
+              display: block !important;
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              right: 0 !important;
+              height: 0 !important;
+              z-index: 2147483000 !important;
+              isolation: isolate !important;
+              transform: translateZ(0) !important;
+              -webkit-transform: translateZ(0) !important;
+              pointer-events: none !important;
+            }
+
+            .nexa-showroom-mobile-fixed-nav :global(header),
+            .nexa-showroom-mobile-fixed-nav :global(nav) {
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              right: 0 !important;
+              z-index: 2147483000 !important;
+              transform: translateZ(0) !important;
+              -webkit-transform: translateZ(0) !important;
+              --nexa-mobile-nav-icon: #ffffff;
+            }
+
+            .nexa-showroom-mobile-fixed-nav :global(a),
+            .nexa-showroom-mobile-fixed-nav :global(button),
+            .nexa-showroom-mobile-fixed-nav :global([role="button"]) {
+              pointer-events: auto !important;
+            }
+
+            .nexa-showroom-desktop-nav {
+              display: none !important;
+            }
+          }
+
+          @media (min-width: 1024px) {
+            .nexa-showroom-mobile-fixed-nav {
+              display: none !important;
+            }
+
+            .nexa-showroom-desktop-nav {
+              display: block !important;
+            }
+          }
           #booking :global(nav),
           #booking :global(header) {
             --nexa-mobile-nav-icon: #ffffff;

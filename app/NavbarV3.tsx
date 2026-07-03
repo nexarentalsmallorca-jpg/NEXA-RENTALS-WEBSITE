@@ -523,7 +523,7 @@ export default function NavbarV3({
   return (
     <header
       data-mobile-scrolled={mobileScrolled ? "true" : "false"}
-      className={`${navFont.className} ${headerPositionClass} nexa-navbar-shell pointer-events-none left-0 right-0 top-0 z-[90] bg-transparent`}
+      className={`${navFont.className} ${headerPositionClass} nexa-navbar-shell pointer-events-none left-0 right-0 top-0 z-[2147483000] bg-transparent lg:z-[90]`}
     >
       <AnnouncementBar />
 
@@ -973,10 +973,27 @@ export default function NavbarV3({
         }
 
         @media (max-width: 1023px) {
-          body {
-            padding-top: ${MOBILE_PAGE_TOP_OFFSET_PX}px !important;
-          }
-        }
+  body {
+    padding-top: ${MOBILE_PAGE_TOP_OFFSET_PX}px !important;
+  }
+
+  .nexa-navbar-shell {
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 2147483000 !important;
+    isolation: isolate !important;
+    transform: translateZ(0) !important;
+    -webkit-transform: translateZ(0) !important;
+  }
+
+  .nexa-navbar-shell .nexa-announcement-bar,
+  .nexa-navbar-shell .nexa-mobile-nav {
+    position: relative !important;
+    z-index: 2 !important;
+  }
+}
 
         .nexa-navbar-shell[data-mobile-scrolled="true"] .nexa-mobile-nav {
           background: #000000 !important;

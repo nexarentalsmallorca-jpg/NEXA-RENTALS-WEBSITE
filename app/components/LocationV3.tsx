@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { Montserrat } from "next/font/google";
 
 const montserrat = Montserrat({
@@ -37,7 +37,9 @@ function getMadridTimeStatus(): OpenStatus {
   }).formatToParts(now);
 
   const hour = Number(parts.find((part) => part.type === "hour")?.value ?? "0");
-  const minute = Number(parts.find((part) => part.type === "minute")?.value ?? "0");
+  const minute = Number(
+    parts.find((part) => part.type === "minute")?.value ?? "0"
+  );
 
   const totalMinutes = hour * 60 + minute;
 
@@ -61,7 +63,10 @@ function getMadridTimeStatus(): OpenStatus {
     isOpen,
     label: isOpen ? "OPEN" : "CLOSED",
     subLabel,
-    localTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`,
+    localTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(
+      2,
+      "0"
+    )}`,
   };
 }
 
@@ -139,7 +144,7 @@ export default function LocationV3() {
       : "border-red-400/35 bg-red-400/[0.09] text-red-300";
   }, [status]);
 
-  const handleMouseMove = (event: React.MouseEvent<HTMLElement>) => {
+  const handleMouseMove = (event: MouseEvent<HTMLElement>) => {
     const section = sectionRef.current;
     if (!section) return;
 
@@ -183,7 +188,8 @@ export default function LocationV3() {
         <div className="absolute inset-0 opacity-45 [background-image:radial-gradient(circle,rgba(255,255,255,0.2)_1px,transparent_1.5px)] [background-size:24px_24px]" />
       </div>
 
-      <div className="relative mx-auto grid max-w-[920px] items-center gap-5 lg:grid-cols-[0.95fr_0.86fr] lg:gap-7">
+      {/* DESKTOP / TABLET ORIGINAL LAYOUT */}
+      <div className="nexa-location-desktop-layout relative mx-auto grid max-w-[920px] items-center gap-5 lg:grid-cols-[0.95fr_0.86fr] lg:gap-7">
         <div className="relative">
           <div className="relative overflow-hidden rounded-[18px] border border-white/12 bg-white/[0.025] p-1.5 shadow-[0_18px_46px_rgba(0,0,0,0.48)]">
             <div className="relative overflow-hidden rounded-[13px] border border-white/10 bg-white">
@@ -313,6 +319,120 @@ export default function LocationV3() {
         </div>
       </div>
 
+      {/* MOBILE ONLY COMPACT LAYOUT */}
+      <div className="nexa-location-mobile-layout relative mx-auto hidden w-full max-w-[430px]">
+        <div className="nexa-location-mobile-top">
+          <div className="nexa-location-mobile-map">
+            <div className="relative h-full w-full overflow-hidden rounded-[15px] border border-white/12 bg-white p-[2px] shadow-[0_14px_34px_rgba(0,0,0,0.48)]">
+              <div className="relative h-full w-full overflow-hidden rounded-[13px] bg-white">
+                <iframe
+                  title="NEXA Rentals Magaluf location map mobile"
+                  src={GOOGLE_MAP_EMBED_URL}
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  className="h-full w-full"
+                  style={{
+                    border: 0,
+                    filter: "brightness(1.05) contrast(0.98) saturate(1.08)",
+                  }}
+                  allowFullScreen
+                />
+
+                <div className="pointer-events-none absolute inset-0 rounded-[13px] shadow-[inset_0_0_16px_rgba(255,255,255,0.25),inset_0_0_8px_rgba(0,0,0,0.08)]" />
+
+                <div className="pointer-events-none absolute left-[7px] top-[7px] rounded-full border border-black/10 bg-white/90 px-[7px] py-[4px] text-[5.8px] font-black uppercase tracking-[0.15em] text-black/75 shadow-[0_8px_20px_rgba(0,0,0,0.12)] backdrop-blur-md">
+                  Interactive Map
+                </div>
+
+                <a
+                  href={GOOGLE_MAPS_URL}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="absolute bottom-[7px] left-[7px] rounded-full border border-black/10 bg-white/92 px-[7px] py-[4px] text-[5.8px] font-black uppercase tracking-[0.12em] text-black/78 shadow-[0_8px_20px_rgba(0,0,0,0.14)] backdrop-blur-md"
+                >
+                  View larger map
+                </a>
+              </div>
+            </div>
+          </div>
+
+          <div className="nexa-location-mobile-info">
+            <div className="text-[6px] font-black uppercase tracking-[0.35em] text-white/42">
+              Location
+            </div>
+
+            <h2 className="mt-[5px] text-[21px] font-black leading-[0.94] tracking-[-0.07em] text-white">
+              Find Us in Magaluf
+            </h2>
+
+            <div className="mt-[8px] h-px w-[32px] bg-white/45" />
+
+            <div className="mt-[9px] flex items-start gap-[7px]">
+              <div className="mt-[2px] flex h-[24px] w-[24px] shrink-0 items-center justify-center rounded-full border border-white/12 bg-white/[0.04] text-white">
+                <ClockIcon />
+              </div>
+
+              <div>
+                <div className="text-[11px] font-bold leading-[1.08] tracking-[-0.04em] text-white">
+                  09:00 – 14:00
+                </div>
+
+                <div className="mt-[2px] text-[11px] font-bold leading-[1.08] tracking-[-0.04em] text-white">
+                  15:00 – 20:00
+                </div>
+
+                <div className="mt-[4px] text-[6px] font-black uppercase tracking-[0.16em] text-white/35">
+                  Every day
+                </div>
+              </div>
+            </div>
+
+            <div className="mt-[10px]">
+              <div
+                className={`inline-flex items-center gap-[5px] rounded-[7px] border px-[7px] py-[4px] text-[6.5px] font-black uppercase tracking-[0.15em] ${statusClasses}`}
+              >
+                <span
+                  className={`h-[5px] w-[5px] rounded-full ${
+                    status?.isOpen ? "bg-emerald-300" : "bg-red-300"
+                  }`}
+                />
+
+                {status?.label ?? "Checking"}
+              </div>
+
+              <div className="mt-[5px] text-[8px] font-semibold leading-[1.25] text-white/70">
+                {status?.subLabel ?? "Checking local time"}
+              </div>
+
+              <div className="mt-[2px] text-[7px] leading-[1.25] text-white/34">
+                Mallorca: {status?.localTime ?? "--:--"}
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <a
+          href={GOOGLE_DIRECTIONS_URL}
+          target="_blank"
+          rel="noreferrer"
+          className="nexa-location-pulse group mt-[13px] flex w-full items-center justify-between rounded-[13px] bg-white px-[13px] py-[11px] text-black shadow-[0_0_26px_rgba(255,255,255,0.22)] transition duration-300 hover:bg-neutral-100"
+        >
+          <span className="flex items-center gap-[9px]">
+            <span className="flex h-[27px] w-[27px] items-center justify-center rounded-full bg-black text-white transition duration-300 group-hover:scale-110">
+              <MapIcon />
+            </span>
+
+            <span className="text-[12px] font-black tracking-[-0.035em]">
+              Open in your maps
+            </span>
+          </span>
+
+          <span className="text-[22px] font-light leading-none transition duration-300 group-hover:translate-x-1.5">
+            ›
+          </span>
+        </a>
+      </div>
+
       <style jsx global>{`
         .nexa-location-cursor-active .nexa-cursor-story {
           opacity: 1;
@@ -333,6 +453,10 @@ export default function LocationV3() {
             rgba(0, 0, 0, 0.18) 58%,
             transparent 75%
           );
+        }
+
+        .nexa-location-mobile-layout {
+          display: none;
         }
 
         @keyframes nexaLocationPulse {
@@ -422,12 +546,62 @@ export default function LocationV3() {
 
         @media (max-width: 767px) {
           #location {
-            padding-top: 34px;
-            padding-bottom: 38px;
+            padding: 22px 12px 28px !important;
+          }
+
+          .nexa-location-desktop-layout {
+            display: none !important;
+          }
+
+          .nexa-location-mobile-layout {
+            display: block !important;
+          }
+
+          .nexa-location-mobile-top {
+            display: grid !important;
+            grid-template-columns: 44% 1fr !important;
+            align-items: stretch !important;
+            gap: 12px !important;
+          }
+
+          .nexa-location-mobile-map {
+            height: 184px !important;
+            min-width: 0 !important;
+          }
+
+          .nexa-location-mobile-info {
+            min-width: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            justify-content: center !important;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+            padding-bottom: 2px !important;
           }
 
           .nexa-cursor-story {
-            display: none;
+            display: none !important;
+          }
+        }
+
+        @media (max-width: 390px) {
+          .nexa-location-mobile-top {
+            grid-template-columns: 42% 1fr !important;
+            gap: 10px !important;
+          }
+
+          .nexa-location-mobile-map {
+            height: 176px !important;
+          }
+        }
+
+        @media (max-width: 350px) {
+          .nexa-location-mobile-top {
+            grid-template-columns: 40% 1fr !important;
+            gap: 9px !important;
+          }
+
+          .nexa-location-mobile-map {
+            height: 168px !important;
           }
         }
 
