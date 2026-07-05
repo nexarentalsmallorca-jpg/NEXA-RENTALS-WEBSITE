@@ -83,7 +83,7 @@ const DESKTOP_LOGO_HEIGHT_PX = 72;
   60 = more push
   80 = a lot
 */
-const MOBILE_PAGE_TOP_OFFSET_PX = 42;
+const MOBILE_PAGE_TOP_OFFSET_PX = 0;
 
 /*
   MOBILE ONLY:
@@ -489,6 +489,25 @@ export default function NavbarV3({
     setMobileMenuOpen(false);
   }
 
+  function handleLanguageChange(nextLocale: Locale) {
+  closeMenus();
+
+  const pathParts = pathname.split("/").filter(Boolean);
+
+  if (pathParts.length === 0) {
+    router.push(`/${nextLocale}`);
+    return;
+  }
+
+  if (isLocale(pathParts[0])) {
+    pathParts[0] = nextLocale;
+    router.push(`/${pathParts.join("/")}`);
+    return;
+  }
+
+  router.push(`/${nextLocale}`);
+}
+
   function handleBookClick() {
     closeMenus();
 
@@ -525,10 +544,10 @@ export default function NavbarV3({
       data-mobile-scrolled={mobileScrolled ? "true" : "false"}
       className={`${navFont.className} ${headerPositionClass} nexa-navbar-shell pointer-events-none left-0 right-0 top-0 z-[2147483000] bg-transparent lg:z-[90]`}
     >
-      <AnnouncementBar />
+      
 
       {showAngledLogoPanel ? (
-        <div className="nexa-angled-logo-panel pointer-events-none absolute left-0 top-[34px] hidden lg:block" />
+        <div className="nexa-angled-logo-panel pointer-events-none absolute left-0 top-0 hidden lg:block" />
       ) : null}
 
       <div className="nexa-desktop-nav pointer-events-auto mx-auto hidden h-[96px] max-w-[1510px] items-center justify-between bg-transparent px-[clamp(28px,4vw,66px)] transition-all duration-300 lg:flex">
@@ -641,16 +660,16 @@ export default function NavbarV3({
                     <button
                       key={language.code}
                       type="button"
-                      disabled
+                      onClick={() => handleLanguageChange(language.code)}
                       className={[
-                        "group flex w-full cursor-not-allowed items-center justify-between rounded-[18px] px-3 py-2.5 text-left opacity-80 transition",
+                        "group flex w-full cursor-pointer items-center justify-between rounded-[18px] px-3 py-2.5 text-left opacity-100 transition hover:scale-[1.01] active:scale-[0.98]",
                         isLightTone
                           ? active
                             ? "bg-[#202226]/8 text-[#202226]"
-                            : "text-[#202226]/68"
+                            : "text-[#202226]/68 hover:bg-[#202226]/[0.055] hover:text-[#202226]"
                           : active
                             ? "bg-white/[0.10] text-white"
-                            : "text-white/68",
+                            : "text-white/68 hover:bg-white/[0.065] hover:text-white",
                       ].join(" ")}
                     >
                       <span className="flex items-center gap-3">
@@ -678,11 +697,11 @@ export default function NavbarV3({
                           active
                             ? "text-[#ff7a00]"
                             : isLightTone
-                              ? "text-[#202226]/34"
-                              : "text-white/34",
+                              ? "text-[#202226]/44"
+                              : "text-white/44",
                         ].join(" ")}
                       >
-                        {active ? copy.active : "Coming soon"}
+                        {active ? copy.active : language.short}
                       </span>
                     </button>
                   );
@@ -797,10 +816,12 @@ export default function NavbarV3({
                     <button
                       key={language.code}
                       type="button"
-                      disabled
+                      onClick={() => handleLanguageChange(language.code)}
                       className={[
-                        "group flex w-full cursor-not-allowed items-center justify-between rounded-[18px] px-3 py-2.5 text-left opacity-80 transition",
-                        active ? "bg-white/[0.12] text-white" : "text-white/68",
+                        "group flex w-full cursor-pointer items-center justify-between rounded-[18px] px-3 py-2.5 text-left opacity-100 transition hover:scale-[1.01] active:scale-[0.98]",
+                        active
+                          ? "bg-white/[0.12] text-white"
+                          : "text-white/68 hover:bg-white/[0.065] hover:text-white",
                       ].join(" ")}
                     >
                       <span className="flex items-center gap-3">
@@ -820,10 +841,10 @@ export default function NavbarV3({
                       <span
                         className={[
                           "text-[10px] font-extrabold uppercase tracking-[0.16em]",
-                          active ? "text-[#ff7a00]" : "text-white/34",
+                          active ? "text-[#ff7a00]" : "text-white/44",
                         ].join(" ")}
                       >
-                        {active ? copy.active : "Soon"}
+                        {active ? copy.active : language.short}
                       </span>
                     </button>
                   );
@@ -919,16 +940,16 @@ export default function NavbarV3({
                   <button
                     key={language.code}
                     type="button"
-                    disabled
+                    onClick={() => handleLanguageChange(language.code)}
                     className={[
-                      "flex cursor-not-allowed items-center justify-between gap-2 rounded-[18px] px-3 py-2.5 text-left text-xs opacity-80 transition",
+                      "flex cursor-pointer items-center justify-between gap-2 rounded-[18px] px-3 py-2.5 text-left text-xs opacity-100 transition hover:scale-[1.02] active:scale-[0.98]",
                       isLightTone
                         ? active
                           ? "bg-[#202226]/8 text-[#202226]"
-                          : "text-[#202226]/66"
+                          : "text-[#202226]/66 hover:bg-[#202226]/[0.055] hover:text-[#202226]"
                         : active
                           ? "bg-white/[0.12] text-white"
-                          : "text-white/66",
+                          : "text-white/66 hover:bg-white/[0.065] hover:text-white",
                     ].join(" ")}
                   >
                     <Image
@@ -973,27 +994,27 @@ export default function NavbarV3({
         }
 
         @media (max-width: 1023px) {
-  body {
-    padding-top: ${MOBILE_PAGE_TOP_OFFSET_PX}px !important;
-  }
+          body {
+            padding-top: ${MOBILE_PAGE_TOP_OFFSET_PX}px !important;
+          }
 
-  .nexa-navbar-shell {
-    position: fixed !important;
-    top: 0 !important;
-    left: 0 !important;
-    right: 0 !important;
-    z-index: 2147483000 !important;
-    isolation: isolate !important;
-    transform: translateZ(0) !important;
-    -webkit-transform: translateZ(0) !important;
-  }
+          .nexa-navbar-shell {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 2147483000 !important;
+            isolation: isolate !important;
+            transform: translateZ(0) !important;
+            -webkit-transform: translateZ(0) !important;
+          }
 
-  .nexa-navbar-shell .nexa-announcement-bar,
-  .nexa-navbar-shell .nexa-mobile-nav {
-    position: relative !important;
-    z-index: 2 !important;
-  }
-}
+          .nexa-navbar-shell .nexa-announcement-bar,
+          .nexa-navbar-shell .nexa-mobile-nav {
+            position: relative !important;
+            z-index: 2 !important;
+          }
+        }
 
         .nexa-navbar-shell[data-mobile-scrolled="true"] .nexa-mobile-nav {
           background: #000000 !important;

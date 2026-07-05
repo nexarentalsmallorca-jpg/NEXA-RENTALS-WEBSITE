@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import { setRequestLocale } from "next-intl/server";
 
-import HomeClientV3 from "../HomeClientV3";
+import NexaBookingShowroomV3 from "../components/NexaBookingShowroomV3";
 import { defaultLocale, isValidLocale, type Locale } from "../../i18n/routing";
 
 type PageProps = {
@@ -26,7 +26,7 @@ export default async function Page({ params }: PageProps) {
 
   return (
     <Suspense fallback={null}>
-      <HomeClientV3 key={locale} />
+      <NexaBookingShowroomV3 key={locale} />
     </Suspense>
   );
 }

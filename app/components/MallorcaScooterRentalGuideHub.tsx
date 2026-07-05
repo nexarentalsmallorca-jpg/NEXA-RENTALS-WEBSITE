@@ -21,6 +21,7 @@ type GuideQuestion = {
 };
 
 const siteBaseUrl = "https://www.nexarentals.es";
+const MOBILE_VISIBLE_GUIDE_COUNT = 5;
 
 const guideQuestions: GuideQuestion[] = [
   {
@@ -135,6 +136,7 @@ export default function MallorcaScooterRentalGuideHub({ locale = "en" }: Props) 
   const [openIndex, setOpenIndex] = useState<number>(-1);
   const [sectionInView, setSectionInView] = useState(false);
   const [animationRun, setAnimationRun] = useState(0);
+  const [mobileGuideExpanded, setMobileGuideExpanded] = useState(false);
 
   useEffect(() => {
     const section = sectionRef.current;
@@ -224,6 +226,54 @@ export default function MallorcaScooterRentalGuideHub({ locale = "en" }: Props) 
           animation-timing-function: cubic-bezier(0.22, 1, 0.36, 1);
           animation-fill-mode: forwards;
         }
+
+        .mobile-guide-more-button {
+          position: relative;
+          overflow: hidden;
+        }
+
+        .mobile-guide-more-button::after {
+          content: "";
+          position: absolute;
+          inset: -80% auto -80% -55%;
+          width: 34%;
+          transform: rotate(18deg);
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.8),
+            transparent
+          );
+          opacity: 0.55;
+          animation: mobileGuideMoreShine 2.4s ease-in-out infinite;
+          pointer-events: none;
+        }
+
+        @keyframes mobileGuideMoreShine {
+          0% {
+            left: -55%;
+          }
+
+          48%,
+          100% {
+            left: 125%;
+          }
+        }
+
+        @media (max-width: 767px) {
+          .mobile-guide-hidden {
+            display: none !important;
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .guide-question-animate,
+          .mobile-guide-more-button::after {
+            animation: none !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
+        }
       `}</style>
 
       <div className="mx-auto max-w-6xl">
@@ -240,13 +290,15 @@ export default function MallorcaScooterRentalGuideHub({ locale = "en" }: Props) 
             const number = String(index + 1).padStart(2, "0");
             const href = `/${locale}/blog/${item.slug}`;
             const delay = `${Math.min(index, 14) * 85}ms`;
+            const shouldHideOnMobile =
+              !mobileGuideExpanded && index >= MOBILE_VISIBLE_GUIDE_COUNT;
 
             return (
               <article
-                key={`${animationRun}-${item.slug}`}
+                key={`${animationRun}-${mobileGuideExpanded}-${item.slug}`}
                 className={`border-b border-black/10 bg-white ${
                   sectionInView ? "guide-question-animate" : "opacity-0"
-                }`}
+                } ${shouldHideOnMobile ? "mobile-guide-hidden" : ""}`}
                 style={{
                   animationDelay: sectionInView ? delay : "0ms",
                 }}
@@ -317,6 +369,24 @@ export default function MallorcaScooterRentalGuideHub({ locale = "en" }: Props) 
               </article>
             );
           })}
+        </div>
+
+        <div className="mt-7 flex justify-center md:hidden">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileGuideExpanded((current) => !current);
+
+              if (mobileGuideExpanded) {
+                setOpenIndex(-1);
+              }
+            }}
+            className="mobile-guide-more-button inline-flex min-h-[48px] items-center justify-center rounded-full bg-black px-7 text-[10px] font-black uppercase tracking-[0.22em] text-white shadow-[0_18px_50px_rgba(0,0,0,0.14)] transition active:scale-[0.97]"
+            aria-expanded={mobileGuideExpanded}
+            aria-controls="mallorca-scooter-rental-guide"
+          >
+            {mobileGuideExpanded ? "Show less" : "See more questions"}
+          </button>
         </div>
 
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">

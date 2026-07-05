@@ -6,8 +6,8 @@ export const dynamic = "force-dynamic";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY as string);
 
-function calcDeposit(totalAmount: number) {
-  return Math.round(totalAmount * 0.5);
+function calcFullPayment(totalAmount: number) {
+  return Math.round(totalAmount);
 }
 
 function cleanMetadataValue(value: unknown, maxLength = 500) {
@@ -158,11 +158,17 @@ export async function POST(req: Request) {
       );
     }
 
-    const depositAmount = calcDeposit(totalAmount);
-    const remainingAmount = totalAmount - depositAmount;
+    // IMPORTANT:
+    // totalAmount is already sent to Stripe in cents.
+    // Example: €39.00 = 3900
+    // Old system charged 50% here.
+    // New system charges the full booking amount online.
+    const amountToCharge = calcFullPayment(totalAmount);
+    const amountPaidOnline = amountToCharge;
+    const remainingAmount = 0;
 
     const paymentIntent = await stripe.paymentIntents.create({
-      amount: depositAmount,
+      amount: amountToCharge,
       currency: String(currency).toLowerCase(),
 
       automatic_payment_methods: {
@@ -175,10 +181,11 @@ export async function POST(req: Request) {
         bookingId: cleanMetadataValue(bookingId, 120),
 
         totalAmount: String(totalAmount),
-        depositAmount: String(depositAmount),
+        amountToCharge: String(amountToCharge),
+        amountPaidOnline: String(amountPaidOnline),
         remainingAmount: String(remainingAmount),
 
-        paymentType: "pay_50_percent",
+        paymentType: "pay_full_amount",
         booking_source: "website",
         booking_status: "payment_pending",
 
@@ -241,9 +248,16 @@ export async function POST(req: Request) {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       bookingId,
-      depositAmount,
+
+      amountToCharge,
+      amountPaidOnline,
       remainingAmount,
       totalAmount,
+
+      // Compatibility with old frontend names.
+      // This prevents breaking other files that may still read depositAmount.
+      depositAmount: amountToCharge,
+
       currency,
       assignedVehicleCode: finalVehicleCode,
       fleetGroup,
