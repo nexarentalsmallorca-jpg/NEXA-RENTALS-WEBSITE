@@ -168,9 +168,9 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
     LANGUAGES.find((language) => language.code === locale) || LANGUAGES[2];
 
   const homeHref = `/${locale}`;
-const bookHref = `/${locale}/home`;
-const contactHref = `/${locale}/contact`;
-const externalBookingHref = `/${locale}/home`;
+  const bookHref = `/${locale}/home`;
+  const contactHref = `/${locale}/contact`;
+  const externalBookingHref = `/${locale}/home`;
 
   const faqSchema = {
     "@context": "https://schema.org",
@@ -451,34 +451,35 @@ const externalBookingHref = `/${locale}/home`;
           </div>
 
           <div className="nexa-hero-visual">
-            <div className="nexa-orange-shape" />
+            <div className="nexa-visual-stack">
+              <div className="nexa-orange-shape" />
 
-            <div className="nexa-photo-card">
-              <Image
-                src="/images/personscooter.jpg"
-                alt="Roller mieten Mallorca mit NEXA Rentals in Magaluf"
-                width={850}
-                height={760}
-                priority
-                className="nexa-hero-image"
-              />
-            </div>
+              <div className="nexa-photo-card nexa-photo-card-top">
+                <Image
+                  src="/images/personscooter.jpg"
+                  alt="Roller mieten Mallorca mit NEXA Rentals in Magaluf"
+                  width={900}
+                  height={620}
+                  priority
+                  className="nexa-hero-image"
+                />
+              </div>
 
-            <div className="nexa-floating-card nexa-card-top">
-              <span className="nexa-card-label">Google Bewertung</span>
-              <strong>5.0★</strong>
-              <small>Vertraut von Mallorca-Urlaubern</small>
-            </div>
+              <div className="nexa-photo-card nexa-photo-card-bottom">
+                <Image
+                  src="/images/scooterperson2.jpg"
+                  alt="Scooter mieten Mallorca bei NEXA Rentals in Magaluf"
+                  width={900}
+                  height={720}
+                  className="nexa-hero-image"
+                />
+              </div>
 
-            <div className="nexa-floating-card nexa-card-online">
-              <span className="nexa-card-label">Buchung</span>
-              <strong>Online</strong>
-              <small>Reservieren & direkt bezahlen</small>
-            </div>
-
-            <div className="nexa-floating-price">
-              <span>von</span>
-              <strong>39€</strong>
+              <div className="nexa-floating-price">
+                <span>von</span>
+                <strong>39€</strong>
+                <small>alles inklusive</small>
+              </div>
             </div>
           </div>
         </div>
@@ -716,7 +717,7 @@ const externalBookingHref = `/${locale}/home`;
         </div>
       </section>
 
-        <footer className="nexa-seo-footer">
+      <footer className="nexa-seo-footer">
         <div className="nexa-seo-footer-inner">
           <div className="nexa-seo-footer-brand">
             <Image
@@ -1392,34 +1393,55 @@ const externalBookingHref = `/${locale}/home`;
 
         .nexa-hero-visual {
           position: relative;
-          min-height: 620px;
+          min-height: 860px;
+        }
+
+        .nexa-visual-stack {
+          position: relative;
+          width: 100%;
+          height: 100%;
+          min-height: 860px;
         }
 
         .nexa-orange-shape {
           position: absolute;
-          top: 34px;
-          right: 36px;
-          width: min(82%, 470px);
-          height: 535px;
-          border-radius: 38px;
+          top: 26px;
+          right: 20px;
+          width: min(86%, 460px);
+          height: 720px;
+          border-radius: 42px;
           background:
-            radial-gradient(circle at 78% 18%, rgba(255, 255, 255, 0.52), transparent 24%),
-            linear-gradient(135deg, #ff6500 0%, #ff8a00 48%, #ffb347 100%);
-          box-shadow: 0 34px 80px rgba(255, 122, 0, 0.28);
+            radial-gradient(
+              circle at 78% 18%,
+              rgba(255, 255, 255, 0.52),
+              transparent 24%
+            ),
+            linear-gradient(135deg, #ff6500 0%, #ff8a00 52%, #ffb347 100%);
+          box-shadow: 0 34px 84px rgba(255, 122, 0, 0.28);
         }
 
         .nexa-photo-card {
           position: absolute;
-          left: 0;
-          top: 78px;
-          width: min(78%, 500px);
-          height: 430px;
           overflow: hidden;
-          border-radius: 28px;
-          background: #eeeeee;
+          border-radius: 30px;
+          background: #f1f1f1;
           box-shadow:
-            0 30px 80px rgba(17, 17, 22, 0.18),
+            0 30px 80px rgba(0, 0, 0, 0.18),
             0 8px 22px rgba(17, 17, 22, 0.08);
+        }
+
+        .nexa-photo-card-top {
+          top: 50px;
+          left: 0;
+          width: min(74%, 430px);
+          height: 340px;
+        }
+
+        .nexa-photo-card-bottom {
+          top: 410px;
+          left: 52px;
+          width: min(82%, 500px);
+          height: 310px;
         }
 
         .nexa-hero-image {
@@ -1429,62 +1451,14 @@ const externalBookingHref = `/${locale}/home`;
           display: block;
         }
 
-        .nexa-floating-card {
-          position: absolute;
-          z-index: 4;
-          width: 156px;
-          padding: 16px 16px 14px;
-          border-radius: 22px;
-          background: rgba(255, 255, 255, 0.92);
-          border: 1px solid rgba(255, 255, 255, 0.82);
-          box-shadow: 0 22px 64px rgba(17, 17, 22, 0.16);
-          backdrop-filter: blur(14px);
-        }
-
-        .nexa-card-top {
-          top: 112px;
-          right: 0;
-        }
-
-        .nexa-card-online {
-          left: 34px;
-          bottom: 48px;
-        }
-
-        .nexa-card-label {
-          display: block;
-          color: #777685;
-          font-size: 10px;
-          font-weight: 800;
-          letter-spacing: 0.08em;
-          text-transform: uppercase;
-        }
-
-        .nexa-floating-card strong {
-          display: block;
-          margin-top: 8px;
-          color: #111116;
-          font-size: 23px;
-          font-weight: 900;
-          letter-spacing: -0.06em;
-        }
-
-        .nexa-floating-card small {
-          display: block;
-          margin-top: 4px;
-          color: #777685;
-          font-size: 11px;
-          font-weight: 600;
-          line-height: 1.35;
-        }
-
         .nexa-floating-price {
           position: absolute;
-          right: 100px;
-          bottom: 42px;
+          top: 18px;
+          right: 0;
+          bottom: auto;
           z-index: 5;
-          width: 108px;
-          height: 108px;
+          width: 122px;
+          height: 122px;
           border-radius: 999px;
           display: flex;
           flex-direction: column;
@@ -1499,6 +1473,7 @@ const externalBookingHref = `/${locale}/home`;
         }
 
         .nexa-floating-price span {
+          display: block;
           font-size: 12px;
           font-weight: 900;
           letter-spacing: 0.02em;
@@ -1506,8 +1481,20 @@ const externalBookingHref = `/${locale}/home`;
           text-transform: none;
         }
 
+        .nexa-floating-price small {
+          display: block;
+          margin-top: 2px;
+          color: #ffb347;
+          font-size: 8px;
+          font-weight: 900;
+          letter-spacing: 0.08em;
+          text-transform: uppercase;
+        }
+
         .nexa-floating-price strong {
-          font-size: 31px;
+          display: block;
+          color: #ffffff;
+          font-size: 33px;
           font-weight: 900;
           letter-spacing: -0.08em;
         }
@@ -1993,10 +1980,18 @@ const externalBookingHref = `/${locale}/home`;
           }
 
           .nexa-hero-visual {
-            min-height: 560px;
-            max-width: 640px;
+            min-height: 820px;
+            max-width: 620px;
             width: 100%;
             margin: 0 auto;
+          }
+
+          .nexa-visual-stack {
+            min-height: 820px;
+          }
+
+          .nexa-orange-shape {
+            right: 24px;
           }
 
           .nexa-content-grid {
@@ -2104,47 +2099,40 @@ const externalBookingHref = `/${locale}/home`;
           }
 
           .nexa-hero-visual {
-            min-height: 500px;
+            min-height: 690px;
+          }
+
+          .nexa-visual-stack {
+            min-height: 690px;
           }
 
           .nexa-orange-shape {
-            right: 0;
-            top: 24px;
             width: 80%;
-            height: 430px;
+            height: 560px;
+            top: 18px;
+            right: 0;
             border-radius: 28px;
           }
 
-          .nexa-photo-card {
-            left: 0;
-            top: 58px;
-            width: 78%;
-            height: 395px;
-            border-radius: 24px;
+          .nexa-photo-card-top {
+            width: 74%;
+            height: 240px;
+            top: 54px;
+            border-radius: 22px;
           }
 
-          .nexa-card-top {
-            top: 72px;
-            right: 0;
-          }
-
-          .nexa-card-online {
-            left: 16px;
-            bottom: 20px;
-          }
-
-          .nexa-floating-card {
-            width: 138px;
-            padding: 14px;
-          }
-
-          .nexa-floating-card strong {
-            font-size: 20px;
+          .nexa-photo-card-bottom {
+            width: 80%;
+            height: 230px;
+            top: 334px;
+            left: 28px;
+            border-radius: 22px;
           }
 
           .nexa-floating-price {
-            right: 30px;
-            bottom: 28px;
+            top: 14px;
+            right: 18px;
+            bottom: auto;
             width: 88px;
             height: 88px;
           }
@@ -2207,6 +2195,31 @@ const externalBookingHref = `/${locale}/home`;
 
           .nexa-fast-info-grid {
             grid-template-columns: 1fr;
+          }
+
+          .nexa-hero-visual {
+            min-height: 620px;
+          }
+
+          .nexa-visual-stack {
+            min-height: 620px;
+          }
+
+          .nexa-orange-shape {
+            width: 84%;
+            height: 500px;
+          }
+
+          .nexa-photo-card-top {
+            width: 76%;
+            height: 210px;
+          }
+
+          .nexa-photo-card-bottom {
+            width: 84%;
+            height: 210px;
+            top: 306px;
+            left: 18px;
           }
         }
 
