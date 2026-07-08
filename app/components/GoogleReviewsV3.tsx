@@ -20,7 +20,7 @@ const reviewFont = Montserrat({
 */
 const TRUST_BRAND_DESKTOP_GAP = "76px";
 const TRUST_BRAND_LAPTOP_GAP = "52px";
-const TRUST_BRAND_MOBILE_GAP = "10px";
+const TRUST_BRAND_MOBILE_GAP = "0px";
 type Locale =
   | "en"
   | "es"
@@ -62,91 +62,91 @@ const COPY: Record<
     title: "Loved by scooter riders in Mallorca.",
     rating: "Google Reviews",
     reviews: "",
-    mobileProof: "5.0 stars from 41 reviews",
+    mobileProof: "5.0 stars from 45 reviews",
     altPrefix: "Google review",
   },
   es: {
     title: "Scooters recomendados por clientes en Mallorca.",
     rating: "Reseñas de Google",
     reviews: "44 reseñas en Google",
-    mobileProof: "5,0 estrellas de 41 reseñas",
+    mobileProof: "5,0 estrellas de 45 reseñas",
     altPrefix: "Reseña de Google",
   },
   de: {
     title: "Beliebt bei Rollerfahrern auf Mallorca.",
     rating: "Google-Bewertungen",
     reviews: "44 Bewertungen auf Google",
-    mobileProof: "5,0 Sterne aus 41 Bewertungen",
+    mobileProof: "5,0 Sterne aus 45 Bewertungen",
     altPrefix: "Google-Bewertung",
   },
   fr: {
     title: "Apprécié par les conducteurs de scooters à Majorque.",
     rating: "Avis Google",
     reviews: "44 avis sur Google",
-    mobileProof: "5,0 étoiles sur 41 avis",
+    mobileProof: "5,0 étoiles sur 45 avis",
     altPrefix: "Avis Google",
   },
   it: {
     title: "Amato dai clienti scooter a Maiorca.",
     rating: "Recensioni Google",
     reviews: "44 recensioni su Google",
-    mobileProof: "5,0 stelle da 41 recensioni",
+    mobileProof: "5,0 stelle da 45 recensioni",
     altPrefix: "Recensione Google",
   },
   pt: {
     title: "Adorado por condutores de scooter em Maiorca.",
     rating: "Avaliações Google",
     reviews: "44 avaliações no Google",
-    mobileProof: "5,0 estrelas em 41 avaliações",
+    mobileProof: "5,0 estrelas em 45 avaliações",
     altPrefix: "Avaliação Google",
   },
   sv: {
     title: "Älskat av scooterförare på Mallorca.",
     rating: "Google-recensioner",
     reviews: "44 recensioner på Google",
-    mobileProof: "5,0 stjärnor från 41 recensioner",
+    mobileProof: "5,0 stjärnor från 45 recensioner",
     altPrefix: "Google-recension",
   },
   nl: {
     title: "Geliefd bij scooterrijders in Mallorca.",
     rating: "Google Reviews",
     reviews: "44 reviews op Google",
-    mobileProof: "5,0 sterren uit 41 reviews",
+    mobileProof: "5,0 sterren uit 45 reviews",
     altPrefix: "Google review",
   },
   pl: {
     title: "Polecane przez kierowców skuterów na Majorce.",
     rating: "Opinie Google",
     reviews: "44 opinii w Google",
-    mobileProof: "5,0 gwiazdek z 41 opinii",
+    mobileProof: "5,0 gwiazdek z 45 opinii",
     altPrefix: "Opinia Google",
   },
   da: {
     title: "Elsket af scooterkunder på Mallorca.",
     rating: "Google-anmeldelser",
     reviews: "44 anmeldelser på Google",
-    mobileProof: "5,0 stjerner fra 41 anmeldelser",
+    mobileProof: "5,0 stjerner fra 45 anmeldelser",
     altPrefix: "Google-anmeldelse",
   },
   no: {
     title: "Elsket av scooterførere på Mallorca.",
     rating: "Google-anmeldelser",
     reviews: "44 anmeldelser på Google",
-    mobileProof: "5,0 stjerner fra 41 anmeldelser",
+    mobileProof: "5,0 stjerner fra 45 anmeldelser",
     altPrefix: "Google-anmeldelse",
   },
   cs: {
     title: "Oblíbené mezi jezdci na skútru na Mallorce.",
     rating: "Recenze Google",
     reviews: "44 recenzí na Google",
-    mobileProof: "5,0 hvězdiček ze 41 recenzí",
+    mobileProof: "5,0 hvězdiček ze 45 recenzí",
     altPrefix: "Recenze Google",
   },
   uk: {
     title: "Улюблений сервіс серед водіїв скутерів на Майорці.",
     rating: "Відгуки Google",
     reviews: "44 відгуків у Google",
-    mobileProof: "5,0 зірок із 41 відгуку",
+    mobileProof: "5,0 зірок із 45 відгуку",
     altPrefix: "Відгук Google",
   },
 };
@@ -304,9 +304,9 @@ function TrustBrandsStrip() {
       className="review-v3-trust-strip relative z-10 w-full border-t border-black/10 bg-[#ffffff]"
     >
       <div className="mx-auto flex min-h-[235px] max-w-[1320px] flex-col items-center justify-center px-5 py-12 text-center sm:px-8 lg:min-h-[245px]">
-        <p className="review-v3-trust-title text-center text-[11px] font-bold uppercase tracking-[0.32em] text-black/55 sm:text-[12px]">
-          Trusted by local brands in Mallorca
-        </p>
+        <p className="review-v3-trust-title text-center text-[11px] font-extrabold uppercase tracking-[0.32em] text-black sm:text-[12px]">
+  Trusted by local brands in Mallorca
+</p>
 
         <div className="review-v3-trust-logos-desktop mx-auto mt-10 flex w-full max-w-[1080px] flex-row flex-nowrap items-center justify-center">
           {trustBrands.map((brand) => (
@@ -585,7 +585,7 @@ export default function GoogleReviewsV3() {
           }
 
           .review-v3-trust-logo-box {
-  width: 132px !important;
+  width: 118px !important;
   height: 68px !important;
 }
 
@@ -652,7 +652,10 @@ export default function GoogleReviewsV3() {
             line-height: 1.1 !important;
             letter-spacing: 0.12em !important;
           }
-
+.review-v3-trust-title {
+  color: #000000 !important;
+  font-weight: 800 !important;
+}
           .review-v3-subtitle {
             display: none !important;
           }
@@ -690,10 +693,10 @@ export default function GoogleReviewsV3() {
           }
 
           .review-v3-trust-strip > div {
-            min-height: 250px !important;
-            padding-top: 42px !important;
-            padding-bottom: 42px !important;
-          }
+  min-height: 185px !important;
+  padding-top: 26px !important;
+  padding-bottom: 28px !important;
+}
 
           .review-v3-trust-title {
             max-width: 310px !important;
@@ -709,7 +712,9 @@ export default function GoogleReviewsV3() {
           .review-v3-trust-mobile-window {
             display: block !important;
           }
-
+.review-v3-trust-mobile-window {
+  margin-top: 22px !important;
+}
           .review-v3-trust-mobile-track {
             column-gap: var(--trust-brand-gap-mobile);
             animation: trustBrandsMobileScroll 24s linear infinite;
