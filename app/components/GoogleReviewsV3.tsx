@@ -12,6 +12,16 @@ const reviewFont = Montserrat({
   variable: "--font-review-montserrat",
 });
 
+/*
+  TRUST BRAND LOGO SPACING CONTROL
+
+  Desktop gap: change this to control the horizontal space between logos on desktop.
+  Example: "60px", "76px", "90px", "110px"
+*/
+const TRUST_BRAND_DESKTOP_GAP = "76px";
+const TRUST_BRAND_LAPTOP_GAP = "52px";
+const TRUST_BRAND_MOBILE_GAP = "34px";
+
 type Locale =
   | "en"
   | "es"
@@ -28,6 +38,12 @@ type Locale =
   | "uk";
 
 type ReviewImage = {
+  id: number;
+  src: string;
+  alt: string;
+};
+
+type TrustBrand = {
   id: number;
   src: string;
   alt: string;
@@ -174,6 +190,29 @@ const reviews: ReviewImage[] = [
   { id: 15, src: "/images/ReviewPNG15.png", alt: "Google review 15" },
 ];
 
+const trustBrands: TrustBrand[] = [
+  {
+    id: 1,
+    src: "/images/ax1.png",
+    alt: "Vibe Experience Mallorca",
+  },
+  {
+    id: 2,
+    src: "/images/ax2.png",
+    alt: "Emotion scooter and bike rental",
+  },
+  {
+    id: 3,
+    src: "/images/ax3.png",
+    alt: "Jala Fusion",
+  },
+  {
+    id: 4,
+    src: "/images/ax4.png",
+    alt: "Saffron Desi",
+  },
+];
+
 const firstRow = reviews.slice(0, 8);
 const secondRow = reviews.slice(7, 15);
 const thirdRow = [
@@ -246,6 +285,66 @@ function ReviewStrip({
   );
 }
 
+function TrustBrandsStrip() {
+  const trustGapStyle = {
+    "--trust-brand-gap-desktop": TRUST_BRAND_DESKTOP_GAP,
+    "--trust-brand-gap-laptop": TRUST_BRAND_LAPTOP_GAP,
+    "--trust-brand-gap-mobile": TRUST_BRAND_MOBILE_GAP,
+  } as CSSProperties;
+
+  const repeatedTrustBrands = [
+    ...trustBrands,
+    ...trustBrands,
+    ...trustBrands,
+    ...trustBrands,
+  ];
+
+  return (
+    <div
+      style={trustGapStyle}
+      className="review-v3-trust-strip relative z-10 w-full border-t border-black/10 bg-[#ffffff]"
+    >
+      <div className="mx-auto flex min-h-[235px] max-w-[1320px] flex-col items-center justify-center px-5 py-12 text-center sm:px-8 lg:min-h-[245px]">
+        <p className="review-v3-trust-title text-center text-[11px] font-bold uppercase tracking-[0.32em] text-black/55 sm:text-[12px]">
+          Trusted by local brands in Mallorca
+        </p>
+
+        <div className="review-v3-trust-logos-desktop mx-auto mt-10 flex w-full max-w-[1080px] flex-row flex-nowrap items-center justify-center">
+          {trustBrands.map((brand) => (
+            <div
+              key={brand.id}
+              className="review-v3-trust-logo-box flex h-[78px] w-[185px] shrink-0 items-center justify-center overflow-visible"
+            >
+              <img
+                src={brand.src}
+                alt={brand.alt}
+                className="review-v3-trust-logo-img"
+              />
+            </div>
+          ))}
+        </div>
+
+        <div className="review-v3-trust-mobile-window mx-auto mt-8 hidden w-full overflow-hidden">
+          <div className="review-v3-trust-mobile-track flex w-max will-change-transform">
+            {repeatedTrustBrands.map((brand, index) => (
+              <div
+                key={`mobile-trust-${brand.id}-${index}`}
+                className="review-v3-trust-logo-box flex h-[68px] w-[150px] shrink-0 items-center justify-center overflow-visible"
+              >
+                <img
+                  src={brand.src}
+                  alt={brand.alt}
+                  className="review-v3-trust-logo-img"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function GoogleReviewsV3() {
   const locale = getSafeLocale(useLocale());
   const copy = COPY[locale];
@@ -273,7 +372,7 @@ export default function GoogleReviewsV3() {
     <section
       style={sectionStyle}
       onMouseMove={handleMouseMove}
-      className={`${reviewFont.variable} ${reviewFont.className} review-v3-section group/reviews relative isolate overflow-hidden bg-[#ececea] py-[clamp(46px,5vw,78px)] text-black`}
+      className={`${reviewFont.variable} ${reviewFont.className} review-v3-section group/reviews relative isolate overflow-hidden bg-[#ececea] text-black`}
     >
       <div className="absolute inset-0 -z-30 bg-[radial-gradient(circle_at_18%_8%,rgba(255,255,255,0.88),transparent_31%),radial-gradient(circle_at_82%_92%,rgba(0,0,0,0.105),transparent_35%),linear-gradient(180deg,#f2f2ee_0%,#e2e2df_48%,#eeeeeb_100%)]" />
 
@@ -284,56 +383,60 @@ export default function GoogleReviewsV3() {
       <div className="pointer-events-none absolute left-[-12%] top-[5%] -z-10 h-[320px] w-[320px] rounded-full bg-black/[0.055] blur-[95px]" />
       <div className="pointer-events-none absolute bottom-[-18%] right-[-8%] -z-10 h-[400px] w-[400px] rounded-full bg-black/[0.065] blur-[110px]" />
 
-      <div className="review-v3-header mx-auto mb-[clamp(26px,3.2vw,46px)] max-w-[1320px] px-5 text-center sm:px-8">
-        <div className="review-v3-pill mx-auto inline-flex items-center gap-3 rounded-full border border-black/10 bg-white/75 px-5 py-2.5 shadow-[0_14px_45px_rgba(0,0,0,0.08)] backdrop-blur-xl">
-          <span className="review-v3-pill-stars text-[12px] tracking-[0.18em] text-black">
-            ★★★★★
-          </span>
+      <div className="review-v3-google-content py-[clamp(46px,5vw,78px)]">
+        <div className="review-v3-header mx-auto mb-[clamp(26px,3.2vw,46px)] max-w-[1320px] px-5 text-center sm:px-8">
+          <div className="review-v3-pill mx-auto inline-flex items-center gap-3 rounded-full border border-black/10 bg-white/75 px-5 py-2.5 shadow-[0_14px_45px_rgba(0,0,0,0.08)] backdrop-blur-xl">
+            <span className="review-v3-pill-stars text-[12px] tracking-[0.18em] text-black">
+              ★★★★★
+            </span>
 
-          <span className="review-v3-pill-text text-[10px] uppercase tracking-[0.22em] text-black/55">
-            {copy.rating}
-          </span>
+            <span className="review-v3-pill-text text-[10px] uppercase tracking-[0.22em] text-black/55">
+              {copy.rating}
+            </span>
 
-          <span className="review-v3-pill-proof hidden text-[9px] uppercase tracking-[0.14em] text-black/48">
-            {copy.mobileProof}
-          </span>
+            <span className="review-v3-pill-proof hidden text-[9px] uppercase tracking-[0.14em] text-black/48">
+              {copy.mobileProof}
+            </span>
+          </div>
+
+          <h2 className="review-v3-title mx-auto mt-6 max-w-[1160px] text-[clamp(32px,4.8vw,70px)] uppercase leading-[1.02] text-black">
+            {copy.title}
+          </h2>
+
+          <p className="review-v3-subtitle mt-4 text-[clamp(13px,1.35vw,18px)] uppercase tracking-[0.2em] text-black/48">
+            {copy.reviews}
+          </p>
         </div>
 
-        <h2 className="review-v3-title mx-auto mt-6 max-w-[1160px] text-[clamp(32px,4.8vw,70px)] uppercase leading-[1.02] text-black">
-          {copy.title}
-        </h2>
+        <div className="relative">
+          <div className="review-v3-edge-shadow pointer-events-none absolute inset-y-0 left-0 z-20 w-[72px] bg-gradient-to-r from-[#0a0a0a] via-[#141414]/75 to-transparent sm:w-[clamp(110px,12vw,220px)]" />
+          <div className="review-v3-edge-shadow pointer-events-none absolute inset-y-0 right-0 z-20 w-[72px] bg-gradient-to-l from-[#0a0a0a] via-[#141414]/75 to-transparent sm:w-[clamp(110px,12vw,220px)]" />
 
-        <p className="review-v3-subtitle mt-4 text-[clamp(13px,1.35vw,18px)] uppercase tracking-[0.2em] text-black/48">
-          {copy.reviews}
-        </p>
-      </div>
-
-      <div className="relative">
-        <div className="review-v3-edge-shadow pointer-events-none absolute inset-y-0 left-0 z-20 w-[72px] bg-gradient-to-r from-[#0a0a0a] via-[#141414]/75 to-transparent sm:w-[clamp(110px,12vw,220px)]" />
-        <div className="review-v3-edge-shadow pointer-events-none absolute inset-y-0 right-0 z-20 w-[72px] bg-gradient-to-l from-[#0a0a0a] via-[#141414]/75 to-transparent sm:w-[clamp(110px,12vw,220px)]" />
-
-        <ReviewStrip
-          items={firstRow}
-          direction="left"
-          altPrefix={copy.altPrefix}
-        />
-
-        <div className="mt-2">
           <ReviewStrip
-            items={secondRow}
-            direction="right"
-            altPrefix={copy.altPrefix}
-          />
-        </div>
-
-        <div className="review-v3-mobile-third mt-2">
-          <ReviewStrip
-            items={thirdRow}
+            items={firstRow}
             direction="left"
             altPrefix={copy.altPrefix}
           />
+
+          <div className="mt-2">
+            <ReviewStrip
+              items={secondRow}
+              direction="right"
+              altPrefix={copy.altPrefix}
+            />
+          </div>
+
+          <div className="review-v3-mobile-third mt-2">
+            <ReviewStrip
+              items={thirdRow}
+              direction="left"
+              altPrefix={copy.altPrefix}
+            />
+          </div>
         </div>
       </div>
+
+      <TrustBrandsStrip />
 
       <style jsx global>{`
         .review-v3-section,
@@ -353,7 +456,8 @@ export default function GoogleReviewsV3() {
         .review-v3-pill-stars,
         .review-v3-pill-text,
         .review-v3-pill-proof,
-        .review-v3-subtitle {
+        .review-v3-subtitle,
+        .review-v3-trust-title {
           font-family: var(--font-review-montserrat), Montserrat, Arial,
             sans-serif !important;
           font-weight: 600 !important;
@@ -409,6 +513,33 @@ export default function GoogleReviewsV3() {
           gap: clamp(14px, 1.35vw, 24px);
         }
 
+        .review-v3-trust-strip {
+          background: #ffffff !important;
+          box-shadow: none !important;
+        }
+
+        .review-v3-trust-logos-desktop {
+          column-gap: var(--trust-brand-gap-desktop);
+        }
+
+        .review-v3-trust-logo-img {
+          display: block !important;
+          width: auto !important;
+          height: auto !important;
+          max-width: 100% !important;
+          max-height: 70px !important;
+          object-fit: contain !important;
+          opacity: 1 !important;
+          visibility: visible !important;
+          transition:
+            transform 300ms ease,
+            opacity 300ms ease;
+        }
+
+        .review-v3-trust-logo-img:hover {
+          transform: scale(1.035);
+        }
+
         @keyframes reviewV3ScrollLeft {
           from {
             transform: translateX(0);
@@ -429,6 +560,16 @@ export default function GoogleReviewsV3() {
           }
         }
 
+        @keyframes trustBrandsMobileScroll {
+          from {
+            transform: translateX(0);
+          }
+
+          to {
+            transform: translateX(-25%);
+          }
+        }
+
         @media (min-width: 1024px) and (max-width: 1280px) {
           .review-v3-card {
             width: 338px;
@@ -438,10 +579,24 @@ export default function GoogleReviewsV3() {
           .review-v3-track {
             gap: 16px;
           }
+
+          .review-v3-trust-logos-desktop {
+            max-width: 940px !important;
+            column-gap: var(--trust-brand-gap-laptop) !important;
+          }
+
+          .review-v3-trust-logo-box {
+            width: 168px !important;
+            height: 72px !important;
+          }
+
+          .review-v3-trust-logo-img {
+            max-height: 66px !important;
+          }
         }
 
         @media (max-width: 640px) {
-          .review-v3-section {
+          .review-v3-google-content {
             padding-top: 34px !important;
             padding-bottom: 38px !important;
           }
@@ -529,10 +684,51 @@ export default function GoogleReviewsV3() {
           .review-v3-cursor-grid {
             opacity: 0 !important;
           }
+
+          .review-v3-trust-strip {
+            background: #ffffff !important;
+            box-shadow: none !important;
+          }
+
+          .review-v3-trust-strip > div {
+            min-height: 250px !important;
+            padding-top: 42px !important;
+            padding-bottom: 42px !important;
+          }
+
+          .review-v3-trust-title {
+            max-width: 310px !important;
+            font-size: 9px !important;
+            line-height: 1.45 !important;
+            letter-spacing: 0.24em !important;
+          }
+
+          .review-v3-trust-logos-desktop {
+            display: none !important;
+          }
+
+          .review-v3-trust-mobile-window {
+            display: block !important;
+          }
+
+          .review-v3-trust-mobile-track {
+            column-gap: var(--trust-brand-gap-mobile);
+            animation: trustBrandsMobileScroll 24s linear infinite;
+          }
+
+          .review-v3-trust-logo-box {
+            width: 150px !important;
+            height: 68px !important;
+          }
+
+          .review-v3-trust-logo-img {
+            max-height: 60px !important;
+          }
         }
 
         @media (prefers-reduced-motion: reduce) {
-          .review-v3-track {
+          .review-v3-track,
+          .review-v3-trust-mobile-track {
             animation: none !important;
             transform: none !important;
           }
