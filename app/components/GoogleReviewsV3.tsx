@@ -20,8 +20,7 @@ const reviewFont = Montserrat({
 */
 const TRUST_BRAND_DESKTOP_GAP = "76px";
 const TRUST_BRAND_LAPTOP_GAP = "52px";
-const TRUST_BRAND_MOBILE_GAP = "34px";
-
+const TRUST_BRAND_MOBILE_GAP = "10px";
 type Locale =
   | "en"
   | "es"
@@ -586,9 +585,9 @@ export default function GoogleReviewsV3() {
           }
 
           .review-v3-trust-logo-box {
-            width: 168px !important;
-            height: 72px !important;
-          }
+  width: 132px !important;
+  height: 68px !important;
+}
 
           .review-v3-trust-logo-img {
             max-height: 66px !important;
