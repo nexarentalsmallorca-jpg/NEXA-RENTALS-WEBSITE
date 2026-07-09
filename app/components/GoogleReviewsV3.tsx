@@ -18,8 +18,8 @@ const reviewFont = Montserrat({
   Desktop gap: change this to control the horizontal space between logos on desktop.
   Example: "60px", "76px", "90px", "110px"
 */
-const TRUST_BRAND_DESKTOP_GAP = "76px";
-const TRUST_BRAND_LAPTOP_GAP = "52px";
+const TRUST_BRAND_DESKTOP_GAP = "0px";
+const TRUST_BRAND_LAPTOP_GAP = "0px";
 const TRUST_BRAND_MOBILE_GAP = "0px";
 type Locale =
   | "en"
@@ -210,6 +210,16 @@ const trustBrands: TrustBrand[] = [
     src: "/images/ax4.png",
     alt: "Saffron Desi",
   },
+  {
+    id: 5,
+    src: "/images/ax5.png",
+    alt: "Kopi Magaluf",
+  },
+  {
+    id: 6,
+    src: "/images/ax6.png",
+    alt: "Heaven Tours Mallorca",
+  },
 ];
 
 const firstRow = reviews.slice(0, 8);
@@ -315,10 +325,12 @@ function TrustBrandsStrip() {
               className="review-v3-trust-logo-box flex h-[78px] w-[185px] shrink-0 items-center justify-center overflow-visible"
             >
               <img
-                src={brand.src}
-                alt={brand.alt}
-                className="review-v3-trust-logo-img"
-              />
+  src={brand.src}
+  alt={brand.alt}
+  className={`review-v3-trust-logo-img ${
+  brand.id === 3 || brand.id === 6 ? "review-v3-trust-logo-img-big" : ""
+}`}
+/>
             </div>
           ))}
         </div>
@@ -538,7 +550,10 @@ export default function GoogleReviewsV3() {
         .review-v3-trust-logo-img:hover {
           transform: scale(1.035);
         }
-
+.review-v3-trust-logo-img-big {
+  max-height: 86px !important;
+  transform: scale(1.28);
+} 
         @keyframes reviewV3ScrollLeft {
           from {
             transform: translateX(0);
@@ -574,7 +589,10 @@ export default function GoogleReviewsV3() {
             width: 338px;
             height: 102px;
           }
-
+.review-v3-trust-logo-img-big {
+  max-height: 76px !important;
+  transform: scale(1.22);
+}
           .review-v3-track {
             gap: 16px;
           }
