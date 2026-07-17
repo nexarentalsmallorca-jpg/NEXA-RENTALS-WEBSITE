@@ -297,8 +297,10 @@ export default function WhatsAppSupport({
         style={{
           pointerEvents: showBubble ? "auto" : "none",
           transform: showBubble
-  ? "translateX(0px)"
-  : "translateX(18px)",
+            ? "translateX(0px)"
+            : isMobileLike
+              ? "translateX(-18px)"
+              : "translateX(18px)",
           opacity: showBubble ? 1 : 0,
           transition: "all 320ms ease",
           background: "rgba(15,17,21,0.94)",

@@ -18,7 +18,7 @@ const reviewFont = Montserrat({
   Desktop gap: change this to control the horizontal space between logos on desktop.
   Example: "60px", "76px", "90px", "110px"
 */
-const TRUST_BRAND_DESKTOP_GAP = "0px";
+const TRUST_BRAND_DESKTOP_GAP = "30px";
 const TRUST_BRAND_LAPTOP_GAP = "0px";
 const TRUST_BRAND_MOBILE_GAP = "0px";
 type Locale =
@@ -190,6 +190,7 @@ const reviews: ReviewImage[] = [
 ];
 
 const trustBrands: TrustBrand[] = [
+  
   {
     id: 1,
     src: "/images/ax1.png",
@@ -328,8 +329,12 @@ function TrustBrandsStrip() {
   src={brand.src}
   alt={brand.alt}
   className={`review-v3-trust-logo-img ${
-  brand.id === 3 || brand.id === 6 ? "review-v3-trust-logo-img-big" : ""
-}`}
+    brand.id === 0
+      ? "review-v3-trust-logo-img-ax0"
+      : brand.id === 3 || brand.id === 6
+        ? "review-v3-trust-logo-img-big"
+        : ""
+  }`}
 />
             </div>
           ))}
@@ -554,6 +559,10 @@ export default function GoogleReviewsV3() {
   max-height: 86px !important;
   transform: scale(1.28);
 } 
+  .review-v3-trust-logo-img-ax0 {
+  max-height: 86px !important;
+  transform: scale(1.35);
+}
         @keyframes reviewV3ScrollLeft {
           from {
             transform: translateX(0);
@@ -589,6 +598,11 @@ export default function GoogleReviewsV3() {
             width: 338px;
             height: 102px;
           }
+.review-v3-trust-logo-img-ax0 {
+  max-height: 76px !important;
+  transform: scale(1.32);
+}
+
 .review-v3-trust-logo-img-big {
   max-height: 76px !important;
   transform: scale(1.22);

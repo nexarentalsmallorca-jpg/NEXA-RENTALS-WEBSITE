@@ -28,6 +28,10 @@ type BookingData = {
   contractData: {
     numeroContrato: string;
 
+    numeroFactura?: string;
+    fechaFactura?: string;
+    metodoPago?: string;
+
     oficinaEntrega?: string;
     oficinaDevolucion?: string;
 
@@ -86,8 +90,8 @@ const CONTRACT_LOGO_SRC = getContractLogoPath();
 
 const styles = StyleSheet.create({
   page: {
-    paddingTop: 20,
-    paddingBottom: 40,
+    paddingTop: 17,
+    paddingBottom: 38,
     paddingHorizontal: 24,
     fontSize: 7.2,
     fontFamily: "Helvetica",
@@ -166,7 +170,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.2,
     borderColor: "#101010",
     padding: 4,
-    marginBottom: 7,
+    marginBottom: 6,
   },
 
   premiumInner: {
@@ -274,8 +278,8 @@ const styles = StyleSheet.create({
     borderWidth: 0.8,
     borderColor: "#111111",
     backgroundColor: "#f7f7f7",
-    padding: 6.5,
-    marginBottom: 6,
+    padding: 5.5,
+    marginBottom: 5,
   },
 
   summaryRow: {
@@ -304,8 +308,8 @@ const styles = StyleSheet.create({
   section: {
     borderWidth: 0.8,
     borderColor: "#111111",
-    padding: 6.5,
-    marginBottom: 6,
+    padding: 5.2,
+    marginBottom: 4.5,
     backgroundColor: "#ffffff",
   },
 
@@ -326,7 +330,7 @@ const styles = StyleSheet.create({
 
   row: {
     flexDirection: "row",
-    marginBottom: 3,
+    marginBottom: 2,
   },
 
   col: {
@@ -357,6 +361,193 @@ const styles = StyleSheet.create({
     fontSize: 7.7,
     fontFamily: "Helvetica-Bold",
     color: "#000000",
+  },
+
+  invoiceBlock: {
+    borderWidth: 0.8,
+    borderColor: "#111111",
+    marginBottom: 5,
+    backgroundColor: "#ffffff",
+  },
+
+  invoiceTitleBar: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    backgroundColor: "#111111",
+    paddingVertical: 4,
+    paddingHorizontal: 6,
+  },
+
+  invoiceTitle: {
+    color: "#ffffff",
+    fontSize: 7.6,
+    fontFamily: "Helvetica-Bold",
+    textTransform: "uppercase",
+    letterSpacing: 0.55,
+  },
+
+  invoiceTitleRight: {
+    alignItems: "flex-end",
+  },
+
+  invoiceTitleTotalLabel: {
+    color: "#d9d9d9",
+    fontSize: 5.1,
+    textTransform: "uppercase",
+    letterSpacing: 0.35,
+    marginBottom: 1,
+  },
+
+  invoiceTitleTotal: {
+    color: "#ffffff",
+    fontSize: 9.2,
+    fontFamily: "Helvetica-Bold",
+  },
+
+  invoiceMetaRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.6,
+    borderBottomColor: "#111111",
+  },
+
+  invoiceMetaCell: {
+    flex: 1,
+    paddingVertical: 3,
+    paddingHorizontal: 4,
+    borderRightWidth: 0.5,
+    borderRightColor: "#bdbdbd",
+  },
+
+  invoiceMetaCellLast: {
+    borderRightWidth: 0,
+  },
+
+  invoiceMetaLabel: {
+    fontSize: 5.1,
+    color: "#616161",
+    textTransform: "uppercase",
+    letterSpacing: 0.3,
+    marginBottom: 1.2,
+  },
+
+  invoiceMetaValue: {
+    fontSize: 6.45,
+    fontFamily: "Helvetica-Bold",
+    color: "#111111",
+  },
+
+  invoiceServiceHeader: {
+    flexDirection: "row",
+    backgroundColor: "#eeeeee",
+    borderBottomWidth: 0.5,
+    borderBottomColor: "#a8a8a8",
+  },
+
+  invoiceServiceRow: {
+    flexDirection: "row",
+    borderBottomWidth: 0.6,
+    borderBottomColor: "#111111",
+  },
+
+  invoiceConceptCell: {
+    flex: 2.55,
+    paddingVertical: 3.2,
+    paddingHorizontal: 4,
+    borderRightWidth: 0.5,
+    borderRightColor: "#bdbdbd",
+  },
+
+  invoiceDaysCell: {
+    flex: 0.55,
+    paddingVertical: 3.2,
+    paddingHorizontal: 4,
+    borderRightWidth: 0.5,
+    borderRightColor: "#bdbdbd",
+    alignItems: "center",
+  },
+
+  invoicePriceCell: {
+    flex: 1.05,
+    paddingVertical: 3.2,
+    paddingHorizontal: 4,
+    alignItems: "flex-end",
+  },
+
+  invoiceTableHeaderText: {
+    fontSize: 5.15,
+    fontFamily: "Helvetica-Bold",
+    textTransform: "uppercase",
+    color: "#333333",
+  },
+
+  invoiceDescription: {
+    fontSize: 6.45,
+    fontFamily: "Helvetica-Bold",
+    color: "#111111",
+  },
+
+  invoiceDescriptionSub: {
+    marginTop: 1.2,
+    fontSize: 5.25,
+    color: "#5a5a5a",
+  },
+
+  invoiceCellValue: {
+    fontSize: 6.45,
+    fontFamily: "Helvetica-Bold",
+    color: "#111111",
+  },
+
+  invoiceTaxRow: {
+    flexDirection: "row",
+  },
+
+  invoiceTaxCell: {
+    flex: 1,
+    paddingVertical: 3.2,
+    paddingHorizontal: 4,
+    borderRightWidth: 0.5,
+    borderRightColor: "#bdbdbd",
+  },
+
+  invoiceTaxCellLast: {
+    borderRightWidth: 0,
+  },
+
+  invoiceTaxTotalCell: {
+    backgroundColor: "#111111",
+  },
+
+  invoiceTaxLabel: {
+    fontSize: 5.1,
+    color: "#5b5b5b",
+    textTransform: "uppercase",
+    letterSpacing: 0.25,
+    marginBottom: 1.2,
+  },
+
+  invoiceTaxValue: {
+    fontSize: 7.15,
+    fontFamily: "Helvetica-Bold",
+    color: "#111111",
+  },
+
+  invoiceTaxLabelInverted: {
+    color: "#d7d7d7",
+  },
+
+  invoiceTaxValueInverted: {
+    color: "#ffffff",
+  },
+
+  invoiceLegalNote: {
+    borderTopWidth: 0.5,
+    borderTopColor: "#d0d0d0",
+    paddingVertical: 2.6,
+    paddingHorizontal: 4,
+    fontSize: 5.05,
+    color: "#555555",
   },
 
   termsTitleWrap: {
@@ -537,9 +728,61 @@ function clean(value?: string) {
   return value && value.trim() ? value : "—";
 }
 
+const IVA_RATE = 0.21;
+
+function parseMoneyValue(value?: string): number {
+  if (!value) return 0;
+
+  let normalized = value
+    .replace(/\s/g, "")
+    .replace(/€/g, "")
+    .replace(/[^0-9,.-]/g, "");
+
+  if (normalized.includes(",") && normalized.includes(".")) {
+    const commaIsDecimal =
+      normalized.lastIndexOf(",") > normalized.lastIndexOf(".");
+
+    normalized = commaIsDecimal
+      ? normalized.replace(/\./g, "").replace(",", ".")
+      : normalized.replace(/,/g, "");
+  } else if (normalized.includes(",")) {
+    normalized = normalized.replace(",", ".");
+  }
+
+  const parsed = Number.parseFloat(normalized);
+
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function roundMoney(value: number) {
+  return Math.round((value + Number.EPSILON) * 100) / 100;
+}
+
+function formatMoneyAmount(value: number) {
+  return `${roundMoney(value).toFixed(2).replace(".", ",")} €`;
+}
+
+function formatInvoiceDate(value?: string) {
+  if (!value) return "";
+
+  const date = new Date(value);
+
+  if (Number.isNaN(date.getTime())) {
+    return value;
+  }
+
+  return new Intl.DateTimeFormat("es-ES", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    timeZone: "Europe/Madrid",
+  }).format(date);
+}
+
 function Money({ value }: { value?: string }) {
   const cleanValue = clean(value);
   const hasEuro = cleanValue.includes("€");
+
   return <Text>{hasEuro ? cleanValue : `${cleanValue} €`}</Text>;
 }
 
@@ -549,6 +792,173 @@ function Field({ label, value }: { label: string; value?: string }) {
       <Text style={styles.label}>{label}: </Text>
       <Text style={styles.value}>{clean(value)}</Text>
     </Text>
+  );
+}
+
+function InvoiceBreakdown({
+  data,
+  vehicleText,
+  createdAt,
+}: {
+  data: BookingData["contractData"];
+  vehicleText: string;
+  createdAt?: string;
+}) {
+  const totalWithVat = roundMoney(parseMoneyValue(data.total));
+  const taxableBase = roundMoney(totalWithVat / (1 + IVA_RATE));
+  const vatAmount = roundMoney(totalWithVat - taxableBase);
+
+  const invoiceNumber = data.numeroFactura?.trim()
+    ? data.numeroFactura.trim()
+    : `NR-${data.numeroContrato}`;
+
+  const invoiceDate =
+    formatInvoiceDate(data.fechaFactura?.trim()) ||
+    formatInvoiceDate(createdAt) ||
+    clean(data.fechaEntrega);
+
+  return (
+    <View style={styles.invoiceBlock} wrap={false}>
+      <View style={styles.invoiceTitleBar}>
+        <View>
+          <Text style={styles.invoiceTitle}>
+            Factura del alquiler · Rental invoice
+          </Text>
+        </View>
+
+        <View style={styles.invoiceTitleRight}>
+          <Text style={styles.invoiceTitleTotalLabel}>
+            Total IVA incluido
+          </Text>
+
+          <Text style={styles.invoiceTitleTotal}>
+            {formatMoneyAmount(totalWithVat)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.invoiceMetaRow}>
+        <View style={styles.invoiceMetaCell}>
+          <Text style={styles.invoiceMetaLabel}>Factura Nº</Text>
+          <Text style={styles.invoiceMetaValue}>{invoiceNumber}</Text>
+        </View>
+
+        <View style={styles.invoiceMetaCell}>
+          <Text style={styles.invoiceMetaLabel}>Fecha expedición</Text>
+          <Text style={styles.invoiceMetaValue}>{invoiceDate}</Text>
+        </View>
+
+        <View style={styles.invoiceMetaCell}>
+          <Text style={styles.invoiceMetaLabel}>Fecha operación</Text>
+          <Text style={styles.invoiceMetaValue}>
+            {clean(data.fechaEntrega)}
+          </Text>
+        </View>
+
+        <View style={[styles.invoiceMetaCell, styles.invoiceMetaCellLast]}>
+          <Text style={styles.invoiceMetaLabel}>
+            DNI / Pasaporte cliente
+          </Text>
+
+          <Text style={styles.invoiceMetaValue}>
+            {clean(data.dniPasaporte)}
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.invoiceServiceHeader}>
+        <View style={styles.invoiceConceptCell}>
+          <Text style={styles.invoiceTableHeaderText}>Concepto</Text>
+        </View>
+
+        <View style={styles.invoiceDaysCell}>
+          <Text style={styles.invoiceTableHeaderText}>Días</Text>
+        </View>
+
+        <View style={styles.invoicePriceCell}>
+          <Text style={styles.invoiceTableHeaderText}>
+            Precio / día IVA incl.
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.invoiceServiceRow}>
+        <View style={styles.invoiceConceptCell}>
+          <Text style={styles.invoiceDescription}>
+            Servicio de alquiler de vehículo
+          </Text>
+
+          <Text style={styles.invoiceDescriptionSub}>
+            {vehicleText}
+          </Text>
+        </View>
+
+        <View style={styles.invoiceDaysCell}>
+          <Text style={styles.invoiceCellValue}>
+            {clean(data.dias)}
+          </Text>
+        </View>
+
+        <View style={styles.invoicePriceCell}>
+          <Text style={styles.invoiceCellValue}>
+            <Money value={data.precioPorDia} />
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.invoiceTaxRow}>
+        <View style={styles.invoiceTaxCell}>
+          <Text style={styles.invoiceTaxLabel}>
+            Base imponible
+          </Text>
+
+          <Text style={styles.invoiceTaxValue}>
+            {formatMoneyAmount(taxableBase)}
+          </Text>
+        </View>
+
+        <View style={styles.invoiceTaxCell}>
+          <Text style={styles.invoiceTaxLabel}>
+            IVA 21%
+          </Text>
+
+          <Text style={styles.invoiceTaxValue}>
+            {formatMoneyAmount(vatAmount)}
+          </Text>
+        </View>
+
+        <View
+          style={[
+            styles.invoiceTaxCell,
+            styles.invoiceTaxCellLast,
+            styles.invoiceTaxTotalCell,
+          ]}
+        >
+          <Text
+            style={[
+              styles.invoiceTaxLabel,
+              styles.invoiceTaxLabelInverted,
+            ]}
+          >
+            Total factura
+          </Text>
+
+          <Text
+            style={[
+              styles.invoiceTaxValue,
+              styles.invoiceTaxValueInverted,
+            ]}
+          >
+            {formatMoneyAmount(totalWithVat)}
+          </Text>
+        </View>
+      </View>
+
+      <Text style={styles.invoiceLegalNote}>
+        Importes expresados en EUR. El precio final ya incluye el 21% de IVA.
+        Forma de pago: {clean(data.metodoPago || "Según registro de pago")}.
+      </Text>
+    </View>
   );
 }
 
@@ -603,19 +1013,28 @@ function FrontHeader({
             <Text style={styles.brandTitle}>NEXA RENTALS</Text>
 
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>Arrendador: </Text>SAHILPREET SINGH
+              <Text style={styles.label}>Arrendador: </Text>
+              SAHILPREET SINGH
             </Text>
+
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>Nombre Comercial: </Text>NEXA RENTALS
+              <Text style={styles.label}>Nombre Comercial: </Text>
+              NEXA RENTALS
             </Text>
+
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>Tel.: </Text>971 48 23 42
+              <Text style={styles.label}>Tel.: </Text>
+              971 48 23 42
             </Text>
+
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>NIF/NIE: </Text>Y4930755Y
+              <Text style={styles.label}>NIF/NIE: </Text>
+              Y4930755Y
             </Text>
+
             <Text style={styles.companyLine}>
-              <Text style={styles.label}>Dirección: </Text>CARRER GALEÓN 13, LOCAL 57
+              <Text style={styles.label}>Dirección: </Text>
+              CARRER GALEÓN 13, LOCAL 57
             </Text>
 
             {customerName ? (
@@ -635,7 +1054,9 @@ function FrontHeader({
 
           <View style={styles.contractBox}>
             <Text style={styles.contractLabel}>Contrato Nº</Text>
-            <Text style={styles.contractNumber}>{clean(contractNumber)}</Text>
+            <Text style={styles.contractNumber}>
+              {clean(contractNumber)}
+            </Text>
           </View>
         </View>
 
@@ -718,6 +1139,7 @@ function TermsBlock() {
         <Text style={styles.termsTitle}>
           NEXA RENTALS – TÉRMINOS Y CONDICIONES
         </Text>
+
         <Text style={styles.termsSubtitle}>
           Spanish version on the left · English translation on the right
         </Text>
@@ -725,20 +1147,32 @@ function TermsBlock() {
 
       <View style={styles.termsFlowBox} wrap={false}>
         <View style={styles.termsFlowHeader}>
-          <View style={[styles.termsFlowHeaderCell, styles.termsFlowHeaderLeft]}>
+          <View
+            style={[
+              styles.termsFlowHeaderCell,
+              styles.termsFlowHeaderLeft,
+            ]}
+          >
             <Text style={styles.termsFlowHeaderText}>Español</Text>
           </View>
 
           <View style={styles.termsFlowHeaderCell}>
-            <Text style={styles.termsFlowHeaderText}>English Translation</Text>
+            <Text style={styles.termsFlowHeaderText}>
+              English Translation
+            </Text>
           </View>
         </View>
 
         <View style={styles.termsFlowBody}>
           <View style={styles.termsFlowColumnLeft}>
             {spanishTerms.map((term, index) => (
-              <Text key={`spanish-term-${index}`} style={styles.termParagraph}>
-                <Text style={styles.termParagraphNumber}>{index + 1}. </Text>
+              <Text
+                key={`spanish-term-${index}`}
+                style={styles.termParagraph}
+              >
+                <Text style={styles.termParagraphNumber}>
+                  {index + 1}.{" "}
+                </Text>
                 {term}
               </Text>
             ))}
@@ -746,8 +1180,13 @@ function TermsBlock() {
 
           <View style={styles.termsFlowColumnRight}>
             {englishTerms.map((term, index) => (
-              <Text key={`english-term-${index}`} style={styles.termParagraph}>
-                <Text style={styles.termParagraphNumber}>{index + 1}. </Text>
+              <Text
+                key={`english-term-${index}`}
+                style={styles.termParagraph}
+              >
+                <Text style={styles.termParagraphNumber}>
+                  {index + 1}.{" "}
+                </Text>
                 {term}
               </Text>
             ))}
@@ -766,7 +1205,10 @@ function FinalPageContent() {
       </Text>
 
       <View style={styles.infoBlock}>
-        <Text style={styles.blockTitle}>Roadside Assistance:</Text>
+        <Text style={styles.blockTitle}>
+          Roadside Assistance:
+        </Text>
+
         <Text style={styles.paragraph}>
           Free assistance is provided within 10 km only in case of mechanical
           failure not caused by the customer. If assistance is required outside
@@ -777,7 +1219,10 @@ function FinalPageContent() {
           The exact cost will be confirmed before service.
         </Text>
 
-        <Text style={styles.blockTitle}>Asistencia en Carretera:</Text>
+        <Text style={styles.blockTitle}>
+          Asistencia en Carretera:
+        </Text>
+
         <Text style={styles.paragraph}>
           La asistencia es gratuita dentro de un radio de 10 km únicamente en
           caso de avería mecánica no causada por el cliente. Si la asistencia se
@@ -796,17 +1241,17 @@ function FinalPageContent() {
           accepted all the general and specific terms and conditions of this
           rental agreement, including those related to the use of the vehicle,
           responsibilities, insurance coverage, security deposit, additional
-          charges, and penalties, and agrees to comply strictly with them for the
-          entire duration of the contract.
+          charges, and penalties, and agrees to comply strictly with them for
+          the entire duration of the contract.
         </Text>
 
         <Text style={styles.paragraph}>
           El cliente declara haber leído, comprendido y aceptado íntegramente
-          todas las condiciones generales y particulares del presente contrato de
-          alquiler, incluyendo las relativas al uso del vehículo,
+          todas las condiciones generales y particulares del presente contrato
+          de alquiler, incluyendo las relativas al uso del vehículo,
           responsabilidades, cobertura de seguro, fianza, cargos adicionales y
-          penalizaciones, obligándose a su estricto cumplimiento durante toda la
-          duración del contrato.
+          penalizaciones, obligándose a su estricto cumplimiento durante toda
+          la duración del contrato.
         </Text>
       </View>
 
@@ -817,23 +1262,43 @@ function FinalPageContent() {
 
         <View style={styles.signaturesRow}>
           <View style={styles.signatureCard}>
-            <Text style={styles.signatureLine}>Firma Cliente</Text>
-            <Text style={styles.signatureSub}>Customer Signature</Text>
+            <Text style={styles.signatureLine}>
+              Firma Cliente
+            </Text>
+
+            <Text style={styles.signatureSub}>
+              Customer Signature
+            </Text>
           </View>
 
           <View style={styles.signatureCard}>
-            <Text style={styles.signatureLine}>Firma Conductor</Text>
-            <Text style={styles.signatureSub}>Driver Signature</Text>
+            <Text style={styles.signatureLine}>
+              Firma Conductor
+            </Text>
+
+            <Text style={styles.signatureSub}>
+              Driver Signature
+            </Text>
           </View>
 
           <View style={styles.signatureCard}>
-            <Text style={styles.signatureLine}>Firma 2º Conductor</Text>
-            <Text style={styles.signatureSub}>Second Driver</Text>
+            <Text style={styles.signatureLine}>
+              Firma 2º Conductor
+            </Text>
+
+            <Text style={styles.signatureSub}>
+              Second Driver
+            </Text>
           </View>
 
           <View style={styles.signatureCard}>
-            <Text style={styles.signatureLine}>Firma Empresa</Text>
-            <Text style={styles.signatureSub}>Company Signature</Text>
+            <Text style={styles.signatureLine}>
+              Firma Empresa
+            </Text>
+
+            <Text style={styles.signatureSub}>
+              Company Signature
+            </Text>
           </View>
         </View>
       </View>
@@ -841,7 +1306,11 @@ function FinalPageContent() {
   );
 }
 
-export default function NexaContractPDF({ booking }: { booking: BookingData }) {
+export default function NexaContractPDF({
+  booking,
+}: {
+  booking: BookingData;
+}) {
   const data = booking.contractData;
   const vehicle = booking.vehicle;
 
@@ -867,17 +1336,30 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
         <View style={styles.summaryCard}>
           <View style={styles.summaryRow}>
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Cliente</Text>
-              <Text style={styles.summaryValue}>{clean(data.nombreCliente)}</Text>
+              <Text style={styles.summaryLabel}>
+                Cliente
+              </Text>
+
+              <Text style={styles.summaryValue}>
+                {clean(data.nombreCliente)}
+              </Text>
             </View>
 
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Vehículo</Text>
-              <Text style={styles.summaryValue}>{vehicleText}</Text>
+              <Text style={styles.summaryLabel}>
+                Vehículo
+              </Text>
+
+              <Text style={styles.summaryValue}>
+                {vehicleText}
+              </Text>
             </View>
 
             <View style={styles.summaryItem}>
-              <Text style={styles.summaryLabel}>Periodo</Text>
+              <Text style={styles.summaryLabel}>
+                Periodo
+              </Text>
+
               <Text style={styles.summaryValue}>
                 {clean(data.fechaEntrega)} → {clean(data.fechaDevolucion)}
               </Text>
@@ -886,15 +1368,25 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Datos del vehículo</Text>
+          <Text style={styles.sectionTitle}>
+            Datos del vehículo
+          </Text>
+
           <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="Código" value={vehicle.codigo} />
+              <Field
+                label="Código"
+                value={vehicle.codigo}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Matrícula" value={vehicle.matricula} />
+              <Field
+                label="Matrícula"
+                value={vehicle.matricula}
+              />
             </View>
           </View>
 
@@ -905,23 +1397,37 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
                 value={`${vehicle.marca} ${vehicle.modelo}`}
               />
             </View>
+
             <View style={styles.col}>
-              <Field label="Año" value={vehicle.ano} />
+              <Field
+                label="Año"
+                value={vehicle.ano}
+              />
             </View>
           </View>
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="Bastidor VIN" value={vehicle.bastidor} />
+              <Field
+                label="Bastidor VIN"
+                value={vehicle.bastidor}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Combustible" value={vehicle.combustible} />
+              <Field
+                label="Combustible"
+                value={vehicle.combustible}
+              />
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Datos del alquiler</Text>
+          <Text style={styles.sectionTitle}>
+            Datos del alquiler
+          </Text>
+
           <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
@@ -931,6 +1437,7 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
                 value={data.oficinaEntrega || "OFICINA MAGALUF"}
               />
             </View>
+
             <View style={styles.col}>
               <Field
                 label="Recogida del vehículo"
@@ -941,146 +1448,236 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="Fecha entrega" value={data.fechaEntrega} />
+              <Field
+                label="Fecha entrega"
+                value={data.fechaEntrega}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Hora entrega" value={data.horaEntrega} />
+              <Field
+                label="Hora entrega"
+                value={data.horaEntrega}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="KM salida" value={data.kmSalida || "—"} />
+              <Field
+                label="KM salida"
+                value={data.kmSalida || "—"}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Combustible salida" value={data.combustibleSalida} />
+              <Field
+                label="Combustible salida"
+                value={data.combustibleSalida}
+              />
             </View>
           </View>
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="Fecha devolución" value={data.fechaDevolucion} />
+              <Field
+                label="Fecha devolución"
+                value={data.fechaDevolucion}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Hora devolución" value={data.horaDevolucion} />
+              <Field
+                label="Hora devolución"
+                value={data.horaDevolucion}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="KM entrada" value="" />
+              <Field
+                label="KM entrada"
+                value=""
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Combustible entrada" value="" />
+              <Field
+                label="Combustible entrada"
+                value=""
+              />
             </View>
           </View>
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Datos del cliente</Text>
+          <Text style={styles.sectionTitle}>
+            Datos del cliente
+          </Text>
+
           <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="Nombre" value={data.nombreCliente} />
+              <Field
+                label="Nombre"
+                value={data.nombreCliente}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="DNI / Pasaporte" value={data.dniPasaporte} />
+              <Field
+                label="DNI / Pasaporte"
+                value={data.dniPasaporte}
+              />
             </View>
           </View>
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="Teléfono" value={data.telefono} />
+              <Field
+                label="Teléfono"
+                value={data.telefono}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Email" value={data.email} />
+              <Field
+                label="Email"
+                value={data.email}
+              />
             </View>
           </View>
 
-          <Field label="Dirección" value={data.direccion} />
+          <Field
+            label="Dirección"
+            value={data.direccion}
+          />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Datos del conductor / a</Text>
+          <Text style={styles.sectionTitle}>
+            Datos del conductor / a
+          </Text>
+
           <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="Nombre" value={data.nombreCliente} />
+              <Field
+                label="Nombre"
+                value={data.nombreCliente}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Permiso de conducir" value={data.permisoConducir} />
+              <Field
+                label="Permiso de conducir"
+                value={data.permisoConducir}
+              />
             </View>
           </View>
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="País de expedición" value={data.paisExpedicion} />
+              <Field
+                label="País de expedición"
+                value={data.paisExpedicion}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Fecha de caducidad" value={data.fechaCaducidad} />
+              <Field
+                label="Fecha de caducidad"
+                value={data.fechaCaducidad}
+              />
             </View>
           </View>
 
-          <Field label="Dirección" value={data.direccion} />
+          <Field
+            label="Dirección"
+            value={data.direccion}
+          />
         </View>
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>
             Datos del segundo / a conductor / a si aplica
           </Text>
+
           <View style={styles.sectionDivider} />
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="Nombre" value={data.segundoNombre} />
+              <Field
+                label="Nombre"
+                value={data.segundoNombre}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Permiso de conducir" value={data.segundoPermiso} />
+              <Field
+                label="Permiso de conducir"
+                value={data.segundoPermiso}
+              />
             </View>
           </View>
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="País expedición" value={data.segundoPais} />
+              <Field
+                label="País expedición"
+                value={data.segundoPais}
+              />
             </View>
+
             <View style={styles.col}>
-              <Field label="Fecha caducidad" value={data.segundoFechaCaducidad} />
+              <Field
+                label="Fecha caducidad"
+                value={data.segundoFechaCaducidad}
+              />
             </View>
           </View>
 
-          <Field label="Dirección" value={data.segundoDireccion} />
+          <Field
+            label="Dirección"
+            value={data.segundoDireccion}
+          />
         </View>
 
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Detalles del alquiler</Text>
+          <Text style={styles.sectionTitle}>
+            Detalles económicos y factura
+          </Text>
+
           <View style={styles.sectionDivider} />
 
-          <View style={styles.row}>
-            <View style={styles.col}>
-              <Field label="Días" value={data.dias} />
-            </View>
-            <View style={styles.col}>
-              <Text>
-                <Text style={styles.label}>Precio por día: </Text>
-                <Money value={data.precioPorDia} />
-              </Text>
-            </View>
-            <View style={styles.col}>
-              <Text>
-                <Text style={styles.label}>Total: </Text>
-                <Money value={data.total} />
-              </Text>
-            </View>
-          </View>
+          <InvoiceBreakdown
+            data={data}
+            vehicleText={vehicleText}
+            createdAt={booking.createdAt}
+          />
 
           <View style={styles.row}>
             <View style={styles.col}>
-              <Field label="Fianza" value={data.fianza || "150 €"} />
+              <Field
+                label="Fianza"
+                value={data.fianza || "150 €"}
+              />
             </View>
+
             <View style={styles.col}>
               <Text>
-                <Text style={styles.label}>Pagado: </Text>
+                <Text style={styles.label}>
+                  Pagado:{" "}
+                </Text>
+
                 <Money value={data.pagado} />
               </Text>
             </View>
+
             <View style={styles.col}>
-              <Field label="Franquicia máxima" value="800 €" />
+              <Field
+                label="Franquicia máxima"
+                value="800 €"
+              />
             </View>
           </View>
 
@@ -1094,7 +1691,8 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
 
           <View style={styles.importantLineBox}>
             <Text style={styles.importantLine}>
-              El arrendatario asume una franquicia máxima de 800€ en caso de daños.
+              El arrendatario asume una franquicia máxima de 800€ en caso de
+              daños.
             </Text>
           </View>
         </View>
@@ -1102,13 +1700,20 @@ export default function NexaContractPDF({ booking }: { booking: BookingData }) {
         <PremiumFooter page="Page 1 / 3" />
       </Page>
 
-      <Page size="A4" style={styles.termsPage} wrap={false}>
+      <Page
+        size="A4"
+        style={styles.termsPage}
+        wrap={false}
+      >
         <Watermark />
         <TermsBlock />
         <PremiumFooter page="Page 2 / 3" />
       </Page>
 
-      <Page size="A4" style={styles.finalPage}>
+      <Page
+        size="A4"
+        style={styles.finalPage}
+      >
         <Watermark />
         <FinalPageContent />
         <PremiumFooter page="Page 3 / 3" />
