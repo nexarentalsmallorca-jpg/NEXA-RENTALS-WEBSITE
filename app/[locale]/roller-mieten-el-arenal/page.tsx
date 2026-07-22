@@ -1,4 +1,4 @@
-// app/[locale]/roller-mieten-camp-de-mar/page.tsx
+// app/[locale]/roller-mieten-el-arenal/page.tsx
 
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -81,7 +81,7 @@ const INCLUDED_ITEMS = [
   {
     image: "/images/ex2.jpg",
     title: "Handyhalterung",
-    text: "Ideal für Navigation im Südwesten Mallorcas.",
+    text: "Ideal für Navigation rund um die Bucht von Palma.",
   },
   {
     image: "/images/ex3.png",
@@ -110,69 +110,82 @@ async function getPageLocale(params: PageProps["params"]) {
   return normalizeLocale(resolvedParams?.locale);
 }
 
+function getLanguageHref(languageCode: Locale) {
+  if (languageCode === "fr") {
+    return "/fr/location-scooter-el-arenal";
+  }
+
+  if (languageCode === "de") {
+    return "/de/roller-mieten-el-arenal";
+  }
+
+  return `/${languageCode}`;
+}
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const locale = await getPageLocale(params);
+  const isGermanPage = locale === "de";
 
   return {
     title:
-      "Roller mieten Camp de Mar | 125cc Scooter Südwest Mallorca | NEXA Rentals",
+      "Roller mieten El Arenal | 125cc Scooter Playa de Palma | NEXA Rentals",
     description:
-      "Roller mieten in Camp de Mar und Südwest Mallorca. 125cc Scooter online bei NEXA Rentals buchen, in Magaluf abholen und Camp de Mar, Cala Fornells, Paguera, Port d’Andratx und Andratx flexibel entdecken.",
+      "Roller mieten in El Arenal und an der Playa de Palma. 125cc Scooter online bei NEXA Rentals buchen, in Magaluf abholen und El Arenal, Playa de Palma, Can Pastilla, Palma und Llucmajor flexibel entdecken.",
     keywords: [
-      "Roller mieten Camp de Mar",
-      "Scooter mieten Camp de Mar",
-      "125cc Roller Camp de Mar",
-      "Motorroller mieten Camp de Mar",
-      "Roller Verleih Camp de Mar",
-      "Scooter Rental Camp de Mar",
-      "Roller mieten Cala Fornells",
-      "Scooter mieten Cala Fornells",
-      "Roller mieten Paguera",
-      "Scooter mieten Paguera",
-      "Roller mieten Port d’Andratx",
-      "Scooter mieten Port d’Andratx",
-      "Roller mieten Andratx",
-      "Roller mieten Südwest Mallorca",
-      "Scooter mieten Südwest Mallorca",
-      "125cc Scooter Südwest Mallorca",
-      "Roller online buchen Camp de Mar",
-      "NEXA Rentals Camp de Mar",
+      "Roller mieten El Arenal",
+      "Scooter mieten El Arenal",
+      "125cc Roller El Arenal",
+      "Motorroller mieten El Arenal",
+      "Roller Verleih El Arenal",
+      "Scooter Rental El Arenal",
+      "Roller mieten S'Arenal",
+      "Scooter mieten S'Arenal",
+      "Roller mieten Playa de Palma",
+      "Scooter mieten Playa de Palma",
+      "Roller mieten Can Pastilla",
+      "Scooter mieten Can Pastilla",
+      "Roller mieten Palma",
+      "Roller mieten Llucmajor",
+      "Roller mieten Süden Mallorca",
+      "125cc Scooter Playa de Palma",
+      "Roller online buchen El Arenal",
+      "NEXA Rentals El Arenal",
       "NEXA Rentals Magaluf",
     ],
     alternates: {
-      canonical: `https://www.nexarentals.es/${locale}/roller-mieten-camp-de-mar`,
+      canonical: "https://www.nexarentals.es/de/roller-mieten-el-arenal",
     },
     openGraph: {
-      title: "Roller mieten Camp de Mar | NEXA Rentals Mallorca",
+      title: "Roller mieten El Arenal | NEXA Rentals Mallorca",
       description:
-        "125cc Roller für Camp de Mar, Cala Fornells, Paguera und Südwest Mallorca online buchen. Abholung bei NEXA Rentals in Magaluf.",
-      url: `https://www.nexarentals.es/${locale}/roller-mieten-camp-de-mar`,
+        "125cc Roller für El Arenal, Playa de Palma, Can Pastilla und den Süden Mallorcas online buchen. Abholung bei NEXA Rentals in Magaluf.",
+      url: "https://www.nexarentals.es/de/roller-mieten-el-arenal",
       siteName: "NEXA Rentals",
       images: [
         {
           url: "https://www.nexarentals.es/images/personscooter.jpg",
           width: 1200,
           height: 630,
-          alt: "Roller mieten Camp de Mar bei NEXA Rentals Mallorca",
+          alt: "Roller mieten El Arenal bei NEXA Rentals Mallorca",
         },
       ],
       locale: "de_DE",
       type: "website",
     },
     robots: {
-      index: true,
+      index: isGermanPage,
       follow: true,
       googleBot: {
-        index: true,
+        index: isGermanPage,
         follow: true,
       },
     },
   };
 }
 
-export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
+export default async function RollerMietenElArenalPage({ params }: PageProps) {
   const locale = await getPageLocale(params);
 
   const currentLanguage =
@@ -188,26 +201,26 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
     mainEntity: [
       {
         "@type": "Question",
-        name: "Kann ich in Camp de Mar einen Roller mieten?",
+        name: "Kann ich in El Arenal einen Roller mieten?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Ja. Du kannst deinen 125cc Roller online bei NEXA Rentals buchen und ihn direkt in Magaluf abholen. Das ist praktisch für Gäste aus Camp de Mar, Cala Fornells, Paguera, Andratx und Port d’Andratx.",
+          text: "Ja. Du kannst deinen 125cc Roller online bei NEXA Rentals buchen und ihn direkt in Magaluf abholen. Das ist praktisch für Gäste aus El Arenal, S’Arenal, Playa de Palma, Can Pastilla, Palma und Llucmajor.",
         },
       },
       {
         "@type": "Question",
-        name: "Wie weit ist NEXA Rentals von Camp de Mar entfernt?",
+        name: "Wie weit ist NEXA Rentals von El Arenal entfernt?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "NEXA Rentals befindet sich in Magaluf. Von Camp de Mar erreichst du unseren Standort je nach Verkehr ungefähr in 20 bis 25 Minuten mit dem Auto. Abholung und Rückgabe erfolgen direkt bei NEXA Rentals in Magaluf.",
+          text: "NEXA Rentals befindet sich in Magaluf. Von El Arenal erreichst du unseren Standort je nach Verkehr ungefähr in 25 bis 30 Minuten mit dem Auto. Die normale Abholung und Rückgabe erfolgen direkt bei NEXA Rentals in Magaluf.",
         },
       },
       {
         "@type": "Question",
-        name: "Ist ein Roller praktisch für Camp de Mar und Südwest Mallorca?",
+        name: "Ist ein Roller praktisch für El Arenal und die Playa de Palma?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Ja. Ein 125cc Roller ist praktisch, wenn du Camp de Mar, Cala Fornells, Paguera, Port d’Andratx, Andratx, Santa Ponsa und den Südwesten Mallorcas flexibel entdecken möchtest.",
+          text: "Ja. Ein 125cc Roller ist praktisch, wenn du El Arenal, Playa de Palma, Can Pastilla, Palma, Llucmajor und weitere Orte im Süden Mallorcas flexibel entdecken möchtest.",
         },
       },
       {
@@ -215,7 +228,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
         name: "Welche Fahrerlaubnis brauche ich für einen 125cc Roller?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Du brauchst A, A1 oder A2. Mit einem B-Führerschein kannst du einen 125cc Roller fahren, wenn dein B-Führerschein seit mindestens 3 Jahren gültig ist.",
+          text: "Du brauchst A, A1 oder A2. Mit einem B-Führerschein kannst du einen 125cc Roller fahren, wenn dein B-Führerschein seit mindestens 3 Jahren gültig ist. Provisorische Führerscheine und Lernführerscheine werden nicht akzeptiert.",
         },
       },
       {
@@ -228,10 +241,10 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
       },
       {
         "@type": "Question",
-        name: "Gibt es Lieferung nach Camp de Mar?",
+        name: "Gibt es Lieferung nach El Arenal?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Aktuell bieten wir keinen Lieferservice an. Abholung und Rückgabe erfolgen direkt bei NEXA Rentals in Magaluf.",
+          text: "Die normale Abholung und Rückgabe erfolgen bei NEXA Rentals in Magaluf. Kontaktiere uns vor der Buchung, wenn du eine Lieferung zu deinem Hotel in El Arenal oder in einer nahegelegenen Zone anfragen möchtest. Wir prüfen die Verfügbarkeit anhand deiner Daten und Adresse.",
         },
       },
     ],
@@ -253,31 +266,30 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
       addressCountry: "ES",
     },
     areaServed: [
-      "Camp de Mar",
-      "Cala Fornells",
-      "Paguera",
-      "Port d’Andratx",
-      "Andratx",
-      "Santa Ponsa",
-      "Calvià",
+      "El Arenal",
+      "S’Arenal",
+      "Playa de Palma",
+      "Can Pastilla",
+      "Palma",
+      "Llucmajor",
       "Magaluf",
       "Palmanova",
       "Mallorca",
     ],
-    openingHours: "Mo-Su 09:00-20:00",
+    openingHours: ["Mo-Su 09:00-14:00", "Mo-Su 15:00-20:00"],
     makesOffer: {
       "@type": "Offer",
-      name: "125cc Roller mieten Camp de Mar",
+      name: "125cc Roller mieten El Arenal",
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
-      areaServed: "Camp de Mar",
+      areaServed: "El Arenal",
     },
   };
 
   return (
     <main className={`${pageFont.variable} nexa-seo-page`}>
       <Script
-        id="nexa-seo-navbar-scroll-camp-de-mar"
+        id="nexa-seo-navbar-scroll-el-arenal"
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: `
@@ -365,7 +377,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
                   return (
                     <Link
                       key={language.code}
-                      href={`/${language.code}/roller-mieten-camp-de-mar`}
+                      href={getLanguageHref(language.code)}
                       className={
                         active
                           ? "nexa-seo-language-option active"
@@ -400,7 +412,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
           <div className="nexa-hero-copy">
             <div className="nexa-hero-topline">
               <span className="nexa-hero-kicker">
-                Ca. 20–25 Min. von Camp de Mar entfernt
+                Ca. 25–30 Min. von El Arenal entfernt
               </span>
 
               <a
@@ -413,20 +425,20 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
               </a>
             </div>
 
-            <h1>Roller mieten in Camp de Mar und Mallorcas Südwesten erleben.</h1>
+            <h1>Roller mieten in El Arenal und die Bucht von Palma flexibel erleben.</h1>
 
             <p className="nexa-hero-text">
-              Du suchst nach <strong>Roller mieten Camp de Mar</strong>,{" "}
-              <strong>Scooter mieten Camp de Mar</strong> oder{" "}
-              <strong>125cc Roller Südwest Mallorca</strong>? Bei NEXA Rentals
+              Du suchst nach <strong>Roller mieten El Arenal</strong>,{" "}
+              <strong>Scooter mieten El Arenal</strong> oder{" "}
+              <strong>125cc Roller Playa de Palma</strong>? Bei NEXA Rentals
               buchst du deinen Roller online, bezahlst sicher online und holst
               ihn direkt in Magaluf ab.
             </p>
 
             <p className="nexa-hero-text small">
-              Ideal für Camp de Mar, Cala Fornells, Paguera, Port d’Andratx,
-              Andratx, Santa Ponsa und schöne Küstenfahrten im Südwesten
-              Mallorcas. Perfekt, wenn du Strände, Häfen und Restaurants flexibel
+              Ideal für El Arenal, Playa de Palma, Can Pastilla, Palma,
+              Llucmajor und schöne Fahrten entlang der Bucht von Palma. Perfekt,
+              wenn du Strände, Restaurants und verschiedene Urlaubsorte flexibel
               verbinden möchtest.
             </p>
 
@@ -470,7 +482,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
               <div className="nexa-photo-card nexa-photo-card-top">
                 <Image
                   src="/images/personscooter.jpg"
-                  alt="Roller mieten Camp de Mar bei NEXA Rentals Mallorca"
+                  alt="Roller mieten El Arenal bei NEXA Rentals Mallorca"
                   width={900}
                   height={620}
                   priority
@@ -481,7 +493,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
               <div className="nexa-photo-card nexa-photo-card-bottom">
                 <Image
                   src="/images/scooterperson2.jpg"
-                  alt="Scooter mieten Camp de Mar Südwest Mallorca"
+                  alt="Scooter mieten El Arenal und Playa de Palma"
                   width={900}
                   height={720}
                   className="nexa-hero-image"
@@ -499,13 +511,13 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
       </section>
 
       <section className="nexa-trust-section">
-        <p>Für Camp de Mar, Cala Fornells, Paguera, Andratx und Südwest Mallorca</p>
+        <p>Für El Arenal, Playa de Palma, Can Pastilla, Palma und den Süden Mallorcas</p>
 
         <div className="nexa-trust-logos">
-          <span>Camp de Mar</span>
-          <span>Cala Fornells</span>
-          <span>Paguera</span>
-          <span>Port d’Andratx</span>
+          <span>El Arenal</span>
+          <span>Playa de Palma</span>
+          <span>Can Pastilla</span>
+          <span>Palma</span>
           <span>125cc Roller</span>
         </div>
       </section>
@@ -544,22 +556,22 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
       <section className="nexa-content-section">
         <div className="nexa-content-grid">
           <article>
-            <span className="nexa-section-label">Roller Verleih Camp de Mar</span>
+            <span className="nexa-section-label">Roller Verleih El Arenal</span>
 
-            <h2>Camp de Mar, Paguera und Port d’Andratx flexibler entdecken.</h2>
+            <h2>El Arenal, Playa de Palma und Can Pastilla flexibler entdecken.</h2>
 
             <p>
-              Camp de Mar ist perfekt für ruhige Urlaubstage, schöne Strände,
-              Restaurants am Meer und Ausflüge in den Südwesten Mallorcas. Mit
-              einem 125cc Roller kannst du Orte wie Cala Fornells, Paguera, Port
-              d’Andratx, Andratx, Santa Ponsa und Magaluf einfacher verbinden.
+              El Arenal ist ideal für Strandtage, Restaurants, Nachtleben und
+              Ausflüge rund um die Bucht von Palma. Mit einem 125cc Roller kannst
+              du El Arenal, Playa de Palma, Can Pastilla, Palma, Llucmajor und
+              weitere Orte im Süden Mallorcas einfacher verbinden.
             </p>
 
             <p>
-              NEXA Rentals ist eine starke Option für Gäste, die nach Roller
-              mieten Camp de Mar, Scooter mieten Camp de Mar oder Motorroller
-              mieten Südwest Mallorca suchen. Du buchst online, bezahlst online
-              und holst deinen Roller direkt in Magaluf ab.
+              NEXA Rentals ist eine praktische Option für Gäste, die nach Roller
+              mieten El Arenal, Scooter mieten El Arenal oder Motorroller mieten
+              Playa de Palma suchen. Du buchst online, bezahlst online und holst
+              deinen Roller direkt in Magaluf ab.
             </p>
           </article>
 
@@ -567,7 +579,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
             <h3>Alles inklusive</h3>
 
             <ul>
-              <li>125cc Roller für Camp de Mar und Südwest Mallorca</li>
+              <li>125cc Roller für El Arenal und die Playa de Palma</li>
               <li>Online buchen und online bezahlen</li>
               <li>2 Helme inklusive</li>
               <li>Topcase für Tasche, Helm oder Strandzeug</li>
@@ -585,7 +597,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
         <div className="nexa-how-inner">
           <span className="nexa-section-label">So funktioniert es</span>
 
-          <h2>Von Camp de Mar zur Roller-Buchung in drei einfachen Schritten.</h2>
+          <h2>Von El Arenal zur Roller-Buchung in drei einfachen Schritten.</h2>
 
           <div className="nexa-how-grid">
             <div>
@@ -593,7 +605,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
               <h3>Online auswählen</h3>
               <p>
                 Wähle deinen 125cc Roller, Datum und Mietdauer. Die Buchung ist
-                schnell, klar und ideal für deinen Urlaub im Südwesten Mallorcas.
+                schnell, klar und ideal für deinen Urlaub in El Arenal und an der Playa de Palma.
               </p>
             </div>
 
@@ -602,7 +614,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
               <h3>Online sichern</h3>
               <p>
                 Bezahle den Mietpreis online und sichere dir deinen Roller für
-                Camp de Mar, Paguera, Port d’Andratx oder deine Mallorca-Tour.
+                El Arenal, Playa de Palma, Can Pastilla oder deine Mallorca-Tour.
               </p>
             </div>
 
@@ -617,45 +629,45 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
           </div>
 
           <Link href={bookHref} className="nexa-bottom-cta">
-            Jetzt Roller für Camp de Mar buchen
+            Jetzt Roller für El Arenal buchen
           </Link>
         </div>
       </section>
 
       <section className="nexa-seo-text-section">
         <div className="nexa-seo-text-inner">
-          <span className="nexa-section-label">Scooter mieten Camp de Mar</span>
+          <span className="nexa-section-label">Scooter mieten El Arenal</span>
 
           <h2>
-            Für Gäste, die Camp de Mar und den Südwesten Mallorcas unabhängig
+            Für Gäste, die El Arenal, die Playa de Palma und den Süden Mallorcas unabhängig
             erleben möchten.
           </h2>
 
           <p>
-            Wenn du nach “Roller mieten Camp de Mar”, “Scooter mieten Camp de
-            Mar”, “125cc Roller Camp de Mar”, “Motorroller mieten Camp de Mar”
-            oder “Roller mieten Südwest Mallorca” suchst, brauchst du eine
+            Wenn du nach “Roller mieten El Arenal”, “Scooter mieten El
+            Arenal”, “125cc Roller El Arenal”, “Motorroller mieten El Arenal”
+            oder “Roller mieten Playa de Palma” suchst, brauchst du eine
             einfache Lösung: online buchen, sicher bezahlen und mit einem 125cc
             Roller flexibel unterwegs sein.
           </p>
 
           <p>
-            Besonders praktisch ist ein Roller für Wege zwischen Camp de Mar,
-            Cala Fornells, Paguera, Port d’Andratx, Andratx, Santa Ponsa,
-            Magaluf und Palmanova. NEXA Rentals bietet dir eine einfache
-            Online-Buchung und Abholung in Magaluf. Aktuell bieten wir keinen
-            Lieferservice an, damit Übergabe, Dokumentencheck und Rückgabe klar
-            und sicher bleiben.
+            Besonders praktisch ist ein Roller für Wege zwischen El Arenal,
+            Playa de Palma, Can Pastilla, Palma, Llucmajor, Magaluf und
+            Palmanova. Die normale Abholung und Rückgabe erfolgen bei NEXA
+            Rentals in Magaluf. Kontaktiere uns vor der Buchung, wenn du eine
+            Hotel-Lieferung anfragen möchtest, damit wir deine Daten und Adresse
+            prüfen können.
           </p>
 
           <div className="nexa-keyword-cloud">
-            <span>Roller mieten Camp de Mar</span>
-            <span>Scooter mieten Camp de Mar</span>
-            <span>125cc Roller Camp de Mar</span>
-            <span>Roller mieten Cala Fornells</span>
-            <span>Roller mieten Paguera</span>
-            <span>Roller mieten Port d’Andratx</span>
-            <span>Roller mieten Südwest Mallorca</span>
+            <span>Roller mieten El Arenal</span>
+            <span>Scooter mieten El Arenal</span>
+            <span>125cc Roller El Arenal</span>
+            <span>Roller mieten Playa de Palma</span>
+            <span>Roller mieten Can Pastilla</span>
+            <span>Roller mieten Palma</span>
+            <span>Roller mieten Llucmajor</span>
             <span>NEXA Rentals Magaluf</span>
           </div>
         </div>
@@ -669,23 +681,23 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
         <div className="nexa-faq-inner">
           <span className="nexa-section-label">Häufige Fragen</span>
 
-          <h2>Fragen zum Roller mieten in Camp de Mar</h2>
+          <h2>Fragen zum Roller mieten in El Arenal</h2>
 
           <div className="nexa-faq-list">
             <details>
-              <summary>Kann ich einen Roller für Camp de Mar buchen?</summary>
+              <summary>Kann ich einen Roller für El Arenal buchen?</summary>
               <p>
                 Ja. Du kannst deinen 125cc Roller online bei NEXA Rentals buchen
-                und ihn direkt in Magaluf abholen. Das ist praktisch für Camp de
-                Mar, Cala Fornells, Paguera, Andratx und Port d’Andratx.
+                und ihn direkt in Magaluf abholen. Das ist praktisch für El
+                Arenal, Playa de Palma, Can Pastilla, Llucmajor und Palma.
               </p>
             </details>
 
             <details>
-              <summary>Wie weit ist NEXA Rentals von Camp de Mar entfernt?</summary>
+              <summary>Wie weit ist NEXA Rentals von El Arenal entfernt?</summary>
               <p>
-                Unser Standort befindet sich in Magaluf. Von Camp de Mar sind es
-                je nach Verkehr ungefähr 20 bis 25 Minuten mit dem Auto.
+                Unser Standort befindet sich in Magaluf. Von El Arenal sind es
+                je nach Verkehr ungefähr 25 bis 30 Minuten mit dem Auto.
                 Abholung und Rückgabe erfolgen direkt bei NEXA Rentals in
                 Magaluf.
               </p>
@@ -698,7 +710,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
               <p>
                 Du brauchst A, A1 oder A2. Mit einem B-Führerschein kannst du
                 einen 125cc Roller fahren, wenn dein B-Führerschein seit
-                mindestens 3 Jahren gültig ist. Provisorische oder
+                mindestens 3 Jahren gültig ist. Provisorische Führerscheine und
                 Lernführerscheine werden nicht akzeptiert.
               </p>
             </details>
@@ -712,16 +724,18 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
             </details>
 
             <details>
-              <summary>Gibt es Lieferung nach Camp de Mar?</summary>
+              <summary>Gibt es Lieferung nach El Arenal?</summary>
               <p>
-                Aktuell bieten wir keinen Lieferservice an. Abholung und
-                Rückgabe erfolgen direkt bei NEXA Rentals in Magaluf.
+                Die normale Abholung und Rückgabe erfolgen bei NEXA Rentals in
+                Magaluf. Kontaktiere uns vor der Buchung, wenn du eine Lieferung
+                zu deinem Hotel anfragen möchtest. Wir prüfen die Verfügbarkeit
+                anhand deiner Daten und Adresse.
               </p>
             </details>
           </div>
 
           <div className="nexa-final-cta">
-            <h3>Bereit für Camp de Mar?</h3>
+            <h3>Bereit für El Arenal?</h3>
             <p>
               Buche deinen 125cc Roller online und starte direkt bei NEXA
               Rentals in Magaluf.
@@ -741,7 +755,7 @@ export default async function RollerMietenCampDeMarPage({ params }: PageProps) {
               height={72}
               className="nexa-seo-footer-logo"
             />
-            <p>NEXA Rentals · Roller & E-Bike Verleih in Magaluf, Mallorca</p>
+            <p>NEXA Rentals · Roller- & E-Bike-Verleih in Magaluf, Mallorca</p>
           </div>
 
           <div className="nexa-seo-footer-actions">
