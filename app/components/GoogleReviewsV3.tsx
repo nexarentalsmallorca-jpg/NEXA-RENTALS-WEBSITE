@@ -61,7 +61,7 @@ const COPY: Record<
   en: {
     title: "Loved by scooter riders in Mallorca.",
     rating: "Google Reviews",
-    reviews: "70 Reviews on Google",
+    reviews: "70 5.0 stars Reviews on Google",
     mobileProof: "5.0 stars from 70 reviews",
     altPrefix: "Google review",
   },
