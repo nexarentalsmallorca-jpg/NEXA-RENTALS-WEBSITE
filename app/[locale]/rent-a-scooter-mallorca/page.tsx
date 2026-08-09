@@ -1,4 +1,4 @@
-// app/[locale]/scooter-rental-magaluf/page.tsx
+// app/[locale]/rent-a-scooter-mallorca/page.tsx
 
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -81,7 +81,7 @@ const INCLUDED_ITEMS = [
   {
     image: "/images/ex2.jpg",
     title: "Waterproof phone holder",
-    text: "Ideal for navigation around Magaluf and Mallorca.",
+    text: "Ideal for navigation throughout Mallorca.",
   },
   {
     image: "/images/ex3.png",
@@ -110,15 +110,15 @@ async function getPageLocale(params: PageProps["params"]) {
 
 function getLanguageHref(languageCode: Locale) {
   if (languageCode === "en") {
-    return "/en/scooter-rental-magaluf";
+    return "/en/rent-a-scooter-mallorca";
   }
 
   if (languageCode === "it") {
-    return "/it/noleggio-scooter-magaluf";
+    return "/it/affitto-scooter-maiorca";
   }
 
   if (languageCode === "de") {
-    return "/de/roller-mieten-magaluf";
+    return "/de/roller-mieten-mallorca";
   }
 
   return `/${languageCode}`;
@@ -132,41 +132,40 @@ export async function generateMetadata({
 
   return {
     title:
-      "Scooter Rental Magaluf | 125cc Scooter Hire in Magaluf | NEXA Rentals",
+      "Rent a Scooter Mallorca | 125cc Scooters from €39 | NEXA Rentals",
     description:
-      "Scooter rental in Magaluf, Mallorca, directly from NEXA Rentals. Book a 125cc scooter online from €39, collect it from our Magaluf office and explore Palmanova, Santa Ponsa, Portals Nous and Calvià freely.",
+      "Rent a scooter in Mallorca with NEXA Rentals in Magaluf. Book a 125cc scooter online from €39, collect it from our office and explore Magaluf, Palmanova, Santa Ponsa and Calvià freely.",
     keywords: [
-      "scooter rental Magaluf",
-      "scooter hire Magaluf",
-      "rent a scooter Magaluf",
-      "125cc scooter Magaluf",
-      "motor scooter rental Magaluf",
-      "motor scooter hire Magaluf",
+      "rent a scooter Mallorca",
       "scooter rental Mallorca",
       "scooter hire Mallorca",
+      "rent scooter Mallorca",
+      "motor scooter rental Mallorca",
+      "125cc scooter Mallorca",
+      "motor scooter hire Mallorca",
+      "scooter rental Magaluf",
       "scooter rental Palmanova",
-      "scooter rental Palma Nova",
       "scooter rental Santa Ponsa",
-      "scooter rental Calvià",
-      "book scooter online Magaluf",
-      "cheap scooter rental Magaluf",
+      "cheap scooter rental Mallorca",
+      "book scooter Mallorca",
+      "scooter rental Mallorca online",
       "NEXA Rentals Magaluf",
     ],
     alternates: {
-      canonical: "https://www.nexarentals.es/en/scooter-rental-magaluf",
+      canonical: "https://www.nexarentals.es/en/rent-a-scooter-mallorca",
     },
     openGraph: {
-      title: "Scooter Rental Magaluf | NEXA Rentals Mallorca",
+      title: "Rent a Scooter Mallorca | NEXA Rentals Magaluf",
       description:
-        "Book a 125cc scooter online in Magaluf from €39. Collection and return at NEXA Rentals in Magaluf.",
-      url: "https://www.nexarentals.es/en/scooter-rental-magaluf",
+        "Rent a 125cc scooter in Mallorca from €39. Book online and collect from NEXA Rentals in Magaluf.",
+      url: "https://www.nexarentals.es/en/rent-a-scooter-mallorca",
       siteName: "NEXA Rentals",
       images: [
         {
           url: "https://www.nexarentals.es/images/personscooter.jpg",
           width: 1200,
           height: 630,
-          alt: "Scooter rental in Magaluf with NEXA Rentals Mallorca",
+          alt: "Rent a scooter in Mallorca with NEXA Rentals in Magaluf",
         },
       ],
       locale: "en_GB",
@@ -183,7 +182,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function ScooterRentalMagalufPage({
+export default async function RentAScooterMallorcaPage({
   params,
 }: PageProps) {
   const locale = await getPageLocale(params);
@@ -202,7 +201,7 @@ export default async function ScooterRentalMagalufPage({
     mainEntity: [
       {
         "@type": "Question",
-        name: "Where can I rent a scooter in Magaluf?",
+        name: "Where can I rent a scooter in Mallorca with NEXA Rentals?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "You can book a 125cc scooter online and collect it directly from NEXA Rentals at C. Galeón, 13, Loc 57, 07181 Magaluf. Standard collection and return take place at our Magaluf office.",
@@ -218,7 +217,7 @@ export default async function ScooterRentalMagalufPage({
       },
       {
         "@type": "Question",
-        name: "Which driving licence do I need for a 125cc scooter in Magaluf?",
+        name: "Which driving licence do I need for a 125cc scooter in Mallorca?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "A, A1 and A2 motorcycle licences are accepted. You may also ride a 125cc scooter with a category B car licence if it has been valid for at least 3 years. Provisional and learner licences are not accepted.",
@@ -226,7 +225,7 @@ export default async function ScooterRentalMagalufPage({
       },
       {
         "@type": "Question",
-        name: "What is included with scooter rental in Magaluf?",
+        name: "What is included when I rent a scooter in Mallorca?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "Two helmets, a 50-litre top box, security lock, waterproof phone holder, unlimited kilometres and basic insurance are included.",
@@ -234,7 +233,7 @@ export default async function ScooterRentalMagalufPage({
       },
       {
         "@type": "Question",
-        name: "Is hotel scooter delivery available in Magaluf?",
+        name: "Is hotel scooter delivery available?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "No. Standard collection and return take place directly at NEXA Rentals in Magaluf. We do not currently provide a scooter delivery service.",
@@ -262,7 +261,6 @@ export default async function ScooterRentalMagalufPage({
       "Magaluf",
       "Palmanova",
       "Palma Nova",
-      "Torrenova",
       "Santa Ponsa",
       "Portals Nous",
       "Calvià",
@@ -300,11 +298,11 @@ export default async function ScooterRentalMagalufPage({
     ],
     makesOffer: {
       "@type": "Offer",
-      name: "125cc scooter rental in Magaluf",
+      name: "125cc scooter rental in Mallorca",
       price: "39",
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
-      areaServed: "Magaluf",
+      areaServed: "Mallorca",
     },
   };
 
@@ -474,26 +472,25 @@ export default async function ScooterRentalMagalufPage({
       <section className="nexa-hero-section">
         <div className="nexa-hero-grid">
           <div className="nexa-hero-copy">
-            <h1>Rent a scooter in Magaluf and explore Mallorca freely.</h1>
+            <h1>Rent a scooter in Mallorca directly from Magaluf.</h1>
 
             <p className="nexa-hero-text">
-              Looking for{" "}
-              <strong>scooter rental in Magaluf</strong>,{" "}
-              <strong>scooter hire in Magaluf</strong> or a{" "}
-              <strong>125cc scooter in Magaluf</strong>? With NEXA Rentals,
+              Looking to <strong>rent a scooter in Mallorca</strong>,{" "}
+              find <strong>scooter rental in Magaluf</strong> or book a{" "}
+              <strong>125cc scooter in Mallorca</strong>? With NEXA Rentals,
               you can book online, pay securely and collect your scooter
-              directly from our office in central Magaluf.
+              directly from our office in Magaluf.
             </p>
 
             <p className="nexa-hero-text small">
-              Ideal for Magaluf, Palmanova, Palma Nova, Torrenova, Santa Ponsa,
-              Portals Nous, Calvià, beach days, viewpoints, beach clubs and
-              trips without relying on taxis or buses.
+              Ideal for Magaluf, Palmanova, Palma Nova, Santa Ponsa, Portals
+              Nous and Calvià, whether you are planning beach days, viewpoints,
+              beach clubs or trips without relying on taxis or buses.
             </p>
 
             <div className="nexa-hero-actions">
               <Link href={bookHref} className="nexa-primary-cta">
-                Book your scooter
+                Rent your scooter
               </Link>
 
               <Link href={contactHref} className="nexa-secondary-cta">
@@ -503,7 +500,7 @@ export default async function ScooterRentalMagalufPage({
 
             <div className="nexa-online-note">
               Book online at{" "}
-              <a href={externalBookingHref}>
+              <a href={externalBookingHref} target="_blank" rel="noreferrer">
                 www.nexarentals.es/en/home
               </a>
             </div>
@@ -533,7 +530,7 @@ export default async function ScooterRentalMagalufPage({
               <div className="nexa-photo-card nexa-photo-card-top">
                 <Image
                   src="/images/personscooter.jpg"
-                  alt="Scooter rental in Magaluf with NEXA Rentals Mallorca"
+                  alt="Rent a scooter in Mallorca with NEXA Rentals in Magaluf"
                   width={900}
                   height={620}
                   priority
@@ -544,7 +541,7 @@ export default async function ScooterRentalMagalufPage({
               <div className="nexa-photo-card nexa-photo-card-bottom">
                 <Image
                   src="/images/scooterperson2.jpg"
-                  alt="125cc scooter hire in Magaluf with NEXA Rentals"
+                  alt="125cc scooter rental in Mallorca with NEXA Rentals"
                   width={900}
                   height={720}
                   className="nexa-hero-image"
@@ -562,13 +559,13 @@ export default async function ScooterRentalMagalufPage({
       </section>
 
       <section className="nexa-trust-section">
-        <p>The practical choice for exploring freely from Magaluf</p>
+        <p>A simple way to explore Mallorca freely</p>
 
         <div className="nexa-trust-logos">
-          <span>Scooter rental Magaluf</span>
+          <span>Rent a scooter Mallorca</span>
+          <span>Magaluf</span>
           <span>Palmanova</span>
           <span>Santa Ponsa</span>
-          <span>Portals Nous</span>
           <span>125cc scooters</span>
         </div>
       </section>
@@ -609,21 +606,22 @@ export default async function ScooterRentalMagalufPage({
           <article>
             <span className="nexa-section-label">Why NEXA Rentals?</span>
 
-            <h2>The simple way to rent a scooter in Magaluf.</h2>
+            <h2>The simple way to rent a scooter in Mallorca.</h2>
 
             <p>
-              When you stay in Magaluf, you do not need to waste time looking
-              for a rental company far from your hotel. With NEXA Rentals, you
-              can book a 125cc scooter online, pay online and collect it
-              directly from our Magaluf office. You will know that your vehicle
-              is reserved and can begin your day immediately.
+              Many travellers wait until they arrive on holiday before looking
+              for scooter rental in Mallorca, Magaluf or Palmanova. With NEXA
+              Rentals, you can organise everything in advance: book your 125cc
+              scooter online, pay securely and collect it directly from our
+              Magaluf office. This saves time and ensures that your vehicle is
+              reserved for you.
             </p>
 
             <p>
               Our scooters are ideal for short journeys, beach days and trips
-              to Palmanova, Palma Nova, Portals Nous, Santa Ponsa, El Toro and
-              Calvià. You do not need to wait for taxis or organise your day
-              around bus timetables. Simply collect your scooter and explore
+              to Magaluf, Palmanova, Palma Nova, Portals Nous, Santa Ponsa and
+              Calvià. You do not need to wait for taxis, check bus timetables
+              or deal with long waits. Collect your scooter and explore
               Mallorca at your own pace.
             </p>
           </article>
@@ -632,7 +630,7 @@ export default async function ScooterRentalMagalufPage({
             <h3>Everything included</h3>
 
             <ul>
-              <li>125cc scooter for Magaluf and Mallorca</li>
+              <li>125cc scooter for exploring Mallorca</li>
               <li>Online booking and secure online payment</li>
               <li>Two helmets included</li>
               <li>50-litre top box for a helmet, bag or accessories</li>
@@ -650,7 +648,7 @@ export default async function ScooterRentalMagalufPage({
         <div className="nexa-how-inner">
           <span className="nexa-section-label">How it works</span>
 
-          <h2>Book a scooter in Magaluf in three simple steps.</h2>
+          <h2>Rent a scooter in Mallorca in three simple steps.</h2>
 
           <div className="nexa-how-grid">
             <div>
@@ -658,8 +656,8 @@ export default async function ScooterRentalMagalufPage({
               <h3>Choose your scooter online</h3>
               <p>
                 Select your 125cc scooter, rental date and rental duration. The
-                booking process is quick, clear and designed for guests staying
-                in Magaluf.
+                booking process is quick, clear and designed for visitors to
+                Mallorca.
               </p>
             </div>
 
@@ -685,47 +683,46 @@ export default async function ScooterRentalMagalufPage({
           </div>
 
           <Link href={bookHref} className="nexa-bottom-cta">
-            Book your scooter in Magaluf
+            Rent your scooter in Mallorca
           </Link>
         </div>
       </section>
 
       <section className="nexa-seo-text-section">
         <div className="nexa-seo-text-inner">
-          <span className="nexa-section-label">Scooter rental Magaluf</span>
+          <span className="nexa-section-label">Rent a scooter Mallorca</span>
 
           <h2>
-            For travellers who want to enjoy Magaluf and Mallorca with greater
-            freedom.
+            For travellers who want to explore Mallorca freely, simply and
+            conveniently.
           </h2>
 
           <p>
-            When you search for “scooter rental Magaluf”, “scooter hire
-            Magaluf”, “125cc scooter Magaluf”, “motor scooter rental Magaluf”
-            or “rent a scooter Magaluf”, you need a simple solution: clear
-            information, online booking, secure payment and an easy-to-reach
-            collection point. NEXA Rentals is located directly in Magaluf at
-            C. Galeón, 13, Loc 57.
+            When you search for “rent a scooter Mallorca”, “scooter rental
+            Mallorca”, “scooter hire Mallorca” or “125cc scooter Mallorca”,
+            you need a simple solution: clear information, online booking,
+            secure payment and an easy-to-reach collection point. NEXA Rentals
+            is located directly in Magaluf at C. Galeón, 13, Loc 57.
           </p>
 
           <p>
-            Our service is particularly practical for guests staying in
-            Magaluf, Torrenova, Palmanova, Palma Nova, Santa Ponsa or Calvià.
-            With a scooter, you can reach beaches, restaurants, beach clubs,
-            viewpoints and nearby destinations without depending on a taxi
-            every time. Standard collection and return take place at our
-            Magaluf office. We do not currently provide a scooter delivery
+            Our service is particularly convenient for guests staying in
+            Magaluf, Palmanova, Palma Nova, Torrenova, Santa Ponsa, Portals Nous
+            or Calvià. With a scooter, you can reach beaches, restaurants,
+            beach clubs, viewpoints and nearby destinations without depending
+            on a taxi every time. Standard collection and return take place at
+            our Magaluf office. We do not currently provide a scooter delivery
             service.
           </p>
 
           <div className="nexa-keyword-cloud">
-            <span>Scooter rental Magaluf</span>
-            <span>Scooter hire Magaluf</span>
-            <span>125cc scooter Magaluf</span>
-            <span>Motor scooter rental Magaluf</span>
-            <span>Rent a scooter Magaluf</span>
-            <span>Scooter rental Palmanova</span>
+            <span>Rent a scooter Mallorca</span>
             <span>Scooter rental Mallorca</span>
+            <span>Scooter hire Mallorca</span>
+            <span>125cc scooter Mallorca</span>
+            <span>Motor scooter rental Mallorca</span>
+            <span>Scooter rental Magaluf</span>
+            <span>Book scooter Mallorca</span>
             <span>NEXA Rentals Magaluf</span>
           </div>
         </div>
@@ -739,17 +736,9 @@ export default async function ScooterRentalMagalufPage({
         <div className="nexa-faq-inner">
           <span className="nexa-section-label">Frequently asked questions</span>
 
-          <h2>Questions about scooter rental in Magaluf</h2>
+          <h2>Questions about renting a scooter in Mallorca</h2>
 
           <div className="nexa-faq-list">
-            <details>
-              <summary>Where do I collect the scooter in Magaluf?</summary>
-              <p>
-                Standard collection and return take place directly at NEXA
-                Rentals, C. Galeón, 13, Loc 57, 07181 Magaluf.
-              </p>
-            </details>
-
             <details>
               <summary>
                 Which driving licence do I need for a 125cc scooter?
@@ -759,6 +748,14 @@ export default async function ScooterRentalMagalufPage({
                 ride a 125cc scooter with a category B car licence if it has
                 been valid for at least 3 years. Provisional and learner
                 licences are not accepted.
+              </p>
+            </details>
+
+            <details>
+              <summary>Where do I collect and return the scooter?</summary>
+              <p>
+                Standard collection and return take place directly at NEXA
+                Rentals, C. Galeón, 13, Loc 57, 07181 Magaluf.
               </p>
             </details>
 
@@ -781,7 +778,7 @@ export default async function ScooterRentalMagalufPage({
             </details>
 
             <details>
-              <summary>Is hotel delivery available in Magaluf?</summary>
+              <summary>Is hotel delivery available?</summary>
               <p>
                 No. Standard collection and return take place directly at NEXA
                 Rentals in Magaluf. We do not currently provide a scooter
@@ -796,7 +793,7 @@ export default async function ScooterRentalMagalufPage({
               Book your 125cc scooter online and begin your journey directly
               from Magaluf.
             </p>
-            <Link href={bookHref}>Book your scooter now</Link>
+            <Link href={bookHref}>Rent your scooter now</Link>
           </div>
         </div>
       </section>
@@ -1762,8 +1759,6 @@ export default async function ScooterRentalMagalufPage({
           color: #666574;
           font-size: 17px;
           line-height: 1.78;
-          letter-spacing: -0.015em;
-          font-weight:78;
           letter-spacing: -0.015em;
           font-weight: 500;
         }

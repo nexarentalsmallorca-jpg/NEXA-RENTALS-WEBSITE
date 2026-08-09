@@ -1,10 +1,15 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { PaymentElement, useElements, useStripe } from "@stripe/react-stripe-js";
+import {
+  PaymentElement,
+  useElements,
+  useStripe,
+} from "@stripe/react-stripe-js";
 import type { StripePaymentElementOptions } from "@stripe/stripe-js";
 
-const MAPS_LINK = "https://maps.app.goo.gl/L7bRwgirZLcjQqT37";
+const MAPS_LINK =
+  "https://maps.app.goo.gl/L7bRwgirZLcjQqT37";
 
 const MONTHS = [
   "January",
@@ -37,8 +42,12 @@ type BookingDetails = {
 };
 
 function getHomeHref() {
-  const parts = window.location.pathname.split("/").filter(Boolean);
+  const parts = window.location.pathname
+    .split("/")
+    .filter(Boolean);
+
   const locale = parts[0] || "en";
+
   return `/${locale}/home`;
 }
 
@@ -46,51 +55,86 @@ function goHome() {
   window.location.href = getHomeHref();
 }
 
-function getFirstParam(searchParams: URLSearchParams, keys: string[]) {
+function getFirstParam(
+  searchParams: URLSearchParams,
+  keys: string[]
+) {
   for (const key of keys) {
     const value = searchParams.get(key);
-    if (value && value.trim()) return value.trim();
+
+    if (value && value.trim()) {
+      return value.trim();
+    }
   }
 
   return "";
 }
 
 function formatMoney(value?: string) {
-  const cleanValue = value?.replace("€", "").replace(",", ".").trim() || "";
+  const cleanValue =
+    value
+      ?.replace("€", "")
+      .replace(",", ".")
+      .trim() || "";
+
   const num = Number(cleanValue);
 
-  if (!cleanValue || Number.isNaN(num)) return "";
+  if (!cleanValue || Number.isNaN(num)) {
+    return "";
+  }
+
   return `€${num.toFixed(2)}`;
 }
 
 function formatCents(value?: number | null) {
-  if (typeof value !== "number" || Number.isNaN(value)) return "";
+  if (
+    typeof value !== "number" ||
+    Number.isNaN(value)
+  ) {
+    return "";
+  }
+
   return `€${(value / 100).toFixed(2)}`;
 }
 
 function extractDate(value?: string) {
   if (!value) return "";
 
-  const isoMatch = value.match(/(\d{4})-(\d{2})-(\d{2})/);
+  const isoMatch = value.match(
+    /(\d{4})-(\d{2})-(\d{2})/
+  );
 
   if (isoMatch) {
     const year = isoMatch[1];
     const month = Number(isoMatch[2]);
     const day = Number(isoMatch[3]);
 
-    if (year && month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+    if (
+      year &&
+      month >= 1 &&
+      month <= 12 &&
+      day >= 1 &&
+      day <= 31
+    ) {
       return `${day} ${MONTHS[month - 1]} ${year}`;
     }
   }
 
-  const slashMatch = value.match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+  const slashMatch = value.match(
+    /(\d{1,2})\/(\d{1,2})\/(\d{4})/
+  );
 
   if (slashMatch) {
     const day = Number(slashMatch[1]);
     const month = Number(slashMatch[2]);
     const year = slashMatch[3];
 
-    if (month >= 1 && month <= 12 && day >= 1 && day <= 31) {
+    if (
+      month >= 1 &&
+      month <= 12 &&
+      day >= 1 &&
+      day <= 31
+    ) {
       return `${day} ${MONTHS[month - 1]} ${year}`;
     }
   }
@@ -101,7 +145,10 @@ function extractDate(value?: string) {
 function extractTime(value?: string) {
   if (!value) return "";
 
-  const timeMatch = value.match(/(\d{1,2}):(\d{2})(?:\s?(AM|PM|am|pm))?/);
+  const timeMatch = value.match(
+    /(\d{1,2}):(\d{2})(?:\s?(AM|PM|am|pm))?/
+  );
+
   if (!timeMatch) return "";
 
   const hour = timeMatch[1];
@@ -113,15 +160,26 @@ function extractTime(value?: string) {
     : `${hour}:${minute}`;
 }
 
-function joinDateTime(date: string, time: string) {
-  if (date && time) return `${date} · ${time}`;
+function joinDateTime(
+  date: string,
+  time: string
+) {
+  if (date && time) {
+    return `${date} · ${time}`;
+  }
+
   if (date) return date;
   if (time) return time;
+
   return "";
 }
 
-function getBookingDetailsFromUrl(fallbackCustomerName: string): BookingDetails {
-  const searchParams = new URLSearchParams(window.location.search);
+function getBookingDetailsFromUrl(
+  fallbackCustomerName: string
+): BookingDetails {
+  const searchParams = new URLSearchParams(
+    window.location.search
+  );
 
   const pickupDate = extractDate(
     getFirstParam(searchParams, [
@@ -173,37 +231,56 @@ function getBookingDetailsFromUrl(fallbackCustomerName: string): BookingDetails 
     ])
   );
 
-  const amountFromUrl = getFirstParam(searchParams, [
-    "paid",
-    "amountPaid",
-    "payNow",
-    "total",
-    "totalAmount",
-    "rentalTotal",
-    "price",
-    "fullAmount",
-    "amount",
-  ]);
+  const amountFromUrl = getFirstParam(
+    searchParams,
+    [
+      "paid",
+      "amountPaid",
+      "payNow",
+      "total",
+      "totalAmount",
+      "rentalTotal",
+      "price",
+      "fullAmount",
+      "amount",
+    ]
+  );
 
   return {
     customerName:
-      getFirstParam(searchParams, ["customerName", "name"]) ||
-      fallbackCustomerName,
-    vehicleName: getFirstParam(searchParams, [
-      "vehicleName",
-      "assignedVehicleName",
-      "vehicle",
-      "scooter",
-      "model",
-    ]),
-    pickup: joinDateTime(pickupDate, pickupTime),
-    dropoff: joinDateTime(dropoffDate, dropoffTime),
+      getFirstParam(searchParams, [
+        "customerName",
+        "name",
+      ]) || fallbackCustomerName,
+
+    vehicleName: getFirstParam(
+      searchParams,
+      [
+        "vehicleName",
+        "assignedVehicleName",
+        "vehicle",
+        "scooter",
+        "model",
+      ]
+    ),
+
+    pickup: joinDateTime(
+      pickupDate,
+      pickupTime
+    ),
+
+    dropoff: joinDateTime(
+      dropoffDate,
+      dropoffTime
+    ),
+
     plan: getFirstParam(searchParams, [
       "plan",
       "rentalPlan",
       "duration",
       "selectedPlan",
     ]),
+
     amountPaid: formatMoney(amountFromUrl),
   };
 }
@@ -212,11 +289,16 @@ function buildStripeReturnUrl() {
   const url = new URL(window.location.href);
 
   url.searchParams.delete("payment_intent");
-  url.searchParams.delete("payment_intent_client_secret");
+  url.searchParams.delete(
+    "payment_intent_client_secret"
+  );
   url.searchParams.delete("redirect_status");
   url.searchParams.delete("preview_success");
 
-  url.searchParams.set("nexa_payment_success", "1");
+  url.searchParams.set(
+    "nexa_payment_success",
+    "1"
+  );
 
   return url.toString();
 }
@@ -229,72 +311,155 @@ export default function CheckoutForm({
   const stripe = useStripe();
   const elements = useElements();
 
-  const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState<string | null>(null);
-  const [successOpen, setSuccessOpen] = useState(false);
-  const [bookingDetails, setBookingDetails] = useState<BookingDetails | null>(
-    null
-  );
+  const [loading, setLoading] =
+    useState(false);
 
-  const [viewportReady, setViewportReady] = useState(false);
-  const [mobilePaymentLayout, setMobilePaymentLayout] = useState(false);
-  const [paymentElementReady, setPaymentElementReady] = useState(false);
+  const [msg, setMsg] = useState<
+    string | null
+  >(null);
+
+  const [successOpen, setSuccessOpen] =
+    useState(false);
+
+  const [
+    bookingDetails,
+    setBookingDetails,
+  ] = useState<BookingDetails | null>(null);
+
+  const [
+    viewportReady,
+    setViewportReady,
+  ] = useState(false);
+
+  const [
+    mobilePaymentLayout,
+    setMobilePaymentLayout,
+  ] = useState(false);
+
+  const [
+    paymentElementReady,
+    setPaymentElementReady,
+  ] = useState(false);
 
   useEffect(() => {
     function updateViewport() {
-      setMobilePaymentLayout(window.innerWidth < 768);
+      setMobilePaymentLayout(
+        window.innerWidth < 768
+      );
+
       setViewportReady(true);
     }
 
     updateViewport();
 
-    window.addEventListener("resize", updateViewport);
-    window.addEventListener("orientationchange", updateViewport);
+    window.addEventListener(
+      "resize",
+      updateViewport
+    );
+
+    window.addEventListener(
+      "orientationchange",
+      updateViewport
+    );
 
     return () => {
-      window.removeEventListener("resize", updateViewport);
-      window.removeEventListener("orientationchange", updateViewport);
+      window.removeEventListener(
+        "resize",
+        updateViewport
+      );
+
+      window.removeEventListener(
+        "orientationchange",
+        updateViewport
+      );
     };
   }, []);
 
   useEffect(() => {
     setPaymentElementReady(false);
-  }, [mobilePaymentLayout, customerName, customerEmail, customerPhone]);
+  }, [
+    mobilePaymentLayout,
+    customerName,
+    customerEmail,
+    customerPhone,
+  ]);
 
-  const paymentElementOptions = useMemo<StripePaymentElementOptions>(() => {
-    return {
-      layout: mobilePaymentLayout ? "accordion" : "tabs",
-      defaultValues: {
-        billingDetails: {
-          name: customerName || undefined,
-          email: customerEmail || undefined,
-          phone: customerPhone || undefined,
-        },
+  const paymentElementOptions =
+    useMemo<StripePaymentElementOptions>(
+      () => {
+        return {
+          layout: mobilePaymentLayout
+            ? "accordion"
+            : "tabs",
+
+          defaultValues: {
+            billingDetails: {
+              name:
+                customerName || undefined,
+              email:
+                customerEmail || undefined,
+              phone:
+                customerPhone || undefined,
+            },
+          },
+        };
       },
-    };
-  }, [mobilePaymentLayout, customerName, customerEmail, customerPhone]);
+      [
+        mobilePaymentLayout,
+        customerName,
+        customerEmail,
+        customerPhone,
+      ]
+    );
 
   useEffect(() => {
-    const searchParams = new URLSearchParams(window.location.search);
+    const searchParams =
+      new URLSearchParams(
+        window.location.search
+      );
 
-    const previewSuccess = searchParams.get("preview_success") === "1";
-    const returnedFromStripe = searchParams.get("nexa_payment_success") === "1";
-    const clientSecret = searchParams.get("payment_intent_client_secret");
+    const previewSuccess =
+      searchParams.get(
+        "preview_success"
+      ) === "1";
 
-    if (!previewSuccess && !returnedFromStripe) return;
+    const returnedFromStripe =
+      searchParams.get(
+        "nexa_payment_success"
+      ) === "1";
+
+    const clientSecret =
+      searchParams.get(
+        "payment_intent_client_secret"
+      );
+
+    if (
+      !previewSuccess &&
+      !returnedFromStripe
+    ) {
+      return;
+    }
 
     let cancelled = false;
 
     async function openSuccessPopup() {
-      const details = getBookingDetailsFromUrl(customerName);
+      const details =
+        getBookingDetailsFromUrl(
+          customerName
+        );
 
       let stripeAmount = "";
 
       if (stripe && clientSecret) {
-        const result = await stripe.retrievePaymentIntent(clientSecret);
+        const result =
+          await stripe.retrievePaymentIntent(
+            clientSecret
+          );
 
         if (result.paymentIntent) {
-          stripeAmount = formatCents(result.paymentIntent.amount);
+          stripeAmount = formatCents(
+            result.paymentIntent.amount
+          );
         }
       }
 
@@ -302,10 +467,13 @@ export default function CheckoutForm({
 
       setBookingDetails({
         ...details,
+
         amountPaid:
           details.amountPaid ||
           stripeAmount ||
-          (previewSuccess ? "€39.00" : ""),
+          (previewSuccess
+            ? "€39.00"
+            : ""),
       });
 
       setSuccessOpen(true);
@@ -322,11 +490,15 @@ export default function CheckoutForm({
   useEffect(() => {
     if (!successOpen) return;
 
-    const originalOverflow = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
+    const originalOverflow =
+      document.body.style.overflow;
+
+    document.body.style.overflow =
+      "hidden";
 
     return () => {
-      document.body.style.overflow = originalOverflow;
+      document.body.style.overflow =
+        originalOverflow;
     };
   }, [successOpen]);
 
@@ -337,62 +509,105 @@ export default function CheckoutForm({
     window.setTimeout(() => {
       window.requestAnimationFrame(() => {
         document
-          .getElementById("nexa-stripe-payment-element")
-          ?.scrollIntoView({ behavior: "smooth", block: "center" });
+          .getElementById(
+            "nexa-stripe-payment-element"
+          )
+          ?.scrollIntoView({
+            behavior: "smooth",
+            block: "center",
+          });
       });
     }, 120);
   }
 
-  async function onSubmit(e: React.FormEvent) {
+  async function onSubmit(
+    e: React.FormEvent
+  ) {
     e.preventDefault();
     setMsg(null);
 
     if (!stripe || !elements) {
-      setMsg("Secure payment is still loading. Please wait a moment.");
+      setMsg(
+        "Secure payment is still loading. Please wait a moment."
+      );
+
       return;
     }
 
     if (!paymentElementReady) {
-      setMsg("Payment form is still loading. Please wait a moment.");
+      setMsg(
+        "Payment form is still loading. Please wait a moment."
+      );
+
       return;
     }
 
     setLoading(true);
 
-    const { error: submitError } = await elements.submit();
+    const { error: submitError } =
+      await elements.submit();
 
     if (submitError) {
-      setMsg(submitError.message || "Please check your payment details.");
+      setMsg(
+        submitError.message ||
+          "Please check your payment details."
+      );
+
       setLoading(false);
       return;
     }
 
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      confirmParams: {
-        return_url: buildStripeReturnUrl(),
-        payment_method_data: {
-          billing_details: {
-            name: customerName || undefined,
-            email: customerEmail || undefined,
-            phone: customerPhone || undefined,
+    const { error, paymentIntent } =
+      await stripe.confirmPayment({
+        elements,
+
+        confirmParams: {
+          return_url:
+            buildStripeReturnUrl(),
+
+          payment_method_data: {
+            billing_details: {
+              name:
+                customerName ||
+                undefined,
+
+              email:
+                customerEmail ||
+                undefined,
+
+              phone:
+                customerPhone ||
+                undefined,
+            },
           },
         },
-      },
-      redirect: "if_required",
-    });
+
+        redirect: "if_required",
+      });
 
     if (error) {
-      setMsg(error.message || "Payment failed. Please try again.");
+      setMsg(
+        error.message ||
+          "Payment failed. Please try again."
+      );
+
       setLoading(false);
       return;
     }
 
-    const details = getBookingDetailsFromUrl(customerName);
+    const details =
+      getBookingDetailsFromUrl(
+        customerName
+      );
 
     setBookingDetails({
       ...details,
-      amountPaid: details.amountPaid || formatCents(paymentIntent?.amount),
+
+      amountPaid:
+        details.amountPaid ||
+        formatCents(
+          paymentIntent?.amount
+        ),
     });
 
     setSuccessOpen(true);
@@ -400,7 +615,11 @@ export default function CheckoutForm({
   }
 
   const readyToPay = Boolean(
-    stripe && elements && viewportReady && paymentElementReady && !loading
+    stripe &&
+      elements &&
+      viewportReady &&
+      paymentElementReady &&
+      !loading
   );
 
   return (
@@ -419,7 +638,9 @@ export default function CheckoutForm({
           </h2>
 
           <p className="mt-2 max-w-xl text-[13px] font-medium leading-6 text-black/58">
-            Enter your secure payment details below to complete your booking.
+            Enter your secure payment
+            details below to complete your
+            booking.
           </p>
         </div>
 
@@ -431,7 +652,8 @@ export default function CheckoutForm({
               </div>
 
               <div className="mt-1 text-[13px] font-black text-black">
-                Enter your secure payment details below
+                Enter your secure payment
+                details below
               </div>
             </div>
 
@@ -442,7 +664,8 @@ export default function CheckoutForm({
 
           {!paymentElementReady ? (
             <div className="nexa-payment-loading mb-3 rounded-none border border-black/10 bg-white px-4 py-3 text-[12px] font-bold text-black/50">
-              Loading secure payment form...
+              Loading secure payment
+              form...
             </div>
           ) : null}
 
@@ -452,12 +675,24 @@ export default function CheckoutForm({
           >
             {viewportReady ? (
               <PaymentElement
-                key={mobilePaymentLayout ? "payment-mobile" : "payment-desktop"}
-                options={paymentElementOptions}
-                onReady={handlePaymentElementReady}
+                key={
+                  mobilePaymentLayout
+                    ? "payment-mobile"
+                    : "payment-desktop"
+                }
+                options={
+                  paymentElementOptions
+                }
+                onReady={
+                  handlePaymentElementReady
+                }
                 onChange={() => {
-                  if (!paymentElementReady) {
-                    setPaymentElementReady(true);
+                  if (
+                    !paymentElementReady
+                  ) {
+                    setPaymentElementReady(
+                      true
+                    );
                   }
                 }}
               />
@@ -475,22 +710,33 @@ export default function CheckoutForm({
           </p>
         ) : null}
 
-        <button
-          type="submit"
-          disabled={!readyToPay}
-          className={[
-            "nexa-payment-submit mt-5 min-h-[56px] w-full bg-black px-5 text-[13px] font-black uppercase tracking-[0.18em] text-white transition duration-200 active:scale-[0.98]",
-            readyToPay
-              ? "shadow-[0_14px_34px_rgba(0,0,0,0.14)] hover:-translate-y-0.5 hover:bg-[#222] hover:shadow-[0_20px_46px_rgba(0,0,0,0.22)] active:translate-y-0"
-              : "cursor-not-allowed bg-black/20 text-black/35",
-          ].join(" ")}
-        >
-          {loading
-            ? "Processing payment..."
-            : paymentElementReady
-              ? "Pay now"
-              : "Loading payment..."}
-        </button>
+        <div className="nexa-payment-submit-shell mt-5">
+          <div
+            className={
+              readyToPay
+                ? "nexa-payment-heartbeat"
+                : ""
+            }
+          >
+            <button
+              type="submit"
+              disabled={!readyToPay}
+              className={[
+                "nexa-payment-submit min-h-[56px] w-full bg-black px-5 text-[13px] font-black uppercase tracking-[0.18em] text-white transition duration-200 active:scale-[0.98]",
+
+                readyToPay
+                  ? "shadow-[0_14px_34px_rgba(0,0,0,0.14)] hover:-translate-y-0.5 hover:bg-[#222] hover:shadow-[0_20px_46px_rgba(0,0,0,0.22)] active:translate-y-0"
+                  : "cursor-not-allowed bg-black/20 text-black/35",
+              ].join(" ")}
+            >
+              {loading
+                ? "Processing payment..."
+                : paymentElementReady
+                  ? "Pay now"
+                  : "Loading payment..."}
+            </button>
+          </div>
+        </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
           <TrustPill text="Encrypted payment" />
@@ -500,7 +746,9 @@ export default function CheckoutForm({
       </form>
 
       {successOpen ? (
-        <BookingConfirmedModal bookingDetails={bookingDetails} />
+        <BookingConfirmedModal
+          bookingDetails={bookingDetails}
+        />
       ) : null}
 
       <style jsx global>{`
@@ -518,13 +766,87 @@ export default function CheckoutForm({
           overflow: visible;
         }
 
+        /*
+         * PAY NOW HEARTBEAT
+         *
+         * Two fast beats followed by a short pause.
+         * The animation is only applied when payment is ready.
+         */
+        .nexa-payment-submit-shell {
+          width: 100%;
+        }
+
+        .nexa-payment-heartbeat {
+          width: 100%;
+          transform-origin: center;
+          animation: nexa-pay-heartbeat
+            2.35s ease-in-out infinite;
+          will-change: transform, filter;
+        }
+
+        @keyframes nexa-pay-heartbeat {
+          0%,
+          38%,
+          100% {
+            transform: translateY(0)
+              scale(1);
+            filter: drop-shadow(
+              0 0 0 rgba(0, 0, 0, 0)
+            );
+          }
+
+          7% {
+            transform: translateY(-3px)
+              scale(1.025);
+            filter: drop-shadow(
+              0 12px 12px
+                rgba(0, 0, 0, 0.14)
+            );
+          }
+
+          13% {
+            transform: translateY(0)
+              scale(1);
+            filter: drop-shadow(
+              0 5px 6px
+                rgba(0, 0, 0, 0.08)
+            );
+          }
+
+          21% {
+            transform: translateY(-5px)
+              scale(1.045);
+            filter: drop-shadow(
+              0 17px 16px
+                rgba(0, 0, 0, 0.2)
+            );
+          }
+
+          31% {
+            transform: translateY(0)
+              scale(1);
+            filter: drop-shadow(
+              0 0 0 rgba(0, 0, 0, 0)
+            );
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nexa-payment-heartbeat {
+            animation: none;
+          }
+        }
+
         @media (max-width: 767px) {
           .nexa-payment-form {
             border-left: 0 !important;
             border-right: 0 !important;
             padding-left: 0 !important;
             padding-right: 0 !important;
-            padding-bottom: calc(env(safe-area-inset-bottom) + 32px) !important;
+            padding-bottom: calc(
+              env(safe-area-inset-bottom) +
+                32px
+            ) !important;
             overflow: visible !important;
           }
 
@@ -545,16 +867,28 @@ export default function CheckoutForm({
             padding-bottom: 18px !important;
           }
 
-          .nexa-stripe-payment-element iframe {
+          .nexa-stripe-payment-element
+            iframe {
             width: 100% !important;
             display: block !important;
           }
 
-          .nexa-payment-submit {
+          /*
+           * Sticky positioning stays on the outer shell.
+           * The heartbeat runs on the inner wrapper.
+           */
+          .nexa-payment-submit-shell {
             position: sticky;
-            bottom: max(10px, env(safe-area-inset-bottom));
+            bottom: max(
+              10px,
+              env(safe-area-inset-bottom)
+            );
             z-index: 20;
-            box-shadow: 0 18px 42px rgba(0, 0, 0, 0.22);
+          }
+
+          .nexa-payment-submit {
+            box-shadow: 0 18px 42px
+              rgba(0, 0, 0, 0.22);
           }
         }
 
@@ -633,7 +967,8 @@ function BookingConfirmedModal({
             </h2>
 
             <p className="mx-auto mt-2 max-w-lg text-[12px] font-semibold leading-5 text-black/55 sm:text-[13px]">
-              Your payment was received and your booking is now confirmed.
+              Your payment was received and
+              your booking is now confirmed.
             </p>
           </div>
 
@@ -654,30 +989,52 @@ function BookingConfirmedModal({
                   <>
                     <ModalDetailRow
                       label="Vehicle"
-                      value={bookingDetails?.vehicleName}
+                      value={
+                        bookingDetails?.vehicleName
+                      }
                     />
+
                     <ModalDetailRow
                       label="Customer"
-                      value={bookingDetails?.customerName}
+                      value={
+                        bookingDetails?.customerName
+                      }
                     />
+
                     <ModalDetailRow
                       label="Pickup"
-                      value={bookingDetails?.pickup}
+                      value={
+                        bookingDetails?.pickup
+                      }
                     />
+
                     <ModalDetailRow
                       label="Return"
-                      value={bookingDetails?.dropoff}
+                      value={
+                        bookingDetails?.dropoff
+                      }
                     />
-                    <ModalDetailRow label="Plan" value={bookingDetails?.plan} />
+
+                    <ModalDetailRow
+                      label="Plan"
+                      value={
+                        bookingDetails?.plan
+                      }
+                    />
+
                     <ModalDetailRow
                       label="Paid"
-                      value={bookingDetails?.amountPaid}
+                      value={
+                        bookingDetails?.amountPaid
+                      }
                     />
                   </>
                 ) : (
                   <p className="rounded-[10px] border border-black/10 bg-[#fafafa] px-4 py-3 text-[12px] font-semibold leading-5 text-black/60">
-                    Your booking is confirmed. The full booking details are saved
-                    with your confirmation email.
+                    Your booking is confirmed.
+                    The full booking details are
+                    saved with your confirmation
+                    email.
                   </p>
                 )}
               </div>
@@ -732,14 +1089,16 @@ function BookingConfirmedModal({
 
                 <PickupNote
                   number="3"
-                  title="€150 refundable deposit"
+                  title="€150 refundable deposit per scooter"
                   text="Handled at pickup by cash or card."
                 />
               </div>
 
               <p className="mt-4 rounded-[10px] border border-black/10 bg-[#fafafa] px-4 py-3 text-[11px] font-semibold leading-5 text-black/58">
-                Please arrive at your pickup time so we can prepare your scooter
-                and make the handover fast.
+                Please arrive at your pickup
+                time so we can prepare your
+                scooter and make the handover
+                fast.
               </p>
             </div>
           </div>
@@ -763,6 +1122,7 @@ function ModalDetailRow({
       <p className="text-[9px] font-black uppercase tracking-[0.18em] text-black/38">
         {label}
       </p>
+
       <p className="text-[12px] font-black leading-5 text-black sm:text-[13px]">
         {value}
       </p>
@@ -786,7 +1146,10 @@ function PickupNote({
       </div>
 
       <div>
-        <p className="text-[12px] font-black leading-5 text-black">{title}</p>
+        <p className="text-[12px] font-black leading-5 text-black">
+          {title}
+        </p>
+
         <p className="text-[11px] font-semibold leading-5 text-black/55">
           {text}
         </p>
@@ -795,7 +1158,11 @@ function PickupNote({
   );
 }
 
-function TrustPill({ text }: { text: string }) {
+function TrustPill({
+  text,
+}: {
+  text: string;
+}) {
   return (
     <div className="border border-black/10 bg-white px-3 py-2 text-center text-[11px] font-black text-black/52">
       {text}

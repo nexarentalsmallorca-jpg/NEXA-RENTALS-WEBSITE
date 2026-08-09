@@ -1,4 +1,4 @@
-// app/[locale]/scooter-rental-magaluf/page.tsx
+// app/[locale]/scooter-rental-el-toro/page.tsx
 
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -76,17 +76,17 @@ const INCLUDED_ITEMS = [
   {
     image: "/images/ex1.jpg",
     title: "50-litre top box",
-    text: "Practical storage for a helmet, bag and personal belongings.",
+    text: "Practical space for beach essentials, a bag or shopping.",
   },
   {
     image: "/images/ex2.jpg",
     title: "Waterproof phone holder",
-    text: "Ideal for navigation around Magaluf and Mallorca.",
+    text: "Perfect for navigating between El Toro, Magaluf and Calvià.",
   },
   {
     image: "/images/ex3.png",
     title: "Security lock",
-    text: "For secure stops at the beach, hotel or a restaurant.",
+    text: "For secure stops at the port, beach, hotel or restaurant.",
   },
   {
     image: "/images/ex5.png",
@@ -110,15 +110,15 @@ async function getPageLocale(params: PageProps["params"]) {
 
 function getLanguageHref(languageCode: Locale) {
   if (languageCode === "en") {
-    return "/en/scooter-rental-magaluf";
+    return "/en/scooter-rental-el-toro";
   }
 
   if (languageCode === "it") {
-    return "/it/noleggio-scooter-magaluf";
+    return "/it/noleggio-scooter-el-toro";
   }
 
   if (languageCode === "de") {
-    return "/de/roller-mieten-magaluf";
+    return "/de/roller-mieten-el-toro";
   }
 
   return `/${languageCode}`;
@@ -132,41 +132,43 @@ export async function generateMetadata({
 
   return {
     title:
-      "Scooter Rental Magaluf | 125cc Scooter Hire in Magaluf | NEXA Rentals",
+      "Scooter Rental El Toro | 125cc Scooter Hire El Toro Mallorca | NEXA Rentals",
     description:
-      "Scooter rental in Magaluf, Mallorca, directly from NEXA Rentals. Book a 125cc scooter online from €39, collect it from our Magaluf office and explore Palmanova, Santa Ponsa, Portals Nous and Calvià freely.",
+      "Scooter rental in El Toro, Mallorca. Book a 125cc scooter online with NEXA Rentals, collect it in Magaluf and explore El Toro, Port Adriano, Santa Ponsa, Palmanova and Calvià freely. Around 20 minutes from El Toro.",
     keywords: [
-      "scooter rental Magaluf",
-      "scooter hire Magaluf",
-      "rent a scooter Magaluf",
-      "125cc scooter Magaluf",
-      "motor scooter rental Magaluf",
-      "motor scooter hire Magaluf",
-      "scooter rental Mallorca",
-      "scooter hire Mallorca",
-      "scooter rental Palmanova",
-      "scooter rental Palma Nova",
+      "scooter rental El Toro",
+      "scooter hire El Toro",
+      "rent a scooter El Toro",
+      "125cc scooter El Toro",
+      "motor scooter rental El Toro",
+      "motor scooter hire El Toro",
+      "El Toro scooter rental",
+      "El Toro scooter hire",
+      "scooter rental El Toro Mallorca",
+      "125cc scooter El Toro Mallorca",
+      "scooter rental Port Adriano",
+      "scooter hire Port Adriano",
       "scooter rental Santa Ponsa",
       "scooter rental Calvià",
-      "book scooter online Magaluf",
-      "cheap scooter rental Magaluf",
-      "NEXA Rentals Magaluf",
+      "NEXA Rentals El Toro",
+      "book scooter online El Toro",
+      "scooter El Toro Mallorca",
     ],
     alternates: {
-      canonical: "https://www.nexarentals.es/en/scooter-rental-magaluf",
+      canonical: "https://www.nexarentals.es/en/scooter-rental-el-toro",
     },
     openGraph: {
-      title: "Scooter Rental Magaluf | NEXA Rentals Mallorca",
+      title: "Scooter Rental El Toro | NEXA Rentals Mallorca",
       description:
-        "Book a 125cc scooter online in Magaluf from €39. Collection and return at NEXA Rentals in Magaluf.",
-      url: "https://www.nexarentals.es/en/scooter-rental-magaluf",
+        "Book a 125cc scooter online for El Toro and Port Adriano. Collection from NEXA Rentals in Magaluf, around 20 minutes from El Toro.",
+      url: "https://www.nexarentals.es/en/scooter-rental-el-toro",
       siteName: "NEXA Rentals",
       images: [
         {
           url: "https://www.nexarentals.es/images/personscooter.jpg",
           width: 1200,
           height: 630,
-          alt: "Scooter rental in Magaluf with NEXA Rentals Mallorca",
+          alt: "Scooter rental in El Toro with NEXA Rentals Mallorca",
         },
       ],
       locale: "en_GB",
@@ -183,7 +185,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function ScooterRentalMagalufPage({
+export default async function ScooterRentalElToroPage({
   params,
 }: PageProps) {
   const locale = await getPageLocale(params);
@@ -202,23 +204,31 @@ export default async function ScooterRentalMagalufPage({
     mainEntity: [
       {
         "@type": "Question",
-        name: "Where can I rent a scooter in Magaluf?",
+        name: "Can I rent a scooter for El Toro?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "You can book a 125cc scooter online and collect it directly from NEXA Rentals at C. Galeón, 13, Loc 57, 07181 Magaluf. Standard collection and return take place at our Magaluf office.",
+          text: "Yes. You can book a 125cc scooter online with NEXA Rentals and collect it from our office in Magaluf. Our office is around 20 minutes from El Toro and is a practical option for guests staying in El Toro, Port Adriano, Santa Ponsa and Calvià.",
         },
       },
       {
         "@type": "Question",
-        name: "Can I book and pay for the scooter online?",
+        name: "How far is NEXA Rentals from El Toro?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Yes. With NEXA Rentals, you can book your scooter and pay the rental price online. This reserves the vehicle for your selected dates.",
+          text: "NEXA Rentals is located in Magaluf, around 20 minutes by car from El Toro. Standard scooter collection and return take place at NEXA Rentals in Magaluf.",
         },
       },
       {
         "@type": "Question",
-        name: "Which driving licence do I need for a 125cc scooter in Magaluf?",
+        name: "Can I book a scooter for Port Adriano and El Toro?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Yes. A 125cc scooter is ideal for exploring El Toro, Port Adriano, Santa Ponsa, Magaluf, Palmanova and Calvià freely.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Which driving licence do I need for a 125cc scooter?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "A, A1 and A2 motorcycle licences are accepted. You may also ride a 125cc scooter with a category B car licence if it has been valid for at least 3 years. Provisional and learner licences are not accepted.",
@@ -226,18 +236,18 @@ export default async function ScooterRentalMagalufPage({
       },
       {
         "@type": "Question",
-        name: "What is included with scooter rental in Magaluf?",
+        name: "What is included with the scooter rental for El Toro?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Two helmets, a 50-litre top box, security lock, waterproof phone holder, unlimited kilometres and basic insurance are included.",
+          text: "NEXA Rentals includes two helmets, a 50-litre top box, security lock, waterproof phone holder, unlimited kilometres and basic insurance.",
         },
       },
       {
         "@type": "Question",
-        name: "Is hotel scooter delivery available in Magaluf?",
+        name: "Is scooter delivery available in El Toro?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "No. Standard collection and return take place directly at NEXA Rentals in Magaluf. We do not currently provide a scooter delivery service.",
+          text: "No. Standard collection and return take place directly at the NEXA Rentals office in Magaluf. We do not currently provide a scooter delivery service.",
         },
       },
     ],
@@ -259,13 +269,13 @@ export default async function ScooterRentalMagalufPage({
       addressCountry: "ES",
     },
     areaServed: [
+      "El Toro",
+      "Port Adriano",
+      "Santa Ponsa",
+      "Calvià",
       "Magaluf",
       "Palmanova",
       "Palma Nova",
-      "Torrenova",
-      "Santa Ponsa",
-      "Portals Nous",
-      "Calvià",
       "Mallorca",
     ],
     openingHoursSpecification: [
@@ -300,11 +310,11 @@ export default async function ScooterRentalMagalufPage({
     ],
     makesOffer: {
       "@type": "Offer",
-      name: "125cc scooter rental in Magaluf",
+      name: "125cc scooter rental in El Toro",
       price: "39",
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
-      areaServed: "Magaluf",
+      areaServed: "El Toro",
     },
   };
 
@@ -474,21 +484,28 @@ export default async function ScooterRentalMagalufPage({
       <section className="nexa-hero-section">
         <div className="nexa-hero-grid">
           <div className="nexa-hero-copy">
-            <h1>Rent a scooter in Magaluf and explore Mallorca freely.</h1>
+            <div className="nexa-hero-kicker">
+              Around 20 minutes from El Toro
+            </div>
+
+            <h1>
+              Rent a scooter for El Toro and explore Mallorca freely.
+            </h1>
 
             <p className="nexa-hero-text">
               Looking for{" "}
-              <strong>scooter rental in Magaluf</strong>,{" "}
-              <strong>scooter hire in Magaluf</strong> or a{" "}
-              <strong>125cc scooter in Magaluf</strong>? With NEXA Rentals,
-              you can book online, pay securely and collect your scooter
-              directly from our office in central Magaluf.
+              <strong>scooter rental in El Toro</strong>,{" "}
+              <strong>scooter hire in El Toro</strong> or a{" "}
+              <strong>125cc scooter in El Toro, Mallorca</strong>? With NEXA
+              Rentals, you can book online, pay securely and collect your
+              scooter directly from our office in Magaluf.
             </p>
 
             <p className="nexa-hero-text small">
-              Ideal for Magaluf, Palmanova, Palma Nova, Torrenova, Santa Ponsa,
-              Portals Nous, Calvià, beach days, viewpoints, beach clubs and
-              trips without relying on taxis or buses.
+              Ideal for guests staying in El Toro, Port Adriano, Santa Ponsa,
+              Calvià, Magaluf and Palmanova. Reach the port, beaches,
+              restaurants and viewpoints easily, or begin a day trip without
+              relying on taxis or long waits.
             </p>
 
             <div className="nexa-hero-actions">
@@ -533,7 +550,7 @@ export default async function ScooterRentalMagalufPage({
               <div className="nexa-photo-card nexa-photo-card-top">
                 <Image
                   src="/images/personscooter.jpg"
-                  alt="Scooter rental in Magaluf with NEXA Rentals Mallorca"
+                  alt="Scooter rental in El Toro with NEXA Rentals Mallorca"
                   width={900}
                   height={620}
                   priority
@@ -544,7 +561,7 @@ export default async function ScooterRentalMagalufPage({
               <div className="nexa-photo-card nexa-photo-card-bottom">
                 <Image
                   src="/images/scooterperson2.jpg"
-                  alt="125cc scooter hire in Magaluf with NEXA Rentals"
+                  alt="Scooter hire in El Toro and Port Adriano"
                   width={900}
                   height={720}
                   className="nexa-hero-image"
@@ -562,14 +579,17 @@ export default async function ScooterRentalMagalufPage({
       </section>
 
       <section className="nexa-trust-section">
-        <p>The practical choice for exploring freely from Magaluf</p>
+        <p>
+          Ideal for guests staying in El Toro, Port Adriano, Santa Ponsa and
+          Calvià
+        </p>
 
         <div className="nexa-trust-logos">
-          <span>Scooter rental Magaluf</span>
-          <span>Palmanova</span>
+          <span>Scooter rental El Toro</span>
+          <span>Port Adriano</span>
           <span>Santa Ponsa</span>
-          <span>Portals Nous</span>
           <span>125cc scooters</span>
+          <span>Calvià</span>
         </div>
       </section>
 
@@ -607,24 +627,28 @@ export default async function ScooterRentalMagalufPage({
       <section className="nexa-content-section">
         <div className="nexa-content-grid">
           <article>
-            <span className="nexa-section-label">Why NEXA Rentals?</span>
+            <span className="nexa-section-label">
+              Scooter rental El Toro
+            </span>
 
-            <h2>The simple way to rent a scooter in Magaluf.</h2>
+            <h2>
+              The easiest way to travel around El Toro and the surrounding
+              area.
+            </h2>
 
             <p>
-              When you stay in Magaluf, you do not need to waste time looking
-              for a rental company far from your hotel. With NEXA Rentals, you
-              can book a 125cc scooter online, pay online and collect it
-              directly from our Magaluf office. You will know that your vehicle
-              is reserved and can begin your day immediately.
+              El Toro and Port Adriano are ideal for enjoying Mallorca in a
+              relaxed, exclusive and flexible way. With a 125cc scooter, you
+              can reach beaches, restaurants, viewpoints and destinations such
+              as Santa Ponsa, Magaluf, Palmanova and Calvià much more easily
+              than by taxi or bus.
             </p>
 
             <p>
-              Our scooters are ideal for short journeys, beach days and trips
-              to Palmanova, Palma Nova, Portals Nous, Santa Ponsa, El Toro and
-              Calvià. You do not need to wait for taxis or organise your day
-              around bus timetables. Simply collect your scooter and explore
-              Mallorca at your own pace.
+              NEXA Rentals is a practical choice for guests staying in El Toro.
+              You can book online and collect your scooter from our office in
+              Magaluf, around 20 minutes from El Toro. Reserve your scooter
+              online and begin exploring Mallorca immediately.
             </p>
           </article>
 
@@ -632,10 +656,10 @@ export default async function ScooterRentalMagalufPage({
             <h3>Everything included</h3>
 
             <ul>
-              <li>125cc scooter for Magaluf and Mallorca</li>
+              <li>125cc scooter for El Toro and Port Adriano</li>
               <li>Online booking and secure online payment</li>
               <li>Two helmets included</li>
-              <li>50-litre top box for a helmet, bag or accessories</li>
+              <li>50-litre top box for a bag, helmet or accessories</li>
               <li>Waterproof phone holder</li>
               <li>Security lock included</li>
               <li>Unlimited kilometres</li>
@@ -650,26 +674,28 @@ export default async function ScooterRentalMagalufPage({
         <div className="nexa-how-inner">
           <span className="nexa-section-label">How it works</span>
 
-          <h2>Book a scooter in Magaluf in three simple steps.</h2>
+          <h2>
+            Book a scooter for El Toro in three simple steps.
+          </h2>
 
           <div className="nexa-how-grid">
             <div>
               <span>01</span>
-              <h3>Choose your scooter online</h3>
+              <h3>Choose online</h3>
               <p>
                 Select your 125cc scooter, rental date and rental duration. The
-                booking process is quick, clear and designed for guests staying
-                in Magaluf.
+                booking process is quick, clear and ideal for guests staying in
+                El Toro.
               </p>
             </div>
 
             <div>
               <span>02</span>
-              <h3>Pay online</h3>
+              <h3>Confirm online</h3>
               <p>
-                Pay the rental price online and reserve your scooter for the
-                selected dates. You will automatically receive your booking
-                confirmation.
+                Pay the rental price online and reserve your scooter for El
+                Toro, Port Adriano, Santa Ponsa or your planned trips around
+                Mallorca.
               </p>
             </div>
 
@@ -685,47 +711,47 @@ export default async function ScooterRentalMagalufPage({
           </div>
 
           <Link href={bookHref} className="nexa-bottom-cta">
-            Book your scooter in Magaluf
+            Book a scooter for El Toro
           </Link>
         </div>
       </section>
 
       <section className="nexa-seo-text-section">
         <div className="nexa-seo-text-inner">
-          <span className="nexa-section-label">Scooter rental Magaluf</span>
+          <span className="nexa-section-label">
+            Scooter hire El Toro
+          </span>
 
           <h2>
-            For travellers who want to enjoy Magaluf and Mallorca with greater
-            freedom.
+            For travellers who want to explore El Toro, Port Adriano and
+            south-west Mallorca freely.
           </h2>
 
           <p>
-            When you search for “scooter rental Magaluf”, “scooter hire
-            Magaluf”, “125cc scooter Magaluf”, “motor scooter rental Magaluf”
-            or “rent a scooter Magaluf”, you need a simple solution: clear
-            information, online booking, secure payment and an easy-to-reach
-            collection point. NEXA Rentals is located directly in Magaluf at
-            C. Galeón, 13, Loc 57.
+            When you search for “scooter rental El Toro”, “scooter hire El
+            Toro”, “125cc scooter El Toro”, “rent a scooter El Toro” or
+            “scooter rental El Toro Mallorca”, you need a simple solution:
+            online booking, secure payment, clear collection and a scooter that
+            gives you complete freedom.
           </p>
 
           <p>
-            Our service is particularly practical for guests staying in
-            Magaluf, Torrenova, Palmanova, Palma Nova, Santa Ponsa or Calvià.
-            With a scooter, you can reach beaches, restaurants, beach clubs,
-            viewpoints and nearby destinations without depending on a taxi
-            every time. Standard collection and return take place at our
-            Magaluf office. We do not currently provide a scooter delivery
-            service.
+            El Toro is located close to Port Adriano and Santa Ponsa. A scooter
+            is particularly useful in this area when you do not want to order a
+            taxi every time or wait for public transport. NEXA Rentals offers
+            straightforward online booking, transparent services and
+            collection from our office in Magaluf, around 20 minutes from El
+            Toro. We do not currently provide a scooter delivery service.
           </p>
 
           <div className="nexa-keyword-cloud">
-            <span>Scooter rental Magaluf</span>
-            <span>Scooter hire Magaluf</span>
-            <span>125cc scooter Magaluf</span>
-            <span>Motor scooter rental Magaluf</span>
-            <span>Rent a scooter Magaluf</span>
-            <span>Scooter rental Palmanova</span>
-            <span>Scooter rental Mallorca</span>
+            <span>Scooter rental El Toro</span>
+            <span>Scooter hire El Toro</span>
+            <span>125cc scooter El Toro</span>
+            <span>Scooter rental Port Adriano</span>
+            <span>Rent a scooter El Toro</span>
+            <span>Motor scooter rental El Toro</span>
+            <span>Scooter rental El Toro Mallorca</span>
             <span>NEXA Rentals Magaluf</span>
           </div>
         </div>
@@ -739,14 +765,24 @@ export default async function ScooterRentalMagalufPage({
         <div className="nexa-faq-inner">
           <span className="nexa-section-label">Frequently asked questions</span>
 
-          <h2>Questions about scooter rental in Magaluf</h2>
+          <h2>Questions about scooter rental in El Toro</h2>
 
           <div className="nexa-faq-list">
             <details>
-              <summary>Where do I collect the scooter in Magaluf?</summary>
+              <summary>Can I book a scooter for El Toro?</summary>
               <p>
-                Standard collection and return take place directly at NEXA
-                Rentals, C. Galeón, 13, Loc 57, 07181 Magaluf.
+                Yes. You can book a scooter online with NEXA Rentals and
+                collect it directly in Magaluf. It is a practical option for El
+                Toro, Port Adriano, Santa Ponsa and Calvià.
+              </p>
+            </details>
+
+            <details>
+              <summary>How far is NEXA Rentals from El Toro?</summary>
+              <p>
+                Our office is located in Magaluf, around 20 minutes from El
+                Toro. Standard collection and return take place at NEXA Rentals
+                in Magaluf.
               </p>
             </details>
 
@@ -763,15 +799,6 @@ export default async function ScooterRentalMagalufPage({
             </details>
 
             <details>
-              <summary>Can I book and pay online?</summary>
-              <p>
-                Yes. You can choose your scooter, dates and rental duration
-                directly online. Online payment confirms your booking for the
-                selected dates.
-              </p>
-            </details>
-
-            <details>
               <summary>What is included in the price?</summary>
               <p>
                 Two helmets, a 50-litre top box, security lock, waterproof
@@ -781,7 +808,7 @@ export default async function ScooterRentalMagalufPage({
             </details>
 
             <details>
-              <summary>Is hotel delivery available in Magaluf?</summary>
+              <summary>Is delivery available in El Toro?</summary>
               <p>
                 No. Standard collection and return take place directly at NEXA
                 Rentals in Magaluf. We do not currently provide a scooter
@@ -791,10 +818,10 @@ export default async function ScooterRentalMagalufPage({
           </div>
 
           <div className="nexa-final-cta">
-            <h3>Ready to explore Mallorca?</h3>
+            <h3>Ready to explore El Toro?</h3>
             <p>
               Book your 125cc scooter online and begin your journey directly
-              from Magaluf.
+              from NEXA Rentals in Magaluf.
             </p>
             <Link href={bookHref}>Book your scooter now</Link>
           </div>
@@ -886,11 +913,6 @@ export default async function ScooterRentalMagalufPage({
           visibility: hidden;
           pointer-events: none;
           transform: translateY(-12px) scale(0.98);
-        }
-
-        .nexa-seo-navbar[data-scrolled="true"],
-        html.nexa-seo-page-scrolled .nexa-seo-navbar {
-          box-shadow: 0 16px 42px rgba(0, 0, 0, 0.36);
         }
 
         .nexa-seo-logo-link {
@@ -1074,9 +1096,6 @@ export default async function ScooterRentalMagalufPage({
         .nexa-seo-book-button:active {
           animation-play-state: paused;
           transform: translate(-50%, -50%) scale(0.91);
-          box-shadow:
-            0 0 0 1px rgba(255, 122, 0, 0.7),
-            0 0 14px rgba(255, 122, 0, 0.38);
         }
 
         @keyframes nexaSeoHeartbeat {
@@ -1128,7 +1147,6 @@ export default async function ScooterRentalMagalufPage({
           letter-spacing: 0.13em;
           font-size: 11px;
           font-weight: 800;
-          animation: nexaSoftPulse 2.25s ease-in-out infinite;
           transition:
             background 220ms ease,
             border-color 220ms ease,
@@ -1138,28 +1156,11 @@ export default async function ScooterRentalMagalufPage({
         }
 
         .nexa-seo-contact-button:hover {
-          animation-play-state: paused;
           transform: translateY(-1px) scale(1.04);
           border-color: rgba(255, 122, 0, 0.58);
           background: rgba(255, 122, 0, 0.12);
           color: #ffffff;
           box-shadow: 0 12px 28px rgba(255, 122, 0, 0.14);
-        }
-
-        .nexa-seo-contact-button:active {
-          animation-play-state: paused;
-          transform: scale(0.93);
-        }
-
-        @keyframes nexaSoftPulse {
-          0%,
-          100% {
-            box-shadow: 0 0 0 rgba(255, 122, 0, 0);
-          }
-
-          50% {
-            box-shadow: 0 0 22px rgba(255, 122, 0, 0.14);
-          }
         }
 
         .nexa-seo-language {
@@ -1192,19 +1193,6 @@ export default async function ScooterRentalMagalufPage({
           font-size: 11px;
           font-weight: 900;
           user-select: none;
-          transition:
-            background 220ms ease,
-            border-color 220ms ease,
-            transform 220ms ease;
-        }
-
-        .nexa-seo-language-current:hover {
-          border-color: rgba(255, 122, 0, 0.55);
-          background: rgba(255, 255, 255, 0.11);
-        }
-
-        .nexa-seo-language-current:active {
-          transform: scale(0.95);
         }
 
         .nexa-seo-flag {
@@ -1301,6 +1289,28 @@ export default async function ScooterRentalMagalufPage({
           z-index: 2;
         }
 
+        .nexa-hero-kicker {
+          display: inline-flex;
+          align-items: center;
+          min-height: 40px;
+          margin-bottom: 22px;
+          padding: 9px 13px;
+          border-radius: 999px;
+          background: rgba(255, 122, 0, 0.1);
+          color: #ff7a00;
+          font-size: 11px;
+          font-weight: 900;
+          letter-spacing: 0.15em;
+          text-transform: uppercase;
+        }
+
+        .nexa-hero-kicker::before {
+          content: "📍";
+          margin-right: 7px;
+          font-size: 12px;
+          letter-spacing: 0;
+        }
+
         .nexa-hero-copy h1 {
           max-width: 670px;
           margin: 0;
@@ -1391,36 +1401,15 @@ export default async function ScooterRentalMagalufPage({
           box-shadow: 0 20px 44px rgba(255, 122, 0, 0.3);
         }
 
-        .nexa-primary-cta:active,
-        .nexa-secondary-cta:active,
-        .nexa-bottom-cta:active,
-        .nexa-final-cta a:active {
-          animation-play-state: paused;
-          transform: scale(0.94);
-        }
-
         .nexa-secondary-cta {
           padding: 0 22px;
           background: #ffffff;
           color: #171720;
           border: 1px solid rgba(17, 17, 22, 0.1);
           box-shadow: 0 18px 38px rgba(17, 17, 22, 0.06);
-          animation: nexaSecondaryPulse 2.25s ease-in-out infinite;
-        }
-
-        @keyframes nexaSecondaryPulse {
-          0%,
-          100% {
-            box-shadow: 0 18px 38px rgba(17, 17, 22, 0.06);
-          }
-
-          50% {
-            box-shadow: 0 18px 38px rgba(255, 122, 0, 0.16);
-          }
         }
 
         .nexa-secondary-cta:hover {
-          animation-play-state: paused;
           transform: translateY(-2px) scale(1.03);
           border-color: rgba(255, 122, 0, 0.45);
           color: #ff7a00;
@@ -1438,14 +1427,6 @@ export default async function ScooterRentalMagalufPage({
           font-weight: 900;
           text-decoration: none;
           border-bottom: 2px solid rgba(255, 122, 0, 0.45);
-          transition:
-            color 180ms ease,
-            border-color 180ms ease;
-        }
-
-        .nexa-online-note a:hover {
-          color: #111116;
-          border-color: #111116;
         }
 
         .nexa-hero-points {
@@ -1638,7 +1619,6 @@ export default async function ScooterRentalMagalufPage({
           background: #ffffff;
           border: 0;
           box-shadow: none;
-          min-height: 0;
         }
 
         .nexa-orange-check {
@@ -1646,14 +1626,11 @@ export default async function ScooterRentalMagalufPage({
           top: 0;
           right: 18%;
           z-index: 3;
-          display: inline-flex;
           color: #ff7a00;
           font-size: 26px;
           line-height: 1;
           font-weight: 900;
           background: transparent;
-          border: 0;
-          box-shadow: none;
           text-shadow: 0 8px 22px rgba(255, 122, 0, 0.22);
         }
 
@@ -1762,8 +1739,6 @@ export default async function ScooterRentalMagalufPage({
           color: #666574;
           font-size: 17px;
           line-height: 1.78;
-          letter-spacing: -0.015em;
-          font-weight:78;
           letter-spacing: -0.015em;
           font-weight: 500;
         }
@@ -2069,6 +2044,10 @@ export default async function ScooterRentalMagalufPage({
             text-align: center;
           }
 
+          .nexa-hero-kicker {
+            justify-content: center;
+          }
+
           .nexa-hero-copy h1,
           .nexa-hero-text,
           .nexa-hero-points {
@@ -2179,6 +2158,12 @@ export default async function ScooterRentalMagalufPage({
           .nexa-hero-text {
             font-size: 15.5px;
             line-height: 1.65;
+          }
+
+          .nexa-hero-kicker {
+            min-height: 38px;
+            font-size: 9.5px;
+            letter-spacing: 0.1em;
           }
 
           .nexa-hero-points {

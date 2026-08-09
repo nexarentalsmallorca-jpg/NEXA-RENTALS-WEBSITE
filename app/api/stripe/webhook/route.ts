@@ -1,91 +1,23 @@
-import Stripe from "stripe";
 import { NextResponse } from "next/server";
-import { createClient } from "@supabase/supabase-js";
+import Stripe from "stripe";
 import { Resend } from "resend";
-import {
-  extractVehicleCodeFromText,
-  findVehicleByCodigo,
-  resolveFleetGroupFromWebsiteVehicle,
-  vehicleDisplayName,
-  vehicleShortName,
-} from "../../../../lib/nexaFleet";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const BUFFER_MINUTES_AFTER_BOOKING = 60;
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
-
-const supabase = createClient(
-  process.env.SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-);
-
-const resend = new Resend(process.env.RESEND_API_KEY!);
-
-const OWNER_EMAIL = process.env.OWNER_EMAIL!;
-const FROM_EMAIL =
-  process.env.FROM_EMAIL ||
-  process.env.RESEND_FROM ||
-  "onboarding@resend.dev";
-
-type BookingRow = {
-  id?: string | number;
-  stripe_payment_intent_id?: string;
+type ExistingBooking = {
+  id: string | number;
   status?: string | null;
-
-  pickup_date?: string | null;
-  pickup_time?: string | null;
-  dropoff_date?: string | null;
-  dropoff_time?: string | null;
-
-  vehicle_name?: string | null;
-  vehicle_code?: string | null;
-  assigned_vehicle_code?: string | null;
-  scooter_code?: string | null;
-
-  source?: string | null;
-
-  vehicle?: {
-    codigo?: string | null;
-    code?: string | null;
-    matricula?: string | null;
-    marca?: string | null;
-    modelo?: string | null;
-  } | null;
+  booking_status?: string | null;
 };
 
-type AssignedVehicleResult = {
-  assignedVehicleName: string;
-  assignedVehicleCode: string;
-  assignedVehicleMatricula: string;
-  assignedVehicleShortName: string;
-  assignedVehicleDisplayName: string;
-  fleetGroup: string;
-  publicVehicleName: string;
-  totalFleet: number;
-  bookedCount: number;
-  availableCount: number;
-  assignmentStatus: "assigned" | "unassigned";
-  assignmentSource: "metadata" | "auto_fallback" | "failed";
+type HoldConversionResult = {
+  found: boolean;
+  wasAlreadyConverted: boolean;
 };
 
-function formatDate(dateString?: string) {
-  if (!dateString) return "-";
-
-  const d = new Date(dateString);
-
-  if (Number.isNaN(d.getTime())) return dateString;
-
-  const day = String(d.getDate()).padStart(2, "0");
-  const month = String(d.getMonth() + 1).padStart(2, "0");
-  const year = d.getFullYear();
-
-  return `${day}-${month}-${year}`;
-}
-
-function safeText(value?: string | number | null) {
+function safeText(value: unknown) {
   if (value === undefined || value === null) return "";
 
   return String(value)
@@ -96,812 +28,1207 @@ function safeText(value?: string | number | null) {
     .replaceAll("'", "&#039;");
 }
 
-function moneyFromCents(value?: string | number | null) {
-  const amount = Number(value || 0);
+function metadataText(
+  metadata: Stripe.Metadata,
+  ...keys: string[]
+) {
+  for (const key of keys) {
+    const value = metadata[key];
 
-  if (!Number.isFinite(amount) || amount <= 0) return "-";
+    if (
+      typeof value === "string" &&
+      value.trim() !== ""
+    ) {
+      return value.trim();
+    }
+  }
 
-  return (amount / 100).toFixed(2);
+  return "";
 }
 
-function cleanCurrency(value?: string | null) {
+function normalizeText(value: unknown) {
+  return String(value || "")
+    .trim()
+    .toLowerCase();
+}
+
+function normalizeQuantity(value: unknown) {
+  const quantity = Number(value);
+
+  if (
+    Number.isInteger(quantity) &&
+    quantity >= 1 &&
+    quantity <= 15
+  ) {
+    return quantity;
+  }
+
+  return 1;
+}
+
+function normalizeCents(value: unknown) {
+  const amount = Number(value);
+
+  if (!Number.isFinite(amount) || amount < 0) {
+    return 0;
+  }
+
+  return Math.round(amount);
+}
+
+function moneyFromCents(value: unknown) {
+  return (normalizeCents(value) / 100).toFixed(2);
+}
+
+function cleanCurrency(value: unknown) {
   return String(value || "eur").toUpperCase();
 }
 
-function cleanText(value?: string | number | null) {
-  return String(value || "").trim();
+function formatDate(value: string) {
+  const match = value.match(
+    /^(\d{4})-(\d{2})-(\d{2})$/
+  );
+
+  if (!match) {
+    return value || "-";
+  }
+
+  return `${match[3]}-${match[2]}-${match[1]}`;
 }
 
-function normalizeText(value?: string | number | null) {
-  return cleanText(value).toLowerCase().replace(/\s+/g, " ");
+function isUuid(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(
+    value
+  );
 }
 
-function normalizeVehicleCode(value?: string | number | null) {
-  return cleanText(value).toUpperCase().replace(/\s+/g, "");
-}
-
-function buildDateTime(date?: string | null, time?: string | null) {
-  if (!date || !time) return null;
-
-  const value = new Date(`${date}T${time}`);
-
-  if (Number.isNaN(value.getTime())) return null;
-
-  return value;
-}
-
-function addMinutes(date: Date, minutes: number) {
-  return new Date(date.getTime() + minutes * 60 * 1000);
-}
-
-function isOverlapping(
-  startA: Date,
-  endA: Date,
-  startB: Date,
-  endB: Date
-) {
-  return startA < endB && startB < endA;
-}
-
-function isInactiveStatus(status?: string | null) {
-  const clean = normalizeText(status);
-
+function getBookingId(pi: Stripe.PaymentIntent) {
   return (
-    clean.includes("cancel") ||
-    clean.includes("cancelada") ||
-    clean.includes("canceled") ||
-    clean.includes("cancelled") ||
-    clean.includes("failed") ||
-    clean.includes("refunded") ||
-    clean.includes("returned") ||
-    clean.includes("finalizada") ||
-    clean.includes("completed") ||
-    clean.includes("finished") ||
-    clean.includes("closed")
+    metadataText(
+      pi.metadata || {},
+      "bookingId",
+      "booking_id"
+    ) || pi.id
   );
 }
 
-function bookingRowOverlapsRequest(
-  row: BookingRow,
-  requestedStart: Date,
-  requestedEnd: Date
-) {
-  const start = buildDateTime(row.pickup_date, row.pickup_time);
-  const end = buildDateTime(row.dropoff_date, row.dropoff_time);
-
-  if (!start || !end) return false;
-
-  const existingBlockedEnd = addMinutes(end, BUFFER_MINUTES_AFTER_BOOKING);
-  const requestedBlockedEnd = addMinutes(
-    requestedEnd,
-    BUFFER_MINUTES_AFTER_BOOKING
+function getHoldId(pi: Stripe.PaymentIntent) {
+  const holdId = metadataText(
+    pi.metadata || {},
+    "hold_id",
+    "holdId"
   );
 
-  return isOverlapping(
-    requestedStart,
-    requestedBlockedEnd,
-    start,
-    existingBlockedEnd
-  );
+  return isUuid(holdId) ? holdId : "";
 }
 
-function getBookingVehicleCode(row: BookingRow) {
-  return normalizeVehicleCode(
-    row.assigned_vehicle_code ||
-      row.vehicle_code ||
-      row.scooter_code ||
-      row.vehicle?.codigo ||
-      row.vehicle?.code ||
-      extractVehicleCodeFromText(row.vehicle_name || "")
-  );
-}
+function getFleetGroup(pi: Stripe.PaymentIntent) {
+  const metadata = pi.metadata || {};
 
-function resolveFleetFromMetadata(md: Stripe.Metadata) {
-  const explicitFleetGroup = cleanText(md.fleet_group);
+  const explicitFleetGroup = normalizeText(
+    metadataText(metadata, "fleet_group")
+  );
 
   if (explicitFleetGroup) {
-    const cleanFleetGroup = normalizeText(explicitFleetGroup);
-
-    if (cleanFleetGroup === "sym_symphony_125") {
-      return resolveFleetGroupFromWebsiteVehicle({
-        vehicleId: "s3",
-        vehicleName: "SYM Symphony 125",
-      });
-    }
-
-    if (cleanFleetGroup === "piaggio_liberty_125") {
-      return resolveFleetGroupFromWebsiteVehicle({
-        vehicleId: "s2",
-        vehicleName: "Piaggio Liberty 125",
-      });
-    }
+    return explicitFleetGroup;
   }
 
-  return resolveFleetGroupFromWebsiteVehicle({
-    vehicleId: md.vehicle_id || "",
-    vehicleName:
-      md.public_vehicle_name ||
-      md.vehicle_name ||
-      md.assigned_vehicle_display_name ||
-      "",
-  });
-}
-
-function getVehicleNameForCustomer(md: Stripe.Metadata) {
-  return (
-    md.public_vehicle_name ||
-    md.vehicle_name ||
-    md.assigned_vehicle_display_name ||
-    md.assigned_vehicle_name ||
-    "Selected vehicle"
+  /*
+   * Compatibility for PaymentIntents created immediately before
+   * this new webhook is deployed.
+   */
+  const vehicleText = normalizeText(
+    [
+      metadataText(metadata, "vehicle_id"),
+      metadataText(metadata, "vehicle_name"),
+      metadataText(metadata, "public_vehicle_name"),
+    ].join(" ")
   );
-}
-
-async function getOverlappingBookings({
-  requestedStart,
-  requestedEnd,
-  currentPaymentIntentId,
-}: {
-  requestedStart: Date;
-  requestedEnd: Date;
-  currentPaymentIntentId: string;
-}) {
-  const { data, error } = await supabase
-    .from("bookings")
-    .select(
-      `
-      id,
-      stripe_payment_intent_id,
-      status,
-      source,
-      pickup_date,
-      pickup_time,
-      dropoff_date,
-      dropoff_time,
-      vehicle_name,
-      vehicle_code,
-      assigned_vehicle_code,
-      scooter_code,
-      vehicle:vehicles (
-        codigo,
-        code,
-        matricula,
-        marca,
-        modelo
-      )
-    `
-    )
-    .limit(1000);
-
-  if (error) {
-    console.error("ASSIGN VEHICLE SUPABASE ERROR:", error);
-    throw error;
-  }
-
-  const rows = (data || []) as BookingRow[];
-
-  return rows.filter((row) => {
-    if (!row) return false;
-    if (row.stripe_payment_intent_id === currentPaymentIntentId) return false;
-    if (isInactiveStatus(row.status)) return false;
-
-    return bookingRowOverlapsRequest(row, requestedStart, requestedEnd);
-  });
-}
-
-async function assignFirstAvailableVehicle(
-  pi: Stripe.PaymentIntent
-): Promise<AssignedVehicleResult> {
-  const md = pi.metadata || {};
-
-  const requestedStart = buildDateTime(md.pickup_date, md.pickup_time);
-  const requestedEnd = buildDateTime(md.dropoff_date, md.dropoff_time);
-
-  const fleetGroup = resolveFleetFromMetadata(md);
-  const fleet = fleetGroup.vehicles;
-  const publicVehicleName = getVehicleNameForCustomer(md);
-
-  const metadataAssignedCode = normalizeVehicleCode(
-    md.assigned_vehicle_code || md.vehicle_code || ""
-  );
-  const metadataVehicle = findVehicleByCodigo(metadataAssignedCode);
-
-  if (!requestedStart || !requestedEnd || fleet.length === 0) {
-    return {
-      assignedVehicleName:
-        md.assigned_vehicle_display_name ||
-        md.vehicle_name ||
-        "UNASSIGNED · Vehicle",
-      assignedVehicleCode: "",
-      assignedVehicleMatricula: "",
-      assignedVehicleShortName: "UNASSIGNED",
-      assignedVehicleDisplayName:
-        md.assigned_vehicle_display_name ||
-        md.vehicle_name ||
-        "UNASSIGNED · Vehicle",
-      fleetGroup: md.fleet_group || fleetGroup.group,
-      publicVehicleName,
-      totalFleet: fleet.length,
-      bookedCount: 0,
-      availableCount: fleet.length,
-      assignmentStatus: "unassigned",
-      assignmentSource: "failed",
-    };
-  }
-
-  let overlappingBookings: BookingRow[] = [];
-
-  try {
-    overlappingBookings = await getOverlappingBookings({
-      requestedStart,
-      requestedEnd,
-      currentPaymentIntentId: pi.id,
-    });
-  } catch {
-    return {
-      assignedVehicleName: `UNASSIGNED · ${publicVehicleName}`,
-      assignedVehicleCode: "",
-      assignedVehicleMatricula: "",
-      assignedVehicleShortName: "UNASSIGNED",
-      assignedVehicleDisplayName: `UNASSIGNED · ${publicVehicleName}`,
-      fleetGroup: md.fleet_group || fleetGroup.group,
-      publicVehicleName,
-      totalFleet: fleet.length,
-      bookedCount: 0,
-      availableCount: fleet.length,
-      assignmentStatus: "unassigned",
-      assignmentSource: "failed",
-    };
-  }
-
-  const bookedCodes = new Set<string>();
-  let unknownFleetBookings = 0;
-
-  overlappingBookings.forEach((row) => {
-    const code = getBookingVehicleCode(row);
-    const vehicle = findVehicleByCodigo(code);
-
-    if (vehicle) {
-      bookedCodes.add(vehicle.codigo);
-      return;
-    }
-
-    const rowFleetGroup = resolveFleetGroupFromWebsiteVehicle({
-      vehicleId: "",
-      vehicleName: row.vehicle_name || "",
-    });
-
-    if (rowFleetGroup.group === fleetGroup.group) {
-      unknownFleetBookings += 1;
-    }
-  });
-
-  const bookedCount = Math.min(
-    fleet.length,
-    bookedCodes.size + unknownFleetBookings
-  );
-
-  const availableCount = Math.max(0, fleet.length - bookedCount);
 
   if (
-    metadataVehicle &&
-    fleet.some((vehicle) => vehicle.codigo === metadataVehicle.codigo) &&
-    !bookedCodes.has(metadataVehicle.codigo)
+    vehicleText.includes("sym") ||
+    vehicleText.includes("symphony") ||
+    vehicleText.includes("s3")
   ) {
-    return {
-      assignedVehicleName: vehicleDisplayName(metadataVehicle),
-      assignedVehicleCode: metadataVehicle.codigo,
-      assignedVehicleMatricula: metadataVehicle.matricula,
-      assignedVehicleShortName: vehicleShortName(metadataVehicle),
-      assignedVehicleDisplayName: vehicleDisplayName(metadataVehicle),
-      fleetGroup: md.fleet_group || fleetGroup.group,
-      publicVehicleName,
-      totalFleet: fleet.length,
-      bookedCount,
-      availableCount,
-      assignmentStatus: "assigned",
-      assignmentSource: "metadata",
-    };
+    return "sym_symphony_125";
   }
 
-  const availableVehicles = fleet.filter(
-    (vehicle) => !bookedCodes.has(vehicle.codigo)
+  if (
+    vehicleText.includes("piaggio") ||
+    vehicleText.includes("liberty") ||
+    vehicleText.includes("s2")
+  ) {
+    return "piaggio_liberty_125";
+  }
+
+  return "";
+}
+
+function getPublicVehicleName(
+  pi: Stripe.PaymentIntent
+) {
+  const metadata = pi.metadata || {};
+
+  return (
+    metadataText(
+      metadata,
+      "public_vehicle_name",
+      "vehicle_name"
+    ) || "125cc Scooter"
+  );
+}
+
+function getPaymentSummary(
+  pi: Stripe.PaymentIntent
+) {
+  const metadata = pi.metadata || {};
+
+  const amountPaid =
+    normalizeCents(pi.amount_received) ||
+    normalizeCents(
+      metadataText(
+        metadata,
+        "amount_paid_online",
+        "depositAmount"
+      )
+    ) ||
+    normalizeCents(pi.amount);
+
+  const totalAmount =
+    normalizeCents(
+      metadataText(
+        metadata,
+        "total_amount",
+        "totalAmount"
+      )
+    ) || amountPaid;
+
+  const remainingMetadata = metadataText(
+    metadata,
+    "remaining_amount",
+    "remainingAmount"
   );
 
-  const finalAvailableVehicles = availableVehicles.slice(unknownFleetBookings);
-  const assignedVehicle = finalAvailableVehicles[0];
+  const remainingAmount =
+    remainingMetadata !== ""
+      ? normalizeCents(remainingMetadata)
+      : Math.max(totalAmount - amountPaid, 0);
 
-  if (!assignedVehicle) {
+  return {
+    amountPaid,
+    totalAmount,
+    remainingAmount,
+    fullyPaid:
+      remainingAmount === 0 &&
+      amountPaid >= totalAmount,
+  };
+}
+
+function buildCoreBookingPayload(
+  pi: Stripe.PaymentIntent
+) {
+  const metadata = pi.metadata || {};
+  const holdId = getHoldId(pi);
+  const fleetGroup = getFleetGroup(pi);
+  const quantity = normalizeQuantity(
+    metadataText(metadata, "quantity")
+  );
+  const payment = getPaymentSummary(pi);
+
+  const payload: Record<string, unknown> = {
+    stripe_payment_intent_id: pi.id,
+
+    status: "paid",
+    booking_status: "confirmed",
+    booking_source:
+      metadataText(
+        metadata,
+        "booking_source"
+      ) || "website",
+
+    customer_name: metadataText(
+      metadata,
+      "customer_name"
+    ),
+    customer_email: metadataText(
+      metadata,
+      "customer_email"
+    ),
+    phone: metadataText(metadata, "phone"),
+
+    pickup_date: metadataText(
+      metadata,
+      "pickup_date"
+    ),
+    pickup_time: metadataText(
+      metadata,
+      "pickup_time"
+    ),
+    dropoff_date: metadataText(
+      metadata,
+      "dropoff_date"
+    ),
+    dropoff_time: metadataText(
+      metadata,
+      "dropoff_time"
+    ),
+
+    vehicle_name: getPublicVehicleName(pi),
+    fleet_group: fleetGroup || null,
+    quantity,
+
+    /*
+     * Website bookings reserve a scooter category and quantity.
+     * N1–N8 will be assigned manually from the admin system.
+     */
+    assigned_vehicle_code: null,
+
+    dl_front_path: metadataText(
+      metadata,
+      "dl_front_path"
+    ),
+    dl_back_path: metadataText(
+      metadata,
+      "dl_back_path"
+    ),
+    id_front_path: metadataText(
+      metadata,
+      "id_front_path"
+    ),
+    id_back_path: metadataText(
+      metadata,
+      "id_back_path"
+    ),
+
+    amount: payment.amountPaid,
+    currency: pi.currency || "eur",
+  };
+
+  if (holdId) {
+    payload.hold_id = holdId;
+  }
+
+  return payload;
+}
+
+function buildFullBookingPayload(
+  pi: Stripe.PaymentIntent
+) {
+  const metadata = pi.metadata || {};
+  const corePayload = buildCoreBookingPayload(pi);
+  const publicVehicleName = getPublicVehicleName(pi);
+
+  return {
+    ...corePayload,
+
+    source:
+      metadataText(
+        metadata,
+        "booking_source"
+      ) || "website",
+
+    booking_action: "reserve_now",
+
+    /*
+     * These remain empty because exact scooter assignment
+     * must happen manually.
+     */
+    vehicle_code: "",
+    scooter_code: "",
+
+    public_vehicle_name: publicVehicleName,
+
+    payment_method:
+      pi.payment_method_types?.[0] || "card",
+    payment_status: "paid",
+
+    contract_number: getBookingId(pi),
+  };
+}
+
+function bookingAlreadyConfirmed(
+  booking: ExistingBooking
+) {
+  return (
+    normalizeText(booking.status) === "paid" &&
+    normalizeText(booking.booking_status) ===
+      "confirmed"
+  );
+}
+
+async function findExistingBooking(
+  paymentIntentId: string
+) {
+  const { data, error } = await supabaseAdmin
+    .from("bookings")
+    .select("id, status, booking_status")
+    .eq(
+      "stripe_payment_intent_id",
+      paymentIntentId
+    )
+    .limit(1);
+
+  if (error) {
+    throw new Error(
+      `Could not check the existing booking: ${error.message}`
+    );
+  }
+
+  return (data?.[0] || null) as
+    | ExistingBooking
+    | null;
+}
+
+async function writeBookingPayload(
+  payload: Record<string, unknown>,
+  existingBooking: ExistingBooking | null
+) {
+  if (existingBooking) {
+    return supabaseAdmin
+      .from("bookings")
+      .update(payload)
+      .eq("id", existingBooking.id)
+      .select("id")
+      .limit(1);
+  }
+
+  return supabaseAdmin
+    .from("bookings")
+    .insert(payload)
+    .select("id")
+    .limit(1);
+}
+
+async function savePaidBooking(
+  pi: Stripe.PaymentIntent
+) {
+  const existingBooking =
+    await findExistingBooking(pi.id);
+
+  /*
+   * Stripe may retry the same webhook.
+   * Never create another booking for the same payment.
+   */
+  if (
+    existingBooking &&
+    bookingAlreadyConfirmed(existingBooking)
+  ) {
+    console.log(
+      "BOOKING ALREADY CONFIRMED:",
+      pi.id
+    );
+
     return {
-      assignedVehicleName: `UNASSIGNED · ${publicVehicleName}`,
-      assignedVehicleCode: "",
-      assignedVehicleMatricula: "",
-      assignedVehicleShortName: "UNASSIGNED",
-      assignedVehicleDisplayName: `UNASSIGNED · ${publicVehicleName}`,
-      fleetGroup: md.fleet_group || fleetGroup.group,
-      publicVehicleName,
-      totalFleet: fleet.length,
-      bookedCount,
-      availableCount,
-      assignmentStatus: "unassigned",
-      assignmentSource: "failed",
+      alreadyConfirmed: true,
+      bookingRowId: existingBooking.id,
     };
   }
 
-  return {
-    assignedVehicleName: vehicleDisplayName(assignedVehicle),
-    assignedVehicleCode: assignedVehicle.codigo,
-    assignedVehicleMatricula: assignedVehicle.matricula,
-    assignedVehicleShortName: vehicleShortName(assignedVehicle),
-    assignedVehicleDisplayName: vehicleDisplayName(assignedVehicle),
-    fleetGroup: md.fleet_group || fleetGroup.group,
-    publicVehicleName,
-    totalFleet: fleet.length,
-    bookedCount,
-    availableCount,
-    assignmentStatus: "assigned",
-    assignmentSource: "auto_fallback",
-  };
-}
+  const fullPayload =
+    buildFullBookingPayload(pi);
 
-function buildBookingPayload(
-  pi: Stripe.PaymentIntent,
-  assignment: AssignedVehicleResult
-) {
-  const md = pi.metadata || {};
-  const amount = pi.amount_received ?? pi.amount ?? 0;
+  let result = await writeBookingPayload(
+    fullPayload,
+    existingBooking
+  );
 
-  return {
-    stripe_payment_intent_id: pi.id,
-    status: "paid",
-    booking_action: "reserve_now",
-
-    source: "website",
-
-    customer_name: md.customer_name || "",
-    customer_email: md.customer_email || "",
-    phone: md.phone || "",
-
-    pickup_date: md.pickup_date || "",
-    pickup_time: md.pickup_time || "",
-    dropoff_date: md.dropoff_date || "",
-    dropoff_time: md.dropoff_time || "",
-
-    vehicle_name:
-      assignment.assignedVehicleDisplayName ||
-      assignment.assignedVehicleName ||
-      md.assigned_vehicle_display_name ||
-      md.vehicle_name ||
-      "",
-    vehicle_code:
-      assignment.assignedVehicleCode ||
-      md.assigned_vehicle_code ||
-      md.vehicle_code ||
-      "",
-
-    assigned_vehicle_code:
-      assignment.assignedVehicleCode ||
-      md.assigned_vehicle_code ||
-      md.vehicle_code ||
-      "",
-    scooter_code:
-      assignment.assignedVehicleCode ||
-      md.assigned_vehicle_code ||
-      md.vehicle_code ||
-      "",
-
-    fleet_group: assignment.fleetGroup || md.fleet_group || "",
-    public_vehicle_name:
-      assignment.publicVehicleName ||
-      md.public_vehicle_name ||
-      md.vehicle_name ||
-      "",
-
-    payment_method: "card",
-    payment_status: "paid",
-
-    contract_number: md.bookingId || pi.id,
-
-    dl_front_path: md.dl_front_path || "",
-    dl_back_path: md.dl_back_path || "",
-    id_front_path: md.id_front_path || "",
-    id_back_path: md.id_back_path || "",
-
-    amount,
-    currency: pi.currency || "eur",
-  };
-}
-
-function fallbackPayloadWithoutModernColumns(payload: any) {
-  const {
-    booking_action,
-    assigned_vehicle_code,
-    scooter_code,
-    fleet_group,
-    public_vehicle_name,
-    payment_method,
-    payment_status,
-    contract_number,
-    ...rest
-  } = payload;
-
-  return rest;
-}
-
-function fallbackPayloadForOldBookingsTable(payload: any) {
-  return {
-    stripe_payment_intent_id: payload.stripe_payment_intent_id,
-    status: payload.status,
-
-    customer_name: payload.customer_name,
-    customer_email: payload.customer_email,
-    phone: payload.phone,
-
-    pickup_date: payload.pickup_date,
-    pickup_time: payload.pickup_time,
-    dropoff_date: payload.dropoff_date,
-    dropoff_time: payload.dropoff_time,
-
-    vehicle_name: payload.vehicle_name,
-
-    dl_front_path: payload.dl_front_path,
-    dl_back_path: payload.dl_back_path,
-    id_front_path: payload.id_front_path,
-    id_back_path: payload.id_back_path,
-
-    amount: payload.amount,
-    currency: payload.currency,
-  };
-}
-
-async function savePaidBookingToSupabase(
-  pi: Stripe.PaymentIntent,
-  assignment: AssignedVehicleResult
-) {
-  const payload = buildBookingPayload(pi, assignment);
-
-  console.log("SUPABASE BOOKING PAYLOAD:", payload);
-
-  let { data, error } = await supabase
-    .from("bookings")
-    .upsert(payload, { onConflict: "stripe_payment_intent_id" })
-    .select();
-
-  if (error) {
+  /*
+   * Compatibility fallback:
+   * if an optional legacy column does not exist, save using
+   * only the confirmed old + newly installed columns.
+   */
+  if (result.error) {
     console.warn(
-      "SUPABASE FULL BOOKING UPSERT FAILED, TRYING MODERN FALLBACK:",
-      error.message
+      "FULL BOOKING SAVE FAILED. TRYING CORE PAYLOAD:",
+      result.error.message
     );
 
-    const fallbackPayload = fallbackPayloadWithoutModernColumns(payload);
+    const corePayload =
+      buildCoreBookingPayload(pi);
 
-    const secondTry = await supabase
-      .from("bookings")
-      .upsert(fallbackPayload, { onConflict: "stripe_payment_intent_id" })
-      .select();
-
-    data = secondTry.data;
-    error = secondTry.error;
-  }
-
-  if (error) {
-    console.warn(
-      "SUPABASE MODERN FALLBACK FAILED, TRYING OLD TABLE FALLBACK:",
-      error.message
+    result = await writeBookingPayload(
+      corePayload,
+      existingBooking
     );
-
-    const oldPayload = fallbackPayloadForOldBookingsTable(payload);
-
-    const thirdTry = await supabase
-      .from("bookings")
-      .upsert(oldPayload, { onConflict: "stripe_payment_intent_id" })
-      .select();
-
-    data = thirdTry.data;
-    error = thirdTry.error;
   }
+
+  if (result.error) {
+    /*
+     * A simultaneous Stripe retry might have inserted the row.
+     * Check once more before treating it as a real failure.
+     */
+    const retryBooking =
+      await findExistingBooking(pi.id);
+
+    if (
+      retryBooking &&
+      bookingAlreadyConfirmed(retryBooking)
+    ) {
+      return {
+        alreadyConfirmed: true,
+        bookingRowId: retryBooking.id,
+      };
+    }
+
+    throw new Error(
+      `The paid booking could not be saved: ${result.error.message}`
+    );
+  }
+
+  const bookingRowId =
+    result.data?.[0]?.id ||
+    existingBooking?.id;
+
+  console.log(
+    "PAID BOOKING SAVED:",
+    bookingRowId,
+    pi.id
+  );
+
+  return {
+    alreadyConfirmed: false,
+    bookingRowId,
+  };
+}
+
+async function findPaymentHold(
+  pi: Stripe.PaymentIntent
+) {
+  const holdId = getHoldId(pi);
+
+  if (holdId) {
+    const byId = await supabaseAdmin
+      .from("payment_holds")
+      .select("id, status")
+      .eq("id", holdId)
+      .limit(1);
+
+    if (byId.error) {
+      throw new Error(
+        `Could not check the payment hold: ${byId.error.message}`
+      );
+    }
+
+    if (byId.data?.[0]) {
+      return byId.data[0];
+    }
+  }
+
+  const byPaymentIntent = await supabaseAdmin
+    .from("payment_holds")
+    .select("id, status")
+    .eq(
+      "stripe_payment_intent_id",
+      pi.id
+    )
+    .limit(1);
+
+  if (byPaymentIntent.error) {
+    throw new Error(
+      `Could not check the PaymentIntent hold: ${byPaymentIntent.error.message}`
+    );
+  }
+
+  return byPaymentIntent.data?.[0] || null;
+}
+
+async function convertPaymentHold(
+  pi: Stripe.PaymentIntent
+): Promise<HoldConversionResult> {
+  const hold = await findPaymentHold(pi);
+
+  if (!hold) {
+    /*
+     * Old PaymentIntents created before the inventory system
+     * will not have a hold. Their booking is still saved.
+     */
+    if (getHoldId(pi)) {
+      console.warn(
+        "PAYMENT SUCCEEDED BUT HOLD WAS NOT FOUND:",
+        pi.id,
+        getHoldId(pi)
+      );
+    }
+
+    return {
+      found: false,
+      wasAlreadyConverted: false,
+    };
+  }
+
+  if (
+    normalizeText(hold.status) === "converted"
+  ) {
+    return {
+      found: true,
+      wasAlreadyConverted: true,
+    };
+  }
+
+  const { error } = await supabaseAdmin
+    .from("payment_holds")
+    .update({
+      status: "converted",
+      stripe_payment_intent_id: pi.id,
+      updated_at: new Date().toISOString(),
+    })
+    .eq("id", hold.id);
 
   if (error) {
-    console.error("SUPABASE BOOKING UPSERT ERROR:", error);
-    return { ok: false, data: null, error };
+    throw new Error(
+      `The payment hold could not be converted: ${error.message}`
+    );
   }
 
-  console.log("SUPABASE BOOKING SAVED:", data);
+  console.log(
+    "PAYMENT HOLD CONVERTED:",
+    hold.id
+  );
 
-  return { ok: true, data, error: null };
+  return {
+    found: true,
+    wasAlreadyConverted: false,
+  };
+}
+
+async function releasePaymentHold(
+  pi: Stripe.PaymentIntent,
+  status:
+    | "payment_failed"
+    | "cancelled"
+) {
+  const holdId = getHoldId(pi);
+
+  if (holdId) {
+    const byId = await supabaseAdmin
+      .from("payment_holds")
+      .update({
+        status,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", holdId)
+      .eq("status", "active");
+
+    if (byId.error) {
+      throw new Error(
+        `Could not release the payment hold: ${byId.error.message}`
+      );
+    }
+  }
+
+  const byPaymentIntent = await supabaseAdmin
+    .from("payment_holds")
+    .update({
+      status,
+      updated_at: new Date().toISOString(),
+    })
+    .eq(
+      "stripe_payment_intent_id",
+      pi.id
+    )
+    .eq("status", "active");
+
+  if (byPaymentIntent.error) {
+    throw new Error(
+      `Could not release the PaymentIntent hold: ${byPaymentIntent.error.message}`
+    );
+  }
+
+  console.log(
+    "PAYMENT HOLD RELEASED:",
+    pi.id,
+    status
+  );
+}
+
+function getResendClient() {
+  const apiKey = process.env.RESEND_API_KEY;
+
+  if (!apiKey) {
+    throw new Error(
+      "Missing RESEND_API_KEY."
+    );
+  }
+
+  return new Resend(apiKey);
+}
+
+function getFromEmail() {
+  return (
+    process.env.FROM_EMAIL ||
+    process.env.RESEND_FROM ||
+    "onboarding@resend.dev"
+  );
+}
+
+function getOwnerEmails() {
+  const possibleEmails = [
+    process.env.OWNER_EMAIL,
+    "nexarentalsmallorca@gmail.com",
+  ];
+
+  return Array.from(
+    new Set(
+      possibleEmails.filter(
+        (email): email is string =>
+          typeof email === "string" &&
+          email.trim() !== ""
+      )
+    )
+  );
 }
 
 async function sendOwnerEmail(
   pi: Stripe.PaymentIntent,
-  assignment: AssignedVehicleResult
+  bookingRowId: string | number | undefined
 ) {
-  const md = pi.metadata || {};
-  const amount = pi.amount_received ?? pi.amount ?? 0;
+  const resend = getResendClient();
+  const metadata = pi.metadata || {};
+  const payment = getPaymentSummary(pi);
+
+  const quantity = normalizeQuantity(
+    metadataText(metadata, "quantity")
+  );
+
   const currency = cleanCurrency(pi.currency);
+  const bookingId = getBookingId(pi);
+  const fleetGroup = getFleetGroup(pi);
+  const holdId = getHoldId(pi);
 
-  const ownerEmailResult = await resend.emails.send({
-    from: `Nexa Bookings <${FROM_EMAIL}>`,
-    to: [OWNER_EMAIL, "nexarentalsmallorca@gmail.com"].filter(Boolean),
-    subject:
-      assignment.assignmentStatus === "assigned"
-        ? `✅ New booking paid — ${assignment.assignedVehicleCode} assigned`
-        : `⚠️ New booking paid — vehicle needs manual assignment`,
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
-        <h2 style="color:#f97316;">New booking received ✅</h2>
+  const { data, error } =
+    await resend.emails.send({
+      from: `Nexa Bookings <${getFromEmail()}>`,
+      to: getOwnerEmails(),
+      subject: `✅ New booking paid — ${quantity} scooter${
+        quantity === 1 ? "" : "s"
+      }`,
+      html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111;">
+          <h2 style="color:#f97316;">
+            New paid booking received ✅
+          </h2>
 
-        ${
-          assignment.assignmentStatus === "unassigned"
-            ? `<div style="background:#fee2e2;border:1px solid #ef4444;padding:12px;border-radius:10px;margin-bottom:16px;">
-                <b>⚠️ Attention:</b> The system could not auto-assign a vehicle. Please check availability manually.
-              </div>`
-            : `<div style="background:#ecfdf3;border:1px solid #22c55e;padding:12px;border-radius:10px;margin-bottom:16px;">
-                <b>Vehicle assigned automatically:</b> ${safeText(
-                  assignment.assignedVehicleName
-                )}
-              </div>`
-        }
+          <div style="background:#ecfdf3;border:1px solid #22c55e;padding:12px;border-radius:10px;margin-bottom:16px;">
+            <b>Payment received successfully.</b><br/>
+            Exact scooter codes N1–N8 have not been assigned automatically.
+            Assign the scooters manually from the admin system.
+          </div>
 
-        <p><b>Booking ID:</b> ${safeText(md.bookingId || "-")}</p>
-        <p><b>Name:</b> ${safeText(md.customer_name || "-")}</p>
-        <p><b>Email:</b> ${safeText(md.customer_email || "-")}</p>
-        <p><b>Phone:</b> ${safeText(md.phone || "-")}</p>
+          <p><b>Booking ID:</b> ${safeText(
+            bookingId
+          )}</p>
 
-        <hr/>
+          <p><b>Database row:</b> ${safeText(
+            bookingRowId || "-"
+          )}</p>
 
-        <p><b>Customer selected:</b> ${safeText(
-          assignment.publicVehicleName || md.public_vehicle_name || md.vehicle_name || "-"
-        )}</p>
-        <p><b>Assigned vehicle:</b> ${safeText(
-          assignment.assignedVehicleName || "-"
-        )}</p>
-        <p><b>Assigned code:</b> ${safeText(
-          assignment.assignedVehicleCode || "-"
-        )}</p>
-        <p><b>Assigned matrícula:</b> ${safeText(
-          assignment.assignedVehicleMatricula || "-"
-        )}</p>
-        <p><b>Fleet group:</b> ${safeText(
-          assignment.fleetGroup || md.fleet_group || "-"
-        )}</p>
-        <p><b>Assignment source:</b> ${safeText(
-          assignment.assignmentSource || "-"
-        )}</p>
-        <p><b>Vehicle ID:</b> ${safeText(md.vehicle_id || "-")}</p>
-        <p><b>Plan:</b> ${safeText(md.plan || "-")}</p>
-        <p><b>Days:</b> ${safeText(md.days || "-")}</p>
-        <p><b>Rate per day:</b> ${safeText(md.rate_per_day || "-")}</p>
+          <p><b>PaymentIntent:</b> ${safeText(
+            pi.id
+          )}</p>
 
-        <p><b>Pickup Date & Time:</b> ${safeText(
-          formatDate(md.pickup_date)
-        )} at ${safeText(md.pickup_time || "-")}</p>
-        <p><b>Dropoff Date & Time:</b> ${safeText(
-          formatDate(md.dropoff_date)
-        )} at ${safeText(md.dropoff_time || "-")}</p>
-        <p><b>Pickup location:</b> ${safeText(md.pickup_location || "-")}</p>
+          <p><b>Payment hold:</b> ${safeText(
+            holdId || "-"
+          )}</p>
 
-        <p><b>Fleet total:</b> ${assignment.totalFleet}</p>
-        <p><b>Booked count before this booking:</b> ${assignment.bookedCount}</p>
-        <p><b>Available count before this booking:</b> ${assignment.availableCount}</p>
-        <p><b>Availability buffer:</b> ${BUFFER_MINUTES_AFTER_BOOKING} minutes after every booking</p>
+          <hr/>
 
-        <p><b>Availability check:</b> ${safeText(
-          md.availability_checked || "-"
-        )}</p>
-        <p><b>Available count at checkout:</b> ${safeText(
-          md.available_count || "-"
-        )}</p>
-        <p><b>Total fleet at checkout:</b> ${safeText(
-          md.total_fleet || "-"
-        )}</p>
+          <p><b>Customer:</b> ${safeText(
+            metadataText(metadata, "customer_name") || "-"
+          )}</p>
 
-        <p><b>Notes:</b> ${safeText(md.notes || "-")}</p>
+          <p><b>Email:</b> ${safeText(
+            metadataText(metadata, "customer_email") || "-"
+          )}</p>
 
-        <hr/>
+          <p><b>Phone:</b> ${safeText(
+            metadataText(metadata, "phone") || "-"
+          )}</p>
 
-        <p><b>Driving licence front:</b> ${safeText(
-          md.dl_front_name || "-"
-        )}</p>
-        <p><b>Driving licence front path:</b> ${safeText(
-          md.dl_front_path || "-"
-        )}</p>
+          <hr/>
 
-        <p><b>Driving licence back:</b> ${safeText(
-          md.dl_back_name || "-"
-        )}</p>
-        <p><b>Driving licence back path:</b> ${safeText(
-          md.dl_back_path || "-"
-        )}</p>
+          <p><b>Vehicle category:</b> ${safeText(
+            getPublicVehicleName(pi)
+          )}</p>
 
-        <p><b>ID front:</b> ${safeText(md.id_front_name || "-")}</p>
-        <p><b>ID front path:</b> ${safeText(md.id_front_path || "-")}</p>
+          <p><b>Fleet group:</b> ${safeText(
+            fleetGroup || "-"
+          )}</p>
 
-        <p><b>ID back:</b> ${safeText(md.id_back_name || "-")}</p>
-        <p><b>ID back path:</b> ${safeText(md.id_back_path || "-")}</p>
+          <p><b>Quantity:</b> ${quantity}</p>
 
-        <hr/>
+          <p><b>Exact scooter assignment:</b>
+            Manual assignment required
+          </p>
 
-        <p><b>Total rental amount:</b> ${safeText(
-          moneyFromCents(md.totalAmount)
-        )} ${currency}</p>
-        <p><b>Deposit paid now:</b> ${safeText(
-          moneyFromCents(md.depositAmount)
-        )} ${currency}</p>
-        <p><b>Remaining amount:</b> ${safeText(
-          moneyFromCents(md.remainingAmount)
-        )} ${currency}</p>
-        <p><b>Amount paid now:</b> ${(amount / 100).toFixed(2)} ${currency}</p>
-        <p><b>Marketing opt-in:</b> ${safeText(md.marketing_opt_in || "no")}</p>
-        <p><b>PaymentIntent:</b> ${safeText(pi.id)}</p>
-      </div>
-    `,
-  });
+          <p><b>Plan:</b> ${safeText(
+            metadataText(metadata, "plan") || "-"
+          )}</p>
 
-  if (ownerEmailResult.error) {
-    console.error("OWNER EMAIL ERROR:", ownerEmailResult.error);
-  } else {
-    console.log("OWNER EMAIL SENT:", ownerEmailResult.data);
+          <p><b>Days:</b> ${safeText(
+            metadataText(metadata, "days") || "-"
+          )}</p>
+
+          <p><b>Rate per day:</b> ${safeText(
+            metadataText(metadata, "rate_per_day") || "-"
+          )}</p>
+
+          <p><b>Pickup:</b> ${safeText(
+            formatDate(
+              metadataText(metadata, "pickup_date")
+            )
+          )} at ${safeText(
+            metadataText(metadata, "pickup_time") || "-"
+          )}</p>
+
+          <p><b>Drop-off:</b> ${safeText(
+            formatDate(
+              metadataText(metadata, "dropoff_date")
+            )
+          )} at ${safeText(
+            metadataText(metadata, "dropoff_time") || "-"
+          )}</p>
+
+          <p><b>Pickup location:</b> ${safeText(
+            metadataText(metadata, "pickup_location") || "-"
+          )}</p>
+
+          <p><b>Available after hold:</b> ${safeText(
+            metadataText(
+              metadata,
+              "available_after_hold",
+              "available_count"
+            ) || "-"
+          )}</p>
+
+          <p><b>Total online fleet:</b> ${safeText(
+            metadataText(
+              metadata,
+              "total_online_fleet",
+              "total_fleet"
+            ) || "-"
+          )}</p>
+
+          <p><b>Notes:</b> ${safeText(
+            metadataText(metadata, "notes") || "-"
+          )}</p>
+
+          <hr/>
+
+          <p><b>Driving licence front:</b> ${safeText(
+            metadataText(metadata, "dl_front_name") || "-"
+          )}</p>
+
+          <p><b>Driving licence front path:</b> ${safeText(
+            metadataText(metadata, "dl_front_path") || "-"
+          )}</p>
+
+          <p><b>Driving licence back:</b> ${safeText(
+            metadataText(metadata, "dl_back_name") || "-"
+          )}</p>
+
+          <p><b>Driving licence back path:</b> ${safeText(
+            metadataText(metadata, "dl_back_path") || "-"
+          )}</p>
+
+          <p><b>ID front:</b> ${safeText(
+            metadataText(metadata, "id_front_name") || "-"
+          )}</p>
+
+          <p><b>ID front path:</b> ${safeText(
+            metadataText(metadata, "id_front_path") || "-"
+          )}</p>
+
+          <p><b>ID back:</b> ${safeText(
+            metadataText(metadata, "id_back_name") || "-"
+          )}</p>
+
+          <p><b>ID back path:</b> ${safeText(
+            metadataText(metadata, "id_back_path") || "-"
+          )}</p>
+
+          <hr/>
+
+          <p><b>Total rental amount:</b>
+            ${moneyFromCents(payment.totalAmount)}
+            ${currency}
+          </p>
+
+          <p><b>Amount paid online:</b>
+            ${moneyFromCents(payment.amountPaid)}
+            ${currency}
+          </p>
+
+          <p><b>Remaining rental amount:</b>
+            ${moneyFromCents(payment.remainingAmount)}
+            ${currency}
+          </p>
+
+          <p><b>Rental fully paid:</b>
+            ${payment.fullyPaid ? "Yes" : "No"}
+          </p>
+
+          <p><b>Marketing opt-in:</b> ${safeText(
+            metadataText(metadata, "marketing_opt_in") || "no"
+          )}</p>
+        </div>
+      `,
+    });
+
+  if (error) {
+    throw new Error(
+      `Owner confirmation email failed: ${error.message}`
+    );
   }
+
+  console.log("OWNER EMAIL SENT:", data);
 }
 
 async function sendCustomerEmail(
-  pi: Stripe.PaymentIntent,
-  assignment: AssignedVehicleResult
+  pi: Stripe.PaymentIntent
 ) {
-  const md = pi.metadata || {};
-  const amount = pi.amount_received ?? pi.amount ?? 0;
-  const currency = cleanCurrency(pi.currency);
-  const customerEmail = md.customer_email;
+  const metadata = pi.metadata || {};
+  const customerEmail = metadataText(
+    metadata,
+    "customer_email"
+  );
 
   if (!customerEmail) {
-    console.log("NO CUSTOMER EMAIL FOUND IN METADATA");
+    console.warn(
+      "CUSTOMER EMAIL MISSING:",
+      pi.id
+    );
     return;
   }
 
-  const customerVehicleName =
-    assignment.publicVehicleName ||
-    md.public_vehicle_name ||
-    md.vehicle_name ||
-    "Selected vehicle";
+  const resend = getResendClient();
+  const payment = getPaymentSummary(pi);
+  const currency = cleanCurrency(pi.currency);
 
-  const customerEmailResult = await resend.emails.send({
-    from: `Nexa Rentals <${FROM_EMAIL}>`,
-    to: customerEmail,
-    subject: "✅ Your booking is confirmed",
-    html: `
-      <div style="font-family: Arial, sans-serif; line-height: 1.6; color: #111;">
-        <h2 style="color:#f97316;">Your booking is confirmed ✅</h2>
+  const quantity = normalizeQuantity(
+    metadataText(metadata, "quantity")
+  );
 
-        <p>Hi ${safeText(md.customer_name || "")},</p>
-        <p>Thank you for choosing <b>Nexa Rentals</b>. Your booking has been successfully confirmed.</p>
+  const paymentMessage = payment.fullyPaid
+    ? `
+      <p style="color:#15803d;">
+        <b>Your complete rental amount has been paid online.</b>
+        No rental balance remains to be paid at pickup.
+      </p>
+    `
+    : `
+      <p>
+        <b>Remaining rental amount due at pickup:</b>
+        ${moneyFromCents(payment.remainingAmount)} ${currency}
+      </p>
+    `;
 
-        <hr/>
+  const { data, error } =
+    await resend.emails.send({
+      from: `Nexa Rentals <${getFromEmail()}>`,
+      to: customerEmail,
+      subject: "✅ Your Nexa Rentals booking is confirmed",
+      html: `
+        <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111;">
+          <h2 style="color:#f97316;">
+            Your booking is confirmed ✅
+          </h2>
 
-        <h3>Booking Details</h3>
-        <p><b>Booking ID:</b> ${safeText(md.bookingId || "-")}</p>
-        <p><b>Vehicle:</b> ${safeText(customerVehicleName)}</p>
-        <p><b>Plan:</b> ${safeText(md.plan || "-")}</p>
-        <p><b>Pickup Date & Time:</b> ${safeText(
-          formatDate(md.pickup_date)
-        )} at ${safeText(md.pickup_time || "-")}</p>
-        <p><b>Dropoff Date & Time:</b> ${safeText(
-          formatDate(md.dropoff_date)
-        )} at ${safeText(md.dropoff_time || "-")}</p>
-        <p><b>Pickup Location:</b> ${safeText(
-          md.pickup_location || "Magaluf (Carrer Galeón 13)"
-        )}</p>
+          <p>
+            Hi ${safeText(
+              metadataText(metadata, "customer_name")
+            )},
+          </p>
 
-        <hr/>
+          <p>
+            Thank you for choosing <b>Nexa Rentals</b>.
+            Your payment was successful and your booking is confirmed.
+          </p>
 
-        <h3>Payment Summary</h3>
-        <p><b>Amount Paid:</b> ${(amount / 100).toFixed(2)} ${currency}</p>
-        <p><b>Remaining Amount (to pay at pickup):</b> ${safeText(
-          moneyFromCents(md.remainingAmount)
-        )} ${currency}</p>
+          <hr/>
 
-        <hr/>
+          <h3>Booking details</h3>
 
-        <h3>Pickup Instructions</h3>
-        <ul>
-          <li>Please arrive at the pickup location on time.</li>
-          <li>Bring all required documents listed below.</li>
-          <li>Our team will assist you with the vehicle handover.</li>
-        </ul>
+          <p><b>Booking ID:</b> ${safeText(
+            getBookingId(pi)
+          )}</p>
 
-        <h3>Required Documents</h3>
-        <ul>
-          <li>Valid driving licence original only</li>
-          <li>Passport or national ID</li>
-        </ul>
+          <p><b>Vehicle:</b> ${safeText(
+            getPublicVehicleName(pi)
+          )}</p>
 
-        <h3>Deposit & Payment</h3>
-        <ul>
-          <li>A <b>€150 security deposit</b> is required at pickup.</li>
-          <li>The deposit is accepted <b>only by card</b>.</li>
-          <li>The remaining 50% of the rental amount must be paid at pickup.</li>
-        </ul>
+          <p><b>Quantity:</b> ${quantity}</p>
 
-        <hr/>
+          <p><b>Plan:</b> ${safeText(
+            metadataText(metadata, "plan") || "-"
+          )}</p>
 
-        <p>If you have any questions, simply reply to this email or contact us directly.</p>
+          <p><b>Pickup:</b> ${safeText(
+            formatDate(
+              metadataText(metadata, "pickup_date")
+            )
+          )} at ${safeText(
+            metadataText(metadata, "pickup_time") || "-"
+          )}</p>
 
-        <p>We look forward to serving you.</p>
+          <p><b>Drop-off:</b> ${safeText(
+            formatDate(
+              metadataText(metadata, "dropoff_date")
+            )
+          )} at ${safeText(
+            metadataText(metadata, "dropoff_time") || "-"
+          )}</p>
 
-        <p>
-          <b>Nexa Rentals Team</b><br/>
-          Magaluf, Mallorca Spain
-        </p>
-      </div>
-    `,
-  });
+          <p><b>Pickup location:</b> ${safeText(
+            metadataText(metadata, "pickup_location") ||
+              "Carrer Galeón 13, Magaluf"
+          )}</p>
 
-  if (customerEmailResult.error) {
-    console.error("CUSTOMER EMAIL ERROR:", customerEmailResult.error);
-  } else {
-    console.log("CUSTOMER EMAIL SENT:", customerEmailResult.data);
+          <hr/>
+
+          <h3>Payment summary</h3>
+
+          <p><b>Total rental amount:</b>
+            ${moneyFromCents(payment.totalAmount)}
+            ${currency}
+          </p>
+
+          <p><b>Amount paid online:</b>
+            ${moneyFromCents(payment.amountPaid)}
+            ${currency}
+          </p>
+
+          ${paymentMessage}
+
+          <hr/>
+
+          <h3>Required documents</h3>
+
+          <ul>
+            <li>Original valid driving licence</li>
+            <li>Passport or national ID</li>
+          </ul>
+
+          <h3>Refundable security deposit</h3>
+
+          <ul>
+            <li>
+              A refundable security deposit of
+              <b>€150 per scooter</b> is required at pickup.
+            </li>
+
+            <li>The security deposit is separate from the rental payment.</li>
+            <li>The security deposit must be paid at pickup.</li>
+          </ul>
+
+          <hr/>
+
+          <p>
+            If you have any questions, simply reply to this email
+            or contact us directly.
+          </p>
+
+          <p>
+            We look forward to seeing you.
+          </p>
+
+          <p>
+            <b>Nexa Rentals Team</b><br/>
+            Magaluf, Mallorca, Spain
+          </p>
+        </div>
+      `,
+    });
+
+  if (error) {
+    throw new Error(
+      `Customer confirmation email failed: ${error.message}`
+    );
   }
+
+  console.log("CUSTOMER EMAIL SENT:", data);
 }
 
 export async function POST(req: Request) {
-  const sig = req.headers.get("stripe-signature");
+  const stripeSecretKey =
+    process.env.STRIPE_SECRET_KEY;
+
+  const webhookSecret =
+    process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!stripeSecretKey) {
+    console.error(
+      "Missing STRIPE_SECRET_KEY"
+    );
+
+    return new NextResponse(
+      "Missing Stripe configuration",
+      { status: 500 }
+    );
+  }
+
+  if (!webhookSecret) {
+    console.error(
+      "Missing STRIPE_WEBHOOK_SECRET"
+    );
+
+    return new NextResponse(
+      "Missing Stripe webhook configuration",
+      { status: 500 }
+    );
+  }
+
+  const signature = req.headers.get(
+    "stripe-signature"
+  );
+
+  if (!signature) {
+    return new NextResponse(
+      "Missing Stripe signature",
+      { status: 400 }
+    );
+  }
+
   const rawBody = await req.text();
-
-  if (!process.env.STRIPE_SECRET_KEY) {
-    console.error("Missing STRIPE_SECRET_KEY");
-    return new NextResponse("Missing Stripe config", { status: 500 });
-  }
-
-  if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    console.error("Missing STRIPE_WEBHOOK_SECRET");
-    return new NextResponse("Missing Stripe webhook config", { status: 500 });
-  }
+  const stripe = new Stripe(stripeSecretKey);
 
   let event: Stripe.Event;
 
   try {
     event = stripe.webhooks.constructEvent(
       rawBody,
-      sig!,
-      process.env.STRIPE_WEBHOOK_SECRET
+      signature,
+      webhookSecret
     );
-  } catch (err: any) {
-    console.error("STRIPE WEBHOOK ERROR:", err);
-    return new NextResponse(`Webhook Error: ${err.message}`, { status: 400 });
+  } catch (error: any) {
+    console.error(
+      "STRIPE WEBHOOK SIGNATURE ERROR:",
+      error
+    );
+
+    return new NextResponse(
+      `Webhook Error: ${
+        error?.message ||
+        "Invalid Stripe signature"
+      }`,
+      { status: 400 }
+    );
   }
 
   try {
-    if (event.type === "payment_intent.succeeded") {
-      const pi = event.data.object as Stripe.PaymentIntent;
+    switch (event.type) {
+      case "payment_intent.succeeded": {
+        const paymentIntent =
+          event.data.object as Stripe.PaymentIntent;
 
-      const assignment = await assignFirstAvailableVehicle(pi);
+        /*
+         * First save the confirmed booking.
+         * If this fails, Stripe receives status 500 and retries.
+         */
+        const bookingResult =
+          await savePaidBooking(paymentIntent);
 
-      await savePaidBookingToSupabase(pi, assignment);
+        /*
+         * Then convert the temporary payment hold.
+         */
+        const holdResult =
+          await convertPaymentHold(paymentIntent);
 
-      try {
-        await sendOwnerEmail(pi, assignment);
-      } catch (error) {
-        console.error("OWNER EMAIL SEND FAILED:", error);
+        /*
+         * Avoid duplicate confirmation emails on normal
+         * Stripe webhook retries.
+         *
+         * If the booking was saved during an earlier attempt but
+         * hold conversion failed, the emails are sent after the
+         * retry successfully converts the hold.
+         */
+        const shouldSendEmails =
+          !bookingResult.alreadyConfirmed ||
+          (
+            holdResult.found &&
+            !holdResult.wasAlreadyConverted
+          );
+
+        if (shouldSendEmails) {
+          try {
+            await sendOwnerEmail(
+              paymentIntent,
+              bookingResult.bookingRowId
+            );
+          } catch (emailError) {
+            console.error(
+              "OWNER EMAIL SEND FAILED:",
+              emailError
+            );
+          }
+
+          try {
+            await sendCustomerEmail(
+              paymentIntent
+            );
+          } catch (emailError) {
+            console.error(
+              "CUSTOMER EMAIL SEND FAILED:",
+              emailError
+            );
+          }
+        }
+
+        break;
       }
 
-      try {
-        await sendCustomerEmail(pi, assignment);
-      } catch (error) {
-        console.error("CUSTOMER EMAIL SEND FAILED:", error);
+      case "payment_intent.payment_failed": {
+        const paymentIntent =
+          event.data.object as Stripe.PaymentIntent;
+
+        await releasePaymentHold(
+          paymentIntent,
+          "payment_failed"
+        );
+
+        break;
+      }
+
+      case "payment_intent.canceled": {
+        const paymentIntent =
+          event.data.object as Stripe.PaymentIntent;
+
+        await releasePaymentHold(
+          paymentIntent,
+          "cancelled"
+        );
+
+        break;
+      }
+
+      default: {
+        console.log(
+          "UNHANDLED STRIPE EVENT:",
+          event.type
+        );
       }
     }
 
-    return NextResponse.json({ received: true });
+    return NextResponse.json({
+      received: true,
+    });
   } catch (error: any) {
-    console.error("WEBHOOK PROCESSING ERROR:", error);
+    console.error(
+      "STRIPE WEBHOOK PROCESSING ERROR:",
+      error
+    );
 
+    /*
+     * Status 500 is deliberate.
+     * Stripe will retry instead of silently losing a paid booking.
+     */
     return NextResponse.json(
       {
-        received: true,
-        warning:
+        received: false,
+        error:
           error?.message ||
-          "Webhook received, but there was an internal processing warning.",
+          "The Stripe event could not be processed.",
       },
-      { status: 200 }
+      { status: 500 }
     );
   }
 }
