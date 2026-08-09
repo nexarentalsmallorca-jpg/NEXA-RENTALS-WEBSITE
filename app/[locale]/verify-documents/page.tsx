@@ -1,62 +1,35 @@
 "use client";
 
-export const dynamic = "force-dynamic";
-
-import React, {
+import {
   useCallback,
   useEffect,
   useMemo,
   useRef,
   useState,
 } from "react";
-import { Manrope } from "next/font/google";
-import { AnimatePresence, motion } from "framer-motion";
 
-const manrope = Manrope({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800"],
-  display: "swap",
-});
+type IdentityType =
+  | "id"
+  | "passport";
 
-type IdentityDocumentType = "id" | "passport";
-
-type ScannerMode = "licence" | "id";
+type StepKey =
+  | "dlFront"
+  | "dlBack"
+  | "idFront"
+  | "idBack";
 
 type Stage =
-  | "loading-session"
-  | "licence"
+  | "loading"
+  | "camera"
   | "identity-choice"
-  | "id"
-  | "passport"
-  | "review"
-  | "uploading"
+  | "analyzing"
+  | "decision"
   | "complete"
   | "error";
 
-type ExtractedVehicleClass = {
-  category: string;
-  validFrom: string;
-  validUntil: string;
-};
-
-type ExtractedDocumentData = {
-  firstName: string;
-  lastName: string;
-  fullName: string;
-  dateOfBirth: string;
-  dateOfExpiry: string;
-  documentNumber: string;
-  nationality: string;
-  address: string;
-  countryCode: string;
-  documentType: string;
-  vehicleClasses: ExtractedVehicleClass[];
-};
-
-type SessionResponse = {
+type SessionData = {
   success: boolean;
 
-  sessionToken?: string;
   bookingId?: string;
 
   status?:
@@ -67,551 +40,301 @@ type SessionResponse = {
     | "expired"
     | "cancelled";
 
-  identityType?: IdentityDocumentType | null;
+  error?: string;
+};
 
-  expiresAt?: string;
+type Analysis = {
+  success: boolean;
+
+  outcome:
+    | "accepted"
+    | "retake"
+    | "manual_review"
+    | "rejected";
+
+  message: string;
+  reasons: string[];
+
+  retakeSides: StepKey[];
+
+  licenceData: any;
+  identityData: any;
+  analysis: any;
 
   error?: string;
-  errorMessage?: string;
 };
 
-type UploadedDocumentPaths = {
-  dlFrontPath: string;
-  dlBackPath: string;
-  idFrontPath: string;
-  idBackPath: string;
+type Quality = {
+  tone:
+    | "good"
+    | "warn"
+    | "neutral";
 
-  dlFrontName: string;
-  dlBackName: string;
-  idFrontName: string;
-  idBackName: string;
+  text: string;
 };
 
-type BlinkImageDataLike = {
-  width: number;
-  height: number;
-  data: Uint8ClampedArray | ArrayLike<number>;
+const STEP_COPY: Record<
+  StepKey,
+  {
+    eyebrow: string;
+    title: string;
+    instruction: string;
+  }
+> = {
+  dlFront: {
+    eyebrow:
+      "Driving licence · Front",
+
+    title:
+      "Place the front inside the frame",
+
+    instruction:
+      "Keep all four corners visible. Avoid glare and hold the licence steady.",
+  },
+
+  dlBack: {
+    eyebrow:
+      "Driving licence · Back",
+
+    title:
+      "Now scan the back",
+
+    instruction:
+      "Turn the licence over and keep the complete card inside the frame.",
+  },
+
+  idFront: {
+    eyebrow:
+      "Identity document · Front",
+
+    title:
+      "Place the document inside the frame",
+
+    instruction:
+      "Show the complete photo page or the front of your ID card.",
+  },
+
+  idBack: {
+    eyebrow:
+      "Identity card · Back",
+
+    title:
+      "Now scan the back",
+
+    instruction:
+      "Keep every edge visible and make sure the small text is sharp.",
+  },
 };
 
-const EMPTY_DOCUMENT_DATA: ExtractedDocumentData = {
-  firstName: "",
-  lastName: "",
-  fullName: "",
-  dateOfBirth: "",
-  dateOfExpiry: "",
-  documentNumber: "",
-  nationality: "",
-  address: "",
-  countryCode: "",
-  documentType: "",
-  vehicleClasses: [],
-};
-
-function cleanText(value: unknown) {
-  return String(value ?? "").trim();
-}
-
-function textFromResult(value: any): string {
-  if (value == null) return "";
-
-  if (typeof value === "string") {
-    return value.trim();
-  }
-
-  if (typeof value === "number") {
-    return String(value);
-  }
-
-  const candidates = [
-    value?.latin?.value,
-    value?.value,
-    value?.originalString?.latin?.value,
-    value?.originalString?.value,
-    value?.description,
-    value?.rawString,
-  ];
-
-  for (const candidate of candidates) {
-    if (
-      typeof candidate === "string" &&
-      candidate.trim().length > 0
-    ) {
-      return candidate.trim();
-    }
-  }
-
-  return "";
-}
-
-function dateFromResult(value: any): string {
-  if (!value) return "";
-
-  const candidates = [
-    value?.originalString?.latin?.value,
-    value?.originalString?.value,
-    value?.gregorian?.originalString,
-    value?.gregorian?.rawString,
-    value?.gregorian?.value,
-    value?.latin?.value,
-    value?.value,
-  ];
-
-  for (const candidate of candidates) {
-    if (
-      typeof candidate === "string" &&
-      candidate.trim().length > 0
-    ) {
-      return candidate.trim();
-    }
-  }
-
-  const year =
-    value?.gregorian?.year ??
-    value?.year;
-
-  const month =
-    value?.gregorian?.month ??
-    value?.month;
-
-  const day =
-    value?.gregorian?.day ??
-    value?.day;
-
-  if (
-    Number.isFinite(Number(year)) &&
-    Number.isFinite(Number(month)) &&
-    Number.isFinite(Number(day))
-  ) {
-    return [
-      String(year).padStart(4, "0"),
-      String(month).padStart(2, "0"),
-      String(day).padStart(2, "0"),
-    ].join("-");
-  }
-
-  return "";
-}
-
-function extractVehicleClasses(
-  result: any
-): ExtractedVehicleClass[] {
-  const possibleLists = [
-    result?.vehicleClassInfo,
-    result?.vehicleClassInfos,
-    result?.driverLicenseInfo?.vehicleClassInfo,
-    result?.driverLicenseInfo?.vehicleClassInfos,
-  ];
-
-  let list: any[] = [];
-
-  for (const candidate of possibleLists) {
-    if (Array.isArray(candidate)) {
-      list = candidate;
-      break;
-    }
-  }
-
-  return list
-    .map((item) => {
-      const category =
-        textFromResult(item?.vehicleClass) ||
-        textFromResult(item?.licenceType) ||
-        textFromResult(item?.licenseType) ||
-        textFromResult(item?.category);
-
-      return {
-        category,
-
-        validFrom: dateFromResult(
-          item?.effectiveDate ??
-            item?.validFrom ??
-            item?.issueDate
-        ),
-
-        validUntil: dateFromResult(
-          item?.expiryDate ??
-            item?.validUntil
-        ),
-      };
-    })
-    .filter(
-      (item) =>
-        item.category.length > 0
-    );
-}
-
-function extractDocumentData(
-  result: any
-): ExtractedDocumentData {
-  if (!result) {
-    return {
-      ...EMPTY_DOCUMENT_DATA,
-    };
-  }
-
-  const documentClassInfo =
-    result?.documentClassInfo || {};
-
-  const firstName =
-    textFromResult(
-      result?.firstName
-    );
-
-  const lastName =
-    textFromResult(
-      result?.lastName
-    );
-
-  const fullName =
-    textFromResult(
-      result?.fullName
-    ) ||
-    `${firstName} ${lastName}`.trim();
-
-  return {
-    firstName,
-
-    lastName,
-
-    fullName,
-
-    dateOfBirth:
-      dateFromResult(
-        result?.dateOfBirth
-      ),
-
-    dateOfExpiry:
-      dateFromResult(
-        result?.dateOfExpiry
-      ),
-
-    documentNumber:
-      textFromResult(
-        result?.documentNumber
-      ),
-
-    nationality:
-      textFromResult(
-        result?.nationality
-      ),
-
-    address:
-      textFromResult(
-        result?.address
-      ),
-
-    countryCode:
-      textFromResult(
-        documentClassInfo
-          ?.isoAlpha2CountryCode
-      ),
-
-    documentType:
-      textFromResult(
-        documentClassInfo?.type
-      ) ||
-      textFromResult(
-        documentClassInfo
-          ?.documentType
-          ?.id
-      ),
-
-    vehicleClasses:
-      extractVehicleClasses(
-        result
-      ),
-  };
-}
-
-function isImageDataLike(
+function clean(
   value: unknown
-): value is BlinkImageDataLike {
-  if (
-    !value ||
-    typeof value !== "object"
-  ) {
-    return false;
+) {
+  return String(
+    value ?? ""
+  ).trim();
+}
+
+function safeReturnUrl(
+  raw: string
+) {
+  if (!raw) {
+    return "";
   }
 
-  const candidate =
-    value as {
-      width?: unknown;
-      height?: unknown;
-      data?: unknown;
-    };
+  try {
+    const url = new URL(
+      raw,
+      window.location.origin
+    );
 
-  return (
-    typeof candidate.width ===
-      "number" &&
-    typeof candidate.height ===
-      "number" &&
-    candidate.width > 0 &&
-    candidate.height > 0 &&
-    candidate.data != null
+    /*
+     * Prevent external redirect URLs.
+     */
+    if (
+      url.origin !==
+      window.location.origin
+    ) {
+      return "";
+    }
+
+    return url.toString();
+  } catch {
+    return "";
+  }
+}
+
+function isStep(
+  value: unknown
+): value is StepKey {
+  return [
+    "dlFront",
+    "dlBack",
+    "idFront",
+    "idBack",
+  ].includes(
+    String(value)
   );
 }
 
-async function imageDataToFile(
-  imageDataValue: unknown,
-  fileName: string
-): Promise<File | null> {
+/*
+ * Large native phone photos and HEIC-like
+ * images are converted into a normal JPEG.
+ */
+async function normalizePhoto(
+  file: File
+) {
   if (
-    !isImageDataLike(
-      imageDataValue
-    )
+    file.size <=
+      6 * 1024 * 1024 &&
+    [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ].includes(file.type)
   ) {
-    return null;
+    return file;
   }
 
-  const canvas =
-    document.createElement(
-      "canvas"
-    );
+  const objectUrl =
+    URL.createObjectURL(file);
 
-  canvas.width =
-    imageDataValue.width;
-
-  canvas.height =
-    imageDataValue.height;
-
-  const ctx =
-    canvas.getContext("2d");
-
-  if (!ctx) {
-    return null;
-  }
-
-  const rawData =
-    new Uint8ClampedArray(
-      imageDataValue.width *
-        imageDataValue.height *
-        4
-    );
-
-  rawData.set(
-    Array.from(
-      imageDataValue.data
-    )
-  );
-
-  const usableImageData =
-    new ImageData(
-      rawData,
-      imageDataValue.width,
-      imageDataValue.height
-    );
-
-  ctx.putImageData(
-    usableImageData,
-    0,
-    0
-  );
-
-  const blob =
-    await new Promise<Blob | null>(
-      (resolve) => {
-        canvas.toBlob(
+  try {
+    const image =
+      await new Promise<HTMLImageElement>(
+        (
           resolve,
-          "image/jpeg",
-          0.94
-        );
+          reject
+        ) => {
+          const element =
+            new Image();
+
+          element.onload = () =>
+            resolve(element);
+
+          element.onerror = () =>
+            reject(
+              new Error(
+                "This photo format cannot be read. Please take a new photo."
+              )
+            );
+
+          element.src =
+            objectUrl;
+        }
+      );
+
+    const longest =
+      Math.max(
+        image.naturalWidth,
+        image.naturalHeight
+      );
+
+    const scale =
+      Math.min(
+        1,
+        1800 / longest
+      );
+
+    const canvas =
+      document.createElement(
+        "canvas"
+      );
+
+    canvas.width =
+      Math.max(
+        1,
+        Math.round(
+          image.naturalWidth *
+            scale
+        )
+      );
+
+    canvas.height =
+      Math.max(
+        1,
+        Math.round(
+          image.naturalHeight *
+            scale
+        )
+      );
+
+    const ctx =
+      canvas.getContext(
+        "2d"
+      );
+
+    if (!ctx) {
+      throw new Error(
+        "Could not prepare the selected photo."
+      );
+    }
+
+    ctx.drawImage(
+      image,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    const blob =
+      await new Promise<Blob | null>(
+        (resolve) =>
+          canvas.toBlob(
+            resolve,
+            "image/jpeg",
+            0.88
+          )
+      );
+
+    if (!blob) {
+      throw new Error(
+        "Could not prepare the selected photo."
+      );
+    }
+
+    return new File(
+      [blob],
+      `${Date.now()}-document.jpg`,
+      {
+        type: "image/jpeg",
       }
     );
-
-  if (!blob) {
-    return null;
+  } finally {
+    URL.revokeObjectURL(
+      objectUrl
+    );
   }
-
-  return new File(
-    [blob],
-    fileName,
-    {
-      type: "image/jpeg",
-      lastModified:
-        Date.now(),
-    }
-  );
-}
-
-function getSubResultImage(
-  result: any,
-  index: number
-) {
-  return (
-    result?.subResults?.[index]
-      ?.documentImage ??
-    null
-  );
-}
-
-function AnimatedDocumentCard({
-  mode,
-  side,
-}: {
-  mode: ScannerMode;
-  side: "front" | "back";
-}) {
-  return (
-    <div
-      className="relative h-[76px] w-[122px] shrink-0"
-      style={{
-        perspective: "800px",
-      }}
-    >
-      <motion.div
-        animate={{
-          rotateY:
-            side === "front"
-              ? 0
-              : 180,
-        }}
-        transition={{
-          duration: 0.55,
-          ease: [
-            0.22,
-            1,
-            0.36,
-            1,
-          ],
-        }}
-        className="relative h-full w-full"
-        style={{
-          transformStyle:
-            "preserve-3d",
-        }}
-      >
-        <div
-          className="absolute inset-0 overflow-hidden rounded-[10px] bg-white p-3 text-black shadow-lg"
-          style={{
-            backfaceVisibility:
-              "hidden",
-          }}
-        >
-          <div className="flex h-full flex-col justify-between">
-            <div className="flex justify-between">
-              <div className="h-2 w-8 rounded-full bg-black/10" />
-
-              <span className="text-[6px] font-extrabold uppercase tracking-[0.12em] text-black/35">
-                Front
-              </span>
-            </div>
-
-            <div className="flex items-end gap-2">
-              <div className="h-6 w-5 rounded bg-black/10" />
-
-              <div className="flex-1 space-y-1">
-                <div className="h-1 w-full rounded bg-black/10" />
-                <div className="h-1 w-[70%] rounded bg-black/10" />
-                <div className="h-1 w-[45%] rounded bg-black/10" />
-              </div>
-            </div>
-
-            <span className="text-[6px] font-extrabold uppercase tracking-[0.09em]">
-              {mode ===
-              "licence"
-                ? "Driving licence"
-                : "Identity card"}
-            </span>
-          </div>
-        </div>
-
-        <div
-          className="absolute inset-0 overflow-hidden rounded-[10px] bg-[#171717] p-3 text-white shadow-lg"
-          style={{
-            backfaceVisibility:
-              "hidden",
-
-            transform:
-              "rotateY(180deg)",
-          }}
-        >
-          <div className="flex h-full flex-col justify-between">
-            <div className="flex justify-between">
-              <div className="h-1.5 w-10 rounded-full bg-white/15" />
-
-              <span className="text-[6px] font-extrabold uppercase tracking-[0.12em] text-white/45">
-                Back
-              </span>
-            </div>
-
-            <div className="space-y-1">
-              <div className="h-1 w-full bg-white/15" />
-              <div className="h-1 w-[80%] bg-white/15" />
-              <div className="h-1 w-[55%] bg-white/15" />
-            </div>
-
-            <div className="flex gap-[2px]">
-              {Array.from({
-                length: 10,
-              }).map(
-                (_, index) => (
-                  <div
-                    key={index}
-                    className="h-4 flex-1 bg-white/10"
-                  />
-                )
-              )}
-            </div>
-          </div>
-        </div>
-      </motion.div>
-    </div>
-  );
-}
-
-function Spinner({
-  light = false,
-}: {
-  light?: boolean;
-}) {
-  return (
-    <motion.div
-      animate={{
-        rotate: 360,
-      }}
-      transition={{
-        duration: 0.85,
-        repeat: Infinity,
-        ease: "linear",
-      }}
-      className={[
-        "h-10 w-10 rounded-full border-[3px]",
-
-        light
-          ? "border-white/20 border-t-white"
-          : "border-black/10 border-t-black",
-      ].join(" ")}
-    />
-  );
 }
 
 export default function VerifyDocumentsPage() {
-  const scannerMountRef =
-    useRef<HTMLDivElement | null>(
+  const videoRef =
+    useRef<HTMLVideoElement | null>(
       null
     );
 
-  const scannerRef =
-    useRef<any>(null);
-
-  const scannerStartingRef =
-    useRef(false);
-
-  const currentModeRef =
-    useRef<ScannerMode | null>(
+  const streamRef =
+    useRef<MediaStream | null>(
       null
     );
 
-  const resultHandledRef =
-    useRef(false);
+  const sampleCanvasRef =
+    useRef<HTMLCanvasElement | null>(
+      null
+    );
 
-  const passportInputRef =
+  const fileInputRef =
     useRef<HTMLInputElement | null>(
       null
     );
 
-  const initializedRef =
-    useRef(false);
+  const retakeQueueRef =
+    useRef<StepKey[] | null>(
+      null
+    );
+
+  const mountedRef =
+    useRef(true);
 
   const [
     sessionToken,
@@ -619,167 +342,130 @@ export default function VerifyDocumentsPage() {
   ] = useState("");
 
   const [
-    sessionTokenResolved,
-    setSessionTokenResolved,
-  ] = useState(false);
-
-  const [bookingId, setBookingId] =
-    useState("");
-
-  const [stage, setStage] =
-    useState<Stage>(
-      "loading-session"
-    );
-
-  const [
-    scannerMode,
-    setScannerMode,
-  ] =
-    useState<ScannerMode>(
-      "licence"
-    );
-
-  const [
-    currentSide,
-    setCurrentSide,
-  ] =
-    useState<
-      "front" | "back"
-    >("front");
-
-  const [
-    scannerNotice,
-    setScannerNotice,
+    bookingId,
+    setBookingId,
   ] = useState("");
 
   const [
-    error,
-    setError,
+    returnUrl,
+    setReturnUrl,
   ] = useState("");
 
   const [
     identityType,
     setIdentityType,
   ] =
+    useState<IdentityType | null>(
+      null
+    );
+
+  const [
+    files,
+    setFiles,
+  ] =
     useState<
-      IdentityDocumentType | null
-    >(null);
+      Partial<
+        Record<
+          StepKey,
+          File
+        >
+      >
+    >({});
 
   const [
-    dlFront,
-    setDlFront,
+    step,
+    setStep,
   ] =
-    useState<File | null>(
+    useState<StepKey>(
+      "dlFront"
+    );
+
+  const [
+    stage,
+    setStage,
+  ] =
+    useState<Stage>(
+      "loading"
+    );
+
+  const [
+    cameraReady,
+    setCameraReady,
+  ] =
+    useState(false);
+
+  const [
+    capturing,
+    setCapturing,
+  ] =
+    useState(false);
+
+  const [
+    quality,
+    setQuality,
+  ] =
+    useState<Quality>({
+      tone: "neutral",
+
+      text:
+        "Opening rear camera...",
+    });
+
+  const [
+    analysis,
+    setAnalysis,
+  ] =
+    useState<Analysis | null>(
       null
     );
 
   const [
-    dlBack,
-    setDlBack,
+    finalOutcome,
+    setFinalOutcome,
   ] =
-    useState<File | null>(
-      null
-    );
+    useState<
+      | "accepted"
+      | "manual_review"
+    >("accepted");
 
   const [
-    idFront,
-    setIdFront,
+    error,
+    setError,
   ] =
-    useState<File | null>(
-      null
-    );
+    useState("");
 
   const [
-    idBack,
-    setIdBack,
+    cameraError,
+    setCameraError,
   ] =
-    useState<File | null>(
-      null
-    );
+    useState(false);
 
-  const [
-    passport,
-    setPassport,
-  ] =
-    useState<File | null>(
-      null
-    );
-
-  const [
-    licenceData,
-    setLicenceData,
-  ] =
-    useState<ExtractedDocumentData>(
-      {
-        ...EMPTY_DOCUMENT_DATA,
+  const stopCamera =
+    useCallback(() => {
+      for (
+        const track of
+        streamRef.current?.getTracks() ||
+        []
+      ) {
+        track.stop();
       }
-    );
 
-  const [
-    identityData,
-    setIdentityData,
-  ] =
-    useState<ExtractedDocumentData | null>(
-      null
-    );
-
-  const [
-    passportPreview,
-    setPassportPreview,
-  ] = useState("");
-
-  const destroyScanner =
-    useCallback(async () => {
-      scannerStartingRef.current =
-        false;
-
-      currentModeRef.current =
+      streamRef.current =
         null;
 
-      const scanner =
-        scannerRef.current;
-
-      scannerRef.current =
-        null;
-
-      if (!scanner) {
-        return;
+      if (
+        videoRef.current
+      ) {
+        videoRef.current.srcObject =
+          null;
       }
 
-      try {
-        await scanner.destroy?.();
-      } catch {
-        // Scanner cleanup should never block the user.
-      }
+      setCameraReady(
+        false
+      );
     }, []);
 
-  useEffect(() => {
-    if (
-      typeof window ===
-      "undefined"
-    ) {
-      return;
-    }
-
-    const params =
-      new URLSearchParams(
-        window.location.search
-      );
-
-    setSessionToken(
-      cleanText(
-        params.get(
-          "session"
-        )
-      )
-    );
-
-    setSessionTokenResolved(
-      true
-    );
-  }, []);
-
-  const updateSession =
+  const patchSession =
     useCallback(
       async (
         body: Record<
@@ -787,12 +473,6 @@ export default function VerifyDocumentsPage() {
           unknown
         >
       ) => {
-        if (!sessionToken) {
-          throw new Error(
-            "The verification session is missing."
-          );
-        }
-
         const response =
           await fetch(
             "/api/document-verification/session",
@@ -814,7 +494,7 @@ export default function VerifyDocumentsPage() {
           );
 
         const data =
-          (await response.json()) as SessionResponse;
+          await response.json();
 
         if (
           !response.ok ||
@@ -831,694 +511,1078 @@ export default function VerifyDocumentsPage() {
       [sessionToken]
     );
 
-  const initializeSession =
-    useCallback(
-      async () => {
-        if (!sessionToken) {
-          setError(
-            "The verification link is missing its secure session."
+  /*
+   * Load and start the secure session.
+   */
+  useEffect(() => {
+    mountedRef.current =
+      true;
+
+    const previousBody =
+      document.body.style.cssText;
+
+    const previousHtml =
+      document.documentElement
+        .style.cssText;
+
+    document.body.style.overflow =
+      "hidden";
+
+    document.body.style.background =
+      "#000";
+
+    document.body.style.margin =
+      "0";
+
+    document.documentElement.style.background =
+      "#000";
+
+    const params =
+      new URLSearchParams(
+        window.location.search
+      );
+
+    const token =
+      clean(
+        params.get(
+          "session"
+        )
+      );
+
+    const back =
+      safeReturnUrl(
+        clean(
+          params.get(
+            "return"
+          )
+        )
+      );
+
+    setSessionToken(
+      token
+    );
+
+    setReturnUrl(
+      back
+    );
+
+    async function initialize() {
+      try {
+        if (!token) {
+          throw new Error(
+            "The secure verification session is missing."
+          );
+        }
+
+        const response =
+          await fetch(
+            `/api/document-verification/session?session=${encodeURIComponent(
+              token
+            )}`,
+            {
+              cache:
+                "no-store",
+            }
           );
 
+        const data =
+          (await response.json()) as SessionData;
+
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            data.error ||
+              "This verification session is unavailable."
+          );
+        }
+
+        if (
+          data.status ===
+          "completed"
+        ) {
           setStage(
-            "error"
+            "complete"
           );
 
           return;
         }
 
-        try {
-          setError("");
-
-          setStage(
-            "loading-session"
-          );
-
-          const response =
-            await fetch(
-              `/api/document-verification/session?session=${encodeURIComponent(
-                sessionToken
-              )}`,
-              {
-                method:
-                  "GET",
-
-                cache:
-                  "no-store",
-              }
-            );
-
-          const data =
-            (await response.json()) as SessionResponse;
-
-          if (
-            !response.ok ||
-            !data.success
-          ) {
-            throw new Error(
-              data.error ||
-                "This verification session is unavailable."
-            );
-          }
-
-          if (
-            data.status ===
-            "expired"
-          ) {
-            throw new Error(
-              "This QR code has expired. Return to the booking screen and generate a new one."
-            );
-          }
-
-          if (
-            data.status ===
-            "completed"
-          ) {
-            setStage(
-              "complete"
-            );
-
-            return;
-          }
-
-          if (
-            data.status ===
-              "cancelled" ||
-            data.status ===
-              "failed"
-          ) {
-            throw new Error(
-              "This verification session can no longer be used."
-            );
-          }
-
-          if (
-            !data.bookingId
-          ) {
-            throw new Error(
-              "Booking verification ID is missing."
-            );
-          }
-
-          setBookingId(
-            data.bookingId
-          );
-
-          await updateSession({
-            action:
-              "start",
-          });
-
-          setStage(
-            "licence"
-          );
-        } catch (
-          sessionError: any
+        if (
+          [
+            "failed",
+            "expired",
+            "cancelled",
+          ].includes(
+            data.status || ""
+          )
         ) {
-          setError(
-            sessionError?.message ||
-              "Could not start document verification."
-          );
-
-          setStage(
-            "error"
+          throw new Error(
+            "This verification session can no longer be used."
           );
         }
-      },
-      [
-        sessionToken,
-        updateSession,
-      ]
-    );
 
+        if (
+          !data.bookingId
+        ) {
+          throw new Error(
+            "The booking verification ID is missing."
+          );
+        }
+
+        setBookingId(
+          data.bookingId
+        );
+
+        const started =
+          await fetch(
+            "/api/document-verification/session",
+            {
+              method:
+                "PATCH",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  sessionToken:
+                    token,
+
+                  action:
+                    "start",
+                }),
+            }
+          );
+
+        const startData =
+          await started.json();
+
+        if (
+          !started.ok ||
+          !startData.success
+        ) {
+          throw new Error(
+            startData.error ||
+              "Could not start the scanner."
+          );
+        }
+
+        setStage(
+          "camera"
+        );
+      } catch (
+        caught: any
+      ) {
+        setError(
+          caught?.message ||
+            "Could not start document verification."
+        );
+
+        setStage(
+          "error"
+        );
+      }
+    }
+
+    void initialize();
+
+    return () => {
+      mountedRef.current =
+        false;
+
+      stopCamera();
+
+      document.body.style.cssText =
+        previousBody;
+
+      document.documentElement.style.cssText =
+        previousHtml;
+    };
+  }, [stopCamera]);
+
+  const startCamera =
+    useCallback(async () => {
+      stopCamera();
+
+      setCameraError(
+        false
+      );
+
+      setError("");
+
+      setQuality({
+        tone: "neutral",
+
+        text:
+          "Opening rear camera...",
+      });
+
+      try {
+        if (
+          !navigator
+            .mediaDevices
+            ?.getUserMedia
+        ) {
+          throw new Error(
+            "This browser does not support live camera access."
+          );
+        }
+
+        const stream =
+          await navigator.mediaDevices.getUserMedia(
+            {
+              audio:
+                false,
+
+              video: {
+                facingMode: {
+                  ideal:
+                    "environment",
+                },
+
+                width: {
+                  ideal:
+                    1920,
+                },
+
+                height: {
+                  ideal:
+                    1080,
+                },
+              },
+            }
+          );
+
+        if (
+          !mountedRef.current
+        ) {
+          for (
+            const track of
+            stream.getTracks()
+          ) {
+            track.stop();
+          }
+
+          return;
+        }
+
+        streamRef.current =
+          stream;
+
+        if (
+          !videoRef.current
+        ) {
+          throw new Error(
+            "Camera preview could not be mounted."
+          );
+        }
+
+        videoRef.current.srcObject =
+          stream;
+
+        await videoRef.current.play();
+
+        setCameraReady(
+          true
+        );
+
+        setQuality({
+          tone: "neutral",
+
+          text:
+            "Align the document inside the frame",
+        });
+      } catch (
+        caught: any
+      ) {
+        stopCamera();
+
+        setCameraError(
+          true
+        );
+
+        setError(
+          caught?.name ===
+            "NotAllowedError"
+            ? "Camera permission was blocked. Allow camera access in your browser, or take a photo using the button below."
+            : caught?.message ||
+                "Could not open the camera."
+        );
+
+        setStage(
+          "error"
+        );
+      }
+    }, [stopCamera]);
+
+  /*
+   * Open the camera whenever a new
+   * document side becomes active.
+   */
   useEffect(() => {
     if (
-      !sessionTokenResolved ||
-      initializedRef.current
+      stage !== "camera"
     ) {
       return;
     }
 
-    initializedRef.current =
-      true;
+    void startCamera();
 
-    void initializeSession();
+    return stopCamera;
   }, [
-    sessionTokenResolved,
-    initializeSession,
+    stage,
+    step,
+    startCamera,
+    stopCamera,
   ]);
 
-  const handleScannerResult =
-    useCallback(
-      async (
-        mode: ScannerMode,
-        result: any
-      ) => {
-        if (
-          resultHandledRef.current
-        ) {
-          return;
-        }
-
-        resultHandledRef.current =
-          true;
-
-        try {
-          setScannerNotice(
-            "Saving scan..."
-          );
-
-          const frontImage =
-            getSubResultImage(
-              result,
-              0
-            );
-
-          const backImage =
-            getSubResultImage(
-              result,
-              1
-            );
-
-          const frontFile =
-            await imageDataToFile(
-              frontImage,
-
-              mode ===
-              "licence"
-                ? "driving-licence-front.jpg"
-                : "identity-card-front.jpg"
-            );
-
-          const backFile =
-            await imageDataToFile(
-              backImage,
-
-              mode ===
-              "licence"
-                ? "driving-licence-back.jpg"
-                : "identity-card-back.jpg"
-            );
-
-          await destroyScanner();
-
-          if (!frontFile) {
-            throw new Error(
-              "The scanner could not save the front image. Please scan again."
-            );
-          }
-
-          if (!backFile) {
-            throw new Error(
-              "The scanner did not capture the back side. Please scan the document again."
-            );
-          }
-
-          const extracted =
-            extractDocumentData(
-              result
-            );
-
-          if (
-            mode ===
-            "licence"
-          ) {
-            setDlFront(
-              frontFile
-            );
-
-            setDlBack(
-              backFile
-            );
-
-            setLicenceData(
-              extracted
-            );
-
-            setCurrentSide(
-              "front"
-            );
-
-            setScannerNotice(
-              ""
-            );
-
-            setStage(
-              "identity-choice"
-            );
-
-            return;
-          }
-
-          setIdFront(
-            frontFile
-          );
-
-          setIdBack(
-            backFile
-          );
-
-          setIdentityData(
-            extracted
-          );
-
-          setCurrentSide(
-            "front"
-          );
-
-          setScannerNotice(
-            ""
-          );
-
-          setStage(
-            "review"
-          );
-        } catch (
-          resultError: any
-        ) {
-          await destroyScanner();
-
-          setError(
-            resultError?.message ||
-              "The document could not be saved."
-          );
-
-          setStage(
-            "error"
-          );
-        }
-      },
-      [
-        destroyScanner,
-      ]
-    );
-
-  const startScanner =
-    useCallback(
-      async (
-        mode: ScannerMode
-      ) => {
-        if (
-          scannerStartingRef.current
-        ) {
-          return;
-        }
-
-        if (
-          currentModeRef.current ===
-            mode &&
-          scannerRef.current
-        ) {
-          return;
-        }
-
-        const mount =
-          scannerMountRef.current;
-
-        if (!mount) {
-          return;
-        }
-
-        const licenseKey =
-          process.env
-            .NEXT_PUBLIC_BLINKID_LICENSE_KEY;
-
-        if (!licenseKey) {
-          setError(
-            "Document scanner licence is not configured."
-          );
-
-          setStage(
-            "error"
-          );
-
-          return;
-        }
-
-        scannerStartingRef.current =
-          true;
-
-        currentModeRef.current =
-          mode;
-
-        resultHandledRef.current =
-          false;
-
-        try {
-          if (
-            typeof window ===
-            "undefined"
-          ) {
-            scannerStartingRef.current =
-              false;
-
-            return;
-          }
-
-          await destroyScanner();
-
-          scannerStartingRef.current =
-            true;
-
-          currentModeRef.current =
-            mode;
-
-          setScannerMode(
-            mode
-          );
-
-          setCurrentSide(
-            "front"
-          );
-
-          setScannerNotice(
-            ""
-          );
-
-          mount.innerHTML =
-            "";
-
-          /*
-           * BlinkID is loaded dynamically because
-           * it uses browser APIs during initialization.
-           */
-          const {
-            createBlinkId,
-          } =
-            await import(
-              "@microblink/blinkid"
-            );
-
-          /*
-           * IMPORTANT:
-           *
-           * resourcesLocation must be the BASE URL.
-           * BlinkID automatically appends:
-           *
-           * resources/blinkid-worker.js
-           * resources/*.wasm
-           * etc.
-           *
-           * Using window.location.origin guarantees:
-           *
-           * https://www.nexarentals.es/resources/...
-           *
-           * and prevents the locale prefix:
-           *
-           * https://www.nexarentals.es/es/resources/...
-           */
-          const resourcesLocation =
-            `${window.location.origin}/`;
-
-          const blinkId =
-            await createBlinkId({
-              licenseKey,
-
-              resourcesLocation,
-
-              targetNode:
-                mount,
-
-              feedbackUiOptions: {
-                showOnboardingGuide:
-                  false,
-              },
-
-              cameraManagerUiOptions: {
-                showMirrorCameraButton:
-                  false,
-              },
-
-              scanningSettings: {
-                documentCaptureModule:
-                  {
-                    documentImageReturnEnabled:
-                      true,
-
-                    secondSideWithNoExtractableDataSkipped:
-                      false,
-
-                    imageWithBlurRejected:
-                      true,
-
-                    imageWithGlareRejected:
-                      true,
-
-                    inputImageSelectionStrategy:
-                      "optimize-for-quality",
-                  },
-              },
-            });
-
-          scannerRef.current =
-            blinkId;
-
-          scannerStartingRef.current =
-            false;
-
-          blinkId.addDocumentClassFilter(
-            (
-              documentClassInfo: any
-            ) => {
-              /*
-               * Current BlinkID versions expose the
-               * class as documentClassInfo.type.
-               *
-               * The legacy fallback remains here so
-               * the flow also tolerates the older shape.
-               */
-              const documentType =
-                documentClassInfo
-                  ?.type ??
-                documentClassInfo
-                  ?.documentType
-                  ?.id;
-
-              if (
-                mode ===
-                "licence"
-              ) {
-                return (
-                  documentType ===
-                  "dl"
-                );
-              }
-
-              return (
-                documentType ===
-                "id"
-              );
-            }
-          );
-
-          blinkId.addOnDocumentFilteredCallback(
-            () => {
-              setScannerNotice(
-                mode ===
-                  "licence"
-                  ? "Please show a driving licence."
-                  : "Please show an ID card."
-              );
-            }
-          );
-
-          blinkId.blinkIdUxManager.addOnFrameProcessCallback(
-            (
-              frameResult: any
-            ) => {
-              const side =
-                frameResult
-                  ?.inputImageAnalysisResult
-                  ?.scanningSide;
-
-              if (
-                side ===
-                "first"
-              ) {
-                setCurrentSide(
-                  "front"
-                );
-              }
-
-              if (
-                side ===
-                "second"
-              ) {
-                setCurrentSide(
-                  "back"
-                );
-              }
-            }
-          );
-
-          blinkId.addOnErrorCallback(
-            (
-              scannerError: any
-            ) => {
-              const readable =
-                typeof scannerError ===
-                "string"
-                  ? scannerError
-                  : scannerError
-                      ?.message ||
-                    "Scanner error";
-
-              setScannerNotice(
-                readable
-              );
-            }
-          );
-
-          blinkId.addOnResultCallback(
-            (
-              result: any
-            ) => {
-              void handleScannerResult(
-                mode,
-                result
-              );
-            }
-          );
-        } catch (
-          scannerError: any
-        ) {
-          scannerStartingRef.current =
-            false;
-
-          await destroyScanner();
-
-          console.error(
-            "BLINKID SCANNER START ERROR:",
-            scannerError
-          );
-
-          setError(
-            scannerError?.message ||
-              "The camera scanner could not start."
-          );
-
-          setStage(
-            "error"
-          );
-        }
-      },
-      [
-        destroyScanner,
-        handleScannerResult,
-      ]
-    );
-
+  /*
+   * Lightweight local quality guide.
+   * OpenAI performs the final screening.
+   */
   useEffect(() => {
     if (
-      stage !==
-        "licence" &&
-      stage !== "id"
+      stage !== "camera" ||
+      !cameraReady
     ) {
       return;
     }
 
     const timer =
-      window.setTimeout(
+      window.setInterval(
         () => {
-          void startScanner(
-            stage ===
-              "licence"
-              ? "licence"
-              : "id"
+          const video =
+            videoRef.current;
+
+          if (
+            !video ||
+            video.readyState <
+              2 ||
+            !video.videoWidth
+          ) {
+            return;
+          }
+
+          const canvas =
+            sampleCanvasRef.current ||
+            document.createElement(
+              "canvas"
+            );
+
+          sampleCanvasRef.current =
+            canvas;
+
+          canvas.width =
+            120;
+
+          canvas.height =
+            76;
+
+          const ctx =
+            canvas.getContext(
+              "2d",
+              {
+                willReadFrequently:
+                  true,
+              }
+            );
+
+          if (!ctx) {
+            return;
+          }
+
+          ctx.drawImage(
+            video,
+            0,
+            0,
+            canvas.width,
+            canvas.height
           );
+
+          const pixels =
+            ctx.getImageData(
+              0,
+              0,
+              canvas.width,
+              canvas.height
+            ).data;
+
+          let brightness =
+            0;
+
+          let glare =
+            0;
+
+          let edges =
+            0;
+
+          let previous =
+            0;
+
+          const count =
+            pixels.length /
+            4;
+
+          for (
+            let i = 0;
+            i <
+            pixels.length;
+            i += 4
+          ) {
+            const gray =
+              (
+                pixels[i] *
+                  0.299 +
+                pixels[i + 1] *
+                  0.587 +
+                pixels[i + 2] *
+                  0.114
+              ) | 0;
+
+            brightness +=
+              gray;
+
+            if (
+              gray > 245
+            ) {
+              glare += 1;
+            }
+
+            if (i > 0) {
+              edges +=
+                Math.abs(
+                  gray -
+                    previous
+                );
+            }
+
+            previous =
+              gray;
+          }
+
+          brightness /=
+            count;
+
+          glare /=
+            count;
+
+          edges /=
+            count;
+
+          if (
+            brightness <
+            42
+          ) {
+            setQuality({
+              tone: "warn",
+
+              text:
+                "Too dark — move toward better light",
+            });
+          } else if (
+            glare >
+            0.24
+          ) {
+            setQuality({
+              tone: "warn",
+
+              text:
+                "Too much glare — tilt the document slightly",
+            });
+          } else if (
+            edges <
+            5.5
+          ) {
+            setQuality({
+              tone: "warn",
+
+              text:
+                "Hold still and move slightly closer",
+            });
+          } else {
+            setQuality({
+              tone: "good",
+
+              text:
+                "Good position — capture now",
+            });
+          }
         },
-        300
+        450
       );
 
-    return () => {
-      window.clearTimeout(
+    return () =>
+      window.clearInterval(
         timer
       );
-    };
   }, [
     stage,
-    startScanner,
+    cameraReady,
   ]);
 
-  useEffect(() => {
-    return () => {
-      void destroyScanner();
-    };
-  }, [
-    destroyScanner,
-  ]);
-
-  useEffect(() => {
-    return () => {
-      if (
-        passportPreview
-      ) {
-        URL.revokeObjectURL(
-          passportPreview
-        );
-      }
-    };
-  }, [
-    passportPreview,
-  ]);
-
-  function chooseIdCard() {
-    setIdentityType(
-      "id"
+  function frameAspect() {
+    return (
+      identityType ===
+        "passport" &&
+      step === "idFront"
+        ? 1.42
+        : 1.586
     );
+  }
 
-    setPassport(
-      null
-    );
+  async function makeCameraFile() {
+    const video =
+      videoRef.current;
 
     if (
-      passportPreview
+      !video ||
+      !video.videoWidth ||
+      !video.videoHeight
     ) {
-      URL.revokeObjectURL(
-        passportPreview
-      );
-
-      setPassportPreview(
-        ""
+      throw new Error(
+        "The camera is not ready yet."
       );
     }
 
+    const aspect =
+      frameAspect();
+
+    const sourceAspect =
+      video.videoWidth /
+      video.videoHeight;
+
+    let sx = 0;
+    let sy = 0;
+
+    let sw =
+      video.videoWidth;
+
+    let sh =
+      video.videoHeight;
+
+    /*
+     * Crop exactly the same area
+     * visible inside the frame.
+     */
+    if (
+      sourceAspect >
+      aspect
+    ) {
+      sw =
+        video.videoHeight *
+        aspect;
+
+      sx =
+        (
+          video.videoWidth -
+          sw
+        ) / 2;
+    } else {
+      sh =
+        video.videoWidth /
+        aspect;
+
+      sy =
+        (
+          video.videoHeight -
+          sh
+        ) / 2;
+    }
+
+    const canvas =
+      document.createElement(
+        "canvas"
+      );
+
+    canvas.width =
+      1600;
+
+    canvas.height =
+      Math.round(
+        1600 / aspect
+      );
+
+    const ctx =
+      canvas.getContext(
+        "2d"
+      );
+
+    if (!ctx) {
+      throw new Error(
+        "Could not capture the photograph."
+      );
+    }
+
+    ctx.drawImage(
+      video,
+      sx,
+      sy,
+      sw,
+      sh,
+      0,
+      0,
+      canvas.width,
+      canvas.height
+    );
+
+    const blob =
+      await new Promise<Blob | null>(
+        (resolve) =>
+          canvas.toBlob(
+            resolve,
+            "image/jpeg",
+            0.9
+          )
+      );
+
+    if (!blob) {
+      throw new Error(
+        "Could not save the photograph."
+      );
+    }
+
+    return new File(
+      [blob],
+      `${step}-${Date.now()}.jpg`,
+      {
+        type:
+          "image/jpeg",
+      }
+    );
+  }
+
+  async function analyzeDocuments(
+    nextFiles: Partial<
+      Record<
+        StepKey,
+        File
+      >
+    >,
+    selectedType: IdentityType
+  ) {
+    try {
+      setStage(
+        "analyzing"
+      );
+
+      setError("");
+
+      stopCamera();
+
+      const form =
+        new FormData();
+
+      form.append(
+        "sessionToken",
+        sessionToken
+      );
+
+      form.append(
+        "identityType",
+        selectedType
+      );
+
+      for (
+        const key of [
+          "dlFront",
+          "dlBack",
+          "idFront",
+          "idBack",
+        ] as StepKey[]
+      ) {
+        const file =
+          nextFiles[key];
+
+        if (file) {
+          form.append(
+            key,
+            file
+          );
+        }
+      }
+
+      const response =
+        await fetch(
+          "/api/document-verification/analyze",
+          {
+            method:
+              "POST",
+
+            body:
+              form,
+          }
+        );
+
+      const data =
+        (await response.json()) as Analysis;
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          data.error ||
+            "Could not analyze the documents."
+        );
+      }
+
+      setAnalysis(
+        data
+      );
+
+      if (
+        data.outcome ===
+          "accepted" ||
+        data.outcome ===
+          "manual_review"
+      ) {
+        await saveAndComplete(
+          data,
+          nextFiles,
+          selectedType
+        );
+      } else {
+        setStage(
+          "decision"
+        );
+      }
+    } catch (
+      caught: any
+    ) {
+      setError(
+        caught?.message ||
+          "Document analysis failed."
+      );
+
+      setCameraError(
+        false
+      );
+
+      setStage(
+        "error"
+      );
+    }
+  }
+
+  async function saveAndComplete(
+    result: Pick<
+      Analysis,
+      | "outcome"
+      | "licenceData"
+      | "identityData"
+      | "analysis"
+      | "message"
+      | "reasons"
+    >,
+
+    nextFiles: Partial<
+      Record<
+        StepKey,
+        File
+      >
+    >,
+
+    selectedType: IdentityType
+  ) {
+    if (!bookingId) {
+      throw new Error(
+        "The booking verification ID is missing."
+      );
+    }
+
+    if (
+      !nextFiles.dlFront ||
+      !nextFiles.dlBack ||
+      !nextFiles.idFront
+    ) {
+      throw new Error(
+        "One or more required photographs are missing."
+      );
+    }
+
+    if (
+      selectedType ===
+        "id" &&
+      !nextFiles.idBack
+    ) {
+      throw new Error(
+        "The back of the ID card is missing."
+      );
+    }
+
+    const upload =
+      new FormData();
+
+    upload.append(
+      "bookingId",
+      bookingId
+    );
+
+    upload.append(
+      "sessionToken",
+      sessionToken
+    );
+
+    upload.append(
+      "dlFront",
+      nextFiles.dlFront
+    );
+
+    upload.append(
+      "dlBack",
+      nextFiles.dlBack
+    );
+
+    upload.append(
+      "idFront",
+      nextFiles.idFront
+    );
+
+    if (
+      nextFiles.idBack
+    ) {
+      upload.append(
+        "idBack",
+        nextFiles.idBack
+      );
+    }
+
+    const uploadResponse =
+      await fetch(
+        "/api/stripe/upload-booking-documents",
+        {
+          method:
+            "POST",
+
+          body:
+            upload,
+        }
+      );
+
+    const uploaded =
+      await uploadResponse.json();
+
+    if (
+      !uploadResponse.ok ||
+      !uploaded.success
+    ) {
+      throw new Error(
+        uploaded.error ||
+          "Could not save the document photographs."
+      );
+    }
+
+    await patchSession({
+      action:
+        "complete",
+
+      identityType:
+        selectedType,
+
+      firstName:
+        result.licenceData
+          ?.firstName ||
+        result.identityData
+          ?.firstName ||
+        "",
+
+      lastName:
+        result.licenceData
+          ?.lastName ||
+        result.identityData
+          ?.lastName ||
+        "",
+
+      homeAddress:
+        result.identityData
+          ?.address ||
+        result.licenceData
+          ?.address ||
+        "",
+
+      licenceData: {
+        ...result.licenceData,
+
+        verificationOutcome:
+          result.outcome,
+
+        verificationReasons:
+          result.reasons,
+      },
+
+      identityData:
+        result.identityData,
+
+      dlFrontPath:
+        uploaded.dlFrontPath,
+
+      dlBackPath:
+        uploaded.dlBackPath,
+
+      idFrontPath:
+        uploaded.idFrontPath,
+
+      idBackPath:
+        uploaded.idBackPath ||
+        "",
+
+      dlFrontName:
+        uploaded.dlFrontName,
+
+      dlBackName:
+        uploaded.dlBackName,
+
+      idFrontName:
+        uploaded.idFrontName,
+
+      idBackName:
+        uploaded.idBackName ||
+        "",
+    });
+
+    setFinalOutcome(
+      result.outcome ===
+        "manual_review"
+        ? "manual_review"
+        : "accepted"
+    );
+
     setStage(
-      "id"
+      "complete"
     );
   }
 
-  function choosePassport() {
-    setIdentityType(
-      "passport"
+  async function acceptFile(
+    file: File
+  ) {
+    const nextFiles = {
+      ...files,
+      [step]: file,
+    };
+
+    setFiles(
+      nextFiles
     );
 
-    setIdFront(
-      null
-    );
+    stopCamera();
 
-    setIdBack(
-      null
-    );
+    const queue =
+      retakeQueueRef.current;
 
-    setIdentityData(
-      null
-    );
+    if (queue) {
+      const remaining =
+        queue.slice(1);
 
-    setStage(
-      "passport"
-    );
+      retakeQueueRef.current =
+        remaining.length
+          ? remaining
+          : null;
+
+      if (
+        remaining.length
+      ) {
+        setStep(
+          remaining[0]
+        );
+
+        setStage(
+          "camera"
+        );
+      } else if (
+        identityType
+      ) {
+        await analyzeDocuments(
+          nextFiles,
+          identityType
+        );
+      }
+
+      return;
+    }
+
+    if (
+      step === "dlFront"
+    ) {
+      setStep(
+        "dlBack"
+      );
+
+      setStage(
+        "camera"
+      );
+    } else if (
+      step === "dlBack"
+    ) {
+      setStage(
+        "identity-choice"
+      );
+    } else if (
+      step === "idFront" &&
+      identityType === "id"
+    ) {
+      setStep(
+        "idBack"
+      );
+
+      setStage(
+        "camera"
+      );
+    } else if (
+      identityType
+    ) {
+      await analyzeDocuments(
+        nextFiles,
+        identityType
+      );
+    }
   }
 
-  function openPassportCamera() {
-    passportInputRef.current?.click();
+  async function capture() {
+    if (capturing) {
+      return;
+    }
+
+    try {
+      setCapturing(
+        true
+      );
+
+      const file =
+        await makeCameraFile();
+
+      await acceptFile(
+        file
+      );
+    } catch (
+      caught: any
+    ) {
+      setError(
+        caught?.message ||
+          "Could not capture the photograph."
+      );
+
+      setStage(
+        "error"
+      );
+    } finally {
+      setCapturing(
+        false
+      );
+    }
   }
 
-  async function handlePassportPhoto(
+  async function useSelectedPhoto(
     event: React.ChangeEvent<HTMLInputElement>
   ) {
     const selected =
-      event.target.files?.[0] ??
-      null;
+      event.target.files?.[0];
+
+    event.target.value =
+      "";
 
     if (!selected) {
       return;
@@ -1530,286 +1594,161 @@ export default function VerifyDocumentsPage() {
       )
     ) {
       setError(
-        "Please take a photo of the passport photo page."
-      );
-
-      setStage(
-        "error"
+        "Please select or take an image."
       );
 
       return;
     }
 
-    if (
-      passportPreview
+    try {
+      setCameraError(
+        false
+      );
+
+      const normalized =
+        await normalizePhoto(
+          selected
+        );
+
+      await acceptFile(
+        normalized
+      );
+    } catch (
+      caught: any
     ) {
-      URL.revokeObjectURL(
-        passportPreview
+      setError(
+        caught?.message ||
+          "Could not read the selected photo."
+      );
+
+      setStage(
+        "error"
       );
     }
+  }
 
-    setPassport(
-      selected
+  function chooseIdentity(
+    type: IdentityType
+  ) {
+    setIdentityType(
+      type
     );
 
-    setPassportPreview(
-      URL.createObjectURL(
-        selected
-      )
+    setStep(
+      "idFront"
     );
 
     setStage(
-      "review"
+      "camera"
     );
   }
 
-  async function uploadDocuments(): Promise<UploadedDocumentPaths> {
-    if (!bookingId) {
-      throw new Error(
-        "Booking verification ID is missing."
-      );
-    }
+  function beginRetake() {
+    const requested =
+      (
+        analysis?.retakeSides ||
+        []
+      )
+        .filter(isStep)
+        .filter(
+          (key) =>
+            identityType ===
+            "passport"
+              ? key !==
+                "idBack"
+              : true
+        );
 
-    if (
-      !dlFront ||
-      !dlBack
-    ) {
-      throw new Error(
-        "Both sides of the driving licence are required."
-      );
-    }
+    const queue: StepKey[] =
+      requested.length
+        ? [
+            ...new Set(
+              requested
+            ),
+          ]
+        : [
+            "dlFront",
+            "dlBack",
+            "idFront",
+          ];
 
-    const finalIdFront =
-      identityType ===
-      "passport"
-        ? passport
-        : idFront;
+    retakeQueueRef.current =
+      queue;
 
-    const finalIdBack =
-      identityType ===
-      "id"
-        ? idBack
-        : null;
-
-    if (!finalIdFront) {
-      throw new Error(
-        identityType ===
-          "passport"
-          ? "Passport photo is missing."
-          : "ID card front is missing."
-      );
-    }
-
-    if (
-      identityType ===
-        "id" &&
-      !finalIdBack
-    ) {
-      throw new Error(
-        "ID card back is missing."
-      );
-    }
-
-    const formData =
-      new FormData();
-
-    formData.append(
-      "bookingId",
-      bookingId
-    );
-
-    formData.append(
-      "dlFront",
-      dlFront
-    );
-
-    formData.append(
-      "dlBack",
-      dlBack
-    );
-
-    formData.append(
-      "idFront",
-      finalIdFront
-    );
-
-    if (finalIdBack) {
-      formData.append(
-        "idBack",
-        finalIdBack
-      );
-    }
-
-    const response =
-      await fetch(
-        "/api/stripe/upload-booking-documents",
-        {
-          method:
-            "POST",
-
-          body:
-            formData,
-        }
-      );
-
-    const rawText =
-      await response.text();
-
-    let data: any = {};
-
-    try {
-      data =
-        rawText
-          ? JSON.parse(
-              rawText
-            )
-          : {};
-    } catch {
-      throw new Error(
-        "Document upload returned an invalid response."
-      );
-    }
-
-    if (!response.ok) {
-      throw new Error(
-        data?.error ||
-          "Document upload failed."
-      );
-    }
-
-    return {
-      dlFrontPath:
-        data?.dlFrontPath ||
-        "",
-
-      dlBackPath:
-        data?.dlBackPath ||
-        "",
-
-      idFrontPath:
-        data?.idFrontPath ||
-        "",
-
-      idBackPath:
-        data?.idBackPath ||
-        "",
-
-      dlFrontName:
-        data?.dlFrontName ||
-        dlFront.name,
-
-      dlBackName:
-        data?.dlBackName ||
-        dlBack.name,
-
-      idFrontName:
-        data?.idFrontName ||
-        finalIdFront.name,
-
-      idBackName:
-        data?.idBackName ||
-        finalIdBack?.name ||
-        "",
+    const nextFiles = {
+      ...files,
     };
+
+    for (
+      const key of
+      queue
+    ) {
+      delete nextFiles[key];
+    }
+
+    setFiles(
+      nextFiles
+    );
+
+    setStep(
+      queue[0]
+    );
+
+    setAnalysis(
+      null
+    );
+
+    setStage(
+      "camera"
+    );
   }
 
-  async function completeVerification() {
+  async function continueForManualReview() {
     if (
       !identityType
     ) {
-      setError(
-        "Choose your ID card or passport."
-      );
-
-      setStage(
-        "error"
-      );
-
       return;
     }
 
     try {
-      setError("");
-
       setStage(
-        "uploading"
+        "analyzing"
       );
 
-      const uploaded =
-        await uploadDocuments();
+      await saveAndComplete(
+        {
+          outcome:
+            "manual_review",
 
-      const firstName =
-        licenceData.firstName ||
-        identityData
-          ?.firstName ||
-        "";
+          message:
+            "Documents require manual review.",
 
-      const lastName =
-        licenceData.lastName ||
-        identityData
-          ?.lastName ||
-        "";
+          reasons: [
+            "Automatic screening was unavailable",
+          ],
 
-      const homeAddress =
-        identityData?.address ||
-        licenceData.address ||
-        "";
+          licenceData:
+            {},
 
-      await updateSession({
-        action:
-          "complete",
+          identityData: {
+            selectedType:
+              identityType,
+          },
 
-        identityType,
+          analysis:
+            null,
+        },
 
-        firstName,
+        files,
 
-        lastName,
-
-        homeAddress,
-
-        licenceData,
-
-        identityData:
-          identityType ===
-          "id"
-            ? identityData
-            : null,
-
-        dlFrontPath:
-          uploaded.dlFrontPath,
-
-        dlBackPath:
-          uploaded.dlBackPath,
-
-        idFrontPath:
-          uploaded.idFrontPath,
-
-        idBackPath:
-          uploaded.idBackPath,
-
-        dlFrontName:
-          uploaded.dlFrontName,
-
-        dlBackName:
-          uploaded.dlBackName,
-
-        idFrontName:
-          uploaded.idFrontName,
-
-        idBackName:
-          uploaded.idBackName,
-      });
-
-      setStage(
-        "complete"
+        identityType
       );
     } catch (
-      verificationError: any
+      caught: any
     ) {
       setError(
-        verificationError
-          ?.message ||
-          "Could not complete document verification."
+        caught?.message ||
+          "Could not save the documents."
       );
 
       setStage(
@@ -1818,602 +1757,668 @@ export default function VerifyDocumentsPage() {
     }
   }
 
-  function retryFromError() {
+  function retryAfterError() {
     setError("");
 
-    if (
-      !dlFront ||
-      !dlBack
-    ) {
-      setStage(
-        "licence"
+    const hasAllFiles =
+      Boolean(
+        identityType &&
+          files.dlFront &&
+          files.dlBack &&
+          files.idFront &&
+          (
+            identityType ===
+              "passport" ||
+            files.idBack
+          )
       );
 
-      return;
-    }
-
-    if (!identityType) {
-      setStage(
-        "identity-choice"
-      );
-
-      return;
-    }
-
     if (
-      identityType ===
-      "id" &&
-      (
-        !idFront ||
-        !idBack
-      )
+      hasAllFiles &&
+      identityType
     ) {
-      setStage(
-        "id"
-      );
-
-      return;
-    }
-
-    if (
-      identityType ===
-        "passport" &&
-      !passport
-    ) {
-      setStage(
-        "passport"
+      void analyzeDocuments(
+        files,
+        identityType
       );
 
       return;
     }
 
     setStage(
-      "review"
+      "camera"
     );
   }
 
-  const licenceCategories =
+  async function leaveAfterRejection() {
+    try {
+      await patchSession({
+        action:
+          "fail",
+
+        errorMessage:
+          analysis?.message ||
+          "Documents not accepted.",
+      });
+    } catch {
+      /*
+       * Navigation must still work.
+       */
+    }
+
+    if (returnUrl) {
+      window.location.assign(
+        returnUrl
+      );
+    } else {
+      window.history.back();
+    }
+  }
+
+  /*
+   * Return to checkout automatically
+   * after a successful scan.
+   */
+  useEffect(() => {
+    if (
+      stage !== "complete" ||
+      !returnUrl ||
+      !sessionToken
+    ) {
+      return;
+    }
+
+    const timer =
+      window.setTimeout(
+        () => {
+          const url =
+            new URL(
+              returnUrl
+            );
+
+          url.searchParams.set(
+            "verification_session",
+            sessionToken
+          );
+
+          url.searchParams.set(
+            "verification_result",
+            finalOutcome
+          );
+
+          window.location.assign(
+            url.toString()
+          );
+        },
+        1700
+      );
+
+    return () =>
+      window.clearTimeout(
+        timer
+      );
+  }, [
+    stage,
+    returnUrl,
+    sessionToken,
+    finalOutcome,
+  ]);
+
+  const copy =
+    STEP_COPY[step];
+
+  const frameClass =
+    identityType ===
+      "passport" &&
+    step === "idFront"
+      ? "aspect-[1.42/1]"
+      : "aspect-[1.586/1]";
+
+  const progress =
     useMemo(() => {
-      return licenceData
-        .vehicleClasses
-        .map(
-          (item) =>
-            item.category
+      const total =
+        identityType ===
+        "passport"
+          ? 3
+          : 4;
+
+      const captured =
+        Object.keys(
+          files
+        ).length;
+
+      return Math.max(
+        1,
+        Math.min(
+          total,
+          captured + 1
         )
-        .filter(
-          Boolean
-        )
-        .join(", ");
+      );
     }, [
-      licenceData,
+      files,
+      identityType,
     ]);
 
-  const isScanning =
-    stage ===
-      "licence" ||
-    stage ===
-      "id";
-
   return (
-    <div
-      className={`${manrope.className} min-h-screen bg-white text-[#111]`}
-    >
+    <div className="fixed inset-0 z-[2147483647] min-h-[100svh] overflow-y-auto bg-black font-sans text-white">
       <input
-        ref={
-          passportInputRef
-        }
+        ref={fileInputRef}
         type="file"
         accept="image/*"
         capture="environment"
         className="hidden"
         onChange={
-          handlePassportPhoto
+          useSelectedPhoto
         }
       />
 
-      <main className="mx-auto min-h-screen w-full max-w-[720px] px-4 pb-8 pt-4 sm:px-6">
-        <header className="border-b border-black/10 pb-4">
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-black/30">
-            NEXA Rentals
-          </div>
+      {stage ===
+      "camera" ? (
+        <main className="mx-auto flex min-h-[100svh] w-full max-w-[820px] flex-col px-4 pb-[max(18px,env(safe-area-inset-bottom))] pt-[max(18px,env(safe-area-inset-top))] sm:px-6">
+          <header className="flex items-start justify-between gap-5">
+            <div>
+              <div className="text-[9px] font-black uppercase tracking-[0.24em] text-white/45">
+                NEXA secure scanner
+              </div>
 
-          <h1 className="mt-1 text-[27px] font-extrabold leading-[1.06] tracking-[-0.045em] sm:text-[32px]">
-            Document verification
-          </h1>
+              <h1 className="mt-1 text-[18px] font-black tracking-[-0.03em]">
+                {copy.eyebrow}
+              </h1>
+            </div>
 
-          <p className="mt-2 text-sm font-medium leading-6 text-black/45">
-            Complete this secure verification on your phone. Your booking will
-            continue automatically on the computer.
-          </p>
-        </header>
+            <div className="rounded-full border border-white/15 px-3 py-1.5 text-[10px] font-black text-white/60">
+              Step {progress}
+            </div>
+          </header>
 
-        <div className="relative mt-4">
-          <div
-            ref={
-              scannerMountRef
-            }
-            className={[
-              "relative min-h-[500px] w-full overflow-hidden bg-black",
+          <section className="flex flex-1 flex-col justify-center py-5">
+            <div
+              className={[
+                "relative mx-auto w-full max-w-[700px] overflow-hidden rounded-[18px] bg-[#111] shadow-[0_0_0_1px_rgba(255,255,255,0.16),0_30px_80px_rgba(0,0,0,0.65)]",
+                frameClass,
+              ].join(" ")}
+            >
+              <video
+                ref={videoRef}
+                playsInline
+                muted
+                className="h-full w-full object-cover"
+              />
 
-              isScanning
-                ? "block"
-                : "hidden",
-            ].join(" ")}
-          />
+              <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(90deg,rgba(0,0,0,.18),transparent_16%,transparent_84%,rgba(0,0,0,.18))]" />
 
-          {isScanning ? (
-            <div className="pointer-events-none absolute left-0 right-0 top-0 z-30 bg-gradient-to-b from-black/90 via-black/50 to-transparent px-4 pb-16 pt-4 text-white">
-              <div className="flex items-start justify-between gap-4">
-                <div>
-                  <div className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-white/55">
-                    {scannerMode ===
-                    "licence"
-                      ? "Driving licence"
-                      : "Identity card"}
-                  </div>
+              <div className="nexa-scan-line pointer-events-none absolute left-[4%] right-[4%] top-[8%] h-px bg-white/85 shadow-[0_0_16px_rgba(255,255,255,.9)]" />
 
-                  <div className="mt-1 text-[20px] font-extrabold tracking-[-0.035em]">
-                    Scan the{" "}
-                    {currentSide ===
-                    "front"
-                      ? "front"
-                      : "back"}
-                  </div>
+              <FrameCorners />
 
-                  <p className="mt-1 max-w-[230px] text-xs font-medium leading-5 text-white/60">
-                    Keep all four corners visible and hold the document steady.
-                  </p>
+              {!cameraReady ? (
+                <div className="absolute inset-0 flex items-center justify-center bg-black">
+                  <Spinner />
                 </div>
+              ) : null}
+            </div>
 
-                <AnimatedDocumentCard
-                  mode={
-                    scannerMode
-                  }
-                  side={
-                    currentSide
-                  }
-                />
+            <div className="mx-auto mt-5 w-full max-w-[700px] text-center">
+              <DocumentMotion
+                side={
+                  step.endsWith(
+                    "Back"
+                  )
+                    ? "back"
+                    : "front"
+                }
+              />
+
+              <h2 className="mt-3 text-[21px] font-black tracking-[-0.04em] sm:text-[25px]">
+                {copy.title}
+              </h2>
+
+              <p className="mx-auto mt-2 max-w-[560px] text-[12px] font-semibold leading-5 text-white/52 sm:text-[13px]">
+                {
+                  copy.instruction
+                }
+              </p>
+
+              <div
+                className={[
+                  "mx-auto mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black",
+
+                  quality.tone ===
+                  "good"
+                    ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
+                    : quality.tone ===
+                        "warn"
+                      ? "border-amber-400/30 bg-amber-400/10 text-amber-200"
+                      : "border-white/12 bg-white/5 text-white/55",
+                ].join(" ")}
+              >
+                <span className="h-1.5 w-1.5 rounded-full bg-current" />
+
+                {quality.text}
               </div>
             </div>
-          ) : null}
+          </section>
 
-          {isScanning &&
-          scannerNotice ? (
-            <div className="pointer-events-none absolute bottom-5 left-1/2 z-40 w-[calc(100%-32px)] -translate-x-1/2 bg-white px-4 py-3 text-center text-xs font-bold text-black shadow-xl">
-              {scannerNotice}
+          <div className="mx-auto flex w-full max-w-[700px] items-center gap-3">
+            <button
+              type="button"
+              onClick={() =>
+                fileInputRef.current?.click()
+              }
+              className="min-h-[58px] flex-1 rounded-[12px] border border-white/15 bg-white/5 px-4 text-[11px] font-black uppercase tracking-[0.12em] text-white/75"
+            >
+              Use photo
+            </button>
+
+            <button
+              type="button"
+              disabled={
+                !cameraReady ||
+                capturing
+              }
+              onClick={() =>
+                void capture()
+              }
+              className="min-h-[58px] flex-[1.8] rounded-[12px] bg-white px-5 text-[12px] font-black uppercase tracking-[0.14em] text-black transition active:scale-[0.98] disabled:bg-white/20 disabled:text-white/35"
+            >
+              {capturing
+                ? "Capturing..."
+                : "Capture document"}
+            </button>
+          </div>
+        </main>
+      ) : null}
+
+      {stage ===
+      "identity-choice" ? (
+        <Centered>
+          <div className="text-[10px] font-black uppercase tracking-[0.24em] text-emerald-300">
+            Driving licence captured
+          </div>
+
+          <h1 className="mt-3 text-[31px] font-black tracking-[-0.055em]">
+            Choose your identity document
+          </h1>
+
+          <p className="mx-auto mt-3 max-w-md text-[13px] font-semibold leading-6 text-white/50">
+            Use the original document
+            you will bring when
+            collecting the scooter.
+          </p>
+
+          <div className="mt-8 grid w-full max-w-[560px] grid-cols-2 gap-3">
+            <Choice
+              label="ID card"
+              detail="Front and back"
+              icon="ID"
+              onClick={() =>
+                chooseIdentity(
+                  "id"
+                )
+              }
+            />
+
+            <Choice
+              label="Passport"
+              detail="Photo page"
+              icon="✦"
+              onClick={() =>
+                chooseIdentity(
+                  "passport"
+                )
+              }
+            />
+          </div>
+        </Centered>
+      ) : null}
+
+      {stage ===
+        "loading" ||
+      stage ===
+        "analyzing" ? (
+        <Centered>
+          <Spinner />
+
+          <h1 className="mt-6 text-[28px] font-black tracking-[-0.05em]">
+            {stage ===
+            "loading"
+              ? "Opening secure scanner"
+              : "Reviewing your documents"}
+          </h1>
+
+          <p className="mt-3 text-[13px] font-semibold text-white/45">
+            {stage ===
+            "loading"
+              ? "Connecting to your booking..."
+              : "Checking clarity, dates, names and licence categories..."}
+          </p>
+        </Centered>
+      ) : null}
+
+      {stage ===
+        "decision" &&
+      analysis ? (
+        <Centered>
+          <div
+            className={[
+              "flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black",
+
+              analysis.outcome ===
+              "retake"
+                ? "bg-amber-400 text-black"
+                : "bg-red-600 text-white",
+            ].join(" ")}
+          >
+            {analysis.outcome ===
+            "retake"
+              ? "↻"
+              : "!"}
+          </div>
+
+          <h1 className="mt-6 text-[29px] font-black tracking-[-0.05em]">
+            {analysis.outcome ===
+            "retake"
+              ? "Please retake a photo"
+              : "Licence cannot be accepted"}
+          </h1>
+
+          <p className="mx-auto mt-3 max-w-lg text-[13px] font-semibold leading-6 text-white/58">
+            {analysis.message}
+          </p>
+
+          {analysis.outcome ===
+          "retake" ? (
+            <button
+              type="button"
+              onClick={
+                beginRetake
+              }
+              className="mt-7 min-h-[56px] w-full max-w-md rounded-[12px] bg-white px-5 text-[12px] font-black uppercase tracking-[0.14em] text-black"
+            >
+              Retake requested photo
+            </button>
+          ) : (
+            <div className="mt-7 flex w-full max-w-md flex-col gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setFiles({});
+                  setIdentityType(
+                    null
+                  );
+                  setAnalysis(
+                    null
+                  );
+                  setStep(
+                    "dlFront"
+                  );
+                  setStage(
+                    "camera"
+                  );
+                }}
+                className="min-h-[56px] rounded-[12px] bg-white px-5 text-[12px] font-black uppercase tracking-[0.14em] text-black"
+              >
+                Scan again
+              </button>
+
+              <button
+                type="button"
+                onClick={() =>
+                  void leaveAfterRejection()
+                }
+                className="min-h-[48px] rounded-[12px] border border-white/15 text-[11px] font-black text-white/60"
+              >
+                Return to checkout
+              </button>
             </div>
-          ) : null}
+          )}
+        </Centered>
+      ) : null}
 
-          <AnimatePresence mode="wait">
-            {stage ===
-            "loading-session" ? (
-              <motion.section
-                key="loading"
-                initial={{
-                  opacity: 0,
-                }}
-                animate={{
-                  opacity: 1,
-                }}
-                className="flex min-h-[500px] flex-col items-center justify-center border border-black/10 bg-[#fafaf8] px-6 text-center"
+      {stage ===
+      "complete" ? (
+        <Centered>
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-emerald-400 text-[32px] font-black text-black">
+            ✓
+          </div>
+
+          <h1 className="mt-7 text-[31px] font-black tracking-[-0.055em]">
+            {finalOutcome ===
+            "manual_review"
+              ? "Documents received"
+              : "Verification complete"}
+          </h1>
+
+          <p className="mx-auto mt-3 max-w-lg text-[13px] font-semibold leading-6 text-white/55">
+            {finalOutcome ===
+            "manual_review"
+              ? "Your booking can continue. NEXA Rentals will confirm the documents manually before pickup."
+              : "Your documents passed the automatic checks and were connected to your booking."}
+          </p>
+
+          <div className="mt-7 text-[10px] font-black uppercase tracking-[0.2em] text-white/35">
+            {returnUrl
+              ? "Returning to checkout..."
+              : "You can return to the booking screen"}
+          </div>
+        </Centered>
+      ) : null}
+
+      {stage ===
+      "error" ? (
+        <Centered>
+          <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-2xl font-black">
+            !
+          </div>
+
+          <h1 className="mt-6 text-[29px] font-black tracking-[-0.05em]">
+            Scanner needs attention
+          </h1>
+
+          <p className="mx-auto mt-3 max-w-lg text-[13px] font-semibold leading-6 text-red-200">
+            {error}
+          </p>
+
+          <div className="mt-7 flex w-full max-w-md flex-col gap-3">
+            {cameraError ? (
+              <button
+                type="button"
+                onClick={() =>
+                  fileInputRef.current?.click()
+                }
+                className="min-h-[56px] rounded-[12px] bg-white px-5 text-[12px] font-black uppercase tracking-[0.14em] text-black"
               >
-                <Spinner />
-
-                <h2 className="mt-5 text-[21px] font-extrabold tracking-[-0.035em]">
-                  Opening secure session
-                </h2>
-
-                <p className="mt-2 text-sm font-medium text-black/42">
-                  Connecting to your booking...
-                </p>
-              </motion.section>
+                Take photo instead
+              </button>
             ) : null}
 
-            {stage ===
-            "identity-choice" ? (
-              <motion.section
-                key="identity-choice"
-                initial={{
-                  opacity: 0,
-                  y: 14,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                className="min-h-[500px] border border-black/10 bg-white px-5 py-7"
+            <button
+              type="button"
+              onClick={
+                retryAfterError
+              }
+              className="min-h-[54px] rounded-[12px] border border-white/15 bg-white/5 px-5 text-[12px] font-black uppercase tracking-[0.14em] text-white"
+            >
+              Try again
+            </button>
+
+            {!cameraError &&
+            identityType &&
+            files.dlFront &&
+            files.dlBack &&
+            files.idFront &&
+            (
+              identityType ===
+                "passport" ||
+              files.idBack
+            ) ? (
+              <button
+                type="button"
+                onClick={() =>
+                  void continueForManualReview()
+                }
+                className="py-3 text-[11px] font-black text-white/50"
               >
-                <div className="text-center">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-black text-lg font-extrabold text-white">
-                    ✓
-                  </div>
-
-                  <h2 className="mt-5 text-[23px] font-extrabold tracking-[-0.04em]">
-                    Driving licence captured
-                  </h2>
-
-                  <p className="mt-2 text-sm font-medium text-black/45">
-                    Now choose the identity document you have with you.
-                  </p>
-                </div>
-
-                <div className="mt-8 grid grid-cols-2 gap-3">
-                  <button
-                    type="button"
-                    onClick={
-                      chooseIdCard
-                    }
-                    className="min-h-[180px] border border-black/12 bg-white p-5 text-left transition active:scale-[0.98]"
-                  >
-                    <div className="flex h-12 w-16 items-center justify-center bg-black text-[11px] font-extrabold uppercase tracking-[0.12em] text-white">
-                      ID
-                    </div>
-
-                    <div className="mt-5 text-[17px] font-extrabold">
-                      ID card
-                    </div>
-
-                    <p className="mt-1 text-xs font-medium leading-5 text-black/42">
-                      Automatically scan the front and back.
-                    </p>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={
-                      choosePassport
-                    }
-                    className="min-h-[180px] border border-black/12 bg-white p-5 text-left transition active:scale-[0.98]"
-                  >
-                    <div className="flex h-16 w-12 items-center justify-center bg-black text-[18px] text-white">
-                      ✦
-                    </div>
-
-                    <div className="mt-1 text-[17px] font-extrabold">
-                      Passport
-                    </div>
-
-                    <p className="mt-1 text-xs font-medium leading-5 text-black/42">
-                      Take one clear photo of the passport photo page.
-                    </p>
-                  </button>
-                </div>
-              </motion.section>
+                Continue for manual review
+              </button>
             ) : null}
+          </div>
+        </Centered>
+      ) : null}
 
-            {stage ===
-            "passport" ? (
-              <motion.section
-                key="passport"
-                initial={{
-                  opacity: 0,
-                  y: 14,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                className="flex min-h-[500px] flex-col items-center justify-center bg-black px-6 py-8 text-center text-white"
-              >
-                <motion.div
-                  animate={{
-                    rotateY: [
-                      0,
-                      7,
-                      0,
-                      -7,
-                      0,
-                    ],
-                  }}
-                  transition={{
-                    duration: 3,
-                    repeat: Infinity,
-                  }}
-                  className="flex h-[170px] w-[125px] flex-col bg-[#191919] p-4 text-left shadow-2xl"
-                >
-                  <div className="text-[8px] font-extrabold uppercase tracking-[0.17em] text-white/45">
-                    Passport
-                  </div>
+      <style jsx global>{`
+        @keyframes nexa-scan {
+          0% {
+            top: 8%;
+            opacity: 0.25;
+          }
 
-                  <div className="mt-6 flex gap-3">
-                    <div className="h-14 w-10 bg-white/15" />
+          50% {
+            opacity: 1;
+          }
 
-                    <div className="flex-1 space-y-2 pt-1">
-                      <div className="h-1.5 w-full bg-white/15" />
-                      <div className="h-1.5 w-[80%] bg-white/15" />
-                      <div className="h-1.5 w-[60%] bg-white/15" />
-                    </div>
-                  </div>
+          100% {
+            top: 91%;
+            opacity: 0.25;
+          }
+        }
 
-                  <div className="mt-auto space-y-1">
-                    <div className="h-1 w-full bg-white/15" />
-                    <div className="h-1 w-full bg-white/15" />
-                  </div>
-                </motion.div>
+        @keyframes nexa-card {
+          0%,
+          100% {
+            transform: translateX(-7px)
+              rotate(-2deg);
+          }
 
-                <h2 className="mt-7 text-[23px] font-extrabold tracking-[-0.04em]">
-                  Photograph your passport
-                </h2>
+          50% {
+            transform: translateX(7px)
+              rotate(2deg);
+          }
+        }
 
-                <p className="mt-2 max-w-[360px] text-sm font-medium leading-6 text-white/55">
-                  Open the photo page. Make sure the complete page and all four
-                  corners are clearly visible.
-                </p>
+        @keyframes nexa-spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
 
-                <button
-                  type="button"
-                  onClick={
-                    openPassportCamera
-                  }
-                  className="mt-7 bg-white px-7 py-4 text-xs font-extrabold uppercase tracking-[0.15em] text-black active:scale-[0.98]"
-                >
-                  Open camera
-                </button>
+        .nexa-scan-line {
+          animation: nexa-scan
+            2.2s ease-in-out
+            infinite;
+        }
 
-                <button
-                  type="button"
-                  onClick={() =>
-                    setStage(
-                      "identity-choice"
-                    )
-                  }
-                  className="mt-4 text-xs font-bold text-white/50"
-                >
-                  Choose ID card instead
-                </button>
-              </motion.section>
-            ) : null}
+        .nexa-card-motion {
+          animation: nexa-card
+            2.4s ease-in-out
+            infinite;
+        }
 
-            {stage ===
-            "review" ? (
-              <motion.section
-                key="review"
-                initial={{
-                  opacity: 0,
-                  y: 14,
-                }}
-                animate={{
-                  opacity: 1,
-                  y: 0,
-                }}
-                className="min-h-[500px] border border-black/10 bg-white px-5 py-6"
-              >
-                <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-black/30">
-                  Ready
-                </div>
+        .nexa-spinner {
+          animation: nexa-spin
+            0.85s linear
+            infinite;
+        }
 
-                <h2 className="mt-1 text-[24px] font-extrabold tracking-[-0.04em]">
-                  Validate your documents
-                </h2>
-
-                <p className="mt-2 text-sm font-medium leading-6 text-black/45">
-                  Check that both documents were captured before completing the
-                  verification.
-                </p>
-
-                <div className="mt-6 border-y border-black/10">
-                  <ReviewLine
-                    title="Driving licence"
-                    subtitle="Front + back"
-                  />
-
-                  <ReviewLine
-                    title={
-                      identityType ===
-                      "passport"
-                        ? "Passport"
-                        : "ID card"
-                    }
-                    subtitle={
-                      identityType ===
-                      "passport"
-                        ? "Photo page"
-                        : "Front + back"
-                    }
-                  />
-                </div>
-
-                {licenceData.fullName ? (
-                  <div className="mt-5 border border-black/10 bg-[#fafaf8] px-4 py-4">
-                    <div className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-black/30">
-                      Detected
-                    </div>
-
-                    <div className="mt-2 flex items-start justify-between gap-5">
-                      <span className="text-xs font-semibold text-black/40">
-                        Name
-                      </span>
-
-                      <span className="max-w-[65%] text-right text-sm font-extrabold">
-                        {
-                          licenceData.fullName
-                        }
-                      </span>
-                    </div>
-
-                    {licenceCategories ? (
-                      <div className="mt-3 flex items-start justify-between gap-5">
-                        <span className="text-xs font-semibold text-black/40">
-                          Licence categories
-                        </span>
-
-                        <span className="max-w-[65%] text-right text-sm font-extrabold">
-                          {
-                            licenceCategories
-                          }
-                        </span>
-                      </div>
-                    ) : null}
-                  </div>
-                ) : null}
-
-                {identityType ===
-                  "passport" &&
-                passportPreview ? (
-                  <div className="mt-5">
-                    <div className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-black/30">
-                      Passport photo
-                    </div>
-
-                    <div className="mt-2 overflow-hidden border border-black/10 bg-black/[0.02]">
-                      <img
-                        src={
-                          passportPreview
-                        }
-                        alt="Passport preview"
-                        className="max-h-[210px] w-full object-contain"
-                      />
-                    </div>
-                  </div>
-                ) : null}
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    void completeVerification();
-                  }}
-                  className="mt-6 min-h-[56px] w-full bg-black px-6 text-sm font-extrabold text-white transition active:scale-[0.98]"
-                >
-                  Validate documents
-                </button>
-              </motion.section>
-            ) : null}
-
-            {stage ===
-            "uploading" ? (
-              <motion.section
-                key="uploading"
-                initial={{
-                  opacity: 0,
-                }}
-                animate={{
-                  opacity: 1,
-                }}
-                className="flex min-h-[500px] flex-col items-center justify-center border border-black/10 bg-[#fafaf8] px-6 text-center"
-              >
-                <Spinner />
-
-                <h2 className="mt-6 text-[23px] font-extrabold tracking-[-0.04em]">
-                  Validating documents
-                </h2>
-
-                <p className="mt-2 max-w-[350px] text-sm font-medium leading-6 text-black/45">
-                  Securely saving your documents and connecting them to your
-                  booking.
-                </p>
-              </motion.section>
-            ) : null}
-
-            {stage ===
-            "complete" ? (
-              <motion.section
-                key="complete"
-                initial={{
-                  opacity: 0,
-                  scale: 0.96,
-                }}
-                animate={{
-                  opacity: 1,
-                  scale: 1,
-                }}
-                className="flex min-h-[500px] flex-col items-center justify-center bg-black px-6 text-center text-white"
-              >
-                <motion.div
-                  initial={{
-                    scale: 0,
-                  }}
-                  animate={{
-                    scale: 1,
-                  }}
-                  transition={{
-                    type: "spring",
-                    stiffness: 180,
-                    damping: 14,
-                  }}
-                  className="flex h-20 w-20 items-center justify-center rounded-full bg-white text-[30px] font-extrabold text-black"
-                >
-                  ✓
-                </motion.div>
-
-                <h2 className="mt-7 text-[27px] font-extrabold tracking-[-0.045em]">
-                  Verification complete
-                </h2>
-
-                <p className="mt-3 max-w-[390px] text-sm font-medium leading-6 text-white/60">
-                  Your documents have been received. You can return to the
-                  computer — the booking will continue there automatically.
-                </p>
-
-                <div className="mt-8 border-t border-white/10 pt-6 text-xs font-bold uppercase tracking-[0.15em] text-white/40">
-                  NEXA Rentals
-                </div>
-              </motion.section>
-            ) : null}
-
-            {stage ===
-            "error" ? (
-              <motion.section
-                key="error"
-                initial={{
-                  opacity: 0,
-                }}
-                animate={{
-                  opacity: 1,
-                }}
-                className="flex min-h-[500px] flex-col items-center justify-center border border-red-200 bg-red-50 px-6 text-center"
-              >
-                <div className="flex h-16 w-16 items-center justify-center rounded-full bg-red-600 text-[23px] font-extrabold text-white">
-                  !
-                </div>
-
-                <h2 className="mt-6 text-[23px] font-extrabold tracking-[-0.04em] text-red-900">
-                  Verification needs attention
-                </h2>
-
-                <p className="mt-2 max-w-[410px] break-words text-sm font-semibold leading-6 text-red-700">
-                  {error}
-                </p>
-
-                <button
-                  type="button"
-                  onClick={
-                    retryFromError
-                  }
-                  className="mt-7 bg-black px-7 py-3.5 text-xs font-extrabold uppercase tracking-[0.15em] text-white"
-                >
-                  Try again
-                </button>
-              </motion.section>
-            ) : null}
-          </AnimatePresence>
-        </div>
-      </main>
+        @media (prefers-reduced-motion: reduce) {
+          .nexa-scan-line,
+          .nexa-card-motion,
+          .nexa-spinner {
+            animation: none;
+          }
+        }
+      `}</style>
     </div>
   );
 }
 
-function ReviewLine({
-  title,
-  subtitle,
+function Centered({
+  children,
 }: {
-  title: string;
-  subtitle: string;
+  children:
+    React.ReactNode;
 }) {
   return (
-    <div className="flex items-center justify-between gap-5 border-b border-black/10 py-4 last:border-b-0">
-      <div>
-        <div className="text-sm font-extrabold text-black">
-          {title}
-        </div>
+    <main className="mx-auto flex min-h-[100svh] w-full max-w-[760px] flex-col items-center justify-center px-5 py-10 text-center">
+      {children}
+    </main>
+  );
+}
 
-        <div className="mt-0.5 text-xs font-medium text-black/40">
-          {subtitle}
-        </div>
-      </div>
+function Spinner() {
+  return (
+    <div className="nexa-spinner h-11 w-11 rounded-full border-[3px] border-white/15 border-t-white" />
+  );
+}
 
-      <div className="flex h-8 w-8 items-center justify-center rounded-full bg-black text-xs font-extrabold text-white">
-        ✓
-      </div>
+function FrameCorners() {
+  return (
+    <div className="pointer-events-none absolute inset-[10px]">
+      <i className="absolute left-0 top-0 h-9 w-9 rounded-tl-[10px] border-l-[3px] border-t-[3px] border-white" />
+
+      <i className="absolute right-0 top-0 h-9 w-9 rounded-tr-[10px] border-r-[3px] border-t-[3px] border-white" />
+
+      <i className="absolute bottom-0 left-0 h-9 w-9 rounded-bl-[10px] border-b-[3px] border-l-[3px] border-white" />
+
+      <i className="absolute bottom-0 right-0 h-9 w-9 rounded-br-[10px] border-b-[3px] border-r-[3px] border-white" />
     </div>
+  );
+}
+
+function DocumentMotion({
+  side,
+}: {
+  side:
+    | "front"
+    | "back";
+}) {
+  return (
+    <div className="nexa-card-motion mx-auto flex h-10 w-16 items-center rounded-[5px] border border-white/20 bg-white/10 px-2">
+      <div className="h-5 w-4 rounded-sm bg-white/20" />
+
+      <div className="ml-2 flex-1 space-y-1">
+        <div className="h-0.5 w-full bg-white/30" />
+
+        <div className="h-0.5 w-4/5 bg-white/20" />
+
+        <div className="h-0.5 w-3/5 bg-white/20" />
+      </div>
+
+      <span className="sr-only">
+        {side}
+      </span>
+    </div>
+  );
+}
+
+function Choice({
+  label,
+  detail,
+  icon,
+  onClick,
+}: {
+  label: string;
+  detail: string;
+  icon: string;
+  onClick(): void;
+}) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="min-h-[180px] rounded-[16px] border border-white/15 bg-white/[0.06] p-5 text-left transition active:scale-[0.98]"
+    >
+      <div className="flex h-12 w-16 items-center justify-center rounded-[7px] bg-white text-[13px] font-black text-black">
+        {icon}
+      </div>
+
+      <div className="mt-6 text-[18px] font-black">
+        {label}
+      </div>
+
+      <div className="mt-1 text-[11px] font-bold text-white/40">
+        {detail}
+      </div>
+    </button>
   );
 }
