@@ -7,6 +7,7 @@ import React, {
   useRef,
   useState,
 } from "react";
+import { createPortal } from "react-dom";
 import { Manrope } from "next/font/google";
 import { motion } from "framer-motion";
 import { QRCodeSVG } from "qrcode.react";
@@ -20,7 +21,6 @@ const manrope = Manrope({
 });
 
 const LIVE_VERIFICATION_ORIGIN = "https://www.nexarentals.es";
-
 const QR_SESSION_SECONDS = 10 * 60;
 
 export type IdentityDocumentType = "id" | "passport";
@@ -176,6 +176,10 @@ const EMPTY_DOCUMENT_DATA: ExtractedDocumentData = {
   vehicleClasses: [],
 };
 
+/* -------------------------------------------------------------------------- */
+/*                                  HELPERS                                   */
+/* -------------------------------------------------------------------------- */
+
 function safeParam(
   searchParams: {
     get: (name: string) => string | null;
@@ -330,18 +334,16 @@ function extractVehicleClasses(
       return {
         category,
 
-        validFrom:
-          dateFromResult(
-            item?.effectiveDate ??
-              item?.validFrom ??
-              item?.issueDate
-          ),
+        validFrom: dateFromResult(
+          item?.effectiveDate ??
+            item?.validFrom ??
+            item?.issueDate
+        ),
 
-        validUntil:
-          dateFromResult(
-            item?.expiryDate ??
-              item?.validUntil
-          ),
+        validUntil: dateFromResult(
+          item?.expiryDate ??
+            item?.validUntil
+        ),
       };
     })
     .filter(
@@ -385,36 +387,30 @@ function extractDocumentData(
 
     fullName,
 
-    dateOfBirth:
-      dateFromResult(
-        result?.dateOfBirth
-      ),
+    dateOfBirth: dateFromResult(
+      result?.dateOfBirth
+    ),
 
-    dateOfExpiry:
-      dateFromResult(
-        result?.dateOfExpiry
-      ),
+    dateOfExpiry: dateFromResult(
+      result?.dateOfExpiry
+    ),
 
-    documentNumber:
-      textFromResult(
-        result?.documentNumber
-      ),
+    documentNumber: textFromResult(
+      result?.documentNumber
+    ),
 
-    nationality:
-      textFromResult(
-        result?.nationality
-      ),
+    nationality: textFromResult(
+      result?.nationality
+    ),
 
-    address:
-      textFromResult(
-        result?.address
-      ),
+    address: textFromResult(
+      result?.address
+    ),
 
-    countryCode:
-      textFromResult(
-        documentClassInfo
-          ?.isoAlpha2CountryCode
-      ),
+    countryCode: textFromResult(
+      documentClassInfo
+        ?.isoAlpha2CountryCode
+    ),
 
     documentType:
       textFromResult(
@@ -529,15 +525,13 @@ async function imageDataToFile(
   const blob =
     await new Promise<
       Blob | null
-    >(
-      (resolve) => {
-        canvas.toBlob(
-          resolve,
-          "image/jpeg",
-          0.94
-        );
-      }
-    );
+    >((resolve) => {
+      canvas.toBlob(
+        resolve,
+        "image/jpeg",
+        0.94
+      );
+    });
 
   if (!blob) {
     return null;
@@ -547,8 +541,7 @@ async function imageDataToFile(
     [blob],
     fileName,
     {
-      type:
-        "image/jpeg",
+      type: "image/jpeg",
 
       lastModified:
         Date.now(),
@@ -568,6 +561,237 @@ function getSubResultImage(
   );
 }
 
+/*
+ * BlinkID renders its own guidance/reticle over the camera.
+ *
+ * On the mobile NEXA scanner we want only:
+ * - camera
+ * - our rectangular frame
+ * - our guidance
+ *
+ * This function keeps the camera/video path visible,
+ * while visually suppressing SDK feedback chrome.
+ */
+function cleanBlinkIdCameraUi(
+  instance: any,
+  root: HTMLElement
+) {
+  try {
+    const possibleComponents = [
+      instance?.cameraManagerComponent,
+      instance?.cameraManagerUi,
+      instance?.cameraManager?.component,
+      instance?.cameraComponent,
+    ];
+
+    for (const component of possibleComponents) {
+      if (
+        component?.feedbackLayerNode instanceof
+        HTMLElement
+      ) {
+        component.feedbackLayerNode.style.opacity =
+          "0";
+
+        component.feedbackLayerNode.style.pointerEvents =
+          "none";
+      }
+
+      if (
+        component?.overlayLayerNode instanceof
+        HTMLElement
+      ) {
+        component.overlayLayerNode.style.opacity =
+          "0";
+
+        component.overlayLayerNode.style.pointerEvents =
+          "none";
+      }
+    }
+  } catch {
+    // Fallback below handles SDK DOM if direct nodes are unavailable.
+  }
+
+  const video =
+    root.querySelector(
+      "video"
+    ) as HTMLVideoElement | null;
+
+  if (!video) {
+    return;
+  }
+
+  video.style.position =
+    "absolute";
+
+  video.style.inset =
+    "0";
+
+  video.style.width =
+    "100%";
+
+  video.style.height =
+    "100%";
+
+  video.style.maxWidth =
+    "none";
+
+  video.style.objectFit =
+    "cover";
+
+  video.style.background =
+    "#000";
+
+  /*
+   * Walk from the camera video up toward our mount.
+   * Hide sibling UI nodes at every level.
+   *
+   * We use opacity rather than display:none so we don't
+   * interfere with any SDK processing lifecycle.
+   */
+  let current:
+    HTMLElement | null =
+    video;
+
+  while (
+    current &&
+    current !== root
+  ) {
+    const parent =
+      current.parentElement;
+
+    if (!parent) {
+      break;
+    }
+
+    for (
+      const sibling of Array.from(
+        parent.children
+      )
+    ) {
+      if (
+        sibling === current ||
+        !(sibling instanceof HTMLElement)
+      ) {
+        continue;
+      }
+
+      if (
+        sibling.contains(video)
+      ) {
+        continue;
+      }
+
+      sibling.dataset.nexaBlinkidHidden =
+        "true";
+
+      sibling.style.opacity =
+        "0";
+
+      sibling.style.pointerEvents =
+        "none";
+    }
+
+    parent.style.width =
+      "100%";
+
+    parent.style.height =
+      "100%";
+
+    parent.style.maxWidth =
+      "none";
+
+    parent.style.maxHeight =
+      "none";
+
+    current =
+      parent;
+  }
+
+  root.style.position =
+    "absolute";
+
+  root.style.inset =
+    "0";
+
+  root.style.width =
+    "100%";
+
+  root.style.height =
+    "100%";
+
+  root.style.overflow =
+    "hidden";
+
+  root.style.background =
+    "#000";
+}
+
+function deriveScannerGuidance(
+  frameResult: any,
+  mode: ScannerMode,
+  side: "front" | "back"
+) {
+  const analysis =
+    frameResult
+      ?.inputImageAnalysisResult;
+
+  const quality =
+    analysis?.imageQuality ??
+    analysis?.quality ??
+    {};
+
+  if (
+    analysis?.glareDetected === true ||
+    analysis?.hasGlare === true ||
+    quality?.glareDetected === true ||
+    quality?.hasGlare === true
+  ) {
+    return "Reduce reflections on the document";
+  }
+
+  if (
+    analysis?.blurDetected === true ||
+    analysis?.isBlurred === true ||
+    quality?.blurDetected === true ||
+    quality?.isBlurred === true
+  ) {
+    return "Hold your phone steady";
+  }
+
+  if (
+    analysis?.documentTooFar === true ||
+    analysis?.tooFar === true
+  ) {
+    return "Move the phone closer";
+  }
+
+  if (
+    analysis?.documentTooClose === true ||
+    analysis?.tooClose === true
+  ) {
+    return "Move the phone slightly further away";
+  }
+
+  if (
+    analysis?.documentNotFound === true
+  ) {
+    return "Place the whole document inside the frame";
+  }
+
+  const documentName =
+    mode === "licence"
+      ? "driving licence"
+      : "ID card";
+
+  return side === "front"
+    ? `Place the front of your ${documentName} inside the frame`
+    : `Place the back of your ${documentName} inside the frame`;
+}
+
+/* -------------------------------------------------------------------------- */
+/*                                SMALL UI                                    */
+/* -------------------------------------------------------------------------- */
+
 function Spinner({
   light = false,
 }: {
@@ -585,6 +809,7 @@ function Spinner({
       }}
       className={[
         "h-8 w-8 rounded-full border-[3px]",
+
         light
           ? "border-white/20 border-t-white"
           : "border-black/10 border-t-black",
@@ -704,10 +929,7 @@ function CountdownRing({
 
   const offset =
     circumference *
-    (
-      1 -
-      progress
-    );
+    (1 - progress);
 
   return (
     <div className="relative h-[94px] w-[94px] shrink-0">
@@ -857,7 +1079,29 @@ function StatusDot({
   );
 }
 
-function AnimatedDocumentCard({
+function DocumentReadyLine({
+  text,
+}: {
+  text: string;
+}) {
+  return (
+    <div className="flex items-center gap-3">
+      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black/[0.055] text-[12px] font-extrabold text-black">
+        ✓
+      </div>
+
+      <span className="text-sm font-bold text-black/65">
+        {text}
+      </span>
+    </div>
+  );
+}
+
+/* -------------------------------------------------------------------------- */
+/*                         FULLSCREEN SCANNER UI                              */
+/* -------------------------------------------------------------------------- */
+
+function ScannerDocumentAnimation({
   mode,
   side,
 }: {
@@ -868,7 +1112,7 @@ function AnimatedDocumentCard({
 }) {
   return (
     <div
-      className="relative h-[68px] w-[108px] shrink-0"
+      className="relative h-[68px] w-[110px]"
       style={{
         perspective:
           "800px",
@@ -883,7 +1127,9 @@ function AnimatedDocumentCard({
               : 180,
         }}
         transition={{
-          duration: 0.55,
+          duration:
+            0.58,
+
           ease: [
             0.22,
             1,
@@ -898,44 +1144,44 @@ function AnimatedDocumentCard({
         }}
       >
         <div
-          className="absolute inset-0 overflow-hidden rounded-[10px] bg-white p-3 text-black shadow-lg"
+          className="absolute inset-0 rounded-[9px] border border-white/20 bg-white p-2.5 text-black shadow-[0_15px_40px_rgba(0,0,0,0.45)]"
           style={{
             backfaceVisibility:
               "hidden",
           }}
         >
           <div className="flex h-full flex-col justify-between">
-            <div className="flex justify-between">
-              <div className="h-2 w-8 rounded-full bg-black/10" />
+            <div className="flex items-center justify-between">
+              <div className="h-1.5 w-7 rounded-full bg-black/10" />
 
-              <span className="text-[6px] font-extrabold uppercase tracking-[0.12em] text-black/35">
+              <div className="text-[6px] font-extrabold uppercase tracking-[0.13em] text-black/35">
                 Front
-              </span>
-            </div>
-
-            <div className="flex items-end gap-2">
-              <div className="h-6 w-5 rounded bg-black/10" />
-
-              <div className="flex-1 space-y-1">
-                <div className="h-1 w-full rounded bg-black/10" />
-
-                <div className="h-1 w-[70%] rounded bg-black/10" />
-
-                <div className="h-1 w-[45%] rounded bg-black/10" />
               </div>
             </div>
 
-            <span className="text-[6px] font-extrabold uppercase tracking-[0.09em]">
+            <div className="flex items-end gap-2">
+              <div className="h-6 w-5 rounded-[3px] bg-black/10" />
+
+              <div className="flex-1 space-y-1">
+                <div className="h-1 w-full rounded-full bg-black/10" />
+
+                <div className="h-1 w-[72%] rounded-full bg-black/10" />
+
+                <div className="h-1 w-[50%] rounded-full bg-black/10" />
+              </div>
+            </div>
+
+            <div className="text-[6px] font-extrabold uppercase tracking-[0.08em]">
               {mode ===
               "licence"
-                ? "Driving licence"
-                : "Identity card"}
-            </span>
+                ? "Driving Licence"
+                : "ID Card"}
+            </div>
           </div>
         </div>
 
         <div
-          className="absolute inset-0 overflow-hidden rounded-[10px] bg-[#171717] p-3 text-white shadow-lg"
+          className="absolute inset-0 rounded-[9px] border border-white/15 bg-[#1b1b1d] p-2.5 text-white shadow-[0_15px_40px_rgba(0,0,0,0.45)]"
           style={{
             backfaceVisibility:
               "hidden",
@@ -945,35 +1191,32 @@ function AnimatedDocumentCard({
           }}
         >
           <div className="flex h-full flex-col justify-between">
-            <div className="flex justify-between">
-              <div className="h-1.5 w-10 rounded-full bg-white/15" />
+            <div className="flex items-center justify-between">
+              <div className="h-1.5 w-8 rounded-full bg-white/15" />
 
-              <span className="text-[6px] font-extrabold uppercase tracking-[0.12em] text-white/45">
+              <div className="text-[6px] font-extrabold uppercase tracking-[0.13em] text-white/40">
                 Back
-              </span>
+              </div>
             </div>
 
             <div className="space-y-1">
-              <div className="h-1 w-full bg-white/15" />
+              <div className="h-1 w-full rounded-full bg-white/15" />
 
-              <div className="h-1 w-[80%] bg-white/15" />
+              <div className="h-1 w-[80%] rounded-full bg-white/15" />
 
-              <div className="h-1 w-[55%] bg-white/15" />
+              <div className="h-1 w-[55%] rounded-full bg-white/15" />
             </div>
 
             <div className="flex gap-[2px]">
               {Array.from({
-                length: 10,
+                length: 12,
               }).map(
-                (
-                  _,
-                  index
-                ) => (
+                (_, index) => (
                   <div
                     key={
                       index
                     }
-                    className="h-4 flex-1 bg-white/10"
+                    className="h-3 flex-1 bg-white/10"
                   />
                 )
               )}
@@ -985,31 +1228,257 @@ function AnimatedDocumentCard({
   );
 }
 
-function MobileReviewLine({
-  title,
-  subtitle,
+function FullscreenScanner({
+  mountRef,
+  mode,
+  side,
+  guidance,
+  onClose,
 }: {
-  title: string;
-  subtitle: string;
-}) {
-  return (
-    <div className="flex min-w-0 items-center justify-between gap-4 border-b border-black/10 py-4 last:border-b-0">
-      <div className="min-w-0">
-        <div className="truncate text-sm font-extrabold text-black">
-          {title}
-        </div>
+  mountRef:
+    React.RefObject<HTMLDivElement | null>;
 
-        <div className="mt-0.5 text-xs font-medium text-black/40">
-          {subtitle}
+  mode:
+    ScannerMode;
+
+  side:
+    | "front"
+    | "back";
+
+  guidance:
+    string;
+
+  onClose:
+    () => void;
+}) {
+  const label =
+    mode === "licence"
+      ? "DRIVING LICENCE"
+      : "ID CARD";
+
+  const sideLabel =
+    side === "front"
+      ? "Front side"
+      : "Back side";
+
+  return (
+    <div
+      className={`${manrope.className} fixed inset-0 z-[2147483646] overflow-hidden bg-black text-white`}
+    >
+      {/* BlinkID camera lives underneath our interface */}
+      <div
+        ref={
+          mountRef
+        }
+        id="nexa-fullscreen-blinkid-camera"
+        className="absolute inset-0 h-full w-full overflow-hidden bg-black"
+      />
+
+      {/* Black camera mask + transparent document window */}
+      <div className="pointer-events-none absolute inset-0 z-20">
+        <div className="absolute left-1/2 top-[46%] aspect-[1.58/1] w-[calc(100%-44px)] max-w-[440px] -translate-x-1/2 -translate-y-1/2 rounded-[22px] border-[2px] border-white/75 shadow-[0_0_0_9999px_rgba(0,0,0,0.92),0_0_44px_rgba(255,255,255,0.08)]">
+          <motion.div
+            animate={{
+              opacity: [
+                0.45,
+                1,
+                0.45,
+              ],
+            }}
+            transition={{
+              duration:
+                1.8,
+
+              repeat:
+                Infinity,
+
+              ease:
+                "easeInOut",
+            }}
+            className="absolute -inset-[2px] rounded-[22px] border border-[#7d55ff]/75"
+          />
+
+          {/* Corners */}
+          <div className="absolute -left-[3px] -top-[3px] h-8 w-8 rounded-tl-[22px] border-l-[4px] border-t-[4px] border-white" />
+
+          <div className="absolute -right-[3px] -top-[3px] h-8 w-8 rounded-tr-[22px] border-r-[4px] border-t-[4px] border-white" />
+
+          <div className="absolute -bottom-[3px] -left-[3px] h-8 w-8 rounded-bl-[22px] border-b-[4px] border-l-[4px] border-white" />
+
+          <div className="absolute -bottom-[3px] -right-[3px] h-8 w-8 rounded-br-[22px] border-b-[4px] border-r-[4px] border-white" />
+
+          {/* Scan line */}
+          <motion.div
+            initial={{
+              top:
+                "12%",
+            }}
+            animate={{
+              top: [
+                "12%",
+                "86%",
+                "12%",
+              ],
+            }}
+            transition={{
+              duration:
+                2.5,
+
+              repeat:
+                Infinity,
+
+              ease:
+                "easeInOut",
+            }}
+            className="absolute left-[7%] right-[7%] h-px bg-[linear-gradient(90deg,transparent,#66b5ff,#8c5cff,#ff8a35,transparent)] shadow-[0_0_12px_rgba(84,156,255,0.9)]"
+          />
         </div>
       </div>
 
-      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-xs font-extrabold text-white">
-        ✓
+      {/* Minimal top information */}
+      <div className="pointer-events-none absolute inset-x-0 top-0 z-40 px-5 pb-14 pt-[max(22px,env(safe-area-inset-top))]">
+        <div className="mx-auto max-w-[480px] text-center">
+          <motion.div
+            key={
+              `${mode}-${side}-${guidance}`
+            }
+            initial={{
+              opacity:
+                0,
+
+              y:
+                -5,
+            }}
+            animate={{
+              opacity:
+                1,
+
+              y:
+                0,
+            }}
+          >
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.24em] text-white/45">
+              {label}
+            </div>
+
+            <div className="mt-2 text-[24px] font-extrabold leading-tight tracking-[-0.045em] text-white">
+              Scan the{" "}
+              {side ===
+              "front"
+                ? "front"
+                : "back"}{" "}
+              side
+            </div>
+
+            <div className="mx-auto mt-2 max-w-[310px] text-[13px] font-semibold leading-5 text-white/65">
+              {guidance}
+            </div>
+          </motion.div>
+        </div>
+      </div>
+
+      {/* Close button */}
+      <button
+        type="button"
+        onClick={
+          onClose
+        }
+        aria-label="Close scanner"
+        className="absolute right-4 top-[max(18px,env(safe-area-inset-top))] z-50 flex h-11 w-11 items-center justify-center rounded-full border border-white/12 bg-black/45 text-[23px] font-light leading-none text-white backdrop-blur-xl active:scale-[0.94]"
+      >
+        ×
+      </button>
+
+      {/* Bottom side indicator */}
+      <div className="pointer-events-none absolute inset-x-0 bottom-0 z-40 pb-[max(28px,env(safe-area-inset-bottom))]">
+        <div className="flex flex-col items-center">
+          <ScannerDocumentAnimation
+            mode={
+              mode
+            }
+            side={
+              side
+            }
+          />
+
+          <motion.div
+            key={
+              side
+            }
+            initial={{
+              opacity:
+                0,
+
+              y:
+                4,
+            }}
+            animate={{
+              opacity:
+                1,
+
+              y:
+                0,
+            }}
+            className="mt-3 text-[11px] font-extrabold uppercase tracking-[0.19em] text-white/65"
+          >
+            {sideLabel}
+          </motion.div>
+
+          <div className="mt-4 flex items-center gap-2">
+            <div
+              className={[
+                "h-1.5 rounded-full transition-all duration-300",
+
+                side ===
+                "front"
+                  ? "w-7 bg-white"
+                  : "w-2 bg-white/25",
+              ].join(" ")}
+            />
+
+            <div
+              className={[
+                "h-1.5 rounded-full transition-all duration-300",
+
+                side ===
+                "back"
+                  ? "w-7 bg-white"
+                  : "w-2 bg-white/25",
+              ].join(" ")}
+            />
+          </div>
+
+          {side ===
+          "back" ? (
+            <motion.div
+              initial={{
+                opacity:
+                  0,
+
+                y:
+                  8,
+              }}
+              animate={{
+                opacity:
+                  1,
+
+                y:
+                  0,
+              }}
+              className="mt-3 text-[11px] font-semibold text-white/45"
+            >
+              Front captured ✓
+            </motion.div>
+          ) : null}
+        </div>
       </div>
     </div>
   );
 }
+
+/* -------------------------------------------------------------------------- */
+/*                               MAIN COMPONENT                               */
+/* -------------------------------------------------------------------------- */
 
 export default function DocumentVerification({
   autoStart = true,
@@ -1058,13 +1527,23 @@ export default function DocumentVerification({
   const mobileScannerStartingRef =
     useRef(false);
 
-  const mobileScannerModeRef =
-    useRef<
-      ScannerMode | null
-    >(null);
-
   const mobileResultHandledRef =
     useRef(false);
+
+  const mobileChromeObserverRef =
+    useRef<
+      MutationObserver | null
+    >(null);
+
+  const mobileGuidanceTimerRef =
+    useRef<
+      number | null
+    >(null);
+
+  const mobilePreviousSideRef =
+    useRef<
+      "front" | "back"
+    >("front");
 
   const passportInputRef =
     useRef<
@@ -1146,8 +1625,7 @@ export default function DocumentVerification({
     setMobileCurrentSide,
   ] =
     useState<
-      | "front"
-      | "back"
+      "front" | "back"
     >(
       "front"
     );
@@ -1282,6 +1760,16 @@ export default function DocumentVerification({
       mobileLicenceData,
     ]);
 
+  const mobileIsScanning =
+    mobileStage ===
+      "licence" ||
+    mobileStage ===
+      "id";
+
+  /* ------------------------------------------------------------------------ */
+  /*                          DEVICE DETECTION                                */
+  /* ------------------------------------------------------------------------ */
+
   useEffect(() => {
     if (
       typeof window ===
@@ -1317,6 +1805,56 @@ export default function DocumentVerification({
     };
   }, []);
 
+  /*
+   * Prevent scrolling behind the fullscreen scanner.
+   */
+  useEffect(() => {
+    if (
+      !isMobile ||
+      !mobileIsScanning ||
+      typeof document ===
+        "undefined"
+    ) {
+      return;
+    }
+
+    const previousBodyOverflow =
+      document.body.style.overflow;
+
+    const previousHtmlOverflow =
+      document.documentElement.style.overflow;
+
+    const previousBodyOverscroll =
+      document.body.style.overscrollBehavior;
+
+    document.body.style.overflow =
+      "hidden";
+
+    document.documentElement.style.overflow =
+      "hidden";
+
+    document.body.style.overscrollBehavior =
+      "none";
+
+    return () => {
+      document.body.style.overflow =
+        previousBodyOverflow;
+
+      document.documentElement.style.overflow =
+        previousHtmlOverflow;
+
+      document.body.style.overscrollBehavior =
+        previousBodyOverscroll;
+    };
+  }, [
+    isMobile,
+    mobileIsScanning,
+  ]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                                TIMERS                                    */
+  /* ------------------------------------------------------------------------ */
+
   const stopPolling =
     useCallback(() => {
       if (
@@ -1347,13 +1885,36 @@ export default function DocumentVerification({
       }
     }, []);
 
+  const stopMobileGuidanceTimer =
+    useCallback(() => {
+      if (
+        mobileGuidanceTimerRef.current !==
+        null
+      ) {
+        window.clearTimeout(
+          mobileGuidanceTimerRef.current
+        );
+
+        mobileGuidanceTimerRef.current =
+          null;
+      }
+    }, []);
+
+  /* ------------------------------------------------------------------------ */
+  /*                           MOBILE SCANNER CLEANUP                          */
+  /* ------------------------------------------------------------------------ */
+
   const destroyMobileScanner =
     useCallback(async () => {
       mobileScannerStartingRef.current =
         false;
 
-      mobileScannerModeRef.current =
+      mobileChromeObserverRef.current?.disconnect();
+
+      mobileChromeObserverRef.current =
         null;
+
+      stopMobileGuidanceTimer();
 
       const scanner =
         mobileScannerRef.current;
@@ -1370,7 +1931,13 @@ export default function DocumentVerification({
       } catch {
         // Scanner cleanup must never block checkout.
       }
-    }, []);
+    }, [
+      stopMobileGuidanceTimer,
+    ]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                           URL / SESSION HELPERS                           */
+  /* ------------------------------------------------------------------------ */
 
   const buildVerificationUrl =
     useCallback(
@@ -1509,6 +2076,10 @@ export default function DocumentVerification({
       []
     );
 
+  /* ------------------------------------------------------------------------ */
+  /*                           SESSION EXPIRATION                              */
+  /* ------------------------------------------------------------------------ */
+
   const expireCurrentSession =
     useCallback(async () => {
       if (
@@ -1596,6 +2167,10 @@ export default function DocumentVerification({
       stopCountdown,
       expireCurrentSession,
     ]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                           CREATE VERIFICATION                             */
+  /* ------------------------------------------------------------------------ */
 
   const createSession =
     useCallback(async () => {
@@ -1714,6 +2289,10 @@ export default function DocumentVerification({
       stopCountdown,
       destroyMobileScanner,
     ]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                          DESKTOP COMPLETION                               */
+  /* ------------------------------------------------------------------------ */
 
   const finishDesktopVerification =
     useCallback(
@@ -1965,7 +2544,7 @@ export default function DocumentVerification({
           "pending"
         );
       } catch {
-        // Temporary connection errors should not destroy the session.
+        // Temporary network problems should not destroy the session.
       }
     }, [
       sessionToken,
@@ -1974,6 +2553,10 @@ export default function DocumentVerification({
       stopPolling,
       stopCountdown,
     ]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                         CREATE SESSION ON LOAD                            */
+  /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
     if (
@@ -1991,6 +2574,10 @@ export default function DocumentVerification({
     autoStart,
     createSession,
   ]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                            DESKTOP POLLING                                */
+  /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
     if (
@@ -2028,6 +2615,10 @@ export default function DocumentVerification({
     checkSession,
     stopPolling,
   ]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                         MOBILE AUTO SCROLL                                */
+  /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
     if (
@@ -2074,6 +2665,10 @@ export default function DocumentVerification({
     status,
   ]);
 
+  /* ------------------------------------------------------------------------ */
+  /*                       MOBILE SCANNER RESULT                               */
+  /* ------------------------------------------------------------------------ */
+
   const handleMobileScannerResult =
     useCallback(
       async (
@@ -2091,7 +2686,7 @@ export default function DocumentVerification({
 
         try {
           setMobileScannerNotice(
-            "Saving your scan..."
+            "Saving document..."
           );
 
           const frontImage =
@@ -2172,6 +2767,9 @@ export default function DocumentVerification({
               "front"
             );
 
+            mobilePreviousSideRef.current =
+              "front";
+
             setMobileScannerNotice(
               ""
             );
@@ -2202,6 +2800,9 @@ export default function DocumentVerification({
             "front"
           );
 
+          mobilePreviousSideRef.current =
+            "front";
+
           setMobileScannerNotice(
             ""
           );
@@ -2228,6 +2829,10 @@ export default function DocumentVerification({
         destroyMobileScanner,
       ]
     );
+
+  /* ------------------------------------------------------------------------ */
+  /*                         START FULLSCREEN BLINKID                          */
+  /* ------------------------------------------------------------------------ */
 
   const startMobileScanner =
     useCallback(
@@ -2270,9 +2875,6 @@ export default function DocumentVerification({
         mobileScannerStartingRef.current =
           true;
 
-        mobileScannerModeRef.current =
-          mode;
-
         mobileResultHandledRef.current =
           false;
 
@@ -2292,9 +2894,6 @@ export default function DocumentVerification({
           mobileScannerStartingRef.current =
             true;
 
-          mobileScannerModeRef.current =
-            mode;
-
           setStatus(
             "scanning"
           );
@@ -2307,8 +2906,14 @@ export default function DocumentVerification({
             "front"
           );
 
+          mobilePreviousSideRef.current =
+            "front";
+
           setMobileScannerNotice(
-            ""
+            mode ===
+              "licence"
+              ? "Place the front of your driving licence inside the frame"
+              : "Place the front of your ID card inside the frame"
           );
 
           mount.innerHTML =
@@ -2327,26 +2932,15 @@ export default function DocumentVerification({
             );
 
           /*
-           * CRITICAL PRODUCTION FIX
+           * Keep resources at website root.
            *
-           * BlinkID must resolve its worker/WASM files
-           * from the website ROOT:
-           *
-           * /resources/blinkid-worker.js
-           *
-           * NOT:
-           *
-           * /en/resources/blinkid-worker.js
-           * /es/resources/blinkid-worker.js
-           * etc.
-           *
-           * Microblink expects a BASE URL here and
-           * appends "resources/..." itself.
+           * Correct:
+           * https://www.nexarentals.es/resources/...
            */
           const resourcesLocation =
             `${window.location.origin}/`;
 
-          const blinkId =
+          const blinkId: any =
             await createBlinkId({
               licenseKey,
 
@@ -2392,6 +2986,59 @@ export default function DocumentVerification({
           mobileScannerStartingRef.current =
             false;
 
+          /*
+           * Remove BlinkID's default visual chrome.
+           * Recognition remains controlled by BlinkID.
+           */
+          cleanBlinkIdCameraUi(
+            blinkId,
+            mount
+          );
+
+          window.setTimeout(
+            () => {
+              cleanBlinkIdCameraUi(
+                blinkId,
+                mount
+              );
+            },
+            150
+          );
+
+          window.setTimeout(
+            () => {
+              cleanBlinkIdCameraUi(
+                blinkId,
+                mount
+              );
+            },
+            600
+          );
+
+          const observer =
+            new MutationObserver(
+              () => {
+                cleanBlinkIdCameraUi(
+                  blinkId,
+                  mount
+                );
+              }
+            );
+
+          observer.observe(
+            mount,
+            {
+              childList:
+                true,
+
+              subtree:
+                true,
+            }
+          );
+
+          mobileChromeObserverRef.current =
+            observer;
+
           blinkId.addDocumentClassFilter(
             (
               documentClassInfo: any
@@ -2417,8 +3064,8 @@ export default function DocumentVerification({
               setMobileScannerNotice(
                 mode ===
                   "licence"
-                  ? "Please show your driving licence."
-                  : "Please show your ID card."
+                  ? "Please use your driving licence"
+                  : "Please use your ID card"
               );
             }
           );
@@ -2433,22 +3080,68 @@ export default function DocumentVerification({
                     ?.inputImageAnalysisResult
                     ?.scanningSide;
 
-                if (
-                  side ===
-                  "first"
-                ) {
-                  setMobileCurrentSide(
-                    "front"
-                  );
-                }
-
-                if (
+                const nextSide:
+                  | "front"
+                  | "back" =
                   side ===
                   "second"
+                    ? "back"
+                    : "front";
+
+                if (
+                  nextSide !==
+                  mobilePreviousSideRef.current
                 ) {
+                  mobilePreviousSideRef.current =
+                    nextSide;
+
                   setMobileCurrentSide(
-                    "back"
+                    nextSide
                   );
+
+                  stopMobileGuidanceTimer();
+
+                  if (
+                    nextSide ===
+                    "back"
+                  ) {
+                    setMobileScannerNotice(
+                      "Front captured — flip your document"
+                    );
+
+                    mobileGuidanceTimerRef.current =
+                      window.setTimeout(
+                        () => {
+                          setMobileScannerNotice(
+                            mode ===
+                              "licence"
+                              ? "Place the back of your driving licence inside the frame"
+                              : "Place the back of your ID card inside the frame"
+                          );
+                        },
+                        1350
+                      );
+                  }
+                } else {
+                  const guidance =
+                    deriveScannerGuidance(
+                      frameResult,
+                      mode,
+                      nextSide
+                    );
+
+                  /*
+                   * Don't overwrite the special flip message
+                   * while it is being displayed.
+                   */
+                  if (
+                    mobileGuidanceTimerRef.current ===
+                    null
+                  ) {
+                    setMobileScannerNotice(
+                      guidance
+                    );
+                  }
                 }
               }
             );
@@ -2463,11 +3156,15 @@ export default function DocumentVerification({
                   ? scannerError
                   : scannerError
                       ?.message ||
-                    "Scanner error";
+                    "";
 
-              setMobileScannerNotice(
+              if (
                 readable
-              );
+              ) {
+                setMobileScannerNotice(
+                  readable
+                );
+              }
             }
           );
 
@@ -2508,8 +3205,13 @@ export default function DocumentVerification({
         destroyMobileScanner,
         updateSession,
         handleMobileScannerResult,
+        stopMobileGuidanceTimer,
       ]
     );
+
+  /* ------------------------------------------------------------------------ */
+  /*                     OPEN SCANNER WHEN STAGE CHANGES                       */
+  /* ------------------------------------------------------------------------ */
 
   useEffect(() => {
     if (
@@ -2537,7 +3239,7 @@ export default function DocumentVerification({
               : "id"
           );
         },
-        220
+        180
       );
 
     return () => {
@@ -2550,6 +3252,10 @@ export default function DocumentVerification({
     mobileStage,
     startMobileScanner,
   ]);
+
+  /* ------------------------------------------------------------------------ */
+  /*                            MOBILE ACTIONS                                 */
+  /* ------------------------------------------------------------------------ */
 
   function startMobileLicence() {
     if (
@@ -2573,6 +3279,44 @@ export default function DocumentVerification({
 
     setMobileStage(
       "licence"
+    );
+  }
+
+  async function closeMobileScanner() {
+    await destroyMobileScanner();
+
+    setMobileScannerNotice(
+      ""
+    );
+
+    setMobileCurrentSide(
+      "front"
+    );
+
+    mobilePreviousSideRef.current =
+      "front";
+
+    /*
+     * If the licence is already captured,
+     * return to identity selection.
+     */
+    if (
+      mobileDlFront &&
+      mobileDlBack
+    ) {
+      setMobileStage(
+        "identity-choice"
+      );
+
+      return;
+    }
+
+    setMobileStage(
+      "intro"
+    );
+
+    setStatus(
+      "pending"
     );
   }
 
@@ -2687,6 +3431,10 @@ export default function DocumentVerification({
       "review"
     );
   }
+
+  /* ------------------------------------------------------------------------ */
+  /*                           UPLOAD MOBILE DOCS                              */
+  /* ------------------------------------------------------------------------ */
 
   async function uploadMobileDocuments(): Promise<UploadedDocumentPaths> {
     if (
@@ -2846,6 +3594,10 @@ export default function DocumentVerification({
         "",
     };
   }
+
+  /* ------------------------------------------------------------------------ */
+  /*                          COMPLETE MOBILE                                  */
+  /* ------------------------------------------------------------------------ */
 
   async function completeMobileVerification() {
     if (
@@ -3050,6 +3802,10 @@ export default function DocumentVerification({
     }
   }
 
+  /* ------------------------------------------------------------------------ */
+  /*                              RETRY                                        */
+  /* ------------------------------------------------------------------------ */
+
   function retryMobileFromError() {
     setMobileError(
       ""
@@ -3169,6 +3925,9 @@ export default function DocumentVerification({
     rawIdentityResultRef.current =
       null;
 
+    mobilePreviousSideRef.current =
+      "front";
+
     if (
       mobilePassportPreview
     ) {
@@ -3233,16 +3992,24 @@ export default function DocumentVerification({
     onCancel?.();
   }
 
+  /* ------------------------------------------------------------------------ */
+  /*                               CLEANUP                                     */
+  /* ------------------------------------------------------------------------ */
+
   useEffect(() => {
     return () => {
       stopPolling();
       stopCountdown();
+      stopMobileGuidanceTimer();
+
+      mobileChromeObserverRef.current?.disconnect();
 
       void destroyMobileScanner();
     };
   }, [
     stopPolling,
     stopCountdown,
+    stopMobileGuidanceTimer,
     destroyMobileScanner,
   ]);
 
@@ -3268,927 +4035,977 @@ export default function DocumentVerification({
     status ===
     "completed";
 
-  const mobileIsScanning =
-    mobileStage ===
-      "licence" ||
-    mobileStage ===
-      "id";
+  /* ------------------------------------------------------------------------ */
+  /*                       FULLSCREEN SCANNER PORTAL                           */
+  /* ------------------------------------------------------------------------ */
+
+  const fullscreenScanner =
+    isMobile &&
+    mobileIsScanning &&
+    typeof document !==
+      "undefined"
+      ? createPortal(
+          <FullscreenScanner
+            mountRef={
+              mobileScannerMountRef
+            }
+            mode={
+              mobileScannerMode
+            }
+            side={
+              mobileCurrentSide
+            }
+            guidance={
+              mobileScannerNotice ||
+              (
+                mobileCurrentSide ===
+                "front"
+                  ? mobileScannerMode ===
+                    "licence"
+                    ? "Place the front of your driving licence inside the frame"
+                    : "Place the front of your ID card inside the frame"
+                  : mobileScannerMode ===
+                    "licence"
+                    ? "Place the back of your driving licence inside the frame"
+                    : "Place the back of your ID card inside the frame"
+              )
+            }
+            onClose={() => {
+              void closeMobileScanner();
+            }}
+          />,
+          document.body
+        )
+      : null;
+
+  /* ------------------------------------------------------------------------ */
+  /*                                  RENDER                                   */
+  /* ------------------------------------------------------------------------ */
 
   return (
-    <section
-      id="nexa-document-verification"
-      className={`${manrope.className} flex h-full w-full min-w-0 max-w-full scroll-mt-4 flex-col overflow-x-hidden text-[#111] lg:min-h-[590px]`}
-    >
-      <input
-        ref={
-          passportInputRef
-        }
-        type="file"
-        accept="image/*"
-        capture="environment"
-        className="hidden"
-        onChange={
-          handlePassportPhoto
-        }
-      />
+    <>
+      {fullscreenScanner}
 
-      <div className="flex min-w-0 items-start justify-between gap-3 sm:gap-5">
-        <div className="min-w-0">
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-black/30">
-            Fast pickup
-          </div>
-
-          <h2 className="mt-1 text-[27px] font-extrabold leading-[1.08] tracking-[-0.045em] text-black sm:text-[32px] 2xl:text-[36px]">
-            Validate your documents
-          </h2>
-
-          <p className="mt-2 max-w-[560px] text-sm font-medium leading-6 text-black/45 2xl:text-[15px]">
-            Verify your driving licence and your ID card or passport before continuing.
-          </p>
-        </div>
-
-        {onCancel ? (
-          <button
-            type="button"
-            onClick={() => {
-              void handleCancel();
-            }}
-            className="hidden shrink-0 border border-black/12 bg-white px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-black/55 transition hover:border-black hover:bg-black hover:text-white active:scale-[0.97] sm:block"
-          >
-            Cancel
-          </button>
-        ) : null}
-      </div>
-
-      <div className="mt-5 min-w-0 overflow-hidden border-y border-black/10 py-4 sm:mt-6">
-        <CheckoutProgress
-          complete={
-            complete
+      <section
+        id="nexa-document-verification"
+        className={`${manrope.className} flex h-full w-full min-w-0 max-w-full scroll-mt-4 flex-col overflow-x-hidden text-[#111] lg:min-h-[590px]`}
+      >
+        <input
+          ref={
+            passportInputRef
+          }
+          type="file"
+          accept="image/*"
+          capture="environment"
+          className="hidden"
+          onChange={
+            handlePassportPhoto
           }
         />
-      </div>
 
-      <div className="flex min-w-0 max-w-full flex-1 flex-col pt-5">
-        {status ===
-        "creating" ? (
-          <div className="flex min-h-[300px] w-full min-w-0 flex-col items-center justify-center border border-black/10 bg-[#fafaf8] px-6 text-center lg:min-h-[390px]">
-            <Spinner />
+        <div className="flex min-w-0 items-start justify-between gap-3 sm:gap-5">
+          <div className="min-w-0">
+            <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-black/30">
+              Fast pickup
+            </div>
 
-            <h3 className="mt-5 text-[20px] font-extrabold tracking-[-0.035em] text-black">
-              Preparing secure verification
-            </h3>
+            <h2 className="mt-1 text-[27px] font-extrabold leading-[1.08] tracking-[-0.045em] text-black sm:text-[32px] 2xl:text-[36px]">
+              Validate your documents
+            </h2>
 
-            <p className="mt-2 text-sm font-medium text-black/42">
-              Preparing your private document session...
+            <p className="mt-2 max-w-[560px] text-sm font-medium leading-6 text-black/45 2xl:text-[15px]">
+              Verify your driving licence and your ID card or passport before continuing.
             </p>
           </div>
-        ) : null}
 
-        {(status ===
-          "pending" ||
-          phoneConnected) &&
-        verificationUrl ? (
-          <>
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: 12,
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={() => {
+                void handleCancel();
               }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              className="hidden min-w-0 border border-black/10 bg-white px-5 py-5 lg:block lg:px-7 lg:py-6"
+              className="hidden shrink-0 border border-black/12 bg-white px-4 py-2.5 text-[10px] font-extrabold uppercase tracking-[0.16em] text-black/55 transition hover:border-black hover:bg-black hover:text-white active:scale-[0.97] sm:block"
             >
-              <div className="flex items-start justify-between gap-5">
-                <div className="max-w-[520px]">
-                  <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-black/30">
-                    {phoneConnected
-                      ? "Phone connected"
-                      : "Scan with your phone"}
-                  </div>
+              Cancel
+            </button>
+          ) : null}
+        </div>
 
-                  <h3 className="mt-1 text-[20px] font-extrabold tracking-[-0.035em] text-black sm:text-[22px]">
-                    {phoneConnected
-                      ? "Complete the validation on your phone"
-                      : "Keep your documents ready"}
-                  </h3>
+        <div className="mt-5 min-w-0 overflow-hidden border-y border-black/10 py-4 sm:mt-6">
+          <CheckoutProgress
+            complete={
+              complete
+            }
+          />
+        </div>
 
-                  <p className="mt-2 text-sm font-medium leading-6 text-black/50">
-                    Keep your{" "}
-                    <strong className="font-extrabold text-black">
-                      driving licence
-                    </strong>{" "}
-                    and your{" "}
-                    <strong className="font-extrabold text-black">
-                      ID card or passport
-                    </strong>{" "}
-                    in your hand. Scan the QR code below and validate them securely on your phone.
-                  </p>
-                </div>
+        <div className="flex min-w-0 max-w-full flex-1 flex-col pt-5">
+          {status ===
+          "creating" ? (
+            <div className="flex min-h-[300px] w-full min-w-0 flex-col items-center justify-center border border-black/10 bg-[#fafaf8] px-6 text-center lg:min-h-[390px]">
+              <Spinner />
 
-                <CountdownRing
-                  secondsLeft={
-                    secondsLeft
-                  }
-                />
-              </div>
+              <h3 className="mt-5 text-[20px] font-extrabold tracking-[-0.035em] text-black">
+                Preparing secure verification
+              </h3>
 
-              <div className="mt-6 grid min-w-0 items-center gap-7 md:grid-cols-[292px_minmax(0,1fr)]">
-                <div className="flex min-w-0 justify-center md:justify-start">
-                  <AnimatedQrFrame
-                    verificationUrl={
-                      verificationUrl
-                    }
-                  />
-                </div>
+              <p className="mt-2 text-sm font-medium text-black/42">
+                Preparing your private document session...
+              </p>
+            </div>
+          ) : null}
 
-                <div className="flex min-h-[250px] min-w-0 flex-col justify-center border-t border-black/10 pt-6 md:border-l md:border-t-0 md:pl-8 md:pt-0">
-                  <div className="flex min-w-0 items-center gap-3">
-                    <StatusDot
-                      connected={
-                        phoneConnected
-                      }
-                    />
-
-                    <div className="min-w-0">
-                      <div className="text-[15px] font-extrabold text-black">
-                        {phoneConnected
-                          ? "Your phone is connected"
-                          : "Waiting for your phone"}
-                      </div>
-
-                      <div className="mt-0.5 text-xs font-medium text-black/40">
-                        {phoneConnected
-                          ? "Continue scanning your documents on your phone."
-                          : "Open your phone camera and scan the QR code."}
-                      </div>
+          {(status ===
+            "pending" ||
+            phoneConnected) &&
+          verificationUrl ? (
+            <>
+              {/* DESKTOP ONLY */}
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: 12,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                className="hidden min-w-0 border border-black/10 bg-white px-5 py-5 lg:block lg:px-7 lg:py-6"
+              >
+                <div className="flex items-start justify-between gap-5">
+                  <div className="max-w-[520px]">
+                    <div className="text-[10px] font-extrabold uppercase tracking-[0.18em] text-black/30">
+                      {phoneConnected
+                        ? "Phone connected"
+                        : "Scan with your phone"}
                     </div>
-                  </div>
 
-                  <div className="mt-6 border-t border-black/10 pt-5">
-                    <div className="grid gap-3">
-                      <DocumentReadyLine
-                        text="Driving licence"
-                      />
+                    <h3 className="mt-1 text-[20px] font-extrabold tracking-[-0.035em] text-black sm:text-[22px]">
+                      {phoneConnected
+                        ? "Complete the validation on your phone"
+                        : "Keep your documents ready"}
+                    </h3>
 
-                      <DocumentReadyLine
-                        text="ID card or passport"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="mt-6 border-t border-black/10 pt-4">
-                    <p className="text-[11px] font-medium leading-5 text-black/36">
-                      This secure verification session expires automatically when the timer reaches zero.
+                    <p className="mt-2 text-sm font-medium leading-6 text-black/50">
+                      Keep your{" "}
+                      <strong className="font-extrabold text-black">
+                        driving licence
+                      </strong>{" "}
+                      and your{" "}
+                      <strong className="font-extrabold text-black">
+                        ID card or passport
+                      </strong>{" "}
+                      in your hand. Scan the QR code below and validate them securely on your phone.
                     </p>
                   </div>
-                </div>
-              </div>
-            </motion.div>
 
-            <motion.div
-              initial={{
-                opacity: 0,
-                y: 10,
-              }}
-              animate={{
-                opacity: 1,
-                y: 0,
-              }}
-              className="w-full min-w-0 max-w-full lg:hidden"
-            >
-              {mobileStage ===
-              "intro" ? (
-                <div className="w-full min-w-0 overflow-hidden border border-black/10 bg-white px-5 py-6">
-                  <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-black/30">
-                    Ready to validate
+                  <CountdownRing
+                    secondsLeft={
+                      secondsLeft
+                    }
+                  />
+                </div>
+
+                <div className="mt-6 grid min-w-0 items-center gap-7 md:grid-cols-[292px_minmax(0,1fr)]">
+                  <div className="flex min-w-0 justify-center md:justify-start">
+                    <AnimatedQrFrame
+                      verificationUrl={
+                        verificationUrl
+                      }
+                    />
                   </div>
 
-                  <h3 className="mt-1 text-[23px] font-extrabold leading-tight tracking-[-0.04em] text-black">
-                    Keep your documents ready
-                  </h3>
-
-                  <p className="mt-3 text-sm font-medium leading-6 text-black/50">
-                    Keep your{" "}
-                    <strong className="font-extrabold text-black">
-                      driving licence
-                    </strong>{" "}
-                    and your{" "}
-                    <strong className="font-extrabold text-black">
-                      ID card or passport
-                    </strong>{" "}
-                    in your hand.
-                  </p>
-
-                  <p className="mt-2 text-sm font-medium leading-6 text-black/45">
-                    Tap the button below. We will scan your driving licence first, then your identity document.
-                  </p>
-
-                  <motion.button
-                    type="button"
-                    onClick={
-                      startMobileLicence
-                    }
-                    animate={{
-                      y: [
-                        0,
-                        -4,
-                        0,
-                      ],
-
-                      scale: [
-                        1,
-                        1.012,
-                        1,
-                      ],
-                    }}
-                    transition={{
-                      duration: 2.4,
-                      repeat: Infinity,
-                      ease: "easeInOut",
-                    }}
-                    className="nexa-mobile-verify-button relative mt-6 flex min-h-[64px] w-full items-center justify-center overflow-hidden rounded-[18px] px-5 text-[14px] font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_18px_48px_rgba(71,75,255,0.24)] active:scale-[0.97]"
-                  >
-                    <span className="nexa-mobile-verify-button-glow" />
-
-                    <span className="nexa-mobile-verify-button-shine" />
-
-                    <span className="relative z-10 flex items-center gap-2">
-                      Validate documents
-
-                      <span className="text-[19px]">
-                        →
-                      </span>
-                    </span>
-                  </motion.button>
-
-                  <div className="mt-5 flex min-w-0 items-center justify-between gap-3 border-t border-black/10 pt-4">
-                    <div className="flex min-w-0 items-center gap-2">
+                  <div className="flex min-h-[250px] min-w-0 flex-col justify-center border-t border-black/10 pt-6 md:border-l md:border-t-0 md:pl-8 md:pt-0">
+                    <div className="flex min-w-0 items-center gap-3">
                       <StatusDot
                         connected={
-                          false
+                          phoneConnected
                         }
                       />
 
-                      <span className="truncate text-xs font-bold text-black/45">
-                        Secure session ready
+                      <div className="min-w-0">
+                        <div className="text-[15px] font-extrabold text-black">
+                          {phoneConnected
+                            ? "Your phone is connected"
+                            : "Waiting for your phone"}
+                        </div>
+
+                        <div className="mt-0.5 text-xs font-medium text-black/40">
+                          {phoneConnected
+                            ? "Continue scanning your documents on your phone."
+                            : "Open your phone camera and scan the QR code."}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-6 border-t border-black/10 pt-5">
+                      <div className="grid gap-3">
+                        <DocumentReadyLine
+                          text="Driving licence"
+                        />
+
+                        <DocumentReadyLine
+                          text="ID card or passport"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="mt-6 border-t border-black/10 pt-4">
+                      <p className="text-[11px] font-medium leading-5 text-black/36">
+                        This secure verification session expires automatically when the timer reaches zero.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </motion.div>
+
+              {/* MOBILE PRE-SCANNER FLOW */}
+              <motion.div
+                initial={{
+                  opacity: 0,
+                  y: 10,
+                }}
+                animate={{
+                  opacity: 1,
+                  y: 0,
+                }}
+                className="w-full min-w-0 max-w-full lg:hidden"
+              >
+                {mobileStage ===
+                "intro" ? (
+                  <div className="w-full min-w-0 overflow-hidden border border-black/10 bg-white px-5 py-6">
+                    <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-black/30">
+                      Ready to validate
+                    </div>
+
+                    <h3 className="mt-1 text-[23px] font-extrabold leading-tight tracking-[-0.04em] text-black">
+                      Keep your documents ready
+                    </h3>
+
+                    <p className="mt-3 text-sm font-medium leading-6 text-black/50">
+                      Keep your{" "}
+                      <strong className="font-extrabold text-black">
+                        driving licence
+                      </strong>{" "}
+                      and your{" "}
+                      <strong className="font-extrabold text-black">
+                        ID card or passport
+                      </strong>{" "}
+                      ready.
+                    </p>
+
+                    <motion.button
+                      type="button"
+                      onClick={
+                        startMobileLicence
+                      }
+                      animate={{
+                        y: [
+                          0,
+                          -3,
+                          0,
+                        ],
+
+                        scale: [
+                          1,
+                          1.01,
+                          1,
+                        ],
+                      }}
+                      transition={{
+                        duration:
+                          2.4,
+
+                        repeat:
+                          Infinity,
+
+                        ease:
+                          "easeInOut",
+                      }}
+                      className="nexa-mobile-verify-button relative mt-6 flex min-h-[64px] w-full items-center justify-center overflow-hidden rounded-[18px] px-5 text-[14px] font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_18px_48px_rgba(71,75,255,0.24)] active:scale-[0.97]"
+                    >
+                      <span className="nexa-mobile-verify-button-glow" />
+
+                      <span className="nexa-mobile-verify-button-shine" />
+
+                      <span className="relative z-10 flex items-center gap-2">
+                        Validate documents
+
+                        <span className="text-[19px]">
+                          →
+                        </span>
+                      </span>
+                    </motion.button>
+
+                    <div className="mt-5 flex min-w-0 items-center justify-between gap-3 border-t border-black/10 pt-4">
+                      <div className="flex min-w-0 items-center gap-2">
+                        <StatusDot
+                          connected={
+                            false
+                          }
+                        />
+
+                        <span className="truncate text-xs font-bold text-black/45">
+                          Secure session ready
+                        </span>
+                      </div>
+
+                      <span className="shrink-0 text-xs font-extrabold text-black/55">
+                        {formatCountdown(
+                          secondsLeft
+                        )}
                       </span>
                     </div>
-
-                    <span className="shrink-0 text-xs font-extrabold text-black/55">
-                      {formatCountdown(
-                        secondsLeft
-                      )}
-                    </span>
                   </div>
-                </div>
-              ) : null}
+                ) : null}
 
-              {mobileIsScanning ? (
-                <div className="relative w-full min-w-0 max-w-full overflow-hidden rounded-[18px] bg-black">
-                  <div
-                    ref={
-                      mobileScannerMountRef
-                    }
-                    className="relative min-h-[540px] w-full min-w-0 max-w-full overflow-hidden bg-black"
-                  />
+                {mobileStage ===
+                "identity-choice" ? (
+                  <motion.div
+                    initial={{
+                      opacity:
+                        0,
 
-                  <div className="pointer-events-none absolute left-0 right-0 top-0 z-30 bg-gradient-to-b from-black/95 via-black/55 to-transparent px-4 pb-20 pt-4 text-white">
-                    <div className="flex min-w-0 items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-white/55">
-                          {mobileScannerMode ===
-                          "licence"
-                            ? "Driving licence"
-                            : "Identity card"}
-                        </div>
+                      y:
+                        12,
+                    }}
+                    animate={{
+                      opacity:
+                        1,
 
-                        <div className="mt-1 text-[21px] font-extrabold tracking-[-0.04em]">
-                          Scan the{" "}
-                          {mobileCurrentSide ===
-                          "front"
-                            ? "front side"
-                            : "back side"}
-                        </div>
-
-                        <p className="mt-1 max-w-[205px] text-xs font-medium leading-5 text-white/65">
-                          Keep all four corners visible and hold the document steady.
-                        </p>
-                      </div>
-
-                      <AnimatedDocumentCard
-                        mode={
-                          mobileScannerMode
-                        }
-                        side={
-                          mobileCurrentSide
-                        }
-                      />
+                      y:
+                        0,
+                    }}
+                    className="w-full min-w-0 overflow-hidden border border-black/10 bg-white px-5 py-6"
+                  >
+                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-[17px] font-extrabold text-white">
+                      ✓
                     </div>
-                  </div>
 
-                  <div className="pointer-events-none absolute bottom-5 left-1/2 z-40 w-[calc(100%-32px)] -translate-x-1/2">
-                    {mobileScannerNotice ? (
-                      <div className="rounded-[14px] bg-white px-4 py-3 text-center text-xs font-bold text-black shadow-xl">
-                        {mobileScannerNotice}
-                      </div>
-                    ) : (
-                      <div className="rounded-[14px] bg-black/70 px-4 py-3 text-center text-xs font-semibold text-white/85 backdrop-blur-xl">
-                        {mobileCurrentSide ===
-                        "front"
-                          ? "Show the front of your document"
-                          : "Flip your document and show the back"}
-                      </div>
-                    )}
-                  </div>
-                </div>
-              ) : null}
+                    <div className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.18em] text-black/30">
+                      Driving licence complete
+                    </div>
 
-              {mobileStage ===
-              "identity-choice" ? (
-                <motion.div
-                  initial={{
-                    opacity: 0,
-                    y: 12,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  className="w-full min-w-0 overflow-hidden border border-black/10 bg-white px-5 py-6"
-                >
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black text-[17px] font-extrabold text-white">
-                    ✓
-                  </div>
+                    <h3 className="mt-1 text-[23px] font-extrabold tracking-[-0.04em] text-black">
+                      ID card or passport?
+                    </h3>
 
-                  <div className="mt-4 text-[10px] font-extrabold uppercase tracking-[0.18em] text-black/30">
-                    Driving licence complete
-                  </div>
+                    <p className="mt-2 text-sm font-medium leading-6 text-black/45">
+                      Choose the document you have with you.
+                    </p>
 
-                  <h3 className="mt-1 text-[23px] font-extrabold tracking-[-0.04em] text-black">
-                    Now add your ID or passport
-                  </h3>
+                    <div className="mt-6 grid min-w-0 grid-cols-2 gap-3">
+                      <button
+                        type="button"
+                        onClick={
+                          chooseMobileIdCard
+                        }
+                        className="min-w-0 rounded-[16px] border border-black/12 bg-white p-4 text-left transition hover:border-black/30 active:scale-[0.98]"
+                      >
+                        <div className="flex h-11 w-14 items-center justify-center rounded-[8px] bg-black text-[10px] font-extrabold uppercase tracking-[0.12em] text-white">
+                          ID
+                        </div>
 
-                  <p className="mt-2 text-sm font-medium leading-6 text-black/45">
-                    Choose the identity document you have with you.
-                  </p>
+                        <div className="mt-4 text-[16px] font-extrabold text-black">
+                          ID card
+                        </div>
 
-                  <div className="mt-6 grid min-w-0 grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={
-                        chooseMobileIdCard
-                      }
-                      className="min-w-0 rounded-[16px] border border-black/12 bg-white p-4 text-left transition hover:border-black/30 active:scale-[0.98]"
+                        <p className="mt-1 text-[11px] font-medium leading-5 text-black/42">
+                          Scan front and back.
+                        </p>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={
+                          chooseMobilePassport
+                        }
+                        className="min-w-0 rounded-[16px] border border-black/12 bg-white p-4 text-left transition hover:border-black/30 active:scale-[0.98]"
+                      >
+                        <div className="flex h-14 w-11 items-center justify-center rounded-[5px] bg-black text-[17px] text-white">
+                          ✦
+                        </div>
+
+                        <div className="mt-1 text-[16px] font-extrabold text-black">
+                          Passport
+                        </div>
+
+                        <p className="mt-1 text-[11px] font-medium leading-5 text-black/42">
+                          Photograph photo page.
+                        </p>
+                      </button>
+                    </div>
+                  </motion.div>
+                ) : null}
+
+                {mobileStage ===
+                "passport" ? (
+                  <motion.div
+                    initial={{
+                      opacity:
+                        0,
+
+                      y:
+                        12,
+                    }}
+                    animate={{
+                      opacity:
+                        1,
+
+                      y:
+                        0,
+                    }}
+                    className="flex min-h-[440px] w-full min-w-0 flex-col items-center justify-center overflow-hidden rounded-[18px] bg-black px-6 py-8 text-center text-white"
+                  >
+                    <motion.div
+                      animate={{
+                        rotateY: [
+                          0,
+                          7,
+                          0,
+                          -7,
+                          0,
+                        ],
+                      }}
+                      transition={{
+                        duration:
+                          3,
+
+                        repeat:
+                          Infinity,
+                      }}
+                      className="flex h-[160px] w-[118px] flex-col rounded-[6px] bg-[#191919] p-4 text-left shadow-2xl"
                     >
-                      <div className="flex h-11 w-14 items-center justify-center rounded-[8px] bg-black text-[10px] font-extrabold uppercase tracking-[0.12em] text-white">
-                        ID
-                      </div>
-
-                      <div className="mt-4 text-[16px] font-extrabold text-black">
-                        ID card
-                      </div>
-
-                      <p className="mt-1 text-[11px] font-medium leading-5 text-black/42">
-                        Scan front and back automatically.
-                      </p>
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={
-                        chooseMobilePassport
-                      }
-                      className="min-w-0 rounded-[16px] border border-black/12 bg-white p-4 text-left transition hover:border-black/30 active:scale-[0.98]"
-                    >
-                      <div className="flex h-14 w-11 items-center justify-center rounded-[5px] bg-black text-[17px] text-white">
-                        ✦
-                      </div>
-
-                      <div className="mt-1 text-[16px] font-extrabold text-black">
+                      <div className="text-[8px] font-extrabold uppercase tracking-[0.17em] text-white/45">
                         Passport
                       </div>
 
-                      <p className="mt-1 text-[11px] font-medium leading-5 text-black/42">
-                        Take one clear photo of the photo page.
-                      </p>
+                      <div className="mt-6 flex gap-3">
+                        <div className="h-14 w-10 bg-white/15" />
+
+                        <div className="flex-1 space-y-2 pt-1">
+                          <div className="h-1.5 w-full bg-white/15" />
+
+                          <div className="h-1.5 w-[80%] bg-white/15" />
+
+                          <div className="h-1.5 w-[60%] bg-white/15" />
+                        </div>
+                      </div>
+
+                      <div className="mt-auto space-y-1">
+                        <div className="h-1 w-full bg-white/15" />
+
+                        <div className="h-1 w-full bg-white/15" />
+                      </div>
+                    </motion.div>
+
+                    <h3 className="mt-7 text-[23px] font-extrabold tracking-[-0.04em]">
+                      Photograph your passport
+                    </h3>
+
+                    <p className="mt-2 max-w-[340px] text-sm font-medium leading-6 text-white/55">
+                      Open the photo page and keep the complete page visible.
+                    </p>
+
+                    <button
+                      type="button"
+                      onClick={
+                        openPassportCamera
+                      }
+                      className="mt-7 min-h-[54px] rounded-[16px] bg-white px-7 py-4 text-xs font-extrabold uppercase tracking-[0.15em] text-black active:scale-[0.98]"
+                    >
+                      Open camera
                     </button>
-                  </div>
-                </motion.div>
-              ) : null}
 
-              {mobileStage ===
-              "passport" ? (
-                <motion.div
-                  initial={{
-                    opacity: 0,
-                    y: 12,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  className="flex min-h-[440px] w-full min-w-0 flex-col items-center justify-center overflow-hidden rounded-[18px] bg-black px-6 py-8 text-center text-white"
-                >
-                  <motion.div
-                    animate={{
-                      rotateY: [
-                        0,
-                        7,
-                        0,
-                        -7,
-                        0,
-                      ],
-                    }}
-                    transition={{
-                      duration: 3,
-                      repeat: Infinity,
-                    }}
-                    className="flex h-[160px] w-[118px] flex-col rounded-[6px] bg-[#191919] p-4 text-left shadow-2xl"
-                  >
-                    <div className="text-[8px] font-extrabold uppercase tracking-[0.17em] text-white/45">
-                      Passport
-                    </div>
-
-                    <div className="mt-6 flex gap-3">
-                      <div className="h-14 w-10 bg-white/15" />
-
-                      <div className="flex-1 space-y-2 pt-1">
-                        <div className="h-1.5 w-full bg-white/15" />
-
-                        <div className="h-1.5 w-[80%] bg-white/15" />
-
-                        <div className="h-1.5 w-[60%] bg-white/15" />
-                      </div>
-                    </div>
-
-                    <div className="mt-auto space-y-1">
-                      <div className="h-1 w-full bg-white/15" />
-
-                      <div className="h-1 w-full bg-white/15" />
-                    </div>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setMobileStage(
+                          "identity-choice"
+                        )
+                      }
+                      className="mt-4 text-xs font-bold text-white/50"
+                    >
+                      Choose ID card instead
+                    </button>
                   </motion.div>
+                ) : null}
 
-                  <h3 className="mt-7 text-[23px] font-extrabold tracking-[-0.04em]">
-                    Photograph your passport
-                  </h3>
+                {mobileStage ===
+                "review" ? (
+                  <motion.div
+                    initial={{
+                      opacity:
+                        0,
 
-                  <p className="mt-2 max-w-[340px] text-sm font-medium leading-6 text-white/55">
-                    Open the photo page and make sure the complete page and all four corners are clearly visible.
-                  </p>
+                      y:
+                        12,
+                    }}
+                    animate={{
+                      opacity:
+                        1,
 
-                  <button
-                    type="button"
-                    onClick={
-                      openPassportCamera
-                    }
-                    className="mt-7 min-h-[54px] rounded-[16px] bg-white px-7 py-4 text-xs font-extrabold uppercase tracking-[0.15em] text-black active:scale-[0.98]"
+                      y:
+                        0,
+                    }}
+                    className="w-full min-w-0 overflow-hidden border border-black/10 bg-white px-5 py-6"
                   >
-                    Open camera
-                  </button>
+                    <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-black/30">
+                      Ready
+                    </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setMobileStage(
-                        "identity-choice"
-                      )
-                    }
-                    className="mt-4 text-xs font-bold text-white/50"
-                  >
-                    Choose ID card instead
-                  </button>
-                </motion.div>
-              ) : null}
+                    <h3 className="mt-1 text-[23px] font-extrabold tracking-[-0.04em] text-black">
+                      Documents captured
+                    </h3>
 
-              {mobileStage ===
-              "review" ? (
-                <motion.div
-                  initial={{
-                    opacity: 0,
-                    y: 12,
-                  }}
-                  animate={{
-                    opacity: 1,
-                    y: 0,
-                  }}
-                  className="w-full min-w-0 overflow-hidden border border-black/10 bg-white px-5 py-6"
-                >
-                  <div className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-black/30">
-                    Ready
-                  </div>
+                    <p className="mt-2 text-sm font-medium leading-6 text-black/45">
+                      Everything is ready. Continue to validate your documents.
+                    </p>
 
-                  <h3 className="mt-1 text-[23px] font-extrabold tracking-[-0.04em] text-black">
-                    Validate your documents
-                  </h3>
+                    <div className="mt-6 border-y border-black/10">
+                      <MobileReviewLine
+                        title="Driving licence"
+                        subtitle="Front + back captured"
+                      />
 
-                  <p className="mt-2 text-sm font-medium leading-6 text-black/45">
-                    Check that both documents were captured, then continue.
-                  </p>
+                      <MobileReviewLine
+                        title={
+                          mobileIdentityType ===
+                          "passport"
+                            ? "Passport"
+                            : "ID card"
+                        }
+                        subtitle={
+                          mobileIdentityType ===
+                          "passport"
+                            ? "Photo page captured"
+                            : "Front + back captured"
+                        }
+                      />
+                    </div>
 
-                  <div className="mt-6 border-y border-black/10">
-                    <MobileReviewLine
-                      title="Driving licence"
-                      subtitle="Front + back captured"
-                    />
+                    {mobileLicenceData.fullName ? (
+                      <div className="mt-5 min-w-0 rounded-[14px] border border-black/10 bg-[#fafaf8] px-4 py-4">
+                        <div className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-black/30">
+                          Detected
+                        </div>
 
-                    <MobileReviewLine
-                      title={
-                        mobileIdentityType ===
-                        "passport"
-                          ? "Passport"
-                          : "ID card"
-                      }
-                      subtitle={
-                        mobileIdentityType ===
-                        "passport"
-                          ? "Photo page captured"
-                          : "Front + back captured"
-                      }
-                    />
-                  </div>
-
-                  {mobileLicenceData.fullName ? (
-                    <div className="mt-5 min-w-0 rounded-[14px] border border-black/10 bg-[#fafaf8] px-4 py-4">
-                      <div className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-black/30">
-                        Detected
-                      </div>
-
-                      <div className="mt-2 flex min-w-0 items-start justify-between gap-4">
-                        <span className="shrink-0 text-xs font-semibold text-black/40">
-                          Name
-                        </span>
-
-                        <span className="min-w-0 break-words text-right text-sm font-extrabold">
-                          {
-                            mobileLicenceData.fullName
-                          }
-                        </span>
-                      </div>
-
-                      {mobileLicenceCategories ? (
-                        <div className="mt-3 flex min-w-0 items-start justify-between gap-4">
+                        <div className="mt-2 flex min-w-0 items-start justify-between gap-4">
                           <span className="shrink-0 text-xs font-semibold text-black/40">
-                            Categories
+                            Name
                           </span>
 
                           <span className="min-w-0 break-words text-right text-sm font-extrabold">
                             {
-                              mobileLicenceCategories
+                              mobileLicenceData.fullName
                             }
                           </span>
                         </div>
-                      ) : null}
-                    </div>
-                  ) : null}
 
-                  {mobileIdentityType ===
-                    "passport" &&
-                  mobilePassportPreview ? (
-                    <div className="mt-5 min-w-0">
-                      <div className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-black/30">
-                        Passport photo
+                        {mobileLicenceCategories ? (
+                          <div className="mt-3 flex min-w-0 items-start justify-between gap-4">
+                            <span className="shrink-0 text-xs font-semibold text-black/40">
+                              Categories
+                            </span>
+
+                            <span className="min-w-0 break-words text-right text-sm font-extrabold">
+                              {
+                                mobileLicenceCategories
+                              }
+                            </span>
+                          </div>
+                        ) : null}
                       </div>
+                    ) : null}
 
-                      <div className="mt-2 w-full min-w-0 overflow-hidden rounded-[14px] border border-black/10 bg-black/[0.02]">
-                        <img
-                          src={
-                            mobilePassportPreview
-                          }
-                          alt="Passport preview"
-                          className="max-h-[220px] w-full object-contain"
-                        />
+                    {mobileIdentityType ===
+                      "passport" &&
+                    mobilePassportPreview ? (
+                      <div className="mt-5 min-w-0">
+                        <div className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-black/30">
+                          Passport photo
+                        </div>
+
+                        <div className="mt-2 w-full min-w-0 overflow-hidden rounded-[14px] border border-black/10 bg-black/[0.02]">
+                          <img
+                            src={
+                              mobilePassportPreview
+                            }
+                            alt="Passport preview"
+                            className="max-h-[220px] w-full object-contain"
+                          />
+                        </div>
                       </div>
-                    </div>
-                  ) : null}
+                    ) : null}
 
-                  <motion.button
-                    type="button"
-                    onClick={() => {
-                      void completeMobileVerification();
-                    }}
-                    whileTap={{
-                      scale: 0.98,
-                    }}
-                    className="nexa-mobile-verify-button relative mt-6 flex min-h-[60px] w-full items-center justify-center overflow-hidden rounded-[18px] px-5 text-[14px] font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_18px_48px_rgba(71,75,255,0.24)]"
-                  >
-                    <span className="nexa-mobile-verify-button-glow" />
+                    <motion.button
+                      type="button"
+                      onClick={() => {
+                        void completeMobileVerification();
+                      }}
+                      whileTap={{
+                        scale:
+                          0.98,
+                      }}
+                      className="nexa-mobile-verify-button relative mt-6 flex min-h-[60px] w-full items-center justify-center overflow-hidden rounded-[18px] px-5 text-[14px] font-extrabold uppercase tracking-[0.1em] text-white shadow-[0_18px_48px_rgba(71,75,255,0.24)]"
+                    >
+                      <span className="nexa-mobile-verify-button-glow" />
 
-                    <span className="nexa-mobile-verify-button-shine" />
+                      <span className="nexa-mobile-verify-button-shine" />
 
-                    <span className="relative z-10">
-                      Validate documents
-                    </span>
-                  </motion.button>
-                </motion.div>
-              ) : null}
+                      <span className="relative z-10">
+                        Validate documents
+                      </span>
+                    </motion.button>
+                  </motion.div>
+                ) : null}
 
-              {mobileStage ===
-              "uploading" ? (
-                <div className="flex min-h-[360px] w-full min-w-0 flex-col items-center justify-center border border-black/10 bg-[#fafaf8] px-6 text-center">
-                  <Spinner />
+                {mobileStage ===
+                "uploading" ? (
+                  <div className="flex min-h-[360px] w-full min-w-0 flex-col items-center justify-center border border-black/10 bg-[#fafaf8] px-6 text-center">
+                    <Spinner />
 
-                  <h3 className="mt-5 text-[22px] font-extrabold tracking-[-0.04em] text-black">
-                    Saving your documents
-                  </h3>
+                    <h3 className="mt-5 text-[22px] font-extrabold tracking-[-0.04em] text-black">
+                      Saving your documents
+                    </h3>
 
-                  <p className="mt-2 max-w-[340px] text-sm font-medium leading-6 text-black/45">
-                    Securely attaching them to your booking. Please keep this page open.
-                  </p>
-                </div>
-              ) : null}
-
-              {mobileStage ===
-              "error" ? (
-                <div className="flex min-h-[340px] w-full min-w-0 flex-col items-center justify-center border border-red-200 bg-red-50 px-6 text-center">
-                  <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-xl font-extrabold text-white">
-                    !
+                    <p className="mt-2 max-w-[340px] text-sm font-medium leading-6 text-black/45">
+                      Securely attaching them to your booking.
+                    </p>
                   </div>
+                ) : null}
 
-                  <h3 className="mt-5 text-[22px] font-extrabold tracking-[-0.035em] text-red-900">
-                    Verification needs attention
-                  </h3>
+                {mobileStage ===
+                "error" ? (
+                  <div className="flex min-h-[340px] w-full min-w-0 flex-col items-center justify-center border border-red-200 bg-red-50 px-6 text-center">
+                    <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-xl font-extrabold text-white">
+                      !
+                    </div>
 
-                  <p className="mt-2 max-w-[360px] break-words text-sm font-semibold leading-6 text-red-700">
-                    {mobileError ||
-                      "Please try the document scan again."}
-                  </p>
+                    <h3 className="mt-5 text-[22px] font-extrabold tracking-[-0.035em] text-red-900">
+                      Verification needs attention
+                    </h3>
 
-                  <button
-                    type="button"
-                    onClick={
-                      retryMobileFromError
-                    }
-                    className="mt-6 rounded-[14px] bg-black px-6 py-3.5 text-xs font-extrabold uppercase tracking-[0.15em] text-white active:scale-[0.98]"
-                  >
-                    Try again
-                  </button>
-                </div>
-              ) : null}
-            </motion.div>
-          </>
-        ) : null}
+                    <p className="mt-2 max-w-[360px] break-words text-sm font-semibold leading-6 text-red-700">
+                      {mobileError ||
+                        "Please try the document scan again."}
+                    </p>
 
-        {complete ? (
-          <motion.div
-            initial={{
-              opacity: 0,
-              scale: 0.97,
-            }}
-            animate={{
-              opacity: 1,
-              scale: 1,
-            }}
-            className="flex min-h-[340px] w-full min-w-0 flex-col items-center justify-center border border-black/10 bg-[#fafaf8] px-6 text-center lg:min-h-[390px]"
-          >
+                    <button
+                      type="button"
+                      onClick={
+                        retryMobileFromError
+                      }
+                      className="mt-6 rounded-[14px] bg-black px-6 py-3.5 text-xs font-extrabold uppercase tracking-[0.15em] text-white active:scale-[0.98]"
+                    >
+                      Try again
+                    </button>
+                  </div>
+                ) : null}
+              </motion.div>
+            </>
+          ) : null}
+
+          {complete ? (
             <motion.div
               initial={{
-                scale: 0,
+                opacity: 0,
+                scale: 0.97,
               }}
               animate={{
+                opacity: 1,
                 scale: 1,
               }}
-              transition={{
-                type: "spring",
-                stiffness: 180,
-                damping: 14,
-              }}
-              className="flex h-16 w-16 items-center justify-center rounded-full bg-black text-[24px] font-extrabold text-white"
+              className="flex min-h-[340px] w-full min-w-0 flex-col items-center justify-center border border-black/10 bg-[#fafaf8] px-6 text-center lg:min-h-[390px]"
             >
-              ✓
+              <motion.div
+                initial={{
+                  scale: 0,
+                }}
+                animate={{
+                  scale: 1,
+                }}
+                transition={{
+                  type: "spring",
+                  stiffness: 180,
+                  damping: 14,
+                }}
+                className="flex h-16 w-16 items-center justify-center rounded-full bg-black text-[24px] font-extrabold text-white"
+              >
+                ✓
+              </motion.div>
+
+              <h3 className="mt-6 text-[24px] font-extrabold tracking-[-0.04em] text-black">
+                Documents received
+              </h3>
+
+              <p className="mt-2 max-w-[420px] text-sm font-medium leading-6 text-black/45">
+                Validation completed. Preparing your customer details...
+              </p>
+
+              <div className="mt-6 flex items-center gap-3">
+                <Spinner />
+
+                <span className="text-xs font-bold text-black/45">
+                  Continuing automatically
+                </span>
+              </div>
             </motion.div>
+          ) : null}
 
-            <h3 className="mt-6 text-[24px] font-extrabold tracking-[-0.04em] text-black">
-              Documents received
-            </h3>
-
-            <p className="mt-2 max-w-[420px] text-sm font-medium leading-6 text-black/45">
-              Validation completed. Preparing your customer details...
-            </p>
-
-            <div className="mt-6 flex items-center gap-3">
-              <Spinner />
-
-              <span className="text-xs font-bold text-black/45">
-                Continuing automatically
-              </span>
-            </div>
-          </motion.div>
-        ) : null}
-
-        {(status ===
-          "failed" ||
-          status ===
-            "expired" ||
-          status ===
-            "cancelled") ? (
-          <motion.div
-            initial={{
-              opacity: 0,
-            }}
-            animate={{
-              opacity: 1,
-            }}
-            className="flex min-h-[340px] w-full min-w-0 flex-col items-center justify-center border border-red-200 bg-red-50 px-6 text-center lg:min-h-[390px]"
-          >
-            <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-xl font-extrabold text-white">
-              !
-            </div>
-
-            <h3 className="mt-5 text-[22px] font-extrabold tracking-[-0.035em] text-red-900">
-              {status ===
-              "expired"
-                ? "Verification expired"
-                : status ===
-                    "cancelled"
-                  ? "Verification cancelled"
-                  : "Verification unavailable"}
-            </h3>
-
-            <p className="mt-2 max-w-[430px] break-words text-sm font-semibold leading-6 text-red-700">
-              {error ||
-                "Create a new secure session to continue."}
-            </p>
-
-            <button
-              type="button"
-              onClick={
-                retrySession
-              }
-              className="mt-6 bg-black px-6 py-3.5 text-xs font-extrabold uppercase tracking-[0.15em] text-white transition hover:bg-black/80 active:scale-[0.98]"
+          {(status ===
+            "failed" ||
+            status ===
+              "expired" ||
+            status ===
+              "cancelled") ? (
+            <motion.div
+              initial={{
+                opacity: 0,
+              }}
+              animate={{
+                opacity: 1,
+              }}
+              className="flex min-h-[340px] w-full min-w-0 flex-col items-center justify-center border border-red-200 bg-red-50 px-6 text-center lg:min-h-[390px]"
             >
-              Start again
-            </button>
-          </motion.div>
-        ) : null}
-      </div>
+              <div className="flex h-14 w-14 items-center justify-center rounded-full bg-red-600 text-xl font-extrabold text-white">
+                !
+              </div>
 
-      <style jsx global>{`
-        .nexa-mobile-verify-button {
-          background:
-            linear-gradient(
-              110deg,
-              #6f39ff 0%,
-              #2188ff 34%,
-              #9b45f3 61%,
-              #ff7a00 100%
-            );
-          background-size: 220% 220%;
-          animation:
-            nexa-mobile-verify-gradient
-            4.5s ease infinite;
-        }
+              <h3 className="mt-5 text-[22px] font-extrabold tracking-[-0.035em] text-red-900">
+                {status ===
+                "expired"
+                  ? "Verification expired"
+                  : status ===
+                      "cancelled"
+                    ? "Verification cancelled"
+                    : "Verification unavailable"}
+              </h3>
 
-        .nexa-mobile-verify-button-glow {
-          position: absolute;
-          inset: -35%;
-          background:
-            conic-gradient(
-              from 0deg,
-              transparent 0deg,
-              rgba(
-                255,
-                255,
-                255,
-                0.34
-              )
-                70deg,
-              transparent 135deg,
-              rgba(
-                255,
-                255,
-                255,
-                0.16
-              )
-                220deg,
-              transparent 300deg
-            );
-          animation:
-            nexa-mobile-verify-spin
-            3.8s linear infinite;
-        }
+              <p className="mt-2 max-w-[430px] break-words text-sm font-semibold leading-6 text-red-700">
+                {error ||
+                  "Create a new secure session to continue."}
+              </p>
 
-        .nexa-mobile-verify-button-shine {
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          width: 38%;
-          left: -50%;
-          transform:
-            skewX(-18deg);
-          background:
-            linear-gradient(
-              90deg,
-              transparent,
-              rgba(
-                255,
-                255,
-                255,
-                0.34
-              ),
-              transparent
-            );
-          animation:
-            nexa-mobile-verify-shine
-            2.8s ease-in-out
-            infinite;
-        }
+              <button
+                type="button"
+                onClick={
+                  retrySession
+                }
+                className="mt-6 bg-black px-6 py-3.5 text-xs font-extrabold uppercase tracking-[0.15em] text-white transition hover:bg-black/80 active:scale-[0.98]"
+              >
+                Start again
+              </button>
+            </motion.div>
+          ) : null}
+        </div>
 
-        @keyframes nexa-mobile-verify-gradient {
-          0% {
-            background-position:
-              0% 50%;
-          }
-
-          50% {
-            background-position:
-              100% 50%;
-          }
-
-          100% {
-            background-position:
-              0% 50%;
-          }
-        }
-
-        @keyframes nexa-mobile-verify-spin {
-          from {
-            transform:
-              rotate(0deg);
-          }
-
-          to {
-            transform:
-              rotate(360deg);
-          }
-        }
-
-        @keyframes nexa-mobile-verify-shine {
-          0%,
-          20% {
-            left: -50%;
-          }
-
-          65%,
-          100% {
-            left: 120%;
-          }
-        }
-
-        @media (max-width: 1023px) {
-          #nexa-document-verification,
-          #nexa-document-verification * {
-            box-sizing:
-              border-box;
-          }
-
-          #nexa-document-verification {
-            width:
-              100% !important;
-            max-width:
-              100% !important;
-            min-width:
-              0 !important;
-            overflow-x:
-              hidden !important;
-          }
-
-          #nexa-document-verification video,
-          #nexa-document-verification canvas,
-          #nexa-document-verification img {
-            max-width:
-              100% !important;
-          }
-        }
-
-        @media (prefers-reduced-motion: reduce) {
-          .nexa-mobile-verify-button,
-          .nexa-mobile-verify-button-glow,
-          .nexa-mobile-verify-button-shine {
+        <style jsx global>{`
+          .nexa-mobile-verify-button {
+            background:
+              linear-gradient(
+                110deg,
+                #6f39ff 0%,
+                #2188ff 34%,
+                #9b45f3 61%,
+                #ff7a00 100%
+              );
+            background-size: 220% 220%;
             animation:
-              none !important;
+              nexa-mobile-verify-gradient
+              4.5s ease infinite;
           }
-        }
-      `}</style>
-    </section>
+
+          .nexa-mobile-verify-button-glow {
+            position: absolute;
+            inset: -35%;
+            background:
+              conic-gradient(
+                from 0deg,
+                transparent 0deg,
+                rgba(
+                  255,
+                  255,
+                  255,
+                  0.34
+                )
+                  70deg,
+                transparent 135deg,
+                rgba(
+                  255,
+                  255,
+                  255,
+                  0.16
+                )
+                  220deg,
+                transparent 300deg
+              );
+            animation:
+              nexa-mobile-verify-spin
+              3.8s linear infinite;
+          }
+
+          .nexa-mobile-verify-button-shine {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 38%;
+            left: -50%;
+            transform:
+              skewX(-18deg);
+            background:
+              linear-gradient(
+                90deg,
+                transparent,
+                rgba(
+                  255,
+                  255,
+                  255,
+                  0.34
+                ),
+                transparent
+              );
+            animation:
+              nexa-mobile-verify-shine
+              2.8s ease-in-out
+              infinite;
+          }
+
+          #nexa-fullscreen-blinkid-camera,
+          #nexa-fullscreen-blinkid-camera > div {
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+          }
+
+          #nexa-fullscreen-blinkid-camera video {
+            position: absolute !important;
+            inset: 0 !important;
+            width: 100% !important;
+            height: 100% !important;
+            max-width: none !important;
+            max-height: none !important;
+            object-fit: cover !important;
+            background: #000 !important;
+          }
+
+          #nexa-fullscreen-blinkid-camera
+            [data-nexa-blinkid-hidden="true"] {
+            opacity: 0 !important;
+            pointer-events: none !important;
+          }
+
+          @keyframes nexa-mobile-verify-gradient {
+            0% {
+              background-position:
+                0% 50%;
+            }
+
+            50% {
+              background-position:
+                100% 50%;
+            }
+
+            100% {
+              background-position:
+                0% 50%;
+            }
+          }
+
+          @keyframes nexa-mobile-verify-spin {
+            from {
+              transform:
+                rotate(0deg);
+            }
+
+            to {
+              transform:
+                rotate(360deg);
+            }
+          }
+
+          @keyframes nexa-mobile-verify-shine {
+            0%,
+            20% {
+              left: -50%;
+            }
+
+            65%,
+            100% {
+              left: 120%;
+            }
+          }
+
+          @media (max-width: 1023px) {
+            #nexa-document-verification,
+            #nexa-document-verification * {
+              box-sizing:
+                border-box;
+            }
+
+            #nexa-document-verification {
+              width:
+                100% !important;
+
+              max-width:
+                100% !important;
+
+              min-width:
+                0 !important;
+
+              overflow-x:
+                hidden !important;
+            }
+
+            #nexa-document-verification video,
+            #nexa-document-verification canvas,
+            #nexa-document-verification img {
+              max-width:
+                100% !important;
+            }
+          }
+
+          @media (prefers-reduced-motion: reduce) {
+            .nexa-mobile-verify-button,
+            .nexa-mobile-verify-button-glow,
+            .nexa-mobile-verify-button-shine {
+              animation:
+                none !important;
+            }
+          }
+        `}</style>
+      </section>
+    </>
   );
 }
 
-function DocumentReadyLine({
-  text,
+/* -------------------------------------------------------------------------- */
+/*                             MOBILE REVIEW ROW                              */
+/* -------------------------------------------------------------------------- */
+
+function MobileReviewLine({
+  title,
+  subtitle,
 }: {
-  text: string;
+  title: string;
+  subtitle: string;
 }) {
   return (
-    <div className="flex items-center gap-3">
-      <div className="flex h-7 w-7 items-center justify-center rounded-full bg-black/[0.055] text-[12px] font-extrabold text-black">
-        ✓
+    <div className="flex min-w-0 items-center justify-between gap-4 border-b border-black/10 py-4 last:border-b-0">
+      <div className="min-w-0">
+        <div className="truncate text-sm font-extrabold text-black">
+          {title}
+        </div>
+
+        <div className="mt-0.5 text-xs font-medium text-black/40">
+          {subtitle}
+        </div>
       </div>
 
-      <span className="text-sm font-bold text-black/65">
-        {text}
-      </span>
+      <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-black text-xs font-extrabold text-white">
+        ✓
+      </div>
     </div>
   );
 }
