@@ -5,22 +5,16 @@ import { supabaseAdmin } from "@/lib/supabaseAdmin";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TABLE =
-  "document_verification_sessions";
+const TABLE = "document_verification_sessions";
 
-const MAX_FILE_BYTES =
-  8 * 1024 * 1024;
-
-const MAX_TOTAL_BYTES =
-  28 * 1024 * 1024;
+const MAX_FILE_BYTES = 8 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 28 * 1024 * 1024;
 
 const MODEL =
-  process.env.OPENAI_DOCUMENT_MODEL ||
+  process.env.OPENAI_DOCUMENT_MODEL?.trim() ||
   "gpt-4o-mini";
 
-type IdentityType =
-  | "id"
-  | "passport";
+type IdentityType = "id" | "passport";
 
 type StepKey =
   | "dlFront"
@@ -60,8 +54,7 @@ type ExtractedDocument = {
   documentType: string;
   issueDate: string;
 
-  vehicleClasses:
-    VehicleClass[];
+  vehicleClasses: VehicleClass[];
 };
 
 type AiExtraction = {
@@ -71,21 +64,15 @@ type AiExtraction = {
       | "retake"
       | "uncertain";
 
-    retakeSides:
-      StepKey[];
-
-    issues:
-      string[];
+    retakeSides: StepKey[];
+    issues: string[];
   };
 
-  licence:
-    ExtractedDocument;
+  licence: ExtractedDocument;
 
-  identity:
-    ExtractedDocument & {
-      selectedType:
-        IdentityType;
-    };
+  identity: ExtractedDocument & {
+    selectedType: IdentityType;
+  };
 
   nameMatch:
     | "match"
@@ -93,18 +80,149 @@ type AiExtraction = {
     | "uncertain";
 };
 
+class ApiError extends Error {
+  status: number;
+
+  constructor(
+    message: string,
+    status: number
+  ) {
+    super(message);
+
+    this.name = "ApiError";
+    this.status = status;
+  }
+}
+
+function documentSchema(
+  withSelectedType: boolean
+) {
+  const properties: Record<
+    string,
+    unknown
+  > = {
+    documentDetected: {
+      type: "boolean",
+    },
+
+    readable: {
+      type: "boolean",
+    },
+
+    firstName: {
+      type: "string",
+    },
+
+    lastName: {
+      type: "string",
+    },
+
+    fullName: {
+      type: "string",
+    },
+
+    dateOfBirth: {
+      type: "string",
+    },
+
+    dateOfExpiry: {
+      type: "string",
+    },
+
+    documentNumber: {
+      type: "string",
+    },
+
+    nationality: {
+      type: "string",
+    },
+
+    address: {
+      type: "string",
+    },
+
+    countryCode: {
+      type: "string",
+    },
+
+    documentType: {
+      type: "string",
+    },
+
+    issueDate: {
+      type: "string",
+    },
+
+    vehicleClasses: {
+      type: "array",
+
+      items: {
+        type: "object",
+
+        additionalProperties: false,
+
+        properties: {
+          category: {
+            type: "string",
+          },
+
+          validFrom: {
+            type: "string",
+          },
+
+          validUntil: {
+            type: "string",
+          },
+        },
+
+        required: [
+          "category",
+          "validFrom",
+          "validUntil",
+        ],
+      },
+    },
+  };
+
+  const required =
+    Object.keys(properties);
+
+  if (withSelectedType) {
+    properties.selectedType = {
+      type: "string",
+
+      enum: [
+        "id",
+        "passport",
+      ],
+    };
+
+    required.push(
+      "selectedType"
+    );
+  }
+
+  return {
+    type: "object",
+
+    additionalProperties: false,
+
+    properties,
+
+    required,
+  };
+}
+
 const DOCUMENT_SCHEMA = {
   type: "object",
 
-  additionalProperties:
-    false,
+  additionalProperties: false,
 
   properties: {
     quality: {
       type: "object",
 
-      additionalProperties:
-        false,
+      additionalProperties: false,
 
       properties: {
         overall: {
@@ -136,8 +254,7 @@ const DOCUMENT_SCHEMA = {
           type: "array",
 
           items: {
-            type:
-              "string",
+            type: "string",
           },
         },
       },
@@ -149,15 +266,13 @@ const DOCUMENT_SCHEMA = {
       ],
     },
 
-    licence:
-      documentSchema(
-        false
-      ),
+    licence: documentSchema(
+      false
+    ),
 
-    identity:
-      documentSchema(
-        true
-      ),
+    identity: documentSchema(
+      true
+    ),
 
     nameMatch: {
       type: "string",
@@ -178,153 +293,6 @@ const DOCUMENT_SCHEMA = {
   ],
 } as const;
 
-function documentSchema(
-  withSelectedType:
-    boolean
-) {
-  const properties: Record<
-    string,
-    unknown
-  > = {
-    documentDetected: {
-      type:
-        "boolean",
-    },
-
-    readable: {
-      type:
-        "boolean",
-    },
-
-    firstName: {
-      type:
-        "string",
-    },
-
-    lastName: {
-      type:
-        "string",
-    },
-
-    fullName: {
-      type:
-        "string",
-    },
-
-    dateOfBirth: {
-      type:
-        "string",
-    },
-
-    dateOfExpiry: {
-      type:
-        "string",
-    },
-
-    documentNumber: {
-      type:
-        "string",
-    },
-
-    nationality: {
-      type:
-        "string",
-    },
-
-    address: {
-      type:
-        "string",
-    },
-
-    countryCode: {
-      type:
-        "string",
-    },
-
-    documentType: {
-      type:
-        "string",
-    },
-
-    issueDate: {
-      type:
-        "string",
-    },
-
-    vehicleClasses: {
-      type:
-        "array",
-
-      items: {
-        type:
-          "object",
-
-        additionalProperties:
-          false,
-
-        properties: {
-          category: {
-            type:
-              "string",
-          },
-
-          validFrom: {
-            type:
-              "string",
-          },
-
-          validUntil: {
-            type:
-              "string",
-          },
-        },
-
-        required: [
-          "category",
-          "validFrom",
-          "validUntil",
-        ],
-      },
-    },
-  };
-
-  const required =
-    Object.keys(
-      properties
-    );
-
-  if (
-    withSelectedType
-  ) {
-    properties.selectedType =
-      {
-        type:
-          "string",
-
-        enum: [
-          "id",
-          "passport",
-        ],
-      };
-
-    required.push(
-      "selectedType"
-    );
-  }
-
-  return {
-    type:
-      "object",
-
-    additionalProperties:
-      false,
-
-    properties,
-
-    required,
-  };
-}
-
 function cleanText(
   value: unknown
 ) {
@@ -337,10 +305,7 @@ function isFile(
   value:
     FormDataEntryValue | null
 ): value is File {
-  return (
-    value instanceof
-    File
-  );
+  return value instanceof File;
 }
 
 function getOutputText(
@@ -352,6 +317,8 @@ function getOutputText(
   ) {
     return data.output_text;
   }
+
+  const parts: string[] = [];
 
   for (
     const item of
@@ -374,21 +341,57 @@ function getOutputText(
         typeof content.text ===
           "string"
       ) {
-        return content.text;
+        parts.push(
+          content.text
+        );
       }
     }
   }
 
-  return "";
+  return parts.join("");
+}
+
+function getRefusalText(
+  data: any
+) {
+  const refusals: string[] = [];
+
+  for (
+    const item of
+    data?.output || []
+  ) {
+    if (
+      item?.type !==
+      "message"
+    ) {
+      continue;
+    }
+
+    for (
+      const content of
+      item?.content || []
+    ) {
+      if (
+        content?.type ===
+          "refusal" &&
+        typeof content.refusal ===
+          "string"
+      ) {
+        refusals.push(
+          content.refusal
+        );
+      }
+    }
+  }
+
+  return refusals.join(" ");
 }
 
 function parseIsoDate(
   value: string
 ) {
   const match =
-    cleanText(
-      value
-    ).match(
+    cleanText(value).match(
       /^(\d{4})-(\d{2})-(\d{2})$/
     );
 
@@ -396,10 +399,9 @@ function parseIsoDate(
     return null;
   }
 
-  const date =
-    new Date(
-      `${match[1]}-${match[2]}-${match[3]}T00:00:00Z`
-    );
+  const date = new Date(
+    `${match[1]}-${match[2]}-${match[3]}T00:00:00Z`
+  );
 
   if (
     !Number.isFinite(
@@ -423,31 +425,29 @@ function parseIsoDate(
   return date;
 }
 
+function todayUtc() {
+  const now = new Date();
+
+  return Date.UTC(
+    now.getUTCFullYear(),
+    now.getUTCMonth(),
+    now.getUTCDate()
+  );
+}
+
 function isPast(
   value: string
 ) {
   const date =
-    parseIsoDate(
-      value
-    );
+    parseIsoDate(value);
 
   if (!date) {
     return false;
   }
 
-  const now =
-    new Date();
-
-  const today =
-    Date.UTC(
-      now.getUTCFullYear(),
-      now.getUTCMonth(),
-      now.getUTCDate()
-    );
-
   return (
     date.getTime() <
-    today
+    todayUtc()
   );
 }
 
@@ -455,31 +455,22 @@ function heldForThreeYears(
   value: string
 ) {
   const from =
-    parseIsoDate(
-      value
-    );
+    parseIsoDate(value);
 
   if (!from) {
     return null;
   }
 
-  const today =
-    new Date();
-
-  const threshold =
-    new Date(
-      Date.UTC(
-        from.getUTCFullYear() +
-          3,
-
-        from.getUTCMonth(),
-
-        from.getUTCDate()
-      )
-    );
+  const threshold = new Date(
+    Date.UTC(
+      from.getUTCFullYear() + 3,
+      from.getUTCMonth(),
+      from.getUTCDate()
+    )
+  );
 
   return (
-    today.getTime() >=
+    todayUtc() >=
     threshold.getTime()
   );
 }
@@ -487,9 +478,7 @@ function heldForThreeYears(
 function normalCategory(
   value: string
 ) {
-  return cleanText(
-    value
-  )
+  return cleanText(value)
     .toUpperCase()
     .replace(
       /[^A-Z0-9]/g,
@@ -498,59 +487,74 @@ function normalCategory(
 }
 
 function decide(
-  extraction:
-    AiExtraction,
-
-  identityType:
-    IdentityType
+  extraction: AiExtraction,
+  identityType: IdentityType
 ) {
-  const retakeSides =
+  const fallbackRetakeSides:
+    StepKey[] =
+      identityType === "id"
+        ? [
+            "dlFront",
+            "dlBack",
+            "idFront",
+            "idBack",
+          ]
+        : [
+            "dlFront",
+            "dlBack",
+            "idFront",
+          ];
+
+  const validRetakeSides =
     extraction.quality
-      .retakeSides;
+      .retakeSides
+      .filter(
+        (side) =>
+          identityType ===
+            "id" ||
+          side !== "idBack"
+      );
 
   if (
     extraction.quality
       .overall ===
       "retake" ||
-
     !extraction.licence
       .documentDetected ||
-
     !extraction.identity
       .documentDetected ||
-
     !extraction.licence
       .readable ||
-
     !extraction.identity
       .readable ||
-
     extraction.identity
       .selectedType !==
       identityType
   ) {
+    const reasons =
+      extraction.quality
+        .issues.length > 0
+        ? extraction.quality
+            .issues
+        : [
+            "One or more required document photographs could not be read.",
+          ];
+
     return {
       outcome:
         "retake" as Outcome,
 
       message:
-        extraction.quality
-          .issues[0] ||
+        reasons[0] ||
         "One or more photographs are unclear. Please retake the requested image.",
 
-      reasons:
-        extraction.quality
-          .issues,
+      reasons,
 
       retakeSides:
-        retakeSides.length >
+        validRetakeSides.length >
         0
-          ? retakeSides
-          : ([
-              "dlFront",
-              "dlBack",
-              "idFront",
-            ] as StepKey[]),
+          ? validRetakeSides
+          : fallbackRetakeSides,
     };
   }
 
@@ -636,29 +640,38 @@ function decide(
     );
 
   let licenceAllowed =
-    Boolean(
-      motorcycle
-    );
+    Boolean(motorcycle);
 
-  let bMissingDate =
+  let needsBDateReview =
     false;
+
+  let selectedClass:
+    | (VehicleClass & {
+        normalized: string;
+      })
+    | undefined =
+      motorcycle;
 
   if (
     !licenceAllowed &&
     bClass
   ) {
+    selectedClass =
+      bClass;
+
+    /*
+     * Important:
+     * Only use the category-B valid-from
+     * date from the licence category table.
+     *
+     * The general document issue date can
+     * be a renewal/replacement date and does
+     * not prove when category B was obtained.
+     */
     const bHeld =
       heldForThreeYears(
-        bClass.validFrom ||
-          extraction.licence
-            .issueDate
+        bClass.validFrom
       );
-
-    licenceAllowed =
-      bHeld === true;
-
-    bMissingDate =
-      bHeld === null;
 
     if (
       bHeld === false
@@ -678,11 +691,21 @@ function decide(
           [] as StepKey[],
       };
     }
+
+    if (
+      bHeld === true
+    ) {
+      licenceAllowed =
+        true;
+    } else {
+      needsBDateReview =
+        true;
+    }
   }
 
   if (
     !licenceAllowed &&
-    !bMissingDate
+    !needsBDateReview
   ) {
     return {
       outcome:
@@ -704,7 +727,7 @@ function decide(
     string[] = [];
 
   if (
-    bMissingDate
+    needsBDateReview
   ) {
     manualReasons.push(
       "The category B start date needs manual review"
@@ -712,8 +735,10 @@ function decide(
   }
 
   if (
-    !extraction.licence
-      .dateOfExpiry
+    !parseIsoDate(
+      extraction.licence
+        .dateOfExpiry
+    )
   ) {
     manualReasons.push(
       "The driving licence expiry date needs manual review"
@@ -721,11 +746,24 @@ function decide(
   }
 
   if (
-    !extraction.identity
-      .dateOfExpiry
+    !parseIsoDate(
+      extraction.identity
+        .dateOfExpiry
+    )
   ) {
     manualReasons.push(
       "The identity document expiry date needs manual review"
+    );
+  }
+
+  if (
+    selectedClass &&
+    !parseIsoDate(
+      selectedClass.validUntil
+    )
+  ) {
+    manualReasons.push(
+      "The driving licence category expiry date needs manual review"
     );
   }
 
@@ -743,15 +781,23 @@ function decide(
       .overall ===
     "uncertain"
   ) {
-    manualReasons.push(
-      ...extraction.quality
-        .issues
-    );
+    if (
+      extraction.quality
+        .issues.length > 0
+    ) {
+      manualReasons.push(
+        ...extraction.quality
+          .issues
+      );
+    } else {
+      manualReasons.push(
+        "The document image quality needs manual review"
+      );
+    }
   }
 
   if (
-    manualReasons.length >
-    0
+    manualReasons.length > 0
   ) {
     return {
       outcome:
@@ -790,16 +836,23 @@ async function toImageInput(
   file: File,
   label: string
 ) {
+  const mimeType =
+    cleanText(file.type)
+      .toLowerCase();
+
   if (
     ![
       "image/jpeg",
       "image/png",
       "image/webp",
       "image/gif",
-    ].includes(file.type)
+    ].includes(
+      mimeType
+    )
   ) {
-    throw new Error(
-      `${label} must be a JPEG, PNG, WEBP, or GIF image.`
+    throw new ApiError(
+      `${label} must be a JPEG, PNG, WEBP, or GIF image.`,
+      400
     );
   }
 
@@ -808,8 +861,9 @@ async function toImageInput(
     file.size >
       MAX_FILE_BYTES
   ) {
-    throw new Error(
-      `${label} must be smaller than 8 MB.`
+    throw new ApiError(
+      `${label} must be smaller than 8 MB.`,
+      400
     );
   }
 
@@ -828,7 +882,7 @@ async function toImageInput(
         "input_image" as const,
 
       image_url:
-        `data:${file.type};base64,${base64}`,
+        `data:${mimeType};base64,${base64}`,
 
       detail:
         "high" as const,
@@ -845,8 +899,9 @@ export async function POST(
         .OPENAI_API_KEY;
 
     if (!apiKey) {
-      throw new Error(
-        "OPENAI_API_KEY is missing in Vercel."
+      throw new ApiError(
+        "OPENAI_API_KEY is missing in Vercel.",
+        500
       );
     }
 
@@ -867,21 +922,10 @@ export async function POST(
         )
       ) as IdentityType;
 
-    if (
-      !sessionToken
-    ) {
-      return NextResponse.json(
-        {
-          success:
-            false,
-
-          error:
-            "Missing sessionToken.",
-        },
-        {
-          status:
-            400,
-        }
+    if (!sessionToken) {
+      throw new ApiError(
+        "Missing sessionToken.",
+        400
       );
     }
 
@@ -891,18 +935,9 @@ export async function POST(
       identityType !==
         "passport"
     ) {
-      return NextResponse.json(
-        {
-          success:
-            false,
-
-          error:
-            "Invalid identityType.",
-        },
-        {
-          status:
-            400,
-        }
+      throw new ApiError(
+        "Invalid identityType.",
+        400
       );
     }
 
@@ -925,72 +960,56 @@ export async function POST(
         )
         .maybeSingle();
 
-    if (
-      sessionError
-    ) {
+    if (sessionError) {
       throw new Error(
         `Could not validate session: ${sessionError.message}`
       );
     }
 
     if (!session) {
-      return NextResponse.json(
-        {
-          success:
-            false,
-
-          error:
-            "Verification session not found.",
-        },
-        {
-          status:
-            404,
-        }
+      throw new ApiError(
+        "Verification session not found.",
+        404
       );
     }
 
-    if (
+    const expiresAt =
       new Date(
         session.expires_at
-      ).getTime() <=
-      Date.now()
-    ) {
-      return NextResponse.json(
-        {
-          success:
-            false,
+      ).getTime();
 
-          error:
-            "Verification session expired.",
-        },
-        {
-          status:
-            410,
-        }
+    if (
+      !Number.isFinite(
+        expiresAt
+      )
+    ) {
+      throw new Error(
+        "Verification session has an invalid expiry date."
       );
     }
 
     if (
-      [
-        "failed",
-        "expired",
-        "cancelled",
-      ].includes(
-        session.status
-      )
+      expiresAt <=
+      Date.now()
     ) {
-      return NextResponse.json(
-        {
-          success:
-            false,
+      throw new ApiError(
+        "Verification session expired.",
+        410
+      );
+    }
 
-          error:
-            "Verification session is no longer active.",
-        },
-        {
-          status:
-            409,
-        }
+    /*
+     * The scanner changes the session
+     * to "scanning" before photographs
+     * can be submitted.
+     */
+    if (
+      session.status !==
+      "scanning"
+    ) {
+      throw new ApiError(
+        "Verification session is not active.",
+        409
       );
     }
 
@@ -1013,7 +1032,6 @@ export async function POST(
 
       [
         "idFront",
-
         identityType ===
         "passport"
           ? "PASSPORT PHOTO PAGE"
@@ -1031,35 +1049,37 @@ export async function POST(
       ]);
     }
 
-    const files =
-      required.map(
-        ([
-          key,
-          label,
-        ]) => {
-          const value =
-            form.get(
-              key
-            );
+    const files:
+      Array<{
+        key: StepKey;
+        label: string;
+        file: File;
+      }> = [];
 
-          if (
-            !isFile(
-              value
-            )
-          ) {
-            throw new Error(
-              `${label} is missing.`
-            );
-          }
+    for (
+      const [
+        key,
+        label,
+      ] of required
+    ) {
+      const value =
+        form.get(key);
 
-          return {
-            key,
-            label,
-            file:
-              value,
-          };
-        }
-      );
+      if (
+        !isFile(value)
+      ) {
+        throw new ApiError(
+          `${label} is missing.`,
+          400
+        );
+      }
+
+      files.push({
+        key,
+        label,
+        file: value,
+      });
+    }
 
     const totalBytes =
       files.reduce(
@@ -1076,8 +1096,9 @@ export async function POST(
       totalBytes >
       MAX_TOTAL_BYTES
     ) {
-      throw new Error(
-        "The document images are too large."
+      throw new ApiError(
+        "The document images are too large.",
+        400
       );
     }
 
@@ -1099,13 +1120,33 @@ export async function POST(
           "input_text",
 
         text:
-          `You screen rental documents for NEXA Rentals in Spain. The customer selected ${identityType}.
-Read only what is visibly present. Never guess missing characters or dates. Do not claim that a document is genuine.
-Return dates only as YYYY-MM-DD; return an empty string if not clearly readable.
-For the driving licence, list each vehicle category separately and its own valid-from/valid-until date when visible.
-Mark retake when text is blurred, important edges are cropped, glare hides information, the wrong side is shown, or a required document is absent.
-Use retakeSides to identify exactly which photographs must be taken again.
-Compare the holder name on the driving licence with the passport/ID name.`,
+          `You screen rental documents for NEXA Rentals in Spain.
+
+The customer selected this identity-document option: ${identityType}.
+
+Read only information that is visibly present in the photographs. Never guess missing characters, names, categories, or dates. Never claim that a document is genuine or authentic.
+
+Return all clearly readable dates only as YYYY-MM-DD. Return an empty string when a date is missing, incomplete, permanent, obscured, or not clearly readable.
+
+For the driving licence, list every visible vehicle category separately. For each category, extract that category's own valid-from and valid-until dates from the category table when visible.
+
+Do not use the general card issue date as the category-B valid-from date.
+
+For identity.selectedType, report the type of identity document actually visible in the photograph. Do not simply repeat the customer's selected option when the visible document is a different type.
+
+Mark quality.overall as "retake" when:
+- text required for the checks is blurred;
+- important document edges are cropped;
+- glare hides information;
+- the wrong document or wrong side is shown;
+- a required document is absent;
+- the visible identity document does not match the selected option.
+
+Use quality.retakeSides to identify exactly which photographs must be taken again.
+
+Compare the holder's name on the driving licence with the name on the passport or identity card.
+
+When information cannot be determined confidently but the photographs do not clearly require a retake, use "uncertain" and explain the issue.`,
       },
     ];
 
@@ -1128,64 +1169,116 @@ Compare the holder name on the driving licence with the passport/ID name.`,
 
     /*
      * API key remains on the server.
-     * The browser never sees it.
+     * The browser never receives it.
      */
-    const openaiResponse =
-      await fetch(
-        "https://api.openai.com/v1/responses",
-        {
-          method:
-            "POST",
+    const controller =
+      new AbortController();
 
-          headers: {
-            Authorization:
-              `Bearer ${apiKey}`,
-
-            "Content-Type":
-              "application/json",
-          },
-
-          body:
-            JSON.stringify({
-              model:
-                MODEL,
-
-              store:
-                false,
-
-              input: [
-                {
-                  role:
-                    "user",
-
-                  content,
-                },
-              ],
-
-              text: {
-                format: {
-                  type:
-                    "json_schema",
-
-                  name:
-                    "nexa_document_screening",
-
-                  strict:
-                    true,
-
-                  schema:
-                    DOCUMENT_SCHEMA,
-                },
-              },
-
-              max_output_tokens:
-                2200,
-            }),
-        }
+    const timeout =
+      setTimeout(
+        () =>
+          controller.abort(),
+        60_000
       );
 
-    const raw =
-      await openaiResponse.json();
+    let openaiResponse:
+      Response;
+
+    try {
+      openaiResponse =
+        await fetch(
+          "https://api.openai.com/v1/responses",
+          {
+            method:
+              "POST",
+
+            headers: {
+              Authorization:
+                `Bearer ${apiKey}`,
+
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                model:
+                  MODEL,
+
+                store:
+                  false,
+
+                input: [
+                  {
+                    role:
+                      "user",
+
+                    content,
+                  },
+                ],
+
+                text: {
+                  format: {
+                    type:
+                      "json_schema",
+
+                    name:
+                      "nexa_document_screening",
+
+                    strict:
+                      true,
+
+                    schema:
+                      DOCUMENT_SCHEMA,
+                  },
+                },
+
+                max_output_tokens:
+                  2200,
+              }),
+
+            signal:
+              controller.signal,
+          }
+        );
+    } catch (
+      caught: any
+    ) {
+      if (
+        caught?.name ===
+        "AbortError"
+      ) {
+        throw new ApiError(
+          "Document analysis timed out. Please try again.",
+          504
+        );
+      }
+
+      throw caught;
+    } finally {
+      clearTimeout(
+        timeout
+      );
+    }
+
+    const responseText =
+      await openaiResponse.text();
+
+    let raw: any = {};
+
+    if (responseText) {
+      try {
+        raw =
+          JSON.parse(
+            responseText
+          );
+      } catch {
+        throw new ApiError(
+          "The document analysis service returned an invalid response.",
+          502
+        );
+      }
+    }
 
     if (
       !openaiResponse.ok
@@ -1195,34 +1288,76 @@ Compare the holder name on the driving licence with the passport/ID name.`,
         raw
       );
 
-      throw new Error(
-        raw?.error?.message ||
-          "OpenAI could not analyze the documents."
+      throw new ApiError(
+        "The document analysis service is temporarily unavailable.",
+        502
+      );
+    }
+
+    const refusal =
+      getRefusalText(raw);
+
+    if (refusal) {
+      console.error(
+        "OPENAI DOCUMENT ANALYSIS REFUSAL:",
+        refusal
+      );
+
+      throw new ApiError(
+        "The document photographs could not be analyzed automatically.",
+        422
+      );
+    }
+
+    if (
+      raw?.status ===
+      "incomplete"
+    ) {
+      console.error(
+        "OPENAI DOCUMENT ANALYSIS INCOMPLETE:",
+        raw?.incomplete_details
+      );
+
+      throw new ApiError(
+        "Document analysis was incomplete. Please try again.",
+        502
       );
     }
 
     const outputText =
-      getOutputText(
-        raw
-      );
+      getOutputText(raw);
 
-    if (
-      !outputText
-    ) {
-      throw new Error(
-        "OpenAI returned no document result."
+    if (!outputText) {
+      throw new ApiError(
+        "OpenAI returned no document result.",
+        502
       );
     }
 
-    const extraction =
-      JSON.parse(
+    let extraction:
+      AiExtraction;
+
+    try {
+      extraction =
+        JSON.parse(
+          outputText
+        ) as AiExtraction;
+    } catch {
+      console.error(
+        "OPENAI DOCUMENT JSON PARSE ERROR:",
         outputText
-      ) as AiExtraction;
+      );
+
+      throw new ApiError(
+        "The document result could not be read.",
+        502
+      );
+    }
 
     /*
-     * OpenAI extracts the data.
-     * Our code applies the actual
-     * rental rules.
+     * OpenAI extracts visible data.
+     * Our own code applies NEXA's
+     * actual rental rules.
      */
     const decision =
       decide(
@@ -1253,6 +1388,11 @@ Compare the holder name on the driving licence with the passport/ID name.`,
       error
     );
 
+    const status =
+      error instanceof ApiError
+        ? error.status
+        : 500;
+
     return NextResponse.json(
       {
         success:
@@ -1263,8 +1403,7 @@ Compare the holder name on the driving licence with the passport/ID name.`,
           "Could not analyze documents.",
       },
       {
-        status:
-          500,
+        status,
       }
     );
   }

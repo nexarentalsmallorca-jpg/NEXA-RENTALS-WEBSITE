@@ -1,265 +1,1420 @@
+import { randomUUID } from "node:crypto";
+
 import { NextResponse } from "next/server";
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
+import type { SupabaseClient } from "@supabase/supabase-js";
+
 import { uploadContractPdfToGoogleDrive } from "@/lib/googleDrive";
+import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BUCKET = "booking-documents";
+const SESSION_TABLE = "document_verification_sessions";
+
+const MAX_IMAGE_BYTES =
+  8 * 1024 * 1024;
+
+const MAX_CONTRACT_BYTES =
+  12 * 1024 * 1024;
+
+const MAX_TOTAL_BYTES =
+  28 * 1024 * 1024;
+
+type IdentityType =
+  | "id"
+  | "passport";
+
+type UploadKey =
+  | "dlFront"
+  | "dlBack"
+  | "idFront"
+  | "idBack"
+  | "contractPdf";
 
 type UploadResult = {
   path: string;
   name: string;
 };
 
-function sanitizeFileName(name: string) {
-  return String(name || "file")
-    .trim()
-    .replace(/[^a-zA-Z0-9._-]/g, "_")
-    .replace(/_+/g, "_")
-    .slice(0, 180);
+type PreparedUpload = {
+  buffer: Buffer;
+  contentType: string;
+  safeName: string;
+};
+
+type GoogleDriveResult = {
+  uploaded?: boolean;
+  skipped?: boolean;
+  failed?: boolean;
+  reason?: string | null;
+
+  fileId?: string | null;
+  fileName?: string | null;
+  webViewLink?: string | null;
+  webContentLink?: string | null;
+
+  folderId?: string | null;
+  folderName?: string | null;
+  folderWebViewLink?: string | null;
+  parentFolderId?: string | null;
+
+  [key: string]: unknown;
+};
+
+class ApiError extends Error {
+  status: number;
+
+  constructor(
+    message: string,
+    status: number
+  ) {
+    super(message);
+
+    this.name = "ApiError";
+    this.status = status;
+  }
 }
 
-function cleanText(value: FormDataEntryValue | null) {
-  return String(value || "").trim();
+function cleanText(
+  value:
+    FormDataEntryValue | null
+) {
+  if (
+    typeof value !==
+    "string"
+  ) {
+    return "";
+  }
+
+  return value.trim();
 }
 
-function getSupabaseAdmin(): SupabaseClient {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+function getTextField(
+  formData: FormData,
+  key: string,
+  maxLength = 250
+) {
+  return cleanText(
+    formData.get(key)
+  ).slice(
+    0,
+    maxLength
+  );
+}
 
-  if (!supabaseUrl || !serviceRoleKey) {
-    throw new Error(
-      "Missing Supabase env keys. Check SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in .env.local and Vercel."
+function sanitizeFileName(
+  value: string
+) {
+  const sanitized =
+    String(
+      value || "file"
+    )
+      .normalize("NFKD")
+      .replace(
+        /[\u0300-\u036f]/g,
+        ""
+      )
+      .replace(
+        /[^a-zA-Z0-9._-]+/g,
+        "_"
+      )
+      .replace(
+        /_+/g,
+        "_"
+      )
+      .replace(
+        /^\.+/,
+        ""
+      )
+      .slice(
+        0,
+        180
+      );
+
+  if (
+    !sanitized ||
+    sanitized === "." ||
+    sanitized === ".."
+  ) {
+    return "file";
+  }
+
+  return sanitized;
+}
+
+function withExtension(
+  originalName: string,
+  fallbackStem: string,
+  extension: string
+) {
+  const safeName =
+    sanitizeFileName(
+      originalName ||
+        fallbackStem
+    );
+
+  const withoutExtension =
+    safeName.replace(
+      /\.[^.]*$/,
+      ""
+    );
+
+  const stem =
+    withoutExtension ||
+    fallbackStem;
+
+  return `${stem.slice(
+    0,
+    160
+  )}.${extension}`;
+}
+
+function validateBookingId(
+  value: string
+) {
+  /*
+   * Booking IDs may be UUIDs,
+   * Stripe-style IDs, or internal
+   * NEXA references.
+   *
+   * Slashes, dots, spaces, and
+   * path-control characters are
+   * deliberately rejected.
+   */
+  if (
+    !value ||
+    !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(
+      value
+    )
+  ) {
+    throw new ApiError(
+      "Invalid bookingId.",
+      400
     );
   }
 
-  return createClient(supabaseUrl, serviceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false,
-    },
-  });
+  return value;
 }
 
-function isUploadFile(value: FormDataEntryValue | null): value is File {
+function isUploadFile(
+  value:
+    FormDataEntryValue | null
+): value is File {
   return value instanceof File;
 }
 
-async function uploadOne(
+function getOptionalFile(
+  formData: FormData,
+  key: string
+) {
+  const value =
+    formData.get(key);
+
+  if (value === null) {
+    return null;
+  }
+
+  if (
+    !isUploadFile(value)
+  ) {
+    throw new ApiError(
+      `${key} must be a file.`,
+      400
+    );
+  }
+
+  if (
+    value.size <= 0
+  ) {
+    throw new ApiError(
+      `${key} is empty.`,
+      400
+    );
+  }
+
+  return value;
+}
+
+function getContractFile(
+  formData: FormData
+) {
+  const possibleKeys = [
+    "contractPdf",
+    "contract",
+    "pdf",
+    "file",
+  ];
+
+  for (
+    const key of
+    possibleKeys
+  ) {
+    const value =
+      formData.get(key);
+
+    if (value === null) {
+      continue;
+    }
+
+    if (
+      isUploadFile(value)
+    ) {
+      if (
+        value.size <= 0
+      ) {
+        throw new ApiError(
+          "The contract PDF is empty.",
+          400
+        );
+      }
+
+      return value;
+    }
+
+    if (
+      cleanText(value)
+    ) {
+      throw new ApiError(
+        `${key} must be a PDF file.`,
+        400
+      );
+    }
+  }
+
+  return null;
+}
+
+function detectImageType(
+  buffer: Buffer
+) {
+  if (
+    buffer.length >= 3 &&
+    buffer[0] === 0xff &&
+    buffer[1] === 0xd8 &&
+    buffer[2] === 0xff
+  ) {
+    return {
+      contentType:
+        "image/jpeg",
+      extension:
+        "jpg",
+    };
+  }
+
+  if (
+    buffer.length >= 8 &&
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47 &&
+    buffer[4] === 0x0d &&
+    buffer[5] === 0x0a &&
+    buffer[6] === 0x1a &&
+    buffer[7] === 0x0a
+  ) {
+    return {
+      contentType:
+        "image/png",
+      extension:
+        "png",
+    };
+  }
+
+  if (
+    buffer.length >= 12 &&
+    buffer
+      .subarray(
+        0,
+        4
+      )
+      .toString("ascii") ===
+      "RIFF" &&
+    buffer
+      .subarray(
+        8,
+        12
+      )
+      .toString("ascii") ===
+      "WEBP"
+  ) {
+    return {
+      contentType:
+        "image/webp",
+      extension:
+        "webp",
+    };
+  }
+
+  if (
+    buffer.length >= 6
+  ) {
+    const signature =
+      buffer
+        .subarray(
+          0,
+          6
+        )
+        .toString("ascii");
+
+    if (
+      signature ===
+        "GIF87a" ||
+      signature ===
+        "GIF89a"
+    ) {
+      return {
+        contentType:
+          "image/gif",
+        extension:
+          "gif",
+      };
+    }
+  }
+
+  return null;
+}
+
+async function prepareImage(
+  file: File,
+  label: string,
+  fallbackStem: string
+): Promise<PreparedUpload> {
+  if (
+    file.size >
+    MAX_IMAGE_BYTES
+  ) {
+    throw new ApiError(
+      `${label} must be smaller than 8 MB.`,
+      400
+    );
+  }
+
+  const buffer =
+    Buffer.from(
+      await file.arrayBuffer()
+    );
+
+  const detected =
+    detectImageType(
+      buffer
+    );
+
+  if (!detected) {
+    throw new ApiError(
+      `${label} must be a real JPEG, PNG, WEBP, or GIF image.`,
+      400
+    );
+  }
+
+  return {
+    buffer,
+
+    contentType:
+      detected.contentType,
+
+    safeName:
+      withExtension(
+        file.name,
+        fallbackStem,
+        detected.extension
+      ),
+  };
+}
+
+async function preparePdf(
+  file: File
+): Promise<PreparedUpload> {
+  if (
+    file.size >
+    MAX_CONTRACT_BYTES
+  ) {
+    throw new ApiError(
+      "The contract PDF must be smaller than 12 MB.",
+      400
+    );
+  }
+
+  const buffer =
+    Buffer.from(
+      await file.arrayBuffer()
+    );
+
+  if (
+    buffer.length < 5 ||
+    buffer
+      .subarray(
+        0,
+        5
+      )
+      .toString("ascii") !==
+      "%PDF-"
+  ) {
+    throw new ApiError(
+      "The contract must be a valid PDF file.",
+      400
+    );
+  }
+
+  return {
+    buffer,
+
+    contentType:
+      "application/pdf",
+
+    safeName:
+      withExtension(
+        file.name,
+        "contract",
+        "pdf"
+      ),
+  };
+}
+
+async function validateVerificationSession(
+  supabase: SupabaseClient,
+  sessionToken: string
+) {
+  if (
+    !sessionToken ||
+    sessionToken.length < 16 ||
+    sessionToken.length > 512
+  ) {
+    throw new ApiError(
+      "Missing or invalid verification session.",
+      400
+    );
+  }
+
+  const {
+    data: session,
+    error,
+  } =
+    await supabase
+      .from(
+        SESSION_TABLE
+      )
+      .select(
+        "session_token,status,expires_at"
+      )
+      .eq(
+        "session_token",
+        sessionToken
+      )
+      .maybeSingle();
+
+  if (error) {
+    console.error(
+      "DOCUMENT UPLOAD SESSION LOOKUP ERROR:",
+      error.message
+    );
+
+    throw new ApiError(
+      "The verification session could not be validated.",
+      500
+    );
+  }
+
+  if (!session) {
+    throw new ApiError(
+      "Verification session not found.",
+      404
+    );
+  }
+
+  const expiresAt =
+    new Date(
+      session.expires_at
+    ).getTime();
+
+  if (
+    !Number.isFinite(
+      expiresAt
+    )
+  ) {
+    throw new ApiError(
+      "The verification session has an invalid expiry date.",
+      500
+    );
+  }
+
+  if (
+    expiresAt <=
+    Date.now()
+  ) {
+    throw new ApiError(
+      "Verification session expired.",
+      410
+    );
+  }
+
+  const status =
+    String(
+      session.status || ""
+    ).toLowerCase();
+
+  if (
+    [
+      "failed",
+      "expired",
+      "cancelled",
+      "rejected",
+    ].includes(status)
+  ) {
+    throw new ApiError(
+      "Verification session is no longer active.",
+      409
+    );
+  }
+
+  return session;
+}
+
+async function uploadPreparedFile(
   supabase: SupabaseClient,
   bookingId: string,
   label: string,
-  file: File | null
+  prepared:
+    PreparedUpload
 ): Promise<UploadResult> {
-  if (!file || file.size === 0) {
-    return { path: "", name: "" };
-  }
+  const path =
+    `${bookingId}/` +
+    `${label}-` +
+    `${Date.now()}-` +
+    `${randomUUID()}-` +
+    prepared.safeName;
 
-  const safeName = sanitizeFileName(file.name || `${label}.bin`);
-  const path = `${bookingId}/${label}-${Date.now()}-${safeName}`;
+  const {
+    error,
+  } =
+    await supabase.storage
+      .from(BUCKET)
+      .upload(
+        path,
+        prepared.buffer,
+        {
+          contentType:
+            prepared.contentType,
 
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
+          upsert:
+            false,
 
-  const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
-    contentType: file.type || "application/octet-stream",
-    upsert: false,
-  });
+          cacheControl:
+            "3600",
+        }
+      );
 
   if (error) {
-    throw new Error(`${label} upload failed: ${error.message}`);
+    console.error(
+      "SUPABASE DOCUMENT UPLOAD ERROR:",
+      {
+        label,
+        message:
+          error.message,
+      }
+    );
+
+    throw new ApiError(
+      `${label} could not be stored securely.`,
+      502
+    );
   }
 
   return {
     path,
-    name: file.name || safeName,
+    name:
+      prepared.safeName,
   };
 }
 
-async function uploadContractPdfToSupabase(
+async function removePartialUploads(
   supabase: SupabaseClient,
-  bookingId: string,
-  file: File | null
-): Promise<UploadResult> {
-  if (!file || file.size === 0) {
-    return { path: "", name: "" };
+  paths: string[]
+) {
+  if (
+    paths.length === 0
+  ) {
+    return;
   }
 
-  const safeName = sanitizeFileName(file.name || "contract.pdf");
-  const finalName = safeName.toLowerCase().endsWith(".pdf")
-    ? safeName
-    : `${safeName}.pdf`;
-
-  const path = `${bookingId}/contract-${Date.now()}-${finalName}`;
-
-  const arrayBuffer = await file.arrayBuffer();
-  const buffer = Buffer.from(arrayBuffer);
-
-  const { error } = await supabase.storage.from(BUCKET).upload(path, buffer, {
-    contentType: "application/pdf",
-    upsert: false,
-  });
+  const {
+    error,
+  } =
+    await supabase.storage
+      .from(BUCKET)
+      .remove(paths);
 
   if (error) {
-    throw new Error(`contract PDF Supabase upload failed: ${error.message}`);
+    console.error(
+      "PARTIAL DOCUMENT CLEANUP ERROR:",
+      error.message
+    );
   }
+}
 
+function emptyUploadResult():
+  UploadResult {
   return {
-    path,
-    name: file.name || finalName,
+    path: "",
+    name: "",
   };
 }
 
-export async function POST(req: Request) {
+function initialGoogleDriveResult(
+  reason:
+    string
+): GoogleDriveResult {
+  return {
+    uploaded:
+      false,
+
+    skipped:
+      true,
+
+    failed:
+      false,
+
+    reason,
+
+    fileId:
+      null,
+
+    fileName:
+      null,
+
+    webViewLink:
+      null,
+
+    webContentLink:
+      null,
+
+    folderId:
+      null,
+
+    folderName:
+      null,
+
+    folderWebViewLink:
+      null,
+
+    parentFolderId:
+      null,
+  };
+}
+
+export async function POST(
+  req: Request
+) {
   try {
-    const supabase = getSupabaseAdmin();
+    const formData =
+      await req.formData();
 
-    const formData = await req.formData();
+    const bookingId =
+      validateBookingId(
+        getTextField(
+          formData,
+          "bookingId",
+          128
+        )
+      );
 
-    const bookingId = cleanText(formData.get("bookingId"));
+    const sessionToken =
+      getTextField(
+        formData,
+        "sessionToken",
+        512
+      ) ||
+      getTextField(
+        formData,
+        "verificationSessionToken",
+        512
+      );
 
-    if (!bookingId) {
-      return NextResponse.json(
-        { success: false, error: "Missing bookingId" },
-        { status: 400 }
+    /*
+     * This prevents an arbitrary public
+     * request from uploading files using
+     * only a guessed booking ID.
+     */
+    await validateVerificationSession(
+      supabaseAdmin,
+      sessionToken
+    );
+
+    const rawIdentityType =
+      getTextField(
+        formData,
+        "identityType",
+        20
+      );
+
+    const dlFrontFile =
+      getOptionalFile(
+        formData,
+        "dlFront"
+      );
+
+    const dlBackFile =
+      getOptionalFile(
+        formData,
+        "dlBack"
+      );
+
+    const idFrontFile =
+      getOptionalFile(
+        formData,
+        "idFront"
+      );
+
+    const idBackFile =
+      getOptionalFile(
+        formData,
+        "idBack"
+      );
+
+    const contractPdfFile =
+      getContractFile(
+        formData
+      );
+
+    const hasAnyDocuments =
+      Boolean(
+        dlFrontFile ||
+        dlBackFile ||
+        idFrontFile ||
+        idBackFile
+      );
+
+    if (
+      !hasAnyDocuments &&
+      !contractPdfFile
+    ) {
+      throw new ApiError(
+        "No document or contract files were provided.",
+        400
       );
     }
 
-    const customerName = cleanText(formData.get("customerName"));
-    const contractDate = cleanText(formData.get("contractDate"));
-    const contractNumber = cleanText(formData.get("contractNumber"));
-    const vehicleCode = cleanText(formData.get("vehicleCode"));
-    const vehiclePlate = cleanText(formData.get("vehiclePlate"));
-    const customerFolderName = cleanText(formData.get("customerFolderName"));
-    const folderName = cleanText(formData.get("folderName"));
+    let identityType:
+      IdentityType | null =
+        null;
 
-    const dlFrontValue = formData.get("dlFront");
-    const dlBackValue = formData.get("dlBack");
-    const idFrontValue = formData.get("idFront");
-    const idBackValue = formData.get("idBack");
+    if (
+      hasAnyDocuments
+    ) {
+      if (
+        rawIdentityType !==
+          "id" &&
+        rawIdentityType !==
+          "passport"
+      ) {
+        throw new ApiError(
+          "identityType must be id or passport.",
+          400
+        );
+      }
 
-    const contractPdfValue =
-      formData.get("contractPdf") ||
-      formData.get("contract") ||
-      formData.get("pdf") ||
-      formData.get("file");
+      identityType =
+        rawIdentityType;
 
-    const dlFrontFile = isUploadFile(dlFrontValue) ? dlFrontValue : null;
-    const dlBackFile = isUploadFile(dlBackValue) ? dlBackValue : null;
-    const idFrontFile = isUploadFile(idFrontValue) ? idFrontValue : null;
-    const idBackFile = isUploadFile(idBackValue) ? idBackValue : null;
-    const contractPdfFile = isUploadFile(contractPdfValue)
-      ? contractPdfValue
-      : null;
+      if (
+        !dlFrontFile
+      ) {
+        throw new ApiError(
+          "Driving licence front is missing.",
+          400
+        );
+      }
 
-    const [dlFrontRes, dlBackRes, idFrontRes, idBackRes, contractSupabaseRes] =
-      await Promise.all([
-        uploadOne(supabase, bookingId, "dl-front", dlFrontFile),
-        uploadOne(supabase, bookingId, "dl-back", dlBackFile),
-        uploadOne(supabase, bookingId, "id-front", idFrontFile),
-        uploadOne(supabase, bookingId, "id-back", idBackFile),
-        uploadContractPdfToSupabase(supabase, bookingId, contractPdfFile),
-      ]);
+      if (
+        !dlBackFile
+      ) {
+        throw new ApiError(
+          "Driving licence back is missing.",
+          400
+        );
+      }
 
-    let googleDriveContract: any = {
-      uploaded: false,
-      skipped: true,
-      failed: false,
-      reason: "No contract PDF file was sent to the upload API.",
-      fileId: null,
-      fileName: null,
-      webViewLink: null,
-      webContentLink: null,
-      folderId: null,
-      folderName: null,
-      folderWebViewLink: null,
-      parentFolderId: null,
-    };
+      if (
+        !idFrontFile
+      ) {
+        throw new ApiError(
+          identityType ===
+            "passport"
+            ? "Passport photo page is missing."
+            : "Identity card front is missing.",
+          400
+        );
+      }
 
-    if (contractPdfFile && contractPdfFile.size > 0) {
-      const arrayBuffer = await contractPdfFile.arrayBuffer();
-      const pdfBuffer = Buffer.from(arrayBuffer);
+      if (
+        identityType ===
+          "id" &&
+        !idBackFile
+      ) {
+        throw new ApiError(
+          "Identity card back is missing.",
+          400
+        );
+      }
+    }
 
-      const finalPdfName =
-        contractPdfFile.name && contractPdfFile.name.toLowerCase().endsWith(".pdf")
-          ? contractPdfFile.name
-          : `${contractNumber || bookingId || "NEXA_CONTRACT"}.pdf`;
+    const allFiles = [
+      dlFrontFile,
+      dlBackFile,
+      idFrontFile,
+      idBackFile,
+      contractPdfFile,
+    ].filter(
+      (
+        file
+      ): file is File =>
+        Boolean(file)
+    );
 
-      googleDriveContract = await uploadContractPdfToGoogleDrive({
-        fileName: finalPdfName,
-        pdfBuffer,
-        folderName: folderName || undefined,
-        customerFolderName: customerFolderName || undefined,
-        customerName: customerName || undefined,
-        contractDate: contractDate || undefined,
-        contractNumber: contractNumber || bookingId || undefined,
-        vehicleCode: vehicleCode || undefined,
-        vehiclePlate: vehiclePlate || undefined,
+    const totalBytes =
+      allFiles.reduce(
+        (
+          total,
+          file
+        ) =>
+          total +
+          file.size,
+        0
+      );
+
+    if (
+      totalBytes >
+      MAX_TOTAL_BYTES
+    ) {
+      throw new ApiError(
+        "The combined upload is too large.",
+        400
+      );
+    }
+
+    /*
+     * Validate every file completely
+     * before uploading anything.
+     */
+    const preparedUploads:
+      Array<{
+        key: UploadKey;
+        storageLabel: string;
+        prepared: PreparedUpload;
+      }> = [];
+
+    if (dlFrontFile) {
+      preparedUploads.push({
+        key:
+          "dlFront",
+
+        storageLabel:
+          "dl-front",
+
+        prepared:
+          await prepareImage(
+            dlFrontFile,
+            "Driving licence front",
+            "driving-licence-front"
+          ),
       });
     }
 
-    console.log("✅ Booking documents upload completed:", {
-      bookingId,
-      dlFrontPath: dlFrontRes.path,
-      dlBackPath: dlBackRes.path,
-      idFrontPath: idFrontRes.path,
-      idBackPath: idBackRes.path,
-      contractSupabasePath: contractSupabaseRes.path,
-      googleDriveUploaded: googleDriveContract?.uploaded,
-      googleDriveFailed: googleDriveContract?.failed,
-      googleDriveReason: googleDriveContract?.reason,
-      googleDriveFileLink: googleDriveContract?.webViewLink,
-      googleDriveFolderLink: googleDriveContract?.folderWebViewLink,
-    });
+    if (dlBackFile) {
+      preparedUploads.push({
+        key:
+          "dlBack",
+
+        storageLabel:
+          "dl-back",
+
+        prepared:
+          await prepareImage(
+            dlBackFile,
+            "Driving licence back",
+            "driving-licence-back"
+          ),
+      });
+    }
+
+    if (idFrontFile) {
+      preparedUploads.push({
+        key:
+          "idFront",
+
+        storageLabel:
+          identityType ===
+            "passport"
+            ? "passport"
+            : "id-front",
+
+        prepared:
+          await prepareImage(
+            idFrontFile,
+            identityType ===
+              "passport"
+              ? "Passport photo page"
+              : "Identity card front",
+            identityType ===
+              "passport"
+              ? "passport"
+              : "identity-card-front"
+          ),
+      });
+    }
+
+    if (idBackFile) {
+      preparedUploads.push({
+        key:
+          "idBack",
+
+        storageLabel:
+          "id-back",
+
+        prepared:
+          await prepareImage(
+            idBackFile,
+            "Identity card back",
+            "identity-card-back"
+          ),
+      });
+    }
+
+    let preparedContract:
+      PreparedUpload | null =
+        null;
+
+    if (contractPdfFile) {
+      preparedContract =
+        await preparePdf(
+          contractPdfFile
+        );
+
+      preparedUploads.push({
+        key:
+          "contractPdf",
+
+        storageLabel:
+          "contract",
+
+        prepared:
+          preparedContract,
+      });
+    }
+
+    /*
+     * Wait for every Supabase upload to
+     * settle. If one fails, remove every
+     * successful file from this attempt.
+     */
+    const settledUploads =
+      await Promise.allSettled(
+        preparedUploads.map(
+          async (
+            upload
+          ) => {
+            const result =
+              await uploadPreparedFile(
+                supabaseAdmin,
+                bookingId,
+                upload.storageLabel,
+                upload.prepared
+              );
+
+            return {
+              key:
+                upload.key,
+
+              result,
+            };
+          }
+        )
+      );
+
+    const successfulUploads =
+      settledUploads
+        .filter(
+          (
+            item
+          ): item is PromiseFulfilledResult<{
+            key: UploadKey;
+            result: UploadResult;
+          }> =>
+            item.status ===
+            "fulfilled"
+        )
+        .map(
+          (item) =>
+            item.value
+        );
+
+    const failedUpload =
+      settledUploads.find(
+        (item) =>
+          item.status ===
+          "rejected"
+      );
+
+    if (failedUpload) {
+      await removePartialUploads(
+        supabaseAdmin,
+        successfulUploads.map(
+          (item) =>
+            item.result.path
+        )
+      );
+
+      throw failedUpload.reason;
+    }
+
+    const resultMap =
+      new Map<
+        UploadKey,
+        UploadResult
+      >(
+        successfulUploads.map(
+          (item) => [
+            item.key,
+            item.result,
+          ]
+        )
+      );
+
+    const dlFrontRes =
+      resultMap.get(
+        "dlFront"
+      ) ||
+      emptyUploadResult();
+
+    const dlBackRes =
+      resultMap.get(
+        "dlBack"
+      ) ||
+      emptyUploadResult();
+
+    const idFrontRes =
+      resultMap.get(
+        "idFront"
+      ) ||
+      emptyUploadResult();
+
+    const idBackRes =
+      resultMap.get(
+        "idBack"
+      ) ||
+      emptyUploadResult();
+
+    const contractSupabaseRes =
+      resultMap.get(
+        "contractPdf"
+      ) ||
+      emptyUploadResult();
+
+    const customerName =
+      getTextField(
+        formData,
+        "customerName",
+        180
+      );
+
+    const contractDate =
+      getTextField(
+        formData,
+        "contractDate",
+        50
+      );
+
+    const contractNumber =
+      getTextField(
+        formData,
+        "contractNumber",
+        120
+      );
+
+    const vehicleCode =
+      getTextField(
+        formData,
+        "vehicleCode",
+        120
+      );
+
+    const vehiclePlate =
+      getTextField(
+        formData,
+        "vehiclePlate",
+        50
+      );
+
+    const customerFolderName =
+      getTextField(
+        formData,
+        "customerFolderName",
+        180
+      );
+
+    const folderName =
+      getTextField(
+        formData,
+        "folderName",
+        180
+      );
+
+    let googleDriveContract =
+      initialGoogleDriveResult(
+        "No contract PDF file was sent to the upload API."
+      );
+
+    /*
+     * Supabase is the secure primary
+     * contract copy.
+     *
+     * Google Drive is secondary. A Drive
+     * outage must not make the browser
+     * repeat already successful document
+     * uploads.
+     */
+    if (
+      preparedContract
+    ) {
+      try {
+        const driveResult =
+          await uploadContractPdfToGoogleDrive(
+            {
+              fileName:
+                preparedContract.safeName,
+
+              pdfBuffer:
+                preparedContract.buffer,
+
+              folderName:
+                folderName ||
+                undefined,
+
+              customerFolderName:
+                customerFolderName ||
+                undefined,
+
+              customerName:
+                customerName ||
+                undefined,
+
+              contractDate:
+                contractDate ||
+                undefined,
+
+              contractNumber:
+                contractNumber ||
+                bookingId,
+
+              vehicleCode:
+                vehicleCode ||
+                undefined,
+
+              vehiclePlate:
+                vehiclePlate ||
+                undefined,
+            }
+          );
+
+        googleDriveContract =
+          (
+            driveResult ||
+            initialGoogleDriveResult(
+              "Google Drive returned no upload result."
+            )
+          ) as GoogleDriveResult;
+      } catch (
+        driveError: any
+      ) {
+        console.error(
+          "GOOGLE DRIVE CONTRACT UPLOAD ERROR:",
+          {
+            message:
+              driveError?.message,
+          }
+        );
+
+        googleDriveContract = {
+          ...initialGoogleDriveResult(
+            "The contract was saved securely, but the Google Drive copy could not be created."
+          ),
+
+          skipped:
+            false,
+
+          failed:
+            true,
+        };
+      }
+    }
+
+    /*
+     * Do not log private storage paths,
+     * document names, or Google Drive
+     * links.
+     */
+    console.log(
+      "Booking documents upload completed:",
+      {
+        bookingId,
+
+        documentUploadCount:
+          successfulUploads.filter(
+            (item) =>
+              item.key !==
+              "contractPdf"
+          ).length,
+
+        contractSavedToSupabase:
+          Boolean(
+            contractSupabaseRes.path
+          ),
+
+        googleDriveUploaded:
+          Boolean(
+            googleDriveContract
+              .uploaded
+          ),
+
+        googleDriveFailed:
+          Boolean(
+            googleDriveContract
+              .failed
+          ),
+      }
+    );
 
     return NextResponse.json({
-      success: true,
+      success:
+        true,
 
-      dlFrontPath: dlFrontRes.path,
-      dlBackPath: dlBackRes.path,
-      idFrontPath: idFrontRes.path,
-      idBackPath: idBackRes.path,
+      dlFrontPath:
+        dlFrontRes.path,
 
-      dlFrontName: dlFrontRes.name,
-      dlBackName: dlBackRes.name,
-      idFrontName: idFrontRes.name,
-      idBackName: idBackRes.name,
+      dlBackPath:
+        dlBackRes.path,
 
-      contractPdfPath: contractSupabaseRes.path,
-      contractPdfName: contractSupabaseRes.name,
+      idFrontPath:
+        idFrontRes.path,
 
-      googleDriveContractUploaded: Boolean(googleDriveContract?.uploaded),
-      googleDriveContractSkipped: Boolean(googleDriveContract?.skipped),
-      googleDriveContractFailed: Boolean(googleDriveContract?.failed),
-      googleDriveContractReason: googleDriveContract?.reason || null,
+      idBackPath:
+        idBackRes.path,
 
-      googleDriveFileId: googleDriveContract?.fileId || null,
-      googleDriveFileName: googleDriveContract?.fileName || null,
-      googleDriveFileLink: googleDriveContract?.webViewLink || null,
-      googleDriveFileDownloadLink: googleDriveContract?.webContentLink || null,
+      dlFrontName:
+        dlFrontRes.name,
 
-      googleDriveFolderId: googleDriveContract?.folderId || null,
-      googleDriveFolderName: googleDriveContract?.folderName || null,
-      googleDriveFolderLink: googleDriveContract?.folderWebViewLink || null,
-      googleDriveParentFolderId: googleDriveContract?.parentFolderId || null,
+      dlBackName:
+        dlBackRes.name,
 
-      googleDrive: googleDriveContract,
+      idFrontName:
+        idFrontRes.name,
+
+      idBackName:
+        idBackRes.name,
+
+      contractPdfPath:
+        contractSupabaseRes.path,
+
+      contractPdfName:
+        contractSupabaseRes.name,
+
+      googleDriveContractUploaded:
+        Boolean(
+          googleDriveContract
+            .uploaded
+        ),
+
+      googleDriveContractSkipped:
+        Boolean(
+          googleDriveContract
+            .skipped
+        ),
+
+      googleDriveContractFailed:
+        Boolean(
+          googleDriveContract
+            .failed
+        ),
+
+      googleDriveContractReason:
+        googleDriveContract
+          .reason ||
+        null,
+
+      googleDriveFileId:
+        googleDriveContract
+          .fileId ||
+        null,
+
+      googleDriveFileName:
+        googleDriveContract
+          .fileName ||
+        null,
+
+      googleDriveFileLink:
+        googleDriveContract
+          .webViewLink ||
+        null,
+
+      googleDriveFileDownloadLink:
+        googleDriveContract
+          .webContentLink ||
+        null,
+
+      googleDriveFolderId:
+        googleDriveContract
+          .folderId ||
+        null,
+
+      googleDriveFolderName:
+        googleDriveContract
+          .folderName ||
+        null,
+
+      googleDriveFolderLink:
+        googleDriveContract
+          .folderWebViewLink ||
+        null,
+
+      googleDriveParentFolderId:
+        googleDriveContract
+          .parentFolderId ||
+        null,
+
+      googleDrive:
+        googleDriveContract,
     });
-  } catch (error: any) {
-    console.error("UPLOAD BOOKING DOCUMENTS ERROR:", {
-      message: error?.message,
-      stack: error?.stack,
-      responseData: error?.response?.data,
-    });
+  } catch (
+    error: any
+  ) {
+    console.error(
+      "UPLOAD BOOKING DOCUMENTS ERROR:",
+      {
+        message:
+          error?.message,
+
+        stack:
+          error?.stack,
+      }
+    );
+
+    const status =
+      error instanceof ApiError
+        ? error.status
+        : 500;
 
     return NextResponse.json(
       {
-        success: false,
+        success:
+          false,
+
         error:
           error?.message ||
-          "Upload failed. Please try again or continue without documents.",
+          "Upload failed. Please try again.",
       },
-      { status: 500 }
+      {
+        status,
+      }
     );
   }
 }

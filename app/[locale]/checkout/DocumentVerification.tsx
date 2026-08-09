@@ -9,8 +9,11 @@ import {
 } from "react";
 import { useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
+import { QRCodeSVG } from "qrcode.react";
 
-export type IdentityDocumentType = "id" | "passport";
+export type IdentityDocumentType =
+  | "id"
+  | "passport";
 
 export type ExtractedVehicleClass = {
   category: string;
@@ -73,19 +76,28 @@ type Props = {
   onCancel?: () => void;
 };
 
+type SessionStatus =
+  | "pending"
+  | "scanning"
+  | "completed"
+  | "failed"
+  | "expired"
+  | "cancelled";
+
+type InterfaceStatus =
+  | "idle"
+  | "preparing"
+  | "checking"
+  | "ready"
+  | "error";
+
 type SessionData = {
   success: boolean;
 
   sessionToken?: string;
   bookingId?: string;
 
-  status?:
-    | "pending"
-    | "scanning"
-    | "completed"
-    | "failed"
-    | "expired"
-    | "cancelled";
+  status?: SessionStatus;
 
   identityType?: IdentityDocumentType | null;
 
@@ -129,7 +141,45 @@ function param(
   },
   name: string
 ) {
-  return String(search.get(name) || "").trim();
+  return String(
+    search.get(name) || ""
+  ).trim();
+}
+
+function makeScannerUrl(
+  data: SessionData,
+  includeReturnUrl: boolean
+) {
+  if (
+    typeof window === "undefined" ||
+    !data.verifyPath
+  ) {
+    return "";
+  }
+
+  const url = new URL(
+    data.verifyPath,
+    window.location.origin
+  );
+
+  /*
+   * Desktop QR links do not redirect the
+   * phone back into the desktop checkout.
+   * The desktop watches the same session
+   * and updates automatically.
+   *
+   * Mobile navigation includes the return
+   * URL so the customer comes back to the
+   * checkout after completing the scan.
+   */
+  if (includeReturnUrl) {
+    url.searchParams.set(
+      "return",
+      window.location.href
+    );
+  }
+
+  return url.toString();
 }
 
 export default function DocumentVerification({
@@ -145,27 +195,34 @@ export default function DocumentVerification({
   const [session, setSession] =
     useState<SessionData | null>(null);
 
-  const [status, setStatus] = useState<
-    | "idle"
-    | "preparing"
-    | "checking"
-    | "ready"
-    | "error"
-  >("idle");
+  const [status, setStatus] =
+    useState<InterfaceStatus>("idle");
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
+
+  const [qrUrl, setQrUrl] =
+    useState("");
 
   const fleetGroup = useMemo(() => {
     return (
-      param(searchParams, "fleetGroup") ||
-      "scooter"
+      param(
+        searchParams,
+        "fleetGroup"
+      ) || "scooter"
     );
   }, [searchParams]);
 
   const vehicleName = useMemo(() => {
     return (
-      param(searchParams, "vehicleName") ||
-      param(searchParams, "vehicle") ||
+      param(
+        searchParams,
+        "vehicleName"
+      ) ||
+      param(
+        searchParams,
+        "vehicle"
+      ) ||
       "scooter"
     );
   }, [searchParams]);
@@ -188,9 +245,11 @@ export default function DocumentVerification({
       const licenceData: ExtractedDocumentData = {
         ...EMPTY_DOCUMENT,
 
-        firstName: data.firstName || "",
+        firstName:
+          data.firstName || "",
 
-        lastName: data.lastName || "",
+        lastName:
+          data.lastName || "",
 
         fullName: [
           data.firstName,
@@ -199,12 +258,14 @@ export default function DocumentVerification({
           .filter(Boolean)
           .join(" "),
 
-        address: data.homeAddress || "",
+        address:
+          data.homeAddress || "",
       };
 
       onComplete?.({
         identityType:
-          data.identityType === "passport"
+          data.identityType ===
+          "passport"
             ? "passport"
             : "id",
 
@@ -223,8 +284,11 @@ export default function DocumentVerification({
         rawLicenceResult: null,
         rawIdentityResult: null,
 
-        sessionToken: data.sessionToken,
-        bookingId: data.bookingId,
+        sessionToken:
+          data.sessionToken,
+
+        bookingId:
+          data.bookingId,
 
         dlFrontPath:
           data.dlFrontPath || "",
@@ -287,6 +351,7 @@ export default function DocumentVerification({
     useCallback(async () => {
       setStatus("preparing");
       setError("");
+      setQrUrl("");
 
       const response = await fetch(
         "/api/document-verification/session",
@@ -321,7 +386,22 @@ export default function DocumentVerification({
         );
       }
 
+      const desktopScannerUrl =
+        makeScannerUrl(
+          data,
+          false
+        );
+
+      if (!desktopScannerUrl) {
+        throw new Error(
+          "Could not generate the secure QR code."
+        );
+      }
+
       setSession(data);
+      setQrUrl(
+        desktopScannerUrl
+      );
       setStatus("ready");
 
       return data;
@@ -331,14 +411,19 @@ export default function DocumentVerification({
       vehicleName,
     ]);
 
+  /*
+   * Initialize the verification session
+   * when checkout opens.
+   */
   useEffect(() => {
     let cancelled = false;
 
     async function initialize() {
       try {
         /*
-         * Customer returned from the
-         * dedicated scanner route.
+         * The customer returned to checkout
+         * after completing the scanner on
+         * this same mobile device.
          */
         if (returnedToken) {
           setStatus("checking");
@@ -353,14 +438,16 @@ export default function DocumentVerification({
           }
 
           if (
-            data.status === "completed"
+            data.status ===
+            "completed"
           ) {
             finish(data);
             return;
           }
 
           if (
-            data.status === "failed"
+            data.status ===
+            "failed"
           ) {
             throw new Error(
               data.errorMessage ||
@@ -370,9 +457,8 @@ export default function DocumentVerification({
         }
 
         /*
-         * Prepare the secure session
-         * while the customer reads
-         * the instructions.
+         * Prepare the QR or mobile scanner
+         * before the customer presses it.
          */
         if (
           autoStart &&
@@ -405,14 +491,141 @@ export default function DocumentVerification({
     returnedToken,
   ]);
 
+  /*
+   * Keep checking the verification session.
+   *
+   * This allows the customer to scan the QR
+   * with a phone while the desktop checkout
+   * automatically detects completion.
+   */
+  useEffect(() => {
+    const token =
+      session?.sessionToken;
+
+    if (!token) {
+      return;
+    }
+
+    let stopped = false;
+    let timer:
+      | number
+      | undefined;
+
+    async function checkSession() {
+      try {
+        const data =
+          await readSession(
+            token as string
+          );
+
+        if (
+          stopped ||
+          completedRef.current
+        ) {
+          return;
+        }
+
+        if (
+          data.status ===
+          "completed"
+        ) {
+          setStatus("checking");
+          finish(data);
+          return;
+        }
+
+        if (
+          data.status ===
+          "failed"
+        ) {
+          setError(
+            data.errorMessage ||
+              "Documents were not accepted."
+          );
+
+          setStatus("error");
+          return;
+        }
+
+        if (
+          data.status ===
+            "expired" ||
+          data.status ===
+            "cancelled"
+        ) {
+          setError(
+            "The secure scanner link expired. Create a new scanner link and try again."
+          );
+
+          setStatus("error");
+          return;
+        }
+      } catch {
+        /*
+         * A temporary polling interruption
+         * should not destroy the active QR.
+         * The next poll will try again.
+         */
+      }
+
+      if (!stopped) {
+        timer =
+          window.setTimeout(
+            checkSession,
+            1300
+          );
+      }
+    }
+
+    timer =
+      window.setTimeout(
+        checkSession,
+        700
+      );
+
+    return () => {
+      stopped = true;
+
+      if (timer) {
+        window.clearTimeout(
+          timer
+        );
+      }
+    };
+  }, [
+    session?.sessionToken,
+    finish,
+    readSession,
+  ]);
+
+  async function prepareAgain() {
+    try {
+      completedRef.current =
+        false;
+
+      setSession(null);
+      setQrUrl("");
+
+      await createSession();
+    } catch (caught: any) {
+      setError(
+        caught?.message ||
+          "Could not create a new scanner link."
+      );
+
+      setStatus("error");
+    }
+  }
+
   async function openScanner() {
     try {
+      setError("");
+
       let data = session;
 
       /*
-       * Recheck the session before
-       * navigating in case it expired
-       * while the customer waited.
+       * Check that the existing session is
+       * still active before leaving checkout.
        */
       if (
         data?.sessionToken &&
@@ -424,8 +637,19 @@ export default function DocumentVerification({
           );
 
         if (
-          current.status !== "pending" &&
-          current.status !== "scanning"
+          current.status ===
+          "completed"
+        ) {
+          setStatus("checking");
+          finish(current);
+          return;
+        }
+
+        if (
+          current.status !==
+            "pending" &&
+          current.status !==
+            "scanning"
         ) {
           data =
             await createSession();
@@ -444,22 +668,25 @@ export default function DocumentVerification({
         );
       }
 
+      const mobileScannerUrl =
+        makeScannerUrl(
+          data,
+          true
+        );
+
+      if (!mobileScannerUrl) {
+        throw new Error(
+          "Could not open the secure scanner."
+        );
+      }
+
       /*
-       * This performs real navigation.
-       * Checkout disappears completely.
+       * Real page navigation makes checkout
+       * disappear completely and opens the
+       * dedicated black scanner screen.
        */
-      const scannerUrl = new URL(
-        data.verifyPath,
-        window.location.origin
-      );
-
-      scannerUrl.searchParams.set(
-        "return",
-        window.location.href
-      );
-
       window.location.assign(
-        scannerUrl.toString()
+        mobileScannerUrl
       );
     } catch (caught: any) {
       setError(
@@ -475,75 +702,333 @@ export default function DocumentVerification({
     status === "preparing" ||
     status === "checking";
 
+  const qrReady =
+    status === "ready" &&
+    Boolean(qrUrl);
+
   return (
     <section
       id="nexa-document-verification"
-      className="border border-black/10 bg-white p-5 md:p-6"
+      className="overflow-hidden border border-black/10 bg-white"
     >
-      <div className="text-[10px] font-black uppercase tracking-[0.22em] text-black/40">
-        Faster pickup · Secure documents
-      </div>
+      <div className="p-5 md:p-7">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-black/40">
+              Faster pickup · Secure documents
+            </div>
 
-      <h2 className="mt-2 text-[28px] font-black leading-none tracking-[-0.045em] text-black">
-        Validate your documents
-      </h2>
+            <h2 className="mt-2 text-[28px] font-black leading-none tracking-[-0.045em] text-black md:text-[32px]">
+              Validate your documents
+            </h2>
 
-      <p className="mt-3 max-w-2xl text-[13px] font-medium leading-6 text-black/58">
-        Open the private full-screen
-        scanner and photograph your
-        driving licence plus a passport
-        or ID card.
-      </p>
-
-      <div className="mt-5 grid gap-2 sm:grid-cols-3">
-        {[
-          "Licence front + back",
-          "Passport or ID",
-          "Automatic screening",
-        ].map((text, index) => (
-          <div
-            key={text}
-            className="flex min-h-[52px] items-center gap-3 border border-black/10 bg-[#f7f7f7] px-3 py-2"
-          >
-            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-black text-[11px] font-black text-white">
-              {index + 1}
-            </span>
-
-            <span className="text-[11px] font-black text-black/65">
-              {text}
-            </span>
+            <p className="mt-3 max-w-2xl text-[13px] font-medium leading-6 text-black/58">
+              Verify your driving
+              licence and passport or
+              ID before pickup.
+            </p>
           </div>
-        ))}
+
+          <div className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-700 sm:block">
+            Secure session
+          </div>
+        </div>
+
+        {error ? (
+          <div className="mt-5 border border-red-200 bg-red-50 px-4 py-3">
+            <p className="text-[12px] font-bold leading-5 text-red-700">
+              {error}
+            </p>
+
+            <button
+              type="button"
+              onClick={() =>
+                void prepareAgain()
+              }
+              className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-red-800 underline underline-offset-4"
+            >
+              Create a new secure link
+            </button>
+          </div>
+        ) : null}
+
+        {/*
+         * Desktop and large tablet layout:
+         * QR code on the left and numbered
+         * instructions on the right.
+         */}
+        <div className="mt-7 hidden md:grid md:grid-cols-[300px_minmax(0,1fr)] md:items-center md:gap-10">
+          <div className="mx-auto w-full max-w-[286px]">
+            <div className="nexa-gradient-frame rounded-[27px] p-[2px] shadow-[0_24px_60px_rgba(41,31,89,0.18)]">
+              <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[25px] bg-white p-[20px]">
+                {qrReady ? (
+                  <div className="w-full overflow-hidden rounded-[16px] bg-white p-2">
+                    <QRCodeSVG
+                      value={qrUrl}
+                      size={230}
+                      level="M"
+                      marginSize={0}
+                      bgColor="#ffffff"
+                      fgColor="#050505"
+                      title="Scan to verify your NEXA Rentals documents"
+                      className="h-auto w-full"
+                    />
+                  </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center text-center">
+                    <div className="nexa-loader h-11 w-11 rounded-full border-[3px] border-black/10 border-t-black" />
+
+                    <p className="mt-4 text-[11px] font-black uppercase tracking-[0.14em] text-black/45">
+                      {status ===
+                      "checking"
+                        ? "Checking documents"
+                        : "Creating secure QR"}
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="mt-3 flex items-center justify-center gap-2 text-[9px] font-black uppercase tracking-[0.12em] text-black/35">
+              <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              Private one-time scanner
+            </div>
+          </div>
+
+          <div>
+            <DesktopInstruction
+              number="1"
+              title="Scan this QR code"
+              description="Open your phone camera and scan the QR code shown on this screen."
+              active
+            />
+
+            <DesktopInstruction
+              number="2"
+              title="Verify your documents"
+              description="Scan the front and back of your driving licence, then choose an ID card or passport."
+            />
+
+            <DesktopInstruction
+              number="3"
+              title="Keep this page open"
+              description="When verification finishes on your phone, this checkout will update automatically."
+              last
+            />
+          </div>
+        </div>
+
+        {/*
+         * Mobile layout:
+         * Direct animated button instead
+         * of showing a QR code.
+         */}
+        <div className="mt-6 md:hidden">
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              {
+                number: "1",
+                label: "Licence",
+              },
+              {
+                number: "2",
+                label: "ID or passport",
+              },
+              {
+                number: "3",
+                label: "Finish",
+              },
+            ].map((item) => (
+              <div
+                key={item.number}
+                className="min-h-[74px] border border-black/10 bg-[#f7f7f7] px-2 py-3 text-center"
+              >
+                <span className="mx-auto flex h-6 w-6 items-center justify-center rounded-full bg-black text-[9px] font-black text-white">
+                  {item.number}
+                </span>
+
+                <div className="mt-2 text-[9px] font-black leading-3 text-black/55">
+                  {item.label}
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="nexa-heartbeat mt-5">
+            <div className="nexa-gradient-button rounded-[15px] p-[2px] shadow-[0_18px_45px_rgba(86,67,214,0.28)]">
+              <button
+                type="button"
+                disabled={busy}
+                onClick={() =>
+                  void openScanner()
+                }
+                className="flex min-h-[62px] w-full items-center justify-center gap-3 rounded-[13px] bg-transparent px-5 text-[12px] font-black uppercase tracking-[0.13em] text-white transition active:scale-[0.975] disabled:cursor-wait disabled:text-white/70"
+              >
+                {busy ? (
+                  <>
+                    <span className="nexa-loader h-5 w-5 rounded-full border-2 border-white/30 border-t-white" />
+                    Preparing scanner
+                  </>
+                ) : (
+                  <>
+                    <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white/18 text-[16px]">
+                      ▣
+                    </span>
+
+                    Verify your documents
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+
+          <p className="mx-auto mt-3 max-w-sm text-center text-[10px] font-bold leading-4 text-black/40">
+            Opens the private
+            full-screen camera scanner
+            on this phone.
+          </p>
+        </div>
+
+        {onCancel ? (
+          <button
+            type="button"
+            onClick={onCancel}
+            className="mt-5 w-full py-2 text-[11px] font-black text-black/45"
+          >
+            Cancel and go back
+          </button>
+        ) : null}
       </div>
 
-      {error ? (
-        <p className="mt-4 border border-red-200 bg-red-50 px-4 py-3 text-[13px] font-bold text-red-700">
-          {error}
-        </p>
-      ) : null}
+      <style jsx global>{`
+        @keyframes nexa-gradient-flow {
+          0% {
+            background-position: 0% 50%;
+          }
 
-      <button
-        type="button"
-        disabled={busy}
-        onClick={() =>
-          void openScanner()
+          50% {
+            background-position: 100% 50%;
+          }
+
+          100% {
+            background-position: 0% 50%;
+          }
         }
-        className="mt-5 min-h-[58px] w-full bg-black px-5 text-[13px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#222] active:scale-[0.99] disabled:cursor-wait disabled:bg-black/30"
-      >
-        {busy
-          ? "Preparing secure scanner..."
-          : "Open document scanner"}
-      </button>
 
-      {onCancel ? (
-        <button
-          type="button"
-          onClick={onCancel}
-          className="mt-3 w-full py-2 text-[11px] font-black text-black/45"
-        >
-          Cancel and go back
-        </button>
-      ) : null}
+        @keyframes nexa-heartbeat {
+          0%,
+          42%,
+          100% {
+            transform: scale(1);
+          }
+
+          48% {
+            transform: scale(1.018);
+          }
+
+          54% {
+            transform: scale(1);
+          }
+
+          60% {
+            transform: scale(1.012);
+          }
+
+          66% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes nexa-loader-spin {
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        .nexa-gradient-frame,
+        .nexa-gradient-button {
+          background: linear-gradient(
+            115deg,
+            #24c8ff,
+            #536dfe,
+            #8b5cf6,
+            #d946ef,
+            #ff7a18,
+            #24c8ff
+          );
+
+          background-size: 320% 320%;
+
+          animation: nexa-gradient-flow
+            4.2s ease infinite;
+        }
+
+        .nexa-heartbeat {
+          transform-origin: center;
+
+          animation: nexa-heartbeat
+            2.2s ease-in-out infinite;
+        }
+
+        .nexa-loader {
+          animation: nexa-loader-spin
+            0.8s linear infinite;
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nexa-gradient-frame,
+          .nexa-gradient-button,
+          .nexa-heartbeat,
+          .nexa-loader {
+            animation: none;
+          }
+        }
+      `}</style>
     </section>
+  );
+}
+
+function DesktopInstruction({
+  number,
+  title,
+  description,
+  active = false,
+  last = false,
+}: {
+  number: string;
+  title: string;
+  description: string;
+  active?: boolean;
+  last?: boolean;
+}) {
+  return (
+    <div className="relative flex gap-4">
+      <div className="relative flex shrink-0 flex-col items-center">
+        <div
+          className={[
+            "relative z-10 flex h-10 w-10 items-center justify-center rounded-full text-[12px] font-black",
+            active
+              ? "bg-black text-white shadow-[0_8px_22px_rgba(0,0,0,0.18)]"
+              : "border border-black/12 bg-white text-black/45",
+          ].join(" ")}
+        >
+          {number}
+        </div>
+
+        {!last ? (
+          <div className="h-[54px] w-px bg-black/10" />
+        ) : null}
+      </div>
+
+      <div className="pt-1">
+        <h3 className="text-[15px] font-black tracking-[-0.02em] text-black">
+          {title}
+        </h3>
+
+        <p className="mt-1 max-w-md text-[11px] font-semibold leading-5 text-black/48">
+          {description}
+        </p>
+      </div>
+    </div>
   );
 }
