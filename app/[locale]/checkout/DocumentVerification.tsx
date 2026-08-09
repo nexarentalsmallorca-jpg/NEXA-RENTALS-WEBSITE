@@ -20,6 +20,7 @@ const manrope = Manrope({
 });
 
 const LIVE_VERIFICATION_ORIGIN = "https://www.nexarentals.es";
+
 const QR_SESSION_SECONDS = 10 * 60;
 
 export type IdentityDocumentType = "id" | "passport";
@@ -421,7 +422,8 @@ function extractDocumentData(
       ) ||
       textFromResult(
         documentClassInfo
-          ?.documentType?.id
+          ?.documentType
+          ?.id
       ),
 
     vehicleClasses:
@@ -483,26 +485,33 @@ async function imageDataToFile(
     imageDataValue.height;
 
   const ctx =
-    canvas.getContext(
-      "2d"
-    );
+    canvas.getContext("2d");
 
   if (!ctx) {
     return null;
   }
 
-  const rawData =
-    new Uint8ClampedArray(
-      imageDataValue.width *
-        imageDataValue.height *
-        4
-    );
+  const expectedLength =
+    imageDataValue.width *
+    imageDataValue.height *
+    4;
 
-  rawData.set(
-    Array.from(
-      imageDataValue.data
-    )
-  );
+  const rawData =
+    imageDataValue.data instanceof
+    Uint8ClampedArray
+      ? new Uint8ClampedArray(
+          imageDataValue.data
+        )
+      : Uint8ClampedArray.from(
+          imageDataValue.data
+        );
+
+  if (
+    rawData.length !==
+    expectedLength
+  ) {
+    return null;
+  }
 
   const usableImageData =
     new ImageData(
@@ -576,7 +585,6 @@ function Spinner({
       }}
       className={[
         "h-8 w-8 rounded-full border-[3px]",
-
         light
           ? "border-white/20 border-t-white"
           : "border-black/10 border-t-black",
@@ -2021,11 +2029,6 @@ export default function DocumentVerification({
     stopPolling,
   ]);
 
-  /*
-   * MOBILE:
-   * Customer lands directly at
-   * the validation section.
-   */
   useEffect(() => {
     if (
       !isMobile ||
@@ -2071,10 +2074,6 @@ export default function DocumentVerification({
     status,
   ]);
 
-  /*
-   * MOBILE:
-   * BlinkID scan result.
-   */
   const handleMobileScannerResult =
     useCallback(
       async (
@@ -2230,11 +2229,6 @@ export default function DocumentVerification({
       ]
     );
 
-  /*
-   * MOBILE:
-   * Start BlinkID directly inside
-   * the checkout page.
-   */
   const startMobileScanner =
     useCallback(
       async (
@@ -2283,6 +2277,16 @@ export default function DocumentVerification({
           false;
 
         try {
+          if (
+            typeof window ===
+            "undefined"
+          ) {
+            mobileScannerStartingRef.current =
+              false;
+
+            return;
+          }
+
           await destroyMobileScanner();
 
           mobileScannerStartingRef.current =
@@ -2315,10 +2319,6 @@ export default function DocumentVerification({
               "start",
           });
 
-          /*
-           * Browser-only import.
-           * Keeps production build safe.
-           */
           const {
             createBlinkId,
           } =
@@ -2326,9 +2326,31 @@ export default function DocumentVerification({
               "@microblink/blinkid"
             );
 
+          /*
+           * CRITICAL PRODUCTION FIX
+           *
+           * BlinkID must resolve its worker/WASM files
+           * from the website ROOT:
+           *
+           * /resources/blinkid-worker.js
+           *
+           * NOT:
+           *
+           * /en/resources/blinkid-worker.js
+           * /es/resources/blinkid-worker.js
+           * etc.
+           *
+           * Microblink expects a BASE URL here and
+           * appends "resources/..." itself.
+           */
+          const resourcesLocation =
+            `${window.location.origin}/`;
+
           const blinkId =
             await createBlinkId({
               licenseKey,
+
+              resourcesLocation,
 
               targetNode:
                 mount,
@@ -2437,7 +2459,7 @@ export default function DocumentVerification({
             ) => {
               const readable =
                 typeof scannerError ===
-                "string"
+                  "string"
                   ? scannerError
                   : scannerError
                       ?.message ||
@@ -2466,6 +2488,11 @@ export default function DocumentVerification({
             false;
 
           await destroyMobileScanner();
+
+          console.error(
+            "MOBILE BLINKID START ERROR:",
+            scannerError
+          );
 
           setMobileError(
             scannerError?.message ||
@@ -3322,7 +3349,6 @@ export default function DocumentVerification({
           phoneConnected) &&
         verificationUrl ? (
           <>
-            {/* DESKTOP / LAPTOP: QR CODE FLOW */}
             <motion.div
               initial={{
                 opacity: 0,
@@ -3421,7 +3447,6 @@ export default function DocumentVerification({
               </div>
             </motion.div>
 
-            {/* MOBILE: DIRECT SCANNER FLOW - NO QR CODE */}
             <motion.div
               initial={{
                 opacity: 0,
@@ -3885,7 +3910,7 @@ export default function DocumentVerification({
                     Verification needs attention
                   </h3>
 
-                  <p className="mt-2 max-w-[360px] text-sm font-semibold leading-6 text-red-700">
+                  <p className="mt-2 max-w-[360px] break-words text-sm font-semibold leading-6 text-red-700">
                     {mobileError ||
                       "Please try the document scan again."}
                   </p>
@@ -3981,7 +4006,7 @@ export default function DocumentVerification({
                   : "Verification unavailable"}
             </h3>
 
-            <p className="mt-2 max-w-[430px] text-sm font-semibold leading-6 text-red-700">
+            <p className="mt-2 max-w-[430px] break-words text-sm font-semibold leading-6 text-red-700">
               {error ||
                 "Create a new secure session to continue."}
             </p>
