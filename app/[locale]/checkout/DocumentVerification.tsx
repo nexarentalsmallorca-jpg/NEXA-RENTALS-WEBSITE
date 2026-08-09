@@ -656,16 +656,16 @@ function cleanBlinkIdCameraUi(
     current &&
     current !== root
   ) {
-    const parent =
+    const parentElement: HTMLElement | null =
       current.parentElement;
 
-    if (!parent) {
+    if (!parentElement) {
       break;
     }
 
     for (
       const sibling of Array.from(
-        parent.children
+        parentElement.children
       )
     ) {
       if (
@@ -691,20 +691,20 @@ function cleanBlinkIdCameraUi(
         "none";
     }
 
-    parent.style.width =
+    parentElement.style.width =
       "100%";
 
-    parent.style.height =
+    parentElement.style.height =
       "100%";
 
-    parent.style.maxWidth =
+    parentElement.style.maxWidth =
       "none";
 
-    parent.style.maxHeight =
+    parentElement.style.maxHeight =
       "none";
 
     current =
-      parent;
+      parentElement;
   }
 
   root.style.position =
