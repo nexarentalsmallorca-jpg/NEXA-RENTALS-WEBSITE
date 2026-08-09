@@ -244,7 +244,9 @@ function extractDocumentData(
   result: any
 ): ExtractedDocumentData {
   if (!result) {
-    return EMPTY_DOCUMENT_DATA;
+    return {
+      ...EMPTY_DOCUMENT_DATA,
+    };
   }
 
   const documentClassInfo =
@@ -306,8 +308,12 @@ function extractDocumentData(
 
     documentType:
       textFromResult(
+        documentClassInfo?.type
+      ) ||
+      textFromResult(
         documentClassInfo
-          ?.documentType?.id
+          ?.documentType
+          ?.id
       ),
 
     vehicleClasses:
@@ -704,7 +710,9 @@ export default function VerifyDocumentsPage() {
     setLicenceData,
   ] =
     useState<ExtractedDocumentData>(
-      EMPTY_DOCUMENT_DATA
+      {
+        ...EMPTY_DOCUMENT_DATA,
+      }
     );
 
   const [
@@ -741,8 +749,7 @@ export default function VerifyDocumentsPage() {
       try {
         await scanner.destroy?.();
       } catch {
-        // Scanner cleanup should
-        // never block the user.
+        // Scanner cleanup should never block the user.
       }
     }, []);
 
@@ -780,6 +787,12 @@ export default function VerifyDocumentsPage() {
           unknown
         >
       ) => {
+        if (!sessionToken) {
+          throw new Error(
+            "The verification session is missing."
+          );
+        }
+
         const response =
           await fetch(
             "/api/document-verification/session",
@@ -1155,6 +1168,9 @@ export default function VerifyDocumentsPage() {
             typeof window ===
             "undefined"
           ) {
+            scannerStartingRef.current =
+              false;
+
             return;
           }
 
@@ -1182,14 +1198,8 @@ export default function VerifyDocumentsPage() {
             "";
 
           /*
-           * IMPORTANT:
-           *
-           * BlinkID uses browser-only APIs such as
-           * window during its module initialization.
-           *
-           * Loading the SDK here prevents Next.js
-           * production prerendering from evaluating
-           * BlinkID on the server.
+           * BlinkID is loaded dynamically because
+           * it uses browser APIs during initialization.
            */
           const {
             createBlinkId,
@@ -1198,9 +1208,32 @@ export default function VerifyDocumentsPage() {
               "@microblink/blinkid"
             );
 
+          /*
+           * IMPORTANT:
+           *
+           * resourcesLocation must be the BASE URL.
+           * BlinkID automatically appends:
+           *
+           * resources/blinkid-worker.js
+           * resources/*.wasm
+           * etc.
+           *
+           * Using window.location.origin guarantees:
+           *
+           * https://www.nexarentals.es/resources/...
+           *
+           * and prevents the locale prefix:
+           *
+           * https://www.nexarentals.es/es/resources/...
+           */
+          const resourcesLocation =
+            `${window.location.origin}/`;
+
           const blinkId =
             await createBlinkId({
               licenseKey,
+
+              resourcesLocation,
 
               targetNode:
                 mount,
@@ -1246,7 +1279,16 @@ export default function VerifyDocumentsPage() {
             (
               documentClassInfo: any
             ) => {
+              /*
+               * Current BlinkID versions expose the
+               * class as documentClassInfo.type.
+               *
+               * The legacy fallback remains here so
+               * the flow also tolerates the older shape.
+               */
               const documentType =
+                documentClassInfo
+                  ?.type ??
                 documentClassInfo
                   ?.documentType
                   ?.id;
@@ -1344,6 +1386,11 @@ export default function VerifyDocumentsPage() {
 
           await destroyScanner();
 
+          console.error(
+            "BLINKID SCANNER START ERROR:",
+            scannerError
+          );
+
           setError(
             scannerError?.message ||
               "The camera scanner could not start."
@@ -1395,7 +1442,13 @@ export default function VerifyDocumentsPage() {
   useEffect(() => {
     return () => {
       void destroyScanner();
+    };
+  }, [
+    destroyScanner,
+  ]);
 
+  useEffect(() => {
+    return () => {
       if (
         passportPreview
       ) {
@@ -1405,7 +1458,6 @@ export default function VerifyDocumentsPage() {
       }
     };
   }, [
-    destroyScanner,
     passportPreview,
   ]);
 
@@ -1592,8 +1644,11 @@ export default function VerifyDocumentsPage() {
       await fetch(
         "/api/stripe/upload-booking-documents",
         {
-          method: "POST",
-          body: formData,
+          method:
+            "POST",
+
+          body:
+            formData,
         }
       );
 
@@ -1788,8 +1843,10 @@ export default function VerifyDocumentsPage() {
     if (
       identityType ===
       "id" &&
-      (!idFront ||
-        !idBack)
+      (
+        !idFront ||
+        !idBack
+      )
     ) {
       setStage(
         "id"
@@ -1823,7 +1880,9 @@ export default function VerifyDocumentsPage() {
           (item) =>
             item.category
         )
-        .filter(Boolean)
+        .filter(
+          Boolean
+        )
         .join(", ");
     }, [
       licenceData,
@@ -1832,7 +1891,8 @@ export default function VerifyDocumentsPage() {
   const isScanning =
     stage ===
       "licence" ||
-    stage === "id";
+    stage ===
+      "id";
 
   return (
     <div
@@ -1862,12 +1922,8 @@ export default function VerifyDocumentsPage() {
           </h1>
 
           <p className="mt-2 text-sm font-medium leading-6 text-black/45">
-            Complete this secure
-            verification on your
-            phone. Your booking
-            will continue
-            automatically on the
-            computer.
+            Complete this secure verification on your phone. Your booking will
+            continue automatically on the computer.
           </p>
         </header>
 
@@ -1905,10 +1961,7 @@ export default function VerifyDocumentsPage() {
                   </div>
 
                   <p className="mt-1 max-w-[230px] text-xs font-medium leading-5 text-white/60">
-                    Keep all four
-                    corners visible
-                    and hold the
-                    document steady.
+                    Keep all four corners visible and hold the document steady.
                   </p>
                 </div>
 
@@ -1947,13 +2000,11 @@ export default function VerifyDocumentsPage() {
                 <Spinner />
 
                 <h2 className="mt-5 text-[21px] font-extrabold tracking-[-0.035em]">
-                  Opening secure
-                  session
+                  Opening secure session
                 </h2>
 
                 <p className="mt-2 text-sm font-medium text-black/42">
-                  Connecting to
-                  your booking...
+                  Connecting to your booking...
                 </p>
               </motion.section>
             ) : null}
@@ -1978,15 +2029,11 @@ export default function VerifyDocumentsPage() {
                   </div>
 
                   <h2 className="mt-5 text-[23px] font-extrabold tracking-[-0.04em]">
-                    Driving licence
-                    captured
+                    Driving licence captured
                   </h2>
 
                   <p className="mt-2 text-sm font-medium text-black/45">
-                    Now choose the
-                    identity
-                    document you
-                    have with you.
+                    Now choose the identity document you have with you.
                   </p>
                 </div>
 
@@ -2007,9 +2054,7 @@ export default function VerifyDocumentsPage() {
                     </div>
 
                     <p className="mt-1 text-xs font-medium leading-5 text-black/42">
-                      Automatically
-                      scan the front
-                      and back.
+                      Automatically scan the front and back.
                     </p>
                   </button>
 
@@ -2029,10 +2074,7 @@ export default function VerifyDocumentsPage() {
                     </div>
 
                     <p className="mt-1 text-xs font-medium leading-5 text-black/42">
-                      Take one clear
-                      photo of the
-                      passport photo
-                      page.
+                      Take one clear photo of the passport photo page.
                     </p>
                   </button>
                 </div>
@@ -2090,17 +2132,12 @@ export default function VerifyDocumentsPage() {
                 </motion.div>
 
                 <h2 className="mt-7 text-[23px] font-extrabold tracking-[-0.04em]">
-                  Photograph your
-                  passport
+                  Photograph your passport
                 </h2>
 
                 <p className="mt-2 max-w-[360px] text-sm font-medium leading-6 text-white/55">
-                  Open the photo
-                  page. Make sure
-                  the complete page
-                  and all four
-                  corners are
-                  clearly visible.
+                  Open the photo page. Make sure the complete page and all four
+                  corners are clearly visible.
                 </p>
 
                 <button
@@ -2122,8 +2159,7 @@ export default function VerifyDocumentsPage() {
                   }
                   className="mt-4 text-xs font-bold text-white/50"
                 >
-                  Choose ID card
-                  instead
+                  Choose ID card instead
                 </button>
               </motion.section>
             ) : null}
@@ -2147,15 +2183,11 @@ export default function VerifyDocumentsPage() {
                 </div>
 
                 <h2 className="mt-1 text-[24px] font-extrabold tracking-[-0.04em]">
-                  Validate your
-                  documents
+                  Validate your documents
                 </h2>
 
                 <p className="mt-2 text-sm font-medium leading-6 text-black/45">
-                  Check that both
-                  documents were
-                  captured before
-                  completing the
+                  Check that both documents were captured before completing the
                   verification.
                 </p>
 
@@ -2202,8 +2234,7 @@ export default function VerifyDocumentsPage() {
                     {licenceCategories ? (
                       <div className="mt-3 flex items-start justify-between gap-5">
                         <span className="text-xs font-semibold text-black/40">
-                          Licence
-                          categories
+                          Licence categories
                         </span>
 
                         <span className="max-w-[65%] text-right text-sm font-extrabold">
@@ -2221,8 +2252,7 @@ export default function VerifyDocumentsPage() {
                 passportPreview ? (
                   <div className="mt-5">
                     <div className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-black/30">
-                      Passport
-                      photo
+                      Passport photo
                     </div>
 
                     <div className="mt-2 overflow-hidden border border-black/10 bg-black/[0.02]">
@@ -2264,15 +2294,11 @@ export default function VerifyDocumentsPage() {
                 <Spinner />
 
                 <h2 className="mt-6 text-[23px] font-extrabold tracking-[-0.04em]">
-                  Validating
-                  documents
+                  Validating documents
                 </h2>
 
                 <p className="mt-2 max-w-[350px] text-sm font-medium leading-6 text-black/45">
-                  Securely saving
-                  your documents
-                  and connecting
-                  them to your
+                  Securely saving your documents and connecting them to your
                   booking.
                 </p>
               </motion.section>
@@ -2310,19 +2336,12 @@ export default function VerifyDocumentsPage() {
                 </motion.div>
 
                 <h2 className="mt-7 text-[27px] font-extrabold tracking-[-0.045em]">
-                  Verification
-                  complete
+                  Verification complete
                 </h2>
 
                 <p className="mt-3 max-w-[390px] text-sm font-medium leading-6 text-white/60">
-                  Your documents
-                  have been
-                  received. You
-                  can return to the
-                  computer — the
-                  booking will
-                  continue there
-                  automatically.
+                  Your documents have been received. You can return to the
+                  computer — the booking will continue there automatically.
                 </p>
 
                 <div className="mt-8 border-t border-white/10 pt-6 text-xs font-bold uppercase tracking-[0.15em] text-white/40">
@@ -2348,11 +2367,10 @@ export default function VerifyDocumentsPage() {
                 </div>
 
                 <h2 className="mt-6 text-[23px] font-extrabold tracking-[-0.04em] text-red-900">
-                  Verification
-                  needs attention
+                  Verification needs attention
                 </h2>
 
-                <p className="mt-2 max-w-[410px] text-sm font-semibold leading-6 text-red-700">
+                <p className="mt-2 max-w-[410px] break-words text-sm font-semibold leading-6 text-red-700">
                   {error}
                 </p>
 
