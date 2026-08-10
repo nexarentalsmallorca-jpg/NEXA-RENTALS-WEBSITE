@@ -10,13 +10,6 @@ const TABLE = "document_verification_sessions";
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 28 * 1024 * 1024;
 
-/*
- * You can override this in Vercel with:
- * OPENAI_DOCUMENT_MODEL
- *
- * gpt-4o is used by default because document
- * photographs require strong image-reading ability.
- */
 const MODEL =
   process.env.OPENAI_DOCUMENT_MODEL?.trim() ||
   "gpt-4o";
@@ -81,12 +74,6 @@ type AiExtraction = {
     selectedType: IdentityType;
   };
 
-  /*
-   * Kept in the response structure for compatibility
-   * with the existing scanner page.
-   *
-   * It is never used to accept or reject a booking.
-   */
   nameMatch:
     | "match"
     | "mismatch"
@@ -315,8 +302,7 @@ function cleanText(
 }
 
 function isFile(
-  value:
-    FormDataEntryValue | null
+  value: FormDataEntryValue | null
 ): value is File {
   return value instanceof File;
 }
@@ -454,13 +440,6 @@ function isPast(
   const date =
     parseIsoDate(value);
 
-  /*
-   * A missing or unreadable expiry date
-   * is not treated as expired.
-   *
-   * Some older licences are permanent
-   * or do not display an expiry date.
-   */
   if (!date) {
     return false;
   }
@@ -497,17 +476,15 @@ function heldForThreeYears(
     return null;
   }
 
-  const threshold = new Date(
+  const threshold =
     Date.UTC(
       from.getUTCFullYear() + 3,
       from.getUTCMonth(),
       from.getUTCDate()
-    )
-  );
+    );
 
   return (
-    todayUtc() >=
-    threshold.getTime()
+    todayUtc() >= threshold
   );
 }
 
@@ -525,13 +502,6 @@ function normalCategory(
 function decide(
   extraction: AiExtraction
 ) {
-  /*
-   * Only driving-licence photographs can
-   * cause a retake.
-   *
-   * The ID/passport is collected for contract
-   * preparation and does not control acceptance.
-   */
   const licenceRetakeSides =
     extraction.quality
       .retakeSides
@@ -554,17 +524,61 @@ function decide(
     licenceRetakeSides.length >
       0;
 
+  const missingLicenceIdentity =
+    !cleanText(
+      extraction.licence.fullName
+    ) &&
+    !(
+      cleanText(
+        extraction.licence.firstName
+      ) &&
+      cleanText(
+        extraction.licence.lastName
+      )
+    );
+
+  const missingLicenceNumber =
+    !cleanText(
+      extraction.licence
+        .documentNumber
+    );
+
+  const wrongDocumentType =
+    !/driv|licen[cs]e|permiso/i.test(
+      cleanText(
+        extraction.licence
+          .documentType
+      )
+    );
+
   if (
     licenceCannotBeRead ||
-    licencePhotoNeedsRetake
+    licencePhotoNeedsRetake ||
+    missingLicenceIdentity ||
+    missingLicenceNumber ||
+    wrongDocumentType
   ) {
+    let fallbackMessage =
+      "The driving licence could not be read clearly.";
+
+    if (wrongDocumentType) {
+      fallbackMessage =
+        "The photographs do not appear to show a driving licence.";
+    } else if (
+      missingLicenceIdentity ||
+      missingLicenceNumber
+    ) {
+      fallbackMessage =
+        "The licence holder details or licence number could not be read clearly.";
+    }
+
     const reasons =
       extraction.quality
         .issues.length > 0
         ? extraction.quality
             .issues
         : [
-            "The driving licence could not be read clearly.",
+            fallbackMessage,
           ];
 
     return {
@@ -573,7 +587,7 @@ function decide(
 
       message:
         reasons[0] ||
-        "Please retake the driving licence photograph.",
+        fallbackMessage,
 
       reasons,
 
@@ -588,12 +602,6 @@ function decide(
     };
   }
 
-  /*
-   * Reject only when an expiry date is
-   * clearly visible and is already past.
-   *
-   * Missing expiry dates are allowed.
-   */
   if (
     isPast(
       extraction.licence
@@ -635,27 +643,27 @@ function decide(
       );
 
   /*
-   * If the AI could read the licence but
-   * could not confidently read its category
-   * table, allow the booking to continue
-   * for manual review.
+   * IMPORTANT:
+   * No detected categories now causes a retake.
+   * It must not continue as manual review.
    */
   if (
     classes.length === 0
   ) {
     return {
       outcome:
-        "manual_review" as Outcome,
+        "retake" as Outcome,
 
       message:
-        "Documents received. NEXA Rentals will confirm the driving licence manually before pickup.",
+        "The driving-licence category table could not be read. Please retake the back of the licence in sharp focus.",
 
       reasons: [
-        "Driving licence categories could not be read confidently",
+        "Driving-licence categories were not detected",
       ],
 
-      retakeSides:
-        [] as StepKey[],
+      retakeSides: [
+        "dlBack",
+      ] as StepKey[],
     };
   }
 
@@ -682,12 +690,6 @@ function decide(
         )
     );
 
-  /*
-   * A, A1 and A2 are directly valid for
-   * NEXA's 125cc scooters.
-   *
-   * No minimum holding period is required.
-   */
   if (validMotorcycle) {
     const manualReasons:
       string[] = [];
@@ -779,14 +781,6 @@ function decide(
     );
 
   if (validBClass) {
-    /*
-     * For category B, use only the B category's
-     * own valid-from date.
-     *
-     * The general card issue date may represent
-     * a renewal or replacement and must not be
-     * used to calculate the three-year period.
-     */
     const bHeld =
       heldForThreeYears(
         validBClass.validFrom
@@ -876,15 +870,11 @@ function decide(
     };
   }
 
-  /*
-   * A clearly detected AM-only licence cannot
-   * be used for NEXA's 125cc scooters.
-   */
   const hasAm =
     classes.some(
       (item) =>
         item.normalized ===
-        "AM" &&
+          "AM" &&
         !isPast(
           item.validUntil
         )
@@ -915,11 +905,6 @@ function decide(
     };
   }
 
-  /*
-   * A relevant category was visible but its
-   * validity period has clearly expired or
-   * has not started yet.
-   */
   if (
     hasPotentiallyCompatible
   ) {
@@ -939,10 +924,6 @@ function decide(
     };
   }
 
-  /*
-   * Other clearly readable categories do not
-   * authorise one of NEXA's 125cc scooters.
-   */
   return {
     outcome:
       "rejected" as Outcome,
@@ -1011,10 +992,6 @@ async function toImageInput(
       image_url:
         `data:${mimeType};base64,${base64}`,
 
-      /*
-       * High detail is important for small
-       * licence categories and dates.
-       */
       detail:
         "high" as const,
     },
@@ -1072,10 +1049,6 @@ export async function POST(
       );
     }
 
-    /*
-     * Prevent arbitrary requests from sending
-     * unrelated images to the OpenAI API.
-     */
     const {
       data: session,
       error: sessionError,
@@ -1239,6 +1212,171 @@ export async function POST(
         )
       );
 
+    const prompt =
+      `You read rental documents for NEXA Rentals in Spain.
+
+The customer selected this identity-document option: ${identityType}.
+
+PRIMARY TASK — DRIVING LICENCE
+
+Read the driving-licence front and back carefully.
+
+Extract:
+- the licence holder's first name, last name and full name;
+- the licence number;
+- the licence document type;
+- the date of birth;
+- the general issue date when visible;
+- the general expiry date when visible;
+- every visible driving category;
+- each category's own valid-from date;
+- each category's own valid-until date.
+
+Small text and the driving-category table are extremely important. Inspect the high-detail images carefully.
+
+Read only information visibly present in the photographs. Never invent missing characters, numbers, categories or dates.
+
+Return clearly readable dates as YYYY-MM-DD.
+
+DOCUMENT CLASSIFICATION IS MANDATORY
+
+Before extracting information, inspect the images labelled DRIVING LICENCE FRONT and DRIVING LICENCE BACK and determine whether they genuinely show the front and back of a driving licence.
+
+A calculator, telephone, computer screen, payment card, bank card, handwritten paper, pen, blank surface, random object, unrelated document, or other non-licence image is not a driving licence.
+
+Do not classify an object as a driving licence merely because:
+- it is rectangular;
+- it contains some text;
+- it contains numbers;
+- it contains a photograph;
+- it resembles a plastic card;
+- the supplied image label says driving licence.
+
+The visible document itself must contain recognizable driving-licence structure and information.
+
+The image labelled DRIVING LICENCE FRONT must show the front of the licence and must contain readable licence-holder information.
+
+The image labelled DRIVING LICENCE BACK must show the back of the licence and its driving-category table.
+
+If the images show:
+- unrelated objects;
+- unrelated documents;
+- the same side twice;
+- reversed front and back sides;
+- a missing side;
+- an unreadable category table;
+- a screen displaying unrelated content;
+- a licence too blurred, dark, cropped or reflective to read;
+
+then:
+- set licence.documentDetected to false when no driving licence is present;
+- set licence.readable to false;
+- set quality.overall to "retake";
+- add the affected dlFront and/or dlBack value to quality.retakeSides;
+- explain the specific problem in quality.issues;
+- leave unreadable fields as empty strings;
+- never invent information to satisfy the response schema.
+
+Set licence.documentDetected to true only when the photographs genuinely appear to contain a driving licence.
+
+Set licence.readable to true only when all of the following can be read sufficiently:
+- the holder name;
+- the driving-licence number;
+- the relevant driving-category table.
+
+Set licence.documentType to a visible description such as "driving licence" only when the image actually contains a driving licence. Do not repeat the supplied label as the document type without visually confirming it.
+
+A calculator, random card or other object must never receive:
+- licence.documentDetected=true;
+- licence.readable=true;
+- quality.overall="good";
+- an accepted or uncertain result based on invented document information.
+
+FRONT AND BACK VALIDATION
+
+The front and back must be different and must correspond to their supplied labels.
+
+If dlFront contains the licence back:
+- use quality.overall "retake";
+- include "dlFront" in quality.retakeSides.
+
+If dlBack contains the licence front:
+- use quality.overall "retake";
+- include "dlBack" in quality.retakeSides.
+
+If the same side appears twice:
+- use quality.overall "retake";
+- request a retake of the incorrectly labelled side.
+
+If the back category table cannot be read:
+- use quality.overall "retake";
+- include "dlBack" in quality.retakeSides.
+
+Do not use quality.overall "uncertain" for:
+- an unrelated object;
+- an unrelated document;
+- a missing licence;
+- missing licence-holder identity;
+- a missing licence number;
+- duplicate sides;
+- reversed sides;
+- an unreadable category table.
+
+Use "uncertain" only when it is definitely a readable driving licence and only a secondary detail needs human confirmation.
+
+DATE AND CATEGORY RULES
+
+If a general expiry date is missing, permanent, lifetime, shown with a dash, or not printed on the licence, return an empty string. A missing general expiry date alone is not an error and must not cause a retake.
+
+Do not use the general card issue date as category B's valid-from date.
+
+Category B's valid-from date must come specifically from the driving-category table.
+
+Extract each visible category separately, including A, A1, A2, AM and B when present.
+
+Do not judge whether the driving licence is genuine or authentic. Only classify the visible document, evaluate readability and extract visible information.
+
+QUALITY RULES
+
+quality.overall and quality.retakeSides must be based only on whether the DRIVING LICENCE is the correct document and can be read well enough to identify:
+- the licence holder;
+- the licence number;
+- the categories;
+- the category validity dates.
+
+Use quality.overall "retake" when:
+- the driving licence is absent;
+- the image contains an unrelated object or document;
+- the wrong side is shown;
+- the same side is shown twice;
+- the holder name cannot be read;
+- the licence number cannot be read;
+- the category table cannot be read;
+- required licence information is hidden by severe blur, glare, darkness or cropping.
+
+Do not demand a perfect photograph.
+
+Normal perspective, slight hand movement, minor reflections and slightly cropped decorative edges are acceptable only when all required licence details remain readable.
+
+When a retake is necessary, include only "dlFront" and/or "dlBack" in quality.retakeSides.
+
+IDENTITY DOCUMENT
+
+The ID card or passport is collected only to prepare the rental contract.
+
+Extract clearly visible identity details, but:
+- never use identity-document quality to reject the booking;
+- never request an identity-document retake;
+- never add idFront or idBack to quality.retakeSides;
+- never require the identity document to have an expiry date;
+- never compare its name or document number with the driving licence;
+- never use an identity mismatch in quality.overall;
+- never use a different selected identity type to reject the booking.
+
+Set identity.selectedType to "${identityType}".
+
+For compatibility, always return nameMatch as "uncertain".`;
+
     const content:
       any[] = [
       {
@@ -1246,63 +1384,7 @@ export async function POST(
           "input_text",
 
         text:
-          `You read rental documents for NEXA Rentals in Spain.
-
-The customer selected this identity-document option: ${identityType}.
-
-PRIMARY TASK — DRIVING LICENCE
-
-Read the driving licence front and back carefully.
-
-Extract:
-- the licence holder details;
-- the general issue date when visible;
-- the general expiry date when visible;
-- every visible driving category;
-- each category's own valid-from date;
-- each category's own valid-until date.
-
-Small text and the category table are extremely important. Inspect the high-detail images carefully.
-
-Read only information visibly present in the photographs. Never invent missing characters, categories or dates.
-
-Return clearly readable dates as YYYY-MM-DD.
-
-If an expiry date is missing, permanent, lifetime, shown with a dash, or not printed on the licence, return an empty string. A missing expiry date is not an error and must not cause a retake.
-
-Do not use the general card issue date as the category B valid-from date. Category B's valid-from date must come from the category table.
-
-Do not judge whether the document is genuine or authentic.
-
-QUALITY RULES
-
-quality.overall and quality.retakeSides must be based only on whether the DRIVING LICENCE can be read well enough to identify its categories and relevant dates.
-
-Use "retake" only when the driving licence is genuinely unreadable because:
-- the category table cannot be read;
-- important driving-licence information is hidden by severe blur or glare;
-- the driving licence is absent;
-- the wrong side is shown.
-
-Do not demand a perfect photograph. Normal perspective, small hand movement, minor reflections and slightly cropped decorative edges are acceptable when the categories and dates remain readable.
-
-When a retake is necessary, include only dlFront and/or dlBack in quality.retakeSides.
-
-If the licence is mostly readable but one result is uncertain, use quality.overall "uncertain" instead of "retake". The booking will then continue for manual review.
-
-IDENTITY DOCUMENT
-
-The ID card or passport is collected only to prepare the rental contract.
-
-Extract any clearly visible identity details, but:
-- never use identity quality to reject the booking;
-- never request an identity-document retake;
-- never require the identity document to have an expiry date;
-- never compare its name or document number with the driving licence;
-- never use an identity mismatch in quality.overall;
-- never use a different selected identity type to reject the booking.
-
-For compatibility, always return nameMatch as "uncertain".`,
+          prompt,
       },
     ];
 
@@ -1506,11 +1588,6 @@ For compatibility, always return nameMatch as "uncertain".`,
       );
     }
 
-    /*
-     * OpenAI reads the visible document data.
-     * The server-side code applies NEXA's
-     * 125cc licence rules.
-     */
     const decision =
       decide(
         extraction
