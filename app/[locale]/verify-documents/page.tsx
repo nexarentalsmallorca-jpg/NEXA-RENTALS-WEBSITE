@@ -27,7 +27,11 @@ type ScannerLocale =
   | "uk";
 
 type IdentityType = "id" | "passport";
-type StepKey = "dlFront" | "dlBack" | "idFront" | "idBack";
+type StepKey =
+  | "dlFront"
+  | "dlBack"
+  | "idFront"
+  | "idBack";
 
 type Stage =
   | "loading"
@@ -81,6 +85,37 @@ type Analysis = {
 type Quality = {
   tone: "good" | "warn" | "neutral";
   text: string;
+};
+
+type FrameMessageKey =
+  | "correct"
+  | "wrong_document"
+  | "wrong_side"
+  | "not_readable";
+
+type FrameCheckResult = {
+  success: boolean;
+  correctDocument: boolean;
+  messageKey: FrameMessageKey;
+  documentKind:
+    | "driving_licence"
+    | "identity_card"
+    | "passport"
+    | "other"
+    | "none";
+  side: "front" | "back" | "unknown";
+  readableEnough: boolean;
+  confidence: number;
+  error?: string;
+};
+
+type FrameCopy = {
+  checkingDocument: string;
+  wrongLicence: string;
+  wrongIdentity: string;
+  wrongSide: string;
+  notReadable: string;
+  validationUnavailable: string;
 };
 
 type StepCopy = {
@@ -137,21 +172,29 @@ type Copy = {
   analysisError: string;
   saveError: string;
   steps: Record<StepKey, StepCopy>;
-  decisions: Record<DecisionKey, string>;
+  decisions: Record<
+    DecisionKey,
+    string
+  >;
 };
 
-const COPY: Record<ScannerLocale, Copy> = {
+const COPY: Record<
+  ScannerLocale,
+  Copy
+> = {
   en: {
     scanner: "NEXA secure scanner",
     step: "Step",
-    openingCamera: "Opening rear camera...",
+    openingCamera:
+      "Opening rear camera...",
     alignDocument:
       "Align the complete document inside the frame",
     tooDark:
       "Too dark — move toward better light",
     tooMuchGlare:
       "Too much glare — tilt the document slightly",
-    holdStill: "Hold the document still",
+    holdStill:
+      "Hold the document still",
     moveCloser:
       "Move slightly closer and keep all four corners visible",
     automaticReady:
@@ -236,8 +279,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       dlBack: {
         eyebrow:
           "Driving licence · Back",
-        title:
-          "Now scan the back",
+        title: "Now scan the back",
         instruction:
           "Turn the licence over and keep the complete card inside the frame.",
       },
@@ -250,10 +292,8 @@ const COPY: Record<ScannerLocale, Copy> = {
           "Show the complete passport photo page or the front of your ID card.",
       },
       idBack: {
-        eyebrow:
-          "Identity card · Back",
-        title:
-          "Now scan the back",
+        eyebrow: "Identity card · Back",
+        title: "Now scan the back",
         instruction:
           "Keep every edge visible and make sure the small text is sharp.",
       },
@@ -273,14 +313,12 @@ const COPY: Record<ScannerLocale, Copy> = {
         "The detected driving licence category is not valid yet.",
       manual_review:
         "Documents received. NEXA Rentals will confirm them manually before pickup.",
-      accepted:
-        "Documents accepted.",
+      accepted: "Documents accepted.",
     },
   },
 
   es: {
-    scanner:
-      "Escáner seguro de NEXA",
+    scanner: "Escáner seguro de NEXA",
     step: "Paso",
     openingCamera:
       "Abriendo la cámara trasera...",
@@ -304,13 +342,10 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Elige tu documento de identidad",
     identityHelp:
       "Usa el documento original que traerás al recoger el scooter.",
-    idCard:
-      "Documento de identidad",
-    frontAndBack:
-      "Anverso y reverso",
+    idCard: "Documento de identidad",
+    frontAndBack: "Anverso y reverso",
     passport: "Pasaporte",
-    photoPage:
-      "Página con foto",
+    photoPage: "Página con foto",
     openingScanner:
       "Abriendo el escáner seguro",
     reviewingDocuments:
@@ -325,10 +360,8 @@ const COPY: Record<ScannerLocale, Copy> = {
       "No se puede aceptar el permiso",
     retakeButton:
       "Repetir la foto solicitada",
-    scanAgain:
-      "Escanear de nuevo",
-    returnCheckout:
-      "Volver al pago",
+    scanAgain: "Escanear de nuevo",
+    returnCheckout: "Volver al pago",
     documentsReceived:
       "Documentos recibidos",
     verificationComplete:
@@ -343,10 +376,8 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Puedes volver a la pantalla de reserva",
     attention:
       "El escáner necesita atención",
-    takePhotoInstead:
-      "Hacer una foto",
-    tryAgain:
-      "Intentar de nuevo",
+    takePhotoInstead: "Hacer una foto",
+    tryAgain: "Intentar de nuevo",
     continueManual:
       "Continuar para revisión manual",
     missingSession:
@@ -418,14 +449,12 @@ const COPY: Record<ScannerLocale, Copy> = {
         "La categoría detectada del permiso de conducir todavía no es válida.",
       manual_review:
         "Documentos recibidos. NEXA Rentals los confirmará manualmente antes de la recogida.",
-      accepted:
-        "Documentos aceptados.",
+      accepted: "Documentos aceptados.",
     },
   },
 
   de: {
-    scanner:
-      "Sicherer NEXA-Scanner",
+    scanner: "Sicherer NEXA-Scanner",
     step: "Schritt",
     openingCamera:
       "Rückkamera wird geöffnet...",
@@ -449,8 +478,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Wähle dein Ausweisdokument",
     identityHelp:
       "Verwende das Originaldokument, das du bei der Abholung mitbringst.",
-    idCard:
-      "Personalausweis",
+    idCard: "Personalausweis",
     frontAndBack:
       "Vorder- und Rückseite",
     passport: "Reisepass",
@@ -469,10 +497,8 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Führerschein kann nicht akzeptiert werden",
     retakeButton:
       "Angefordertes Foto wiederholen",
-    scanAgain:
-      "Erneut scannen",
-    returnCheckout:
-      "Zurück zur Kasse",
+    scanAgain: "Erneut scannen",
+    returnCheckout: "Zurück zur Kasse",
     documentsReceived:
       "Dokumente erhalten",
     verificationComplete:
@@ -489,8 +515,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Scanner benötigt Aufmerksamkeit",
     takePhotoInstead:
       "Stattdessen Foto aufnehmen",
-    tryAgain:
-      "Erneut versuchen",
+    tryAgain: "Erneut versuchen",
     continueManual:
       "Zur manuellen Prüfung fortfahren",
     missingSession:
@@ -562,14 +587,12 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Die erkannte Führerscheinklasse ist noch nicht gültig.",
       manual_review:
         "Dokumente erhalten. NEXA Rentals prüft sie vor der Abholung manuell.",
-      accepted:
-        "Dokumente akzeptiert.",
+      accepted: "Dokumente akzeptiert.",
     },
   },
 
   fr: {
-    scanner:
-      "Scanner sécurisé NEXA",
+    scanner: "Scanner sécurisé NEXA",
     step: "Étape",
     openingCamera:
       "Ouverture de la caméra arrière...",
@@ -585,21 +608,17 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Rapprochez-vous légèrement et gardez les quatre coins visibles",
     automaticReady:
       "Position nette — capture automatique prête",
-    capturing:
-      "Capture automatique...",
+    capturing: "Capture automatique...",
     licenceCaptured:
       "Permis de conduire capturé",
     chooseIdentity:
       "Choisissez votre pièce d’identité",
     identityHelp:
       "Utilisez le document original que vous apporterez lors du retrait du scooter.",
-    idCard:
-      "Carte d’identité",
-    frontAndBack:
-      "Recto et verso",
+    idCard: "Carte d’identité",
+    frontAndBack: "Recto et verso",
     passport: "Passeport",
-    photoPage:
-      "Page avec photo",
+    photoPage: "Page avec photo",
     openingScanner:
       "Ouverture du scanner sécurisé",
     reviewingDocuments:
@@ -614,8 +633,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Le permis ne peut pas être accepté",
     retakeButton:
       "Reprendre la photo demandée",
-    scanAgain:
-      "Scanner à nouveau",
+    scanAgain: "Scanner à nouveau",
     returnCheckout:
       "Retourner au paiement",
     documentsReceived:
@@ -706,70 +724,98 @@ const COPY: Record<ScannerLocale, Copy> = {
         "La catégorie de permis détectée n’est pas encore valide.",
       manual_review:
         "Documents reçus. NEXA Rentals les confirmera manuellement avant le retrait.",
-      accepted:
-        "Documents acceptés.",
+      accepted: "Documents acceptés.",
     },
   },
-    it: {
+
+  it: {
     scanner: "Scanner sicuro NEXA",
     step: "Passaggio",
-    openingCamera: "Apertura della fotocamera posteriore...",
-    alignDocument: "Allinea l’intero documento dentro la cornice",
-    tooDark: "Troppo buio — spostati verso una luce migliore",
-    tooMuchGlare: "Troppo riflesso — inclina leggermente il documento",
-    holdStill: "Tieni fermo il documento",
+    openingCamera:
+      "Apertura della fotocamera posteriore...",
+    alignDocument:
+      "Allinea l’intero documento dentro la cornice",
+    tooDark:
+      "Troppo buio — spostati verso una luce migliore",
+    tooMuchGlare:
+      "Troppo riflesso — inclina leggermente il documento",
+    holdStill:
+      "Tieni fermo il documento",
     moveCloser:
       "Avvicinati leggermente e mantieni visibili tutti e quattro gli angoli",
     automaticReady:
       "Posizione nitida — acquisizione automatica pronta",
-    capturing: "Acquisizione automatica...",
-    licenceCaptured: "Patente acquisita",
-    chooseIdentity: "Scegli il documento d’identità",
+    capturing:
+      "Acquisizione automatica...",
+    licenceCaptured:
+      "Patente acquisita",
+    chooseIdentity:
+      "Scegli il documento d’identità",
     identityHelp:
       "Usa il documento originale che porterai al ritiro dello scooter.",
     idCard: "Carta d’identità",
     frontAndBack: "Fronte e retro",
     passport: "Passaporto",
     photoPage: "Pagina con foto",
-    openingScanner: "Apertura dello scanner sicuro",
-    reviewingDocuments: "Verifica dei documenti",
-    connecting: "Collegamento alla prenotazione...",
+    openingScanner:
+      "Apertura dello scanner sicuro",
+    reviewingDocuments:
+      "Verifica dei documenti",
+    connecting:
+      "Collegamento alla prenotazione...",
     checking:
       "Controllo di nitidezza, date di rilascio e scadenza e categorie della patente...",
     retakeTitle: "Ripeti la foto",
-    rejectedTitle: "La patente non può essere accettata",
-    retakeButton: "Ripeti la foto richiesta",
+    rejectedTitle:
+      "La patente non può essere accettata",
+    retakeButton:
+      "Ripeti la foto richiesta",
     scanAgain: "Scansiona di nuovo",
-    returnCheckout: "Torna al pagamento",
-    documentsReceived: "Documenti ricevuti",
-    verificationComplete: "Verifica completata",
+    returnCheckout:
+      "Torna al pagamento",
+    documentsReceived:
+      "Documenti ricevuti",
+    verificationComplete:
+      "Verifica completata",
     manualComplete:
       "La prenotazione può continuare. NEXA Rentals confermerà manualmente i documenti prima del ritiro.",
     acceptedComplete:
       "I documenti hanno superato i controlli automatici e sono stati collegati alla prenotazione.",
-    returningCheckout: "Ritorno al pagamento...",
-    returnBooking: "Puoi tornare alla schermata di prenotazione",
-    attention: "Lo scanner richiede attenzione",
+    returningCheckout:
+      "Ritorno al pagamento...",
+    returnBooking:
+      "Puoi tornare alla schermata di prenotazione",
+    attention:
+      "Lo scanner richiede attenzione",
     takePhotoInstead: "Scatta una foto",
     tryAgain: "Riprova",
-    continueManual: "Continua per la verifica manuale",
-    missingSession: "Manca la sessione di verifica sicura.",
+    continueManual:
+      "Continua per la verifica manuale",
+    missingSession:
+      "Manca la sessione di verifica sicura.",
     sessionError:
       "Questa sessione di verifica non è disponibile. Ricomincia dal pagamento.",
-    updateError: "Impossibile aggiornare la sessione di verifica.",
+    updateError:
+      "Impossibile aggiornare la sessione di verifica.",
     cameraUnsupported:
       "Questo browser non supporta l’accesso diretto alla fotocamera.",
     cameraDenied:
       "L’autorizzazione della fotocamera è stata bloccata. Consenti l’accesso o scatta una foto.",
-    cameraError: "Impossibile aprire la fotocamera posteriore.",
-    captureError: "Impossibile acquisire la foto del documento.",
-    invalidPhoto: "Seleziona o scatta un’immagine leggibile.",
-    analysisError: "Impossibile analizzare i documenti. Riprova.",
-    saveError: "Impossibile salvare le foto dei documenti.",
+    cameraError:
+      "Impossibile aprire la fotocamera posteriore.",
+    captureError:
+      "Impossibile acquisire la foto del documento.",
+    invalidPhoto:
+      "Seleziona o scatta un’immagine leggibile.",
+    analysisError:
+      "Impossibile analizzare i documenti. Riprova.",
+    saveError:
+      "Impossibile salvare le foto dei documenti.",
     steps: {
       dlFront: {
         eyebrow: "Patente · Fronte",
-        title: "Posiziona il fronte nella cornice",
+        title:
+          "Posiziona il fronte nella cornice",
         instruction:
           "Mantieni visibili tutti e quattro gli angoli, evita i riflessi e tieni ferma la patente.",
       },
@@ -780,13 +826,16 @@ const COPY: Record<ScannerLocale, Copy> = {
           "Gira la patente e mantieni l’intera tessera dentro la cornice.",
       },
       idFront: {
-        eyebrow: "Documento d’identità · Fronte",
-        title: "Posiziona il documento nella cornice",
+        eyebrow:
+          "Documento d’identità · Fronte",
+        title:
+          "Posiziona il documento nella cornice",
         instruction:
           "Mostra l’intera pagina con foto del passaporto o il fronte della carta d’identità.",
       },
       idBack: {
-        eyebrow: "Carta d’identità · Retro",
+        eyebrow:
+          "Carta d’identità · Retro",
         title: "Ora scansiona il retro",
         instruction:
           "Mantieni visibili tutti i bordi e assicurati che il testo piccolo sia nitido.",
@@ -795,7 +844,8 @@ const COPY: Record<ScannerLocale, Copy> = {
     decisions: {
       retake:
         "Una o più foto non sono nitide. Ripeti l’immagine richiesta.",
-      licence_expired: "La patente sembra scaduta.",
+      licence_expired:
+        "La patente sembra scaduta.",
       identity_expired:
         "Il passaporto o il documento d’identità sembra scaduto.",
       b_less_than_three_years:
@@ -813,47 +863,70 @@ const COPY: Record<ScannerLocale, Copy> = {
   pt: {
     scanner: "Scanner seguro NEXA",
     step: "Passo",
-    openingCamera: "A abrir a câmara traseira...",
-    alignDocument: "Alinhe o documento completo dentro da moldura",
-    tooDark: "Demasiado escuro — procure melhor iluminação",
+    openingCamera:
+      "A abrir a câmara traseira...",
+    alignDocument:
+      "Alinhe o documento completo dentro da moldura",
+    tooDark:
+      "Demasiado escuro — procure melhor iluminação",
     tooMuchGlare:
       "Demasiado reflexo — incline ligeiramente o documento",
-    holdStill: "Mantenha o documento imóvel",
+    holdStill:
+      "Mantenha o documento imóvel",
     moveCloser:
       "Aproxime ligeiramente e mantenha os quatro cantos visíveis",
-    automaticReady: "Posição nítida — captura automática pronta",
-    capturing: "A capturar automaticamente...",
-    licenceCaptured: "Carta de condução capturada",
-    chooseIdentity: "Escolha o documento de identidade",
+    automaticReady:
+      "Posição nítida — captura automática pronta",
+    capturing:
+      "A capturar automaticamente...",
+    licenceCaptured:
+      "Carta de condução capturada",
+    chooseIdentity:
+      "Escolha o documento de identidade",
     identityHelp:
       "Use o documento original que irá trazer ao levantar a scooter.",
     idCard: "Cartão de identidade",
     frontAndBack: "Frente e verso",
     passport: "Passaporte",
     photoPage: "Página com fotografia",
-    openingScanner: "A abrir o scanner seguro",
-    reviewingDocuments: "A verificar os documentos",
-    connecting: "A ligar à sua reserva...",
+    openingScanner:
+      "A abrir o scanner seguro",
+    reviewingDocuments:
+      "A verificar os documentos",
+    connecting:
+      "A ligar à sua reserva...",
     checking:
       "A verificar nitidez, datas de emissão e validade e categorias da carta...",
-    retakeTitle: "Volte a tirar a fotografia",
-    rejectedTitle: "A carta não pode ser aceite",
-    retakeButton: "Repetir a fotografia pedida",
+    retakeTitle:
+      "Volte a tirar a fotografia",
+          rejectedTitle:
+      "A carta não pode ser aceite",
+    retakeButton:
+      "Repetir a fotografia pedida",
     scanAgain: "Digitalizar novamente",
-    returnCheckout: "Voltar ao pagamento",
-    documentsReceived: "Documentos recebidos",
-    verificationComplete: "Verificação concluída",
+    returnCheckout:
+      "Voltar ao pagamento",
+    documentsReceived:
+      "Documentos recebidos",
+    verificationComplete:
+      "Verificação concluída",
     manualComplete:
       "A reserva pode continuar. A NEXA Rentals confirmará os documentos manualmente antes do levantamento.",
     acceptedComplete:
       "Os documentos passaram nas verificações automáticas e foram associados à reserva.",
-    returningCheckout: "A voltar ao pagamento...",
-    returnBooking: "Pode voltar ao ecrã de reserva",
-    attention: "O scanner precisa de atenção",
-    takePhotoInstead: "Tirar uma fotografia",
+    returningCheckout:
+      "A voltar ao pagamento...",
+    returnBooking:
+      "Pode voltar ao ecrã de reserva",
+    attention:
+      "O scanner precisa de atenção",
+    takePhotoInstead:
+      "Tirar uma fotografia",
     tryAgain: "Tentar novamente",
-    continueManual: "Continuar para revisão manual",
-    missingSession: "Falta a sessão segura de verificação.",
+    continueManual:
+      "Continuar para revisão manual",
+    missingSession:
+      "Falta a sessão segura de verificação.",
     sessionError:
       "Esta sessão de verificação não está disponível. Recomece a partir do pagamento.",
     updateError:
@@ -862,36 +935,46 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Este navegador não suporta acesso direto à câmara.",
     cameraDenied:
       "A permissão da câmara foi bloqueada. Permita o acesso ou tire uma fotografia.",
-    cameraError: "Não foi possível abrir a câmara traseira.",
+    cameraError:
+      "Não foi possível abrir a câmara traseira.",
     captureError:
       "Não foi possível capturar a fotografia do documento.",
-    invalidPhoto: "Selecione ou tire uma imagem legível.",
+    invalidPhoto:
+      "Selecione ou tire uma imagem legível.",
     analysisError:
       "Não foi possível analisar os documentos. Tente novamente.",
     saveError:
       "Não foi possível guardar as fotografias dos documentos.",
     steps: {
       dlFront: {
-        eyebrow: "Carta de condução · Frente",
-        title: "Coloque a frente dentro da moldura",
+        eyebrow:
+          "Carta de condução · Frente",
+        title:
+          "Coloque a frente dentro da moldura",
         instruction:
           "Mantenha os quatro cantos visíveis, evite reflexos e segure a carta sem mexer.",
       },
       dlBack: {
-        eyebrow: "Carta de condução · Verso",
-        title: "Agora digitalize o verso",
+        eyebrow:
+          "Carta de condução · Verso",
+        title:
+          "Agora digitalize o verso",
         instruction:
           "Vire a carta e mantenha o cartão completo dentro da moldura.",
       },
       idFront: {
-        eyebrow: "Documento de identidade · Frente",
-        title: "Coloque o documento dentro da moldura",
+        eyebrow:
+          "Documento de identidade · Frente",
+        title:
+          "Coloque o documento dentro da moldura",
         instruction:
           "Mostre a página completa do passaporte com fotografia ou a frente do cartão de identidade.",
       },
       idBack: {
-        eyebrow: "Cartão de identidade · Verso",
-        title: "Agora digitalize o verso",
+        eyebrow:
+          "Cartão de identidade · Verso",
+        title:
+          "Agora digitalize o verso",
         instruction:
           "Mantenha todas as margens visíveis e certifique-se de que o texto pequeno está nítido.",
       },
@@ -918,47 +1001,68 @@ const COPY: Record<ScannerLocale, Copy> = {
   sv: {
     scanner: "NEXA säker skanner",
     step: "Steg",
-    openingCamera: "Öppnar bakre kameran...",
-    alignDocument: "Placera hela dokumentet inom ramen",
-    tooDark: "För mörkt — gå till bättre ljus",
-    tooMuchGlare: "För mycket blänk — vinkla dokumentet lite",
+    openingCamera:
+      "Öppnar bakre kameran...",
+    alignDocument:
+      "Placera hela dokumentet inom ramen",
+    tooDark:
+      "För mörkt — gå till bättre ljus",
+    tooMuchGlare:
+      "För mycket blänk — vinkla dokumentet lite",
     holdStill: "Håll dokumentet stilla",
     moveCloser:
       "Flytta lite närmare och håll alla fyra hörn synliga",
     automaticReady:
       "Tydlig position — automatisk bildtagning redo",
-    capturing: "Tar bilden automatiskt...",
-    licenceCaptured: "Körkort registrerat",
-    chooseIdentity: "Välj identitetshandling",
+    capturing:
+      "Tar bilden automatiskt...",
+    licenceCaptured:
+      "Körkort registrerat",
+    chooseIdentity:
+      "Välj identitetshandling",
     identityHelp:
       "Använd originalhandlingen som du tar med vid hämtning av skotern.",
     idCard: "ID-kort",
     frontAndBack: "Fram- och baksida",
     passport: "Pass",
     photoPage: "Fotosida",
-    openingScanner: "Öppnar säker skanner",
-    reviewingDocuments: "Kontrollerar dina dokument",
-    connecting: "Ansluter till din bokning...",
+    openingScanner:
+      "Öppnar säker skanner",
+    reviewingDocuments:
+      "Kontrollerar dina dokument",
+    connecting:
+      "Ansluter till din bokning...",
     checking:
       "Kontrollerar skärpa, utfärdande- och utgångsdatum samt körkortskategorier...",
     retakeTitle: "Ta om fotografiet",
-    rejectedTitle: "Körkortet kan inte godkännas",
-    retakeButton: "Ta om begärt fotografi",
+    rejectedTitle:
+      "Körkortet kan inte godkännas",
+    retakeButton:
+      "Ta om begärt fotografi",
     scanAgain: "Skanna igen",
-    returnCheckout: "Tillbaka till kassan",
-    documentsReceived: "Dokument mottagna",
-    verificationComplete: "Verifiering klar",
+    returnCheckout:
+      "Tillbaka till kassan",
+    documentsReceived:
+      "Dokument mottagna",
+    verificationComplete:
+      "Verifiering klar",
     manualComplete:
       "Din bokning kan fortsätta. NEXA Rentals kontrollerar dokumenten manuellt före hämtning.",
     acceptedComplete:
       "Dina dokument klarade de automatiska kontrollerna och kopplades till bokningen.",
-    returningCheckout: "Återgår till kassan...",
-    returnBooking: "Du kan återgå till bokningsskärmen",
-    attention: "Skannern behöver din uppmärksamhet",
-    takePhotoInstead: "Ta ett foto i stället",
+    returningCheckout:
+      "Återgår till kassan...",
+    returnBooking:
+      "Du kan återgå till bokningsskärmen",
+    attention:
+      "Skannern behöver din uppmärksamhet",
+    takePhotoInstead:
+      "Ta ett foto i stället",
     tryAgain: "Försök igen",
-    continueManual: "Fortsätt till manuell kontroll",
-    missingSession: "Den säkra verifieringssessionen saknas.",
+    continueManual:
+      "Fortsätt till manuell kontroll",
+    missingSession:
+      "Den säkra verifieringssessionen saknas.",
     sessionError:
       "Verifieringssessionen är inte tillgänglig. Börja om från kassan.",
     updateError:
@@ -967,16 +1071,21 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Webbläsaren stöder inte direkt kameraåtkomst.",
     cameraDenied:
       "Kamerabehörigheten blockerades. Tillåt åtkomst eller ta ett foto.",
-    cameraError: "Den bakre kameran kunde inte öppnas.",
-    captureError: "Dokumentfotot kunde inte tas.",
-    invalidPhoto: "Välj eller ta en läsbar bild.",
+    cameraError:
+      "Den bakre kameran kunde inte öppnas.",
+    captureError:
+      "Dokumentfotot kunde inte tas.",
+    invalidPhoto:
+      "Välj eller ta en läsbar bild.",
     analysisError:
       "Dokumenten kunde inte analyseras. Försök igen.",
-    saveError: "Dokumentfotona kunde inte sparas.",
+    saveError:
+      "Dokumentfotona kunde inte sparas.",
     steps: {
       dlFront: {
         eyebrow: "Körkort · Framsida",
-        title: "Placera framsidan inom ramen",
+        title:
+          "Placera framsidan inom ramen",
         instruction:
           "Håll alla fyra hörn synliga, undvik blänk och håll körkortet stilla.",
       },
@@ -987,8 +1096,10 @@ const COPY: Record<ScannerLocale, Copy> = {
           "Vänd körkortet och håll hela kortet inom ramen.",
       },
       idFront: {
-        eyebrow: "Identitetshandling · Framsida",
-        title: "Placera dokumentet inom ramen",
+        eyebrow:
+          "Identitetshandling · Framsida",
+        title:
+          "Placera dokumentet inom ramen",
         instruction:
           "Visa hela passets fotosida eller framsidan av ditt ID-kort.",
       },
@@ -1002,7 +1113,8 @@ const COPY: Record<ScannerLocale, Copy> = {
     decisions: {
       retake:
         "Ett eller flera fotografier är otydliga. Ta om den begärda bilden.",
-      licence_expired: "Körkortet verkar ha gått ut.",
+      licence_expired:
+        "Körkortet verkar ha gått ut.",
       identity_expired:
         "Passet eller identitetshandlingen verkar ha gått ut.",
       b_less_than_three_years:
@@ -1021,46 +1133,66 @@ const COPY: Record<ScannerLocale, Copy> = {
     scanner: "NEXA sikker scanner",
     step: "Trin",
     openingCamera: "Åbner bagkamera...",
-    alignDocument: "Placér hele dokumentet inden for rammen",
-    tooDark: "For mørkt — gå hen til bedre lys",
-    tooMuchGlare: "For meget genskin — vip dokumentet lidt",
+    alignDocument:
+      "Placér hele dokumentet inden for rammen",
+    tooDark:
+      "For mørkt — gå hen til bedre lys",
+    tooMuchGlare:
+      "For meget genskin — vip dokumentet lidt",
     holdStill: "Hold dokumentet stille",
     moveCloser:
       "Gå lidt tættere på og hold alle fire hjørner synlige",
     automaticReady:
       "Tydelig placering — automatisk optagelse klar",
-    capturing: "Tager billedet automatisk...",
-    licenceCaptured: "Kørekort registreret",
-    chooseIdentity: "Vælg identitetsdokument",
+    capturing:
+      "Tager billedet automatisk...",
+    licenceCaptured:
+      "Kørekort registreret",
+    chooseIdentity:
+      "Vælg identitetsdokument",
     identityHelp:
       "Brug det originale dokument, som du medbringer ved afhentning af scooteren.",
     idCard: "ID-kort",
     frontAndBack: "For- og bagside",
     passport: "Pas",
     photoPage: "Fotoside",
-    openingScanner: "Åbner sikker scanner",
-    reviewingDocuments: "Kontrollerer dine dokumenter",
-    connecting: "Opretter forbindelse til din booking...",
+    openingScanner:
+      "Åbner sikker scanner",
+    reviewingDocuments:
+      "Kontrollerer dine dokumenter",
+    connecting:
+      "Opretter forbindelse til din booking...",
     checking:
       "Kontrollerer skarphed, udstedelses- og udløbsdatoer samt kørekortkategorier...",
     retakeTitle: "Tag billedet igen",
-    rejectedTitle: "Kørekortet kan ikke godkendes",
-    retakeButton: "Tag det ønskede billede igen",
+    rejectedTitle:
+      "Kørekortet kan ikke godkendes",
+    retakeButton:
+      "Tag det ønskede billede igen",
     scanAgain: "Scan igen",
-    returnCheckout: "Tilbage til betaling",
-    documentsReceived: "Dokumenter modtaget",
-    verificationComplete: "Verifikation gennemført",
+    returnCheckout:
+      "Tilbage til betaling",
+    documentsReceived:
+      "Dokumenter modtaget",
+    verificationComplete:
+      "Verifikation gennemført",
     manualComplete:
       "Din booking kan fortsætte. NEXA Rentals kontrollerer dokumenterne manuelt før afhentning.",
     acceptedComplete:
       "Dine dokumenter bestod de automatiske kontroller og blev knyttet til din booking.",
-    returningCheckout: "Vender tilbage til betaling...",
-    returnBooking: "Du kan vende tilbage til bookingskærmen",
-    attention: "Scanneren kræver din opmærksomhed",
-    takePhotoInstead: "Tag et billede i stedet",
+    returningCheckout:
+      "Vender tilbage til betaling...",
+    returnBooking:
+      "Du kan vende tilbage til bookingskærmen",
+    attention:
+      "Scanneren kræver din opmærksomhed",
+    takePhotoInstead:
+      "Tag et billede i stedet",
     tryAgain: "Prøv igen",
-    continueManual: "Fortsæt til manuel kontrol",
-    missingSession: "Den sikre verifikationssession mangler.",
+    continueManual:
+      "Fortsæt til manuel kontrol",
+    missingSession:
+      "Den sikre verifikationssession mangler.",
     sessionError:
       "Denne verifikationssession er ikke tilgængelig. Start igen fra betalingen.",
     updateError:
@@ -1069,16 +1201,21 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Denne browser understøtter ikke direkte kameraadgang.",
     cameraDenied:
       "Kameratilladelsen blev blokeret. Tillad adgang eller tag et billede.",
-    cameraError: "Bagkameraet kunne ikke åbnes.",
-    captureError: "Dokumentbilledet kunne ikke tages.",
-    invalidPhoto: "Vælg eller tag et læsbart billede.",
+    cameraError:
+      "Bagkameraet kunne ikke åbnes.",
+    captureError:
+      "Dokumentbilledet kunne ikke tages.",
+    invalidPhoto:
+      "Vælg eller tag et læsbart billede.",
     analysisError:
       "Dokumenterne kunne ikke analyseres. Prøv igen.",
-    saveError: "Dokumentbillederne kunne ikke gemmes.",
+    saveError:
+      "Dokumentbillederne kunne ikke gemmes.",
     steps: {
       dlFront: {
         eyebrow: "Kørekort · Forside",
-        title: "Placér forsiden inden for rammen",
+        title:
+          "Placér forsiden inden for rammen",
         instruction:
           "Hold alle fire hjørner synlige, undgå genskin og hold kørekortet stille.",
       },
@@ -1089,8 +1226,10 @@ const COPY: Record<ScannerLocale, Copy> = {
           "Vend kørekortet og hold hele kortet inden for rammen.",
       },
       idFront: {
-        eyebrow: "Identitetsdokument · Forside",
-        title: "Placér dokumentet inden for rammen",
+        eyebrow:
+          "Identitetsdokument · Forside",
+        title:
+          "Placér dokumentet inden for rammen",
         instruction:
           "Vis hele passets fotoside eller forsiden af dit ID-kort.",
       },
@@ -1119,50 +1258,70 @@ const COPY: Record<ScannerLocale, Copy> = {
       accepted: "Dokumenter godkendt.",
     },
   },
-    no: {
+  no: {
     scanner: "NEXA sikker skanner",
     step: "Trinn",
     openingCamera: "Åpner bakkamera...",
-    alignDocument: "Plasser hele dokumentet innenfor rammen",
-    tooDark: "For mørkt — gå til bedre lys",
-    tooMuchGlare: "For mye gjenskinn — vipp dokumentet litt",
+    alignDocument:
+      "Plasser hele dokumentet innenfor rammen",
+    tooDark:
+      "For mørkt — gå til bedre lys",
+    tooMuchGlare:
+      "For mye gjenskinn — vipp dokumentet litt",
     holdStill: "Hold dokumentet stille",
     moveCloser:
       "Gå litt nærmere og hold alle fire hjørner synlige",
     automaticReady:
       "Tydelig plassering — automatisk bilde klar",
-    capturing: "Tar bildet automatisk...",
-    licenceCaptured: "Førerkort registrert",
-    chooseIdentity: "Velg identitetsdokument",
+    capturing:
+      "Tar bildet automatisk...",
+    licenceCaptured:
+      "Førerkort registrert",
+    chooseIdentity:
+      "Velg identitetsdokument",
     identityHelp:
       "Bruk originaldokumentet som du tar med ved henting av scooteren.",
     idCard: "ID-kort",
     frontAndBack: "For- og bakside",
     passport: "Pass",
     photoPage: "Fotoside",
-    openingScanner: "Åpner sikker skanner",
-    reviewingDocuments: "Kontrollerer dokumentene",
-    connecting: "Kobler til bestillingen...",
+    openingScanner:
+      "Åpner sikker skanner",
+    reviewingDocuments:
+      "Kontrollerer dokumentene",
+    connecting:
+      "Kobler til bestillingen...",
     checking:
       "Kontrollerer skarphet, utstedelses- og utløpsdatoer samt førerkortklasser...",
     retakeTitle: "Ta bildet på nytt",
-    rejectedTitle: "Førerkortet kan ikke godtas",
-    retakeButton: "Ta det forespurte bildet på nytt",
+    rejectedTitle:
+      "Førerkortet kan ikke godtas",
+    retakeButton:
+      "Ta det forespurte bildet på nytt",
     scanAgain: "Skann på nytt",
-    returnCheckout: "Tilbake til betaling",
-    documentsReceived: "Dokumenter mottatt",
-    verificationComplete: "Verifisering fullført",
+    returnCheckout:
+      "Tilbake til betaling",
+    documentsReceived:
+      "Dokumenter mottatt",
+    verificationComplete:
+      "Verifisering fullført",
     manualComplete:
       "Bestillingen kan fortsette. NEXA Rentals kontrollerer dokumentene manuelt før henting.",
     acceptedComplete:
       "Dokumentene besto de automatiske kontrollene og ble koblet til bestillingen.",
-    returningCheckout: "Går tilbake til betaling...",
-    returnBooking: "Du kan gå tilbake til bestillingsskjermen",
-    attention: "Skanneren trenger oppmerksomhet",
-    takePhotoInstead: "Ta et bilde i stedet",
+    returningCheckout:
+      "Går tilbake til betaling...",
+    returnBooking:
+      "Du kan gå tilbake til bestillingsskjermen",
+    attention:
+      "Skanneren trenger oppmerksomhet",
+    takePhotoInstead:
+      "Ta et bilde i stedet",
     tryAgain: "Prøv igjen",
-    continueManual: "Fortsett til manuell kontroll",
-    missingSession: "Den sikre verifiseringsøkten mangler.",
+    continueManual:
+      "Fortsett til manuell kontroll",
+    missingSession:
+      "Den sikre verifiseringsøkten mangler.",
     sessionError:
       "Denne verifiseringsøkten er ikke tilgjengelig. Start på nytt fra betalingen.",
     updateError:
@@ -1184,7 +1343,8 @@ const COPY: Record<ScannerLocale, Copy> = {
     steps: {
       dlFront: {
         eyebrow: "Førerkort · Forside",
-        title: "Plasser forsiden innenfor rammen",
+        title:
+          "Plasser forsiden innenfor rammen",
         instruction:
           "Hold alle fire hjørner synlige, unngå gjenskinn og hold førerkortet stille.",
       },
@@ -1195,8 +1355,10 @@ const COPY: Record<ScannerLocale, Copy> = {
           "Snu førerkortet og hold hele kortet innenfor rammen.",
       },
       idFront: {
-        eyebrow: "Identitetsdokument · Forside",
-        title: "Plasser dokumentet innenfor rammen",
+        eyebrow:
+          "Identitetsdokument · Forside",
+        title:
+          "Plasser dokumentet innenfor rammen",
         instruction:
           "Vis hele passets fotoside eller forsiden av ID-kortet.",
       },
@@ -1230,15 +1392,15 @@ const COPY: Record<ScannerLocale, Copy> = {
   nl: {
     scanner: "Beveiligde NEXA-scanner",
     step: "Stap",
-    openingCamera: "Achtercamera openen...",
+    openingCamera:
+      "Achtercamera openen...",
     alignDocument:
       "Plaats het volledige document binnen het kader",
     tooDark:
       "Te donker — ga naar beter licht",
     tooMuchGlare:
       "Te veel schittering — kantel het document iets",
-    holdStill:
-      "Houd het document stil",
+    holdStill: "Houd het document stil",
     moveCloser:
       "Kom iets dichterbij en houd alle vier de hoeken zichtbaar",
     automaticReady:
@@ -1251,14 +1413,10 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Kies je identiteitsdocument",
     identityHelp:
       "Gebruik het originele document dat je meeneemt bij het ophalen van de scooter.",
-    idCard:
-      "Identiteitskaart",
-    frontAndBack:
-      "Voor- en achterkant",
-    passport:
-      "Paspoort",
-    photoPage:
-      "Fotopagina",
+    idCard: "Identiteitskaart",
+    frontAndBack: "Voor- en achterkant",
+    passport: "Paspoort",
+    photoPage: "Fotopagina",
     openingScanner:
       "Beveiligde scanner openen",
     reviewingDocuments:
@@ -1267,14 +1425,12 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Verbinden met je boeking...",
     checking:
       "Scherpte, afgifte- en vervaldatums en rijbewijscategorieën controleren...",
-    retakeTitle:
-      "Maak de foto opnieuw",
+    retakeTitle: "Maak de foto opnieuw",
     rejectedTitle:
       "Rijbewijs kan niet worden geaccepteerd",
     retakeButton:
       "Gevraagde foto opnieuw maken",
-    scanAgain:
-      "Opnieuw scannen",
+    scanAgain: "Opnieuw scannen",
     returnCheckout:
       "Terug naar afrekenen",
     documentsReceived:
@@ -1293,8 +1449,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Scanner heeft aandacht nodig",
     takePhotoInstead:
       "Maak in plaats daarvan een foto",
-    tryAgain:
-      "Probeer opnieuw",
+    tryAgain: "Probeer opnieuw",
     continueManual:
       "Doorgaan voor handmatige controle",
     missingSession:
@@ -1319,8 +1474,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       "De documentfoto’s konden niet worden opgeslagen.",
     steps: {
       dlFront: {
-        eyebrow:
-          "Rijbewijs · Voorkant",
+        eyebrow: "Rijbewijs · Voorkant",
         title:
           "Plaats de voorkant binnen het kader",
         instruction:
@@ -1329,8 +1483,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       dlBack: {
         eyebrow:
           "Rijbewijs · Achterkant",
-        title:
-          "Scan nu de achterkant",
+        title: "Scan nu de achterkant",
         instruction:
           "Draai het rijbewijs om en houd de volledige kaart binnen het kader.",
       },
@@ -1345,8 +1498,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       idBack: {
         eyebrow:
           "Identiteitskaart · Achterkant",
-        title:
-          "Scan nu de achterkant",
+        title: "Scan nu de achterkant",
         instruction:
           "Houd alle randen zichtbaar en zorg dat de kleine tekst scherp is.",
       },
@@ -1374,44 +1526,58 @@ const COPY: Record<ScannerLocale, Copy> = {
   pl: {
     scanner: "Bezpieczny skaner NEXA",
     step: "Krok",
-    openingCamera: "Otwieranie tylnej kamery...",
-    alignDocument: "Umieść cały dokument w ramce",
-    tooDark: "Za ciemno — przejdź do lepszego światła",
-    tooMuchGlare: "Za dużo odblasku — lekko przechyl dokument",
-    holdStill: "Trzymaj dokument nieruchomo",
+    openingCamera:
+      "Otwieranie tylnej kamery...",
+    alignDocument:
+      "Umieść cały dokument w ramce",
+    tooDark:
+      "Za ciemno — przejdź do lepszego światła",
+    tooMuchGlare:
+      "Za dużo odblasku — lekko przechyl dokument",
+    holdStill:
+      "Trzymaj dokument nieruchomo",
     moveCloser:
       "Przybliż dokument i pokaż wszystkie cztery rogi",
     automaticReady:
       "Wyraźna pozycja — automatyczne zdjęcie gotowe",
     capturing:
       "Automatyczne wykonywanie zdjęcia...",
-    licenceCaptured: "Prawo jazdy zeskanowane",
-    chooseIdentity: "Wybierz dokument tożsamości",
+    licenceCaptured:
+      "Prawo jazdy zeskanowane",
+    chooseIdentity:
+      "Wybierz dokument tożsamości",
     identityHelp:
       "Użyj oryginalnego dokumentu, który przyniesiesz przy odbiorze skutera.",
     idCard: "Dowód osobisty",
     frontAndBack: "Przód i tył",
     passport: "Paszport",
     photoPage: "Strona ze zdjęciem",
-    openingScanner: "Otwieranie bezpiecznego skanera",
-    reviewingDocuments: "Sprawdzanie dokumentów",
-    connecting: "Łączenie z rezerwacją...",
+    openingScanner:
+      "Otwieranie bezpiecznego skanera",
+    reviewingDocuments:
+      "Sprawdzanie dokumentów",
+    connecting:
+      "Łączenie z rezerwacją...",
     checking:
       "Sprawdzanie ostrości, dat wydania i ważności oraz kategorii prawa jazdy...",
-    retakeTitle: "Wykonaj zdjęcie ponownie",
+    retakeTitle:
+      "Wykonaj zdjęcie ponownie",
     rejectedTitle:
       "Prawo jazdy nie może zostać zaakceptowane",
     retakeButton:
       "Powtórz wymagane zdjęcie",
     scanAgain: "Skanuj ponownie",
     returnCheckout: "Wróć do płatności",
-    documentsReceived: "Dokumenty otrzymane",
-    verificationComplete: "Weryfikacja zakończona",
+    documentsReceived:
+      "Dokumenty otrzymane",
+    verificationComplete:
+      "Weryfikacja zakończona",
     manualComplete:
       "Rezerwacja może być kontynuowana. NEXA Rentals ręcznie potwierdzi dokumenty przed odbiorem.",
     acceptedComplete:
       "Dokumenty przeszły automatyczne kontrole i zostały połączone z rezerwacją.",
-    returningCheckout: "Powrót do płatności...",
+    returningCheckout:
+      "Powrót do płatności...",
     returnBooking:
       "Możesz wrócić do ekranu rezerwacji",
     attention: "Skaner wymaga uwagi",
@@ -1441,18 +1607,14 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Nie udało się zapisać zdjęć dokumentów.",
     steps: {
       dlFront: {
-        eyebrow:
-          "Prawo jazdy · Przód",
-        title:
-          "Umieść przód w ramce",
+        eyebrow: "Prawo jazdy · Przód",
+        title: "Umieść przód w ramce",
         instruction:
           "Pokaż wszystkie cztery rogi, unikaj odblasków i trzymaj prawo jazdy nieruchomo.",
       },
       dlBack: {
-        eyebrow:
-          "Prawo jazdy · Tył",
-        title:
-          "Teraz zeskanuj tył",
+        eyebrow: "Prawo jazdy · Tył",
+        title: "Teraz zeskanuj tył",
         instruction:
           "Odwróć prawo jazdy i trzymaj całą kartę w ramce.",
       },
@@ -1465,10 +1627,8 @@ const COPY: Record<ScannerLocale, Copy> = {
           "Pokaż całą stronę paszportu ze zdjęciem lub przód dowodu osobistego.",
       },
       idBack: {
-        eyebrow:
-          "Dowód osobisty · Tył",
-        title:
-          "Teraz zeskanuj tył",
+        eyebrow: "Dowód osobisty · Tył",
+        title: "Teraz zeskanuj tył",
         instruction:
           "Pokaż wszystkie krawędzie i upewnij się, że mały tekst jest ostry.",
       },
@@ -1496,8 +1656,10 @@ const COPY: Record<ScannerLocale, Copy> = {
   cs: {
     scanner: "Bezpečný skener NEXA",
     step: "Krok",
-    openingCamera: "Otevírání zadního fotoaparátu...",
-    alignDocument: "Umístěte celý dokument do rámečku",
+    openingCamera:
+      "Otevírání zadního fotoaparátu...",
+    alignDocument:
+      "Umístěte celý dokument do rámečku",
     tooDark:
       "Příliš tmavé — přesuňte se k lepšímu světlu",
     tooMuchGlare:
@@ -1515,14 +1677,11 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Vyberte doklad totožnosti",
     identityHelp:
       "Použijte originální doklad, který přinesete při vyzvednutí skútru.",
-    idCard:
-      "Občanský průkaz",
+    idCard: "Občanský průkaz",
     frontAndBack:
       "Přední a zadní strana",
-    passport:
-      "Cestovní pas",
-    photoPage:
-      "Stránka s fotografií",
+    passport: "Cestovní pas",
+    photoPage: "Stránka s fotografií",
     openingScanner:
       "Otevírání bezpečného skeneru",
     reviewingDocuments:
@@ -1537,10 +1696,8 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Řidičský průkaz nelze přijmout",
     retakeButton:
       "Znovu pořídit požadovanou fotografii",
-    scanAgain:
-      "Skenovat znovu",
-    returnCheckout:
-      "Zpět k platbě",
+    scanAgain: "Skenovat znovu",
+    returnCheckout: "Zpět k platbě",
     documentsReceived:
       "Dokumenty přijaty",
     verificationComplete:
@@ -1557,8 +1714,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Skener vyžaduje pozornost",
     takePhotoInstead:
       "Pořídit fotografii",
-    tryAgain:
-      "Zkusit znovu",
+    tryAgain: "Zkusit znovu",
     continueManual:
       "Pokračovat k ruční kontrole",
     missingSession:
@@ -1630,8 +1786,7 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Zjištěná skupina řidičského oprávnění ještě není platná.",
       manual_review:
         "Dokumenty přijaty. NEXA Rentals je před vyzvednutím ručně potvrdí.",
-      accepted:
-        "Dokumenty přijaty.",
+      accepted: "Dokumenty přijaty.",
     },
   },
 
@@ -1644,7 +1799,7 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Розмістіть увесь документ у рамці",
     tooDark:
       "Надто темно — перейдіть до кращого освітлення",
-    tooMuchGlare:
+          tooMuchGlare:
       "Забагато відблисків — трохи нахиліть документ",
     holdStill:
       "Тримайте документ нерухомо",
@@ -1652,22 +1807,18 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Трохи наблизьте документ і залиште видимими всі чотири кути",
     automaticReady:
       "Чітке положення — автоматична зйомка готова",
-    capturing:
-      "Автоматична зйомка...",
+    capturing: "Автоматична зйомка...",
     licenceCaptured:
       "Водійське посвідчення знято",
     chooseIdentity:
       "Виберіть документ, що посвідчує особу",
     identityHelp:
       "Використовуйте оригінал документа, який принесете під час отримання скутера.",
-    idCard:
-      "ID-картка",
+    idCard: "ID-картка",
     frontAndBack:
       "Лицьова і зворотна сторони",
-    passport:
-      "Паспорт",
-    photoPage:
-      "Сторінка з фото",
+    passport: "Паспорт",
+    photoPage: "Сторінка з фото",
     openingScanner:
       "Відкриття безпечного сканера",
     reviewingDocuments:
@@ -1676,14 +1827,12 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Підключення до бронювання...",
     checking:
       "Перевірка чіткості, дат видачі й закінчення та категорій посвідчення...",
-    retakeTitle:
-      "Зробіть фото ще раз",
+    retakeTitle: "Зробіть фото ще раз",
     rejectedTitle:
       "Посвідчення не може бути прийняте",
     retakeButton:
       "Повторити потрібне фото",
-    scanAgain:
-      "Сканувати знову",
+    scanAgain: "Сканувати знову",
     returnCheckout:
       "Повернутися до оплати",
     documentsReceived:
@@ -1698,12 +1847,9 @@ const COPY: Record<ScannerLocale, Copy> = {
       "Повернення до оплати...",
     returnBooking:
       "Можна повернутися до екрана бронювання",
-    attention:
-      "Сканер потребує уваги",
-    takePhotoInstead:
-      "Зробити фото",
-    tryAgain:
-      "Спробувати ще раз",
+    attention: "Сканер потребує уваги",
+    takePhotoInstead: "Зробити фото",
+    tryAgain: "Спробувати ще раз",
     continueManual:
       "Продовжити для ручної перевірки",
     missingSession:
@@ -1775,22 +1921,219 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Виявлена категорія водійського посвідчення ще не чинна.",
       manual_review:
         "Документи отримано. NEXA Rentals підтвердить їх вручну до отримання.",
-      accepted:
-        "Документи прийнято.",
+      accepted: "Документи прийнято.",
     },
   },
 };
-const SUPPORTED_LOCALES = new Set<ScannerLocale>(
-  Object.keys(COPY) as ScannerLocale[]
-);
 
-const AUTO_CAPTURE_SAMPLES = 1;
-const CAMERA_WARMUP_MS = 400;
-const QUALITY_CHECK_INTERVAL_MS = 150;
+const FRAME_COPY: Record<
+  ScannerLocale,
+  FrameCopy
+> = {
+  en: {
+    checkingDocument:
+      "Checking the document...",
+    wrongLicence:
+      "Wrong document — please show your driving licence",
+    wrongIdentity:
+      "Wrong document — please show the requested ID document",
+    wrongSide:
+      "Wrong side — please show the requested side",
+    notReadable:
+      "Keep the complete document visible and move slightly closer",
+    validationUnavailable:
+      "Document check unavailable — hold still and try again",
+  },
+  es: {
+    checkingDocument:
+      "Comprobando el documento...",
+    wrongLicence:
+      "Documento incorrecto — muestre su permiso de conducir",
+    wrongIdentity:
+      "Documento incorrecto — muestre el documento de identidad solicitado",
+    wrongSide:
+      "Lado incorrecto — muestre el lado solicitado",
+    notReadable:
+      "Mantenga todo el documento visible y acérquelo un poco",
+    validationUnavailable:
+      "No se pudo comprobar el documento — manténgalo quieto e inténtelo de nuevo",
+  },
+  de: {
+    checkingDocument:
+      "Dokument wird geprüft...",
+    wrongLicence:
+      "Falsches Dokument — bitte zeigen Sie Ihren Führerschein",
+    wrongIdentity:
+      "Falsches Dokument — bitte zeigen Sie das angeforderte Ausweisdokument",
+    wrongSide:
+      "Falsche Seite — bitte zeigen Sie die angeforderte Seite",
+    notReadable:
+      "Halten Sie das gesamte Dokument sichtbar und etwas näher",
+    validationUnavailable:
+      "Dokumentenprüfung nicht verfügbar — ruhig halten und erneut versuchen",
+  },
+  fr: {
+    checkingDocument:
+      "Vérification du document...",
+    wrongLicence:
+      "Mauvais document — veuillez présenter votre permis de conduire",
+    wrongIdentity:
+      "Mauvais document — veuillez présenter la pièce d’identité demandée",
+    wrongSide:
+      "Mauvais côté — veuillez présenter le côté demandé",
+    notReadable:
+      "Gardez le document entier visible et rapprochez-le légèrement",
+    validationUnavailable:
+      "Vérification indisponible — restez immobile et réessayez",
+  },
+  it: {
+    checkingDocument:
+      "Controllo del documento...",
+    wrongLicence:
+      "Documento errato — mostra la patente di guida",
+    wrongIdentity:
+      "Documento errato — mostra il documento d’identità richiesto",
+    wrongSide:
+      "Lato errato — mostra il lato richiesto",
+    notReadable:
+      "Mantieni visibile tutto il documento e avvicinalo leggermente",
+    validationUnavailable:
+      "Controllo non disponibile — tieni fermo e riprova",
+  },
+  pt: {
+    checkingDocument:
+      "A verificar o documento...",
+    wrongLicence:
+      "Documento errado — mostre a sua carta de condução",
+    wrongIdentity:
+      "Documento errado — mostre o documento de identidade solicitado",
+    wrongSide:
+      "Lado errado — mostre o lado solicitado",
+    notReadable:
+      "Mantenha todo o documento visível e aproxime-o ligeiramente",
+    validationUnavailable:
+      "Verificação indisponível — mantenha imóvel e tente novamente",
+  },
+  sv: {
+    checkingDocument:
+      "Kontrollerar dokumentet...",
+    wrongLicence:
+      "Fel dokument — visa ditt körkort",
+    wrongIdentity:
+      "Fel dokument — visa den begärda ID-handlingen",
+    wrongSide:
+      "Fel sida — visa den begärda sidan",
+    notReadable:
+      "Håll hela dokumentet synligt och flytta det lite närmare",
+    validationUnavailable:
+      "Dokumentkontrollen är inte tillgänglig — håll stilla och försök igen",
+  },
+  da: {
+    checkingDocument:
+      "Kontrollerer dokumentet...",
+    wrongLicence:
+      "Forkert dokument — vis dit kørekort",
+    wrongIdentity:
+      "Forkert dokument — vis det ønskede ID-dokument",
+    wrongSide:
+      "Forkert side — vis den ønskede side",
+    notReadable:
+      "Hold hele dokumentet synligt og flyt det lidt tættere på",
+    validationUnavailable:
+      "Dokumentkontrol er ikke tilgængelig — hold stille og prøv igen",
+  },
+  no: {
+    checkingDocument:
+      "Kontrollerer dokumentet...",
+    wrongLicence:
+      "Feil dokument — vis førerkortet ditt",
+    wrongIdentity:
+      "Feil dokument — vis det forespurte ID-dokumentet",
+    wrongSide:
+      "Feil side — vis den forespurte siden",
+    notReadable:
+      "Hold hele dokumentet synlig og flytt det litt nærmere",
+    validationUnavailable:
+      "Dokumentkontroll er utilgjengelig — hold stille og prøv igjen",
+  },
+  nl: {
+    checkingDocument:
+      "Document controleren...",
+    wrongLicence:
+      "Verkeerd document — toon uw rijbewijs",
+    wrongIdentity:
+      "Verkeerd document — toon het gevraagde identiteitsdocument",
+    wrongSide:
+      "Verkeerde zijde — toon de gevraagde zijde",
+    notReadable:
+      "Houd het volledige document zichtbaar en iets dichterbij",
+    validationUnavailable:
+      "Documentcontrole niet beschikbaar — houd stil en probeer opnieuw",
+  },
+  pl: {
+    checkingDocument:
+      "Sprawdzanie dokumentu...",
+    wrongLicence:
+      "Nieprawidłowy dokument — pokaż prawo jazdy",
+    wrongIdentity:
+      "Nieprawidłowy dokument — pokaż wymagany dokument tożsamości",
+    wrongSide:
+      "Nieprawidłowa strona — pokaż wymaganą stronę",
+    notReadable:
+      "Pokaż cały dokument i przysuń go nieco bliżej",
+    validationUnavailable:
+      "Kontrola dokumentu niedostępna — przytrzymaj nieruchomo i spróbuj ponownie",
+  },
+  cs: {
+    checkingDocument:
+      "Kontrola dokumentu...",
+    wrongLicence:
+      "Nesprávný dokument — ukažte řidičský průkaz",
+    wrongIdentity:
+      "Nesprávný dokument — ukažte požadovaný doklad totožnosti",
+    wrongSide:
+      "Nesprávná strana — ukažte požadovanou stranu",
+    notReadable:
+      "Udržujte celý dokument viditelný a přesuňte jej trochu blíže",
+    validationUnavailable:
+      "Kontrola dokumentu není dostupná — držte jej klidně a zkuste to znovu",
+  },
+  uk: {
+    checkingDocument:
+      "Перевірка документа...",
+    wrongLicence:
+      "Неправильний документ — покажіть посвідчення водія",
+    wrongIdentity:
+      "Неправильний документ — покажіть потрібний документ особи",
+    wrongSide:
+      "Неправильний бік — покажіть потрібний бік",
+    notReadable:
+      "Тримайте весь документ у кадрі та трохи наблизьте його",
+    validationUnavailable:
+      "Перевірка недоступна — тримайте нерухомо та спробуйте ще раз",
+  },
+};
 
-function getScannerLocale(value: string): ScannerLocale {
-  const locale = value.toLowerCase() as ScannerLocale;
-  return SUPPORTED_LOCALES.has(locale) ? locale : "en";
+const SUPPORTED_LOCALES =
+  new Set<ScannerLocale>(
+    Object.keys(
+      COPY,
+    ) as ScannerLocale[],
+  );
+
+const AUTO_CAPTURE_SAMPLES = 6;
+const CAMERA_WARMUP_MS = 1400;
+const QUALITY_CHECK_INTERVAL_MS = 180;
+const FRAME_RETRY_DELAY_MS = 2200;
+
+function getScannerLocale(
+  value: string,
+): ScannerLocale {
+  const locale =
+    value.toLowerCase() as ScannerLocale;
+  return SUPPORTED_LOCALES.has(locale)
+    ? locale
+    : "en";
 }
 
 function clean(value: unknown) {
@@ -1801,8 +2144,12 @@ function safeReturnUrl(raw: string) {
   if (!raw) return "";
 
   try {
-    const url = new URL(raw, window.location.origin);
-    return url.origin === window.location.origin
+    const url = new URL(
+      raw,
+      window.location.origin,
+    );
+    return url.origin ===
+      window.location.origin
       ? url.toString()
       : "";
   } catch {
@@ -1810,18 +2157,24 @@ function safeReturnUrl(raw: string) {
   }
 }
 
-function isStep(value: unknown): value is StepKey {
-  return ["dlFront", "dlBack", "idFront", "idBack"].includes(
-    String(value)
-  );
+function isStep(
+  value: unknown,
+): value is StepKey {
+  return [
+    "dlFront",
+    "dlBack",
+    "idFront",
+    "idBack",
+  ].includes(String(value));
 }
 
 function sourceCrop(
   video: HTMLVideoElement,
-  aspect: number
+  aspect: number,
 ) {
   const sourceAspect =
-    video.videoWidth / video.videoHeight;
+    video.videoWidth /
+    video.videoHeight;
 
   let sx = 0;
   let sy = 0;
@@ -1846,49 +2199,64 @@ function sourceCrop(
 
 async function normalizePhoto(
   file: File,
-  invalidPhoto: string
+  invalidPhoto: string,
 ) {
   if (
     file.size <= 6 * 1024 * 1024 &&
-    ["image/jpeg", "image/png", "image/webp"].includes(
-      file.type
-    )
+    [
+      "image/jpeg",
+      "image/png",
+      "image/webp",
+    ].includes(file.type)
   ) {
     return file;
   }
 
-  const objectUrl = URL.createObjectURL(file);
+  const objectUrl =
+    URL.createObjectURL(file);
 
   try {
-    const image = await new Promise<HTMLImageElement>(
-      (resolve, reject) => {
-        const element = new Image();
+    const image =
+      await new Promise<HTMLImageElement>(
+        (resolve, reject) => {
+          const element = new Image();
 
-        element.onload = () => resolve(element);
-        element.onerror = () =>
-          reject(new Error(invalidPhoto));
+          element.onload = () =>
+            resolve(element);
+          element.onerror = () =>
+            reject(
+              new Error(invalidPhoto),
+            );
 
-        element.src = objectUrl;
-      }
-    );
+          element.src = objectUrl;
+        },
+      );
 
     const longest = Math.max(
       image.naturalWidth,
-      image.naturalHeight
+      image.naturalHeight,
     );
 
-    const scale = Math.min(1, 1800 / longest);
+    const scale = Math.min(
+      1,
+      1800 / longest,
+    );
 
-    const canvas = document.createElement("canvas");
+    const canvas =
+      document.createElement("canvas");
 
     canvas.width = Math.max(
       1,
-      Math.round(image.naturalWidth * scale)
+      Math.round(
+        image.naturalWidth * scale,
+      ),
     );
 
     canvas.height = Math.max(
       1,
-      Math.round(image.naturalHeight * scale)
+      Math.round(
+        image.naturalHeight * scale,
+      ),
     );
 
     const ctx = canvas.getContext("2d");
@@ -1902,17 +2270,18 @@ async function normalizePhoto(
       0,
       0,
       canvas.width,
-      canvas.height
+      canvas.height,
     );
 
-    const blob = await new Promise<Blob | null>(
-      (resolve) =>
-        canvas.toBlob(
-          resolve,
-          "image/jpeg",
-          0.88
-        )
-    );
+    const blob =
+      await new Promise<Blob | null>(
+        (resolve) =>
+          canvas.toBlob(
+            resolve,
+            "image/jpeg",
+            0.88,
+          ),
+      );
 
     if (!blob) {
       throw new Error(invalidPhoto);
@@ -1923,7 +2292,7 @@ async function normalizePhoto(
       `${Date.now()}-document.jpg`,
       {
         type: "image/jpeg",
-      }
+      },
     );
   } finally {
     URL.revokeObjectURL(objectUrl);
@@ -1931,38 +2300,58 @@ async function normalizePhoto(
 }
 
 export default function VerifyDocumentsPage() {
-  const locale = getScannerLocale(useLocale());
+  const locale = getScannerLocale(
+    useLocale(),
+  );
   const copy = COPY[locale];
+  const frameCopy = FRAME_COPY[locale];
 
   const videoRef =
-    useRef<HTMLVideoElement | null>(null);
+    useRef<HTMLVideoElement | null>(
+      null,
+    );
 
   const streamRef =
     useRef<MediaStream | null>(null);
 
   const sampleCanvasRef =
-    useRef<HTMLCanvasElement | null>(null);
+    useRef<HTMLCanvasElement | null>(
+      null,
+    );
 
   const fileInputRef =
-    useRef<HTMLInputElement | null>(null);
+    useRef<HTMLInputElement | null>(
+      null,
+    );
 
-  const retakeQueueRef =
-    useRef<StepKey[] | null>(null);
+  const retakeQueueRef = useRef<
+    StepKey[] | null
+  >(null);
 
   const mountedRef = useRef(true);
 
   const previousFrameRef =
-    useRef<Uint8ClampedArray | null>(null);
+    useRef<Uint8ClampedArray | null>(
+      null,
+    );
 
   const stableSamplesRef = useRef(0);
   const cameraStartedAtRef = useRef(0);
   const capturingRef = useRef(false);
+  const frameCheckControllerRef =
+    useRef<AbortController | null>(
+      null,
+    );
+  const nextFrameCheckAtRef = useRef(0);
 
-  const captureRef =
-    useRef<() => Promise<void>>(async () => {});
+  const captureRef = useRef<
+    () => Promise<void>
+  >(async () => {});
 
-  const [sessionToken, setSessionToken] =
-    useState("");
+  const [
+    sessionToken,
+    setSessionToken,
+  ] = useState("");
 
   const [bookingId, setBookingId] =
     useState("");
@@ -1970,8 +2359,12 @@ export default function VerifyDocumentsPage() {
   const [returnUrl, setReturnUrl] =
     useState("");
 
-  const [identityType, setIdentityType] =
-    useState<IdentityType | null>(null);
+  const [
+    identityType,
+    setIdentityType,
+  ] = useState<IdentityType | null>(
+    null,
+  );
 
   const [files, setFiles] = useState<
     Partial<Record<StepKey, File>>
@@ -1998,21 +2391,26 @@ export default function VerifyDocumentsPage() {
   const [analysis, setAnalysis] =
     useState<Analysis | null>(null);
 
-  const [finalOutcome, setFinalOutcome] =
-    useState<"accepted" | "manual_review">(
-      "accepted"
-    );
+  const [
+    finalOutcome,
+    setFinalOutcome,
+  ] = useState<
+    "accepted" | "manual_review"
+  >("accepted");
 
-  const [error, setError] = useState("");
+  const [error, setError] =
+    useState("");
 
   const [cameraError, setCameraError] =
     useState(false);
 
   const stopCamera = useCallback(() => {
-    for (
-      const track of
-      streamRef.current?.getTracks() || []
-    ) {
+    frameCheckControllerRef.current?.abort();
+    frameCheckControllerRef.current =
+      null;
+
+    for (const track of streamRef.current?.getTracks() ||
+      []) {
       track.stop();
     }
 
@@ -2025,35 +2423,46 @@ export default function VerifyDocumentsPage() {
     previousFrameRef.current = null;
     stableSamplesRef.current = 0;
     cameraStartedAtRef.current = 0;
+    nextFrameCheckAtRef.current = 0;
+    capturingRef.current = false;
 
     setCameraReady(false);
   }, []);
 
   const patchSession = useCallback(
-    async (body: Record<string, unknown>) => {
+    async (
+      body: Record<string, unknown>,
+    ) => {
       const response = await fetch(
         "/api/document-verification/session",
         {
           method: "PATCH",
           headers: {
-            "Content-Type": "application/json",
+            "Content-Type":
+              "application/json",
           },
           body: JSON.stringify({
             sessionToken,
             ...body,
           }),
-        }
+        },
       );
 
-      const data = await response.json();
+      const data =
+        await response.json();
 
-      if (!response.ok || !data.success) {
-        throw new Error(copy.updateError);
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          copy.updateError,
+        );
       }
 
       return data;
     },
-    [copy.updateError, sessionToken]
+    [copy.updateError, sessionToken],
   );
 
   useEffect(() => {
@@ -2063,29 +2472,35 @@ export default function VerifyDocumentsPage() {
       document.body.style.cssText;
 
     const previousHtmlStyle =
-      document.documentElement.style.cssText;
+      document.documentElement.style
+        .cssText;
 
     const previousScannerFlag =
-      document.body.dataset.nexaDocumentScanner;
+      document.body.dataset
+        .nexaDocumentScanner;
 
     document.body.dataset.nexaDocumentScanner =
       "true";
 
-    document.body.style.overflow = "hidden";
-    document.body.style.background = "#000";
+    document.body.style.overflow =
+      "hidden";
+    document.body.style.background =
+      "#000";
     document.body.style.margin = "0";
 
     document.documentElement.style.background =
       "#000";
 
     const params = new URLSearchParams(
-      window.location.search
+      window.location.search,
     );
 
-    const token = clean(params.get("session"));
+    const token = clean(
+      params.get("session"),
+    );
 
     const back = safeReturnUrl(
-      clean(params.get("return"))
+      clean(params.get("return")),
     );
 
     setSessionToken(token);
@@ -2094,26 +2509,35 @@ export default function VerifyDocumentsPage() {
     async function initialize() {
       try {
         if (!token) {
-          throw new Error(copy.missingSession);
+          throw new Error(
+            copy.missingSession,
+          );
         }
 
         const response = await fetch(
           `/api/document-verification/session?session=${encodeURIComponent(
-            token
+            token,
           )}`,
           {
             cache: "no-store",
-          }
+          },
         );
 
         const data =
           (await response.json()) as SessionData;
 
-        if (!response.ok || !data.success) {
-          throw new Error(copy.sessionError);
+        if (
+          !response.ok ||
+          !data.success
+        ) {
+          throw new Error(
+            copy.sessionError,
+          );
         }
 
-        if (data.status === "completed") {
+        if (
+          data.status === "completed"
+        ) {
           setStage("complete");
           return;
         }
@@ -2125,11 +2549,15 @@ export default function VerifyDocumentsPage() {
             "cancelled",
           ].includes(data.status || "")
         ) {
-          throw new Error(copy.sessionError);
+          throw new Error(
+            copy.sessionError,
+          );
         }
 
         if (!data.bookingId) {
-          throw new Error(copy.sessionError);
+          throw new Error(
+            copy.sessionError,
+          );
         }
 
         setBookingId(data.bookingId);
@@ -2146,7 +2574,7 @@ export default function VerifyDocumentsPage() {
               sessionToken: token,
               action: "start",
             }),
-          }
+          },
         );
 
         const startData =
@@ -2156,14 +2584,16 @@ export default function VerifyDocumentsPage() {
           !started.ok ||
           !startData.success
         ) {
-          throw new Error(copy.sessionError);
+          throw new Error(
+            copy.sessionError,
+          );
         }
 
         setStage("camera");
       } catch (caught: any) {
         setError(
           caught?.message ||
-            copy.sessionError
+            copy.sessionError,
         );
 
         setStage("error");
@@ -2183,7 +2613,10 @@ export default function VerifyDocumentsPage() {
       document.documentElement.style.cssText =
         previousHtmlStyle;
 
-      if (previousScannerFlag === undefined) {
+      if (
+        previousScannerFlag ===
+        undefined
+      ) {
         delete document.body.dataset
           .nexaDocumentScanner;
       } else {
@@ -2197,88 +2630,98 @@ export default function VerifyDocumentsPage() {
     stopCamera,
   ]);
 
-  const startCamera = useCallback(async () => {
-    stopCamera();
+  const startCamera =
+    useCallback(async () => {
+      stopCamera();
 
-    setCameraError(false);
-    setError("");
-
-    setQuality({
-      tone: "neutral",
-      text: copy.openingCamera,
-    });
-
-    try {
-      if (
-        !navigator.mediaDevices?.getUserMedia
-      ) {
-        throw new Error(
-          copy.cameraUnsupported
-        );
-      }
-
-      const stream =
-        await navigator.mediaDevices.getUserMedia(
-          {
-            audio: false,
-            video: {
-              facingMode: {
-                ideal: "environment",
-              },
-              width: {
-  ideal: 2560,
-},
-height: {
-  ideal: 1440,
-},
-            },
-          }
-        );
-
-      if (!mountedRef.current) {
-        for (
-          const track of stream.getTracks()
-        ) {
-          track.stop();
-        }
-
-        return;
-      }
-
-      streamRef.current = stream;
-
-      if (!videoRef.current) {
-        throw new Error(copy.cameraError);
-      }
-
-      videoRef.current.srcObject = stream;
-
-      await videoRef.current.play();
-
-      cameraStartedAtRef.current =
-        performance.now();
-
-      setCameraReady(true);
+      setCameraError(false);
+      setError("");
 
       setQuality({
         tone: "neutral",
-        text: copy.alignDocument,
+        text: copy.openingCamera,
       });
-    } catch (caught: any) {
-      stopCamera();
 
-      setCameraError(true);
+      try {
+        if (
+          !navigator.mediaDevices
+            ?.getUserMedia
+        ) {
+          throw new Error(
+            copy.cameraUnsupported,
+          );
+        }
 
-      setError(
-        caught?.name === "NotAllowedError"
-          ? copy.cameraDenied
-          : caught?.message ||
-              copy.cameraError
-      );
+        const stream =
+          await navigator.mediaDevices.getUserMedia(
+            {
+              audio: false,
+              video: {
+                facingMode: {
+                  ideal: "environment",
+                },
+                width: {
+                  ideal: 3840,
+                },
+                height: {
+                  ideal: 2160,
+                },
+                advanced: [
+                  {
+                    focusMode:
+                      "continuous",
+                  } as MediaTrackConstraintSet,
+                ],
+              },
+            },
+          );
 
-      setStage("error");
-    }
-  }, [copy, stopCamera]);
+        if (!mountedRef.current) {
+          for (const track of stream.getTracks()) {
+            track.stop();
+          }
+
+          return;
+        }
+
+        streamRef.current = stream;
+
+        if (!videoRef.current) {
+          throw new Error(
+            copy.cameraError,
+          );
+        }
+
+        videoRef.current.srcObject =
+          stream;
+
+        await videoRef.current.play();
+
+        cameraStartedAtRef.current =
+          performance.now();
+          
+        setCameraReady(true);
+
+        setQuality({
+          tone: "neutral",
+          text: copy.alignDocument,
+        });
+      } catch (caught: any) {
+        stopCamera();
+
+        setCameraError(true);
+
+        setError(
+          caught?.name ===
+            "NotAllowedError"
+            ? copy.cameraDenied
+            : caught?.message ||
+                copy.cameraError,
+        );
+
+        setStage("error");
+      }
+    }, [copy, stopCamera]);
 
   useEffect(() => {
     if (stage !== "camera") {
@@ -2296,8 +2739,8 @@ height: {
   ]);
 
   function frameAspect() {
-    return identityType === "passport" &&
-      step === "idFront"
+    return identityType ===
+      "passport" && step === "idFront"
       ? 1.42
       : 1.586;
   }
@@ -2310,39 +2753,36 @@ height: {
       !video.videoWidth ||
       !video.videoHeight
     ) {
-      throw new Error(copy.captureError);
+      throw new Error(
+        copy.captureError,
+      );
     }
 
     const aspect = frameAspect();
 
-    const {
-      sx,
-      sy,
-      sw,
-      sh,
-    } = sourceCrop(video, aspect);
+    const { sx, sy, sw, sh } =
+      sourceCrop(video, aspect);
 
     const canvas =
       document.createElement("canvas");
 
     const outputWidth = Math.min(
-  2400,
-  Math.max(
-    1800,
-    Math.round(sw)
-  )
-);
+      2200,
+      Math.max(1800, Math.round(sw)),
+    );
 
-canvas.width = outputWidth;
+    canvas.width = outputWidth;
 
-canvas.height = Math.round(
-  outputWidth / aspect
-);
+    canvas.height = Math.round(
+      outputWidth / aspect,
+    );
 
     const ctx = canvas.getContext("2d");
 
     if (!ctx) {
-      throw new Error(copy.captureError);
+      throw new Error(
+        copy.captureError,
+      );
     }
 
     ctx.drawImage(
@@ -2354,20 +2794,23 @@ canvas.height = Math.round(
       0,
       0,
       canvas.width,
-      canvas.height
+      canvas.height,
     );
 
-    const blob = await new Promise<Blob | null>(
-      (resolve) =>
-       canvas.toBlob(
-  resolve,
-  "image/jpeg",
-  0.95
-)
-    );
+    const blob =
+      await new Promise<Blob | null>(
+        (resolve) =>
+          canvas.toBlob(
+            resolve,
+            "image/jpeg",
+            0.92,
+          ),
+      );
 
     if (!blob) {
-      throw new Error(copy.captureError);
+      throw new Error(
+        copy.captureError,
+      );
     }
 
     return new File(
@@ -2375,7 +2818,7 @@ canvas.height = Math.round(
       `${step}-${Date.now()}.jpg`,
       {
         type: "image/jpeg",
-      }
+      },
     );
   }
 
@@ -2383,7 +2826,7 @@ canvas.height = Math.round(
     nextFiles: Partial<
       Record<StepKey, File>
     >,
-    selectedType: IdentityType
+    selectedType: IdentityType,
   ) {
     try {
       setStage("analyzing");
@@ -2394,24 +2837,22 @@ canvas.height = Math.round(
 
       form.append(
         "sessionToken",
-        sessionToken
+        sessionToken,
       );
 
       form.append(
         "identityType",
-        selectedType
+        selectedType,
       );
 
       form.append("locale", locale);
 
-      for (
-        const key of [
-          "dlFront",
-          "dlBack",
-          "idFront",
-          "idBack",
-        ] as StepKey[]
-      ) {
+      for (const key of [
+        "dlFront",
+        "dlBack",
+        "idFront",
+        "idBack",
+      ] as StepKey[]) {
         const file = nextFiles[key];
 
         if (file) {
@@ -2424,14 +2865,19 @@ canvas.height = Math.round(
         {
           method: "POST",
           body: form,
-        }
+        },
       );
 
       const data =
         (await response.json()) as Analysis;
 
-      if (!response.ok || !data.success) {
-        throw new Error(copy.analysisError);
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          copy.analysisError,
+        );
       }
 
       setAnalysis(data);
@@ -2443,7 +2889,7 @@ canvas.height = Math.round(
         await saveAndComplete(
           data,
           nextFiles,
-          selectedType
+          selectedType,
         );
       } else {
         setStage("decision");
@@ -2454,7 +2900,7 @@ canvas.height = Math.round(
       setStage("error");
     }
   }
-    async function saveAndComplete(
+  async function saveAndComplete(
     result: Pick<
       Analysis,
       | "outcome"
@@ -2467,7 +2913,7 @@ canvas.height = Math.round(
     nextFiles: Partial<
       Record<StepKey, File>
     >,
-    selectedType: IdentityType
+    selectedType: IdentityType,
   ) {
     if (
       !bookingId ||
@@ -2489,38 +2935,38 @@ canvas.height = Math.round(
 
     upload.append(
       "bookingId",
-      bookingId
+      bookingId,
     );
 
     upload.append(
       "sessionToken",
-      sessionToken
+      sessionToken,
     );
 
     upload.append(
       "identityType",
-      selectedType
+      selectedType,
     );
 
     upload.append(
       "dlFront",
-      nextFiles.dlFront
+      nextFiles.dlFront,
     );
 
     upload.append(
       "dlBack",
-      nextFiles.dlBack
+      nextFiles.dlBack,
     );
 
     upload.append(
       "idFront",
-      nextFiles.idFront
+      nextFiles.idFront,
     );
 
     if (nextFiles.idBack) {
       upload.append(
         "idBack",
-        nextFiles.idBack
+        nextFiles.idBack,
       );
     }
 
@@ -2529,7 +2975,7 @@ canvas.height = Math.round(
       {
         method: "POST",
         body: upload,
-      }
+      },
     );
 
     const uploaded =
@@ -2548,7 +2994,8 @@ canvas.height = Math.round(
 
       firstName:
         result.licenceData?.firstName ||
-        result.identityData?.firstName ||
+        result.identityData
+          ?.firstName ||
         "",
 
       lastName:
@@ -2556,10 +3003,7 @@ canvas.height = Math.round(
         result.identityData?.lastName ||
         "",
 
-      homeAddress:
-        result.identityData?.address ||
-        result.licenceData?.address ||
-        "",
+      homeAddress: "",
 
       licenceData: {
         ...result.licenceData,
@@ -2569,29 +3013,22 @@ canvas.height = Math.round(
           result.reasons,
       },
 
-      identityData:
-        result.identityData,
+      identityData: result.identityData,
 
-      dlFrontPath:
-        uploaded.dlFrontPath,
+      dlFrontPath: uploaded.dlFrontPath,
 
-      dlBackPath:
-        uploaded.dlBackPath,
+      dlBackPath: uploaded.dlBackPath,
 
-      idFrontPath:
-        uploaded.idFrontPath,
+      idFrontPath: uploaded.idFrontPath,
 
       idBackPath:
         uploaded.idBackPath || "",
 
-      dlFrontName:
-        uploaded.dlFrontName,
+      dlFrontName: uploaded.dlFrontName,
 
-      dlBackName:
-        uploaded.dlBackName,
+      dlBackName: uploaded.dlBackName,
 
-      idFrontName:
-        uploaded.idFrontName,
+      idFrontName: uploaded.idFrontName,
 
       idBackName:
         uploaded.idBackName || "",
@@ -2600,13 +3037,15 @@ canvas.height = Math.round(
     setFinalOutcome(
       result.outcome === "manual_review"
         ? "manual_review"
-        : "accepted"
+        : "accepted",
     );
 
     setStage("complete");
   }
 
-  async function acceptFile(file: File) {
+  async function acceptFile(
+    file: File,
+  ) {
     const nextFiles = {
       ...files,
       [step]: file,
@@ -2619,8 +3058,7 @@ canvas.height = Math.round(
       retakeQueueRef.current;
 
     if (queue) {
-      const remaining =
-        queue.slice(1);
+      const remaining = queue.slice(1);
 
       retakeQueueRef.current =
         remaining.length
@@ -2633,7 +3071,7 @@ canvas.height = Math.round(
       } else if (identityType) {
         await analyzeDocuments(
           nextFiles,
-          identityType
+          identityType,
         );
       }
 
@@ -2654,9 +3092,72 @@ canvas.height = Math.round(
     } else if (identityType) {
       await analyzeDocuments(
         nextFiles,
-        identityType
+        identityType,
       );
     }
+  }
+
+  function frameWarning(
+    messageKey: FrameMessageKey,
+    checkedStep: StepKey,
+  ) {
+    if (messageKey === "wrong_side") {
+      return frameCopy.wrongSide;
+    }
+
+    if (messageKey === "not_readable") {
+      return frameCopy.notReadable;
+    }
+
+    return checkedStep === "dlFront" ||
+      checkedStep === "dlBack"
+      ? frameCopy.wrongLicence
+      : frameCopy.wrongIdentity;
+  }
+
+  async function checkFrame(
+    file: File,
+    checkedStep: StepKey,
+    signal: AbortSignal,
+  ) {
+    const form = new FormData();
+
+    form.append("mode", "frame_check");
+    form.append(
+      "sessionToken",
+      sessionToken,
+    );
+    form.append("step", checkedStep);
+
+    if (identityType) {
+      form.append(
+        "identityType",
+        identityType,
+      );
+    }
+
+    form.append("frame", file);
+
+    const response = await fetch(
+      "/api/document-verification/analyze",
+      {
+        method: "POST",
+        body: form,
+        signal,
+      },
+    );
+
+    const data =
+      (await response.json()) as FrameCheckResult;
+
+    if (!response.ok || !data.success) {
+      throw new Error(
+        data.error ||
+          frameCopy.validationUnavailable,
+      );
+    }
+
+    return data;
   }
 
   async function capture() {
@@ -2664,24 +3165,85 @@ canvas.height = Math.round(
       return;
     }
 
+    if (
+      performance.now() <
+      nextFrameCheckAtRef.current
+    ) {
+      return;
+    }
+
     capturingRef.current = true;
-
-    setCapturing(true);
-
     setQuality({
-      tone: "good",
-      text: copy.capturing,
+      tone: "neutral",
+      text: frameCopy.checkingDocument,
     });
+
+    const checkedStep = step;
+    const controller =
+      new AbortController();
+    frameCheckControllerRef.current =
+      controller;
 
     try {
       const file =
         await makeCameraFile();
 
+      const result = await checkFrame(
+        file,
+        checkedStep,
+        controller.signal,
+      );
+
+      if (!result.correctDocument) {
+        previousFrameRef.current = null;
+        stableSamplesRef.current = 0;
+        nextFrameCheckAtRef.current =
+          performance.now() +
+          FRAME_RETRY_DELAY_MS;
+
+        setQuality({
+          tone: "warn",
+          text: frameWarning(
+            result.messageKey,
+            checkedStep,
+          ),
+        });
+
+        return;
+      }
+
+      setCapturing(true);
+
+      setQuality({
+        tone: "good",
+        text: copy.capturing,
+      });
+
       await acceptFile(file);
-    } catch {
-      setError(copy.captureError);
-      setStage("error");
+    } catch (caught: any) {
+      if (
+        caught?.name !== "AbortError"
+      ) {
+        previousFrameRef.current = null;
+        stableSamplesRef.current = 0;
+        nextFrameCheckAtRef.current =
+          performance.now() +
+          FRAME_RETRY_DELAY_MS;
+
+        setQuality({
+          tone: "warn",
+          text: frameCopy.validationUnavailable,
+        });
+      }
     } finally {
+      if (
+        frameCheckControllerRef.current ===
+        controller
+      ) {
+        frameCheckControllerRef.current =
+          null;
+      }
+
       capturingRef.current = false;
 
       if (mountedRef.current) {
@@ -2706,8 +3268,14 @@ canvas.height = Math.round(
           return;
         }
 
-        const video =
-          videoRef.current;
+        if (
+          performance.now() <
+          nextFrameCheckAtRef.current
+        ) {
+          return;
+        }
+
+        const video = videoRef.current;
 
         if (
           !video ||
@@ -2726,37 +3294,32 @@ canvas.height = Math.round(
 
         const canvas =
           sampleCanvasRef.current ||
-          document.createElement("canvas");
+          document.createElement(
+            "canvas",
+          );
 
         sampleCanvasRef.current =
           canvas;
 
         canvas.width = 180;
 
-canvas.height = Math.round(
-  180 / aspect
-);
+        canvas.height = Math.round(
+          180 / aspect,
+        );
 
         const ctx = canvas.getContext(
           "2d",
           {
             willReadFrequently: true,
-          }
+          },
         );
 
         if (!ctx) {
           return;
         }
 
-        const {
-          sx,
-          sy,
-          sw,
-          sh,
-        } = sourceCrop(
-          video,
-          aspect
-        );
+        const { sx, sy, sw, sh } =
+          sourceCrop(video, aspect);
 
         ctx.drawImage(
           video,
@@ -2767,19 +3330,19 @@ canvas.height = Math.round(
           0,
           0,
           canvas.width,
-          canvas.height
+          canvas.height,
         );
 
         const rgba = ctx.getImageData(
           0,
           0,
           canvas.width,
-          canvas.height
+          canvas.height,
         ).data;
 
         const gray =
           new Uint8ClampedArray(
-            rgba.length / 4
+            rgba.length / 4,
           );
 
         let sum = 0;
@@ -2794,33 +3357,30 @@ canvas.height = Math.round(
           i += 4, p += 1
         ) {
           const value =
-            (
-              rgba[i] * 0.299 +
+            (rgba[i] * 0.299 +
               rgba[i + 1] * 0.587 +
-              rgba[i + 2] * 0.114
-            ) | 0;
+              rgba[i + 2] * 0.114) |
+            0;
 
           gray[p] = value;
 
           sum += value;
 
-          sumSquares +=
-            value * value;
+          sumSquares += value * value;
 
           if (value > 247) {
             glare += 1;
           }
 
-          const x =
-            p % canvas.width;
+          const x = p % canvas.width;
 
           const y = Math.floor(
-            p / canvas.width
+            p / canvas.width,
           );
 
           if (x > 0) {
             edgeSum += Math.abs(
-              value - gray[p - 1]
+              value - gray[p - 1],
             );
 
             edgeCount += 1;
@@ -2829,9 +3389,7 @@ canvas.height = Math.round(
           if (y > 0) {
             edgeSum += Math.abs(
               value -
-                gray[
-                  p - canvas.width
-                ]
+                gray[p - canvas.width],
             );
 
             edgeCount += 1;
@@ -2840,24 +3398,22 @@ canvas.height = Math.round(
 
         const count = gray.length;
 
-        const brightness =
-          sum / count;
+        const brightness = sum / count;
 
         const contrast = Math.sqrt(
           Math.max(
             0,
             sumSquares / count -
-              brightness * brightness
-          )
+              brightness * brightness,
+          ),
         );
 
         const glareRatio =
           glare / count;
 
-        const edgeScore =
-          edgeCount
-            ? edgeSum / edgeCount
-            : 0;
+        const edgeScore = edgeCount
+          ? edgeSum / edgeCount
+          : 0;
 
         const previous =
           previousFrameRef.current;
@@ -2877,7 +3433,7 @@ canvas.height = Math.round(
             i += 1
           ) {
             difference += Math.abs(
-              gray[i] - previous[i]
+              gray[i] - previous[i],
             );
           }
 
@@ -2885,61 +3441,63 @@ canvas.height = Math.round(
             difference / gray.length;
         }
 
-        previousFrameRef.current =
-          gray;
+        previousFrameRef.current = gray;
 
         let nextQuality: Quality;
         let good = false;
 
-       /*
- * Fast customer-friendly capture.
- *
- * We reject only frames that are genuinely
- * unusable. Normal hand movement is accepted.
- * Sharpness is still checked so the AI can
- * read the licence text properly.
- */
-if (brightness < 30) {
-  nextQuality = {
-    tone: "warn",
-    text: copy.tooDark,
-  };
-} else if (
-  brightness > 242 ||
-  glareRatio > 0.38
-) {
-  nextQuality = {
-    tone: "warn",
-    text: copy.tooMuchGlare,
-  };
-} else if (
-  contrast < 13 ||
-  edgeScore < 3.8
-) {
-  nextQuality = {
-    tone: "warn",
-    text: copy.moveCloser,
-  };
-} else if (motion > 24) {
-  nextQuality = {
-    tone: "warn",
-    text: copy.holdStill,
-  };
-} else {
-  good = true;
+        /*
+         * Fast customer-friendly capture.
+         *
+         * We reject only frames that are genuinely
+         * unusable. Normal hand movement is accepted.
+         * Sharpness is still checked so the AI can
+         * read the licence text properly.
+         */
+        if (brightness < 30) {
+          nextQuality = {
+            tone: "warn",
+            text: copy.tooDark,
+          };
+        } else if (
+          brightness > 242 ||
+          glareRatio > 0.38
+        ) {
+          nextQuality = {
+            tone: "warn",
+            text: copy.tooMuchGlare,
+          };
+        } else if (
+          contrast < 18 ||
+          edgeScore <
+            (step === "dlBack"
+              ? 7
+              : 5.5)
+        ) {
+          nextQuality = {
+            tone: "warn",
+            text: copy.moveCloser,
+          };
+        } else if (motion > 12) {
+          nextQuality = {
+            tone: "warn",
+            text: copy.holdStill,
+          };
+        } else {
+          good = true;
 
-  nextQuality = {
-    tone: "good",
-    text: copy.automaticReady,
-  };
-}
+          nextQuality = {
+            tone: "good",
+            text: copy.automaticReady,
+          };
+        }
 
         setQuality(nextQuality);
 
         const warmedUp =
-  performance.now() -
-    cameraStartedAtRef.current >=
-  CAMERA_WARMUP_MS;
+          performance.now() -
+            cameraStartedAtRef.current >=
+          CAMERA_WARMUP_MS;
 
         if (good && warmedUp) {
           stableSamplesRef.current += 1;
@@ -2956,8 +3514,8 @@ if (brightness < 30) {
           void captureRef.current();
         }
       },
-QUALITY_CHECK_INTERVAL_MS
-);
+      QUALITY_CHECK_INTERVAL_MS,
+    );
 
     return () =>
       window.clearInterval(timer);
@@ -2968,8 +3526,8 @@ QUALITY_CHECK_INTERVAL_MS
     stage,
     step,
   ]);
-    async function useSelectedPhoto(
-    event: React.ChangeEvent<HTMLInputElement>
+  async function useSelectedPhoto(
+    event: React.ChangeEvent<HTMLInputElement>,
   ) {
     const selected =
       event.target.files?.[0];
@@ -2981,7 +3539,9 @@ QUALITY_CHECK_INTERVAL_MS
     }
 
     if (
-      !selected.type.startsWith("image/")
+      !selected.type.startsWith(
+        "image/",
+      )
     ) {
       setError(copy.invalidPhoto);
       setCameraError(false);
@@ -2996,23 +3556,58 @@ QUALITY_CHECK_INTERVAL_MS
       const normalized =
         await normalizePhoto(
           selected,
-          copy.invalidPhoto
+          copy.invalidPhoto,
         );
+
+      const controller =
+        new AbortController();
+
+      frameCheckControllerRef.current =
+        controller;
+
+      const result = await checkFrame(
+        normalized,
+        step,
+        controller.signal,
+      );
+
+      if (
+        frameCheckControllerRef.current ===
+        controller
+      ) {
+        frameCheckControllerRef.current =
+          null;
+      }
+
+      if (!result.correctDocument) {
+        setError(
+          frameWarning(
+            result.messageKey,
+            step,
+          ),
+        );
+
+        setCameraError(true);
+        setStage("error");
+        return;
+      }
 
       await acceptFile(normalized);
     } catch (caught: any) {
       setError(
-        caught?.message ||
-          copy.invalidPhoto
-      );
+        caught?.name === "AbortError"
+          ? frameCopy.validationUnavailable
+          : caught?.message ||
+              frameCopy.validationUnavailable,
+                    );
 
-      setCameraError(false);
+      setCameraError(true);
       setStage("error");
     }
   }
 
   function chooseIdentity(
-    type: IdentityType
+    type: IdentityType,
   ) {
     setIdentityType(type);
     setStep("idFront");
@@ -3028,7 +3623,7 @@ QUALITY_CHECK_INTERVAL_MS
       .filter((key) =>
         identityType === "passport"
           ? key !== "idBack"
-          : true
+          : true,
       );
 
     const fallbackQueue: StepKey[] =
@@ -3081,7 +3676,8 @@ QUALITY_CHECK_INTERVAL_MS
           outcome: "manual_review",
 
           message:
-            copy.decisions.manual_review,
+            copy.decisions
+              .manual_review,
 
           reasons: [
             "Automatic screening was unavailable",
@@ -3096,12 +3692,12 @@ QUALITY_CHECK_INTERVAL_MS
           analysis: null,
         },
         files,
-        identityType
+        identityType,
       );
     } catch (caught: any) {
       setError(
         caught?.message ||
-          copy.saveError
+          copy.saveError,
       );
 
       setCameraError(false);
@@ -3115,22 +3711,17 @@ QUALITY_CHECK_INTERVAL_MS
 
     const hasAllFiles = Boolean(
       identityType &&
-        files.dlFront &&
-        files.dlBack &&
-        files.idFront &&
-        (
-          identityType === "passport" ||
-          files.idBack
-        )
+      files.dlFront &&
+      files.dlBack &&
+      files.idFront &&
+      (identityType === "passport" ||
+        files.idBack),
     );
 
-    if (
-      hasAllFiles &&
-      identityType
-    ) {
+    if (hasAllFiles && identityType) {
       void analyzeDocuments(
         files,
-        identityType
+        identityType,
       );
 
       return;
@@ -3156,9 +3747,7 @@ QUALITY_CHECK_INTERVAL_MS
     }
 
     if (returnUrl) {
-      window.location.assign(
-        returnUrl
-      );
+      window.location.assign(returnUrl);
     } else {
       window.history.back();
     }
@@ -3177,25 +3766,26 @@ QUALITY_CHECK_INTERVAL_MS
       return;
     }
 
-    const timer =
-      window.setTimeout(() => {
-        const url =
-          new URL(returnUrl);
+    const timer = window.setTimeout(
+      () => {
+        const url = new URL(returnUrl);
 
         url.searchParams.set(
           "verification_session",
-          sessionToken
+          sessionToken,
         );
 
         url.searchParams.set(
           "verification_result",
-          finalOutcome
+          finalOutcome,
         );
 
         window.location.assign(
-          url.toString()
+          url.toString(),
         );
-      }, 1700);
+      },
+      1700,
+    );
 
     return () =>
       window.clearTimeout(timer);
@@ -3205,7 +3795,7 @@ QUALITY_CHECK_INTERVAL_MS
     sessionToken,
     finalOutcome,
   ]);
-    const stepCopy = copy.steps[step];
+  const stepCopy = copy.steps[step];
 
   const frameClass =
     identityType === "passport" &&
@@ -3223,8 +3813,8 @@ QUALITY_CHECK_INTERVAL_MS
       1,
       Math.min(
         total,
-        Object.keys(files).length + 1
-      )
+        Object.keys(files).length + 1,
+      ),
     );
   }, [files, identityType]);
 
@@ -3277,7 +3867,8 @@ QUALITY_CHECK_INTERVAL_MS
 
               <FrameCorners />
 
-              {!cameraReady || capturing ? (
+              {!cameraReady ||
+              capturing ? (
                 <div className="absolute inset-0 flex flex-col items-center justify-center gap-4 bg-black/75">
                   <Spinner />
 
@@ -3309,9 +3900,11 @@ QUALITY_CHECK_INTERVAL_MS
 
               <div
                 className={`mx-auto mt-3 inline-flex items-center gap-2 rounded-full border px-3 py-1.5 text-[10px] font-black ${
-                  quality.tone === "good"
+                  quality.tone ===
+                  "good"
                     ? "border-emerald-400/30 bg-emerald-400/10 text-emerald-300"
-                    : quality.tone === "warn"
+                    : quality.tone ===
+                        "warn"
                       ? "border-amber-400/30 bg-amber-400/10 text-amber-200"
                       : "border-white/12 bg-white/5 text-white/55"
                 }`}
@@ -3356,7 +3949,9 @@ QUALITY_CHECK_INTERVAL_MS
               detail={copy.photoPage}
               icon="✦"
               onClick={() =>
-                chooseIdentity("passport")
+                chooseIdentity(
+                  "passport",
+                )
               }
             />
           </div>
@@ -3387,18 +3982,21 @@ QUALITY_CHECK_INTERVAL_MS
         <Centered>
           <div
             className={`flex h-16 w-16 items-center justify-center rounded-full text-2xl font-black ${
-              analysis.outcome === "retake"
+              analysis.outcome ===
+              "retake"
                 ? "bg-amber-400 text-black"
                 : "bg-red-600 text-white"
             }`}
           >
-            {analysis.outcome === "retake"
+            {analysis.outcome ===
+            "retake"
               ? "↻"
               : "!"}
           </div>
 
           <h1 className="mt-6 text-[29px] font-black tracking-[-0.05em]">
-            {analysis.outcome === "retake"
+            {analysis.outcome ===
+            "retake"
               ? copy.retakeTitle
               : copy.rejectedTitle}
           </h1>
@@ -3412,7 +4010,8 @@ QUALITY_CHECK_INTERVAL_MS
                 copy.decisions.retake}
           </p>
 
-          {analysis.outcome === "retake" ? (
+          {analysis.outcome ===
+          "retake" ? (
             <button
               type="button"
               onClick={beginRetake}
@@ -3457,13 +4056,15 @@ QUALITY_CHECK_INTERVAL_MS
           </div>
 
           <h1 className="mt-7 text-[31px] font-black tracking-[-0.055em]">
-            {finalOutcome === "manual_review"
+            {finalOutcome ===
+            "manual_review"
               ? copy.documentsReceived
               : copy.verificationComplete}
           </h1>
 
           <p className="mx-auto mt-3 max-w-lg text-[13px] font-semibold leading-6 text-white/55">
-            {finalOutcome === "manual_review"
+            {finalOutcome ===
+            "manual_review"
               ? copy.manualComplete
               : copy.acceptedComplete}
           </p>
@@ -3516,10 +4117,9 @@ QUALITY_CHECK_INTERVAL_MS
             files.dlFront &&
             files.dlBack &&
             files.idFront &&
-            (
-              identityType === "passport" ||
-              files.idBack
-            ) ? (
+            (identityType ===
+              "passport" ||
+              files.idBack) ? (
               <button
                 type="button"
                 onClick={() =>
