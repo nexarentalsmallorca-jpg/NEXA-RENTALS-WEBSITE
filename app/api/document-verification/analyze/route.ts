@@ -10,9 +10,16 @@ const TABLE = "document_verification_sessions";
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 28 * 1024 * 1024;
 
+/*
+ * You can override this in Vercel with:
+ * OPENAI_DOCUMENT_MODEL
+ *
+ * gpt-4o is used by default because document
+ * photographs require strong image-reading ability.
+ */
 const MODEL =
   process.env.OPENAI_DOCUMENT_MODEL?.trim() ||
-  "gpt-4o-mini";
+  "gpt-4o";
 
 type IdentityType = "id" | "passport";
 
@@ -74,6 +81,12 @@ type AiExtraction = {
     selectedType: IdentityType;
   };
 
+  /*
+   * Kept in the response structure for compatibility
+   * with the existing scanner page.
+   *
+   * It is never used to accept or reject a booking.
+   */
   nameMatch:
     | "match"
     | "mismatch"
@@ -441,12 +454,35 @@ function isPast(
   const date =
     parseIsoDate(value);
 
+  /*
+   * A missing or unreadable expiry date
+   * is not treated as expired.
+   *
+   * Some older licences are permanent
+   * or do not display an expiry date.
+   */
   if (!date) {
     return false;
   }
 
   return (
     date.getTime() <
+    todayUtc()
+  );
+}
+
+function isFuture(
+  value: string
+) {
+  const date =
+    parseIsoDate(value);
+
+  if (!date) {
+    return false;
+  }
+
+  return (
+    date.getTime() >
     todayUtc()
   );
 }
@@ -487,49 +523,40 @@ function normalCategory(
 }
 
 function decide(
-  extraction: AiExtraction,
-  identityType: IdentityType
+  extraction: AiExtraction
 ) {
-  const fallbackRetakeSides:
-    StepKey[] =
-      identityType === "id"
-        ? [
-            "dlFront",
-            "dlBack",
-            "idFront",
-            "idBack",
-          ]
-        : [
-            "dlFront",
-            "dlBack",
-            "idFront",
-          ];
-
-  const validRetakeSides =
+  /*
+   * Only driving-licence photographs can
+   * cause a retake.
+   *
+   * The ID/passport is collected for contract
+   * preparation and does not control acceptance.
+   */
+  const licenceRetakeSides =
     extraction.quality
       .retakeSides
       .filter(
-        (side) =>
-          identityType ===
-            "id" ||
-          side !== "idBack"
+        (side): side is StepKey =>
+          side === "dlFront" ||
+          side === "dlBack"
       );
 
-  if (
+  const licenceCannotBeRead =
+    !extraction.licence
+      .documentDetected ||
+    !extraction.licence
+      .readable;
+
+  const licencePhotoNeedsRetake =
     extraction.quality
       .overall ===
-      "retake" ||
-    !extraction.licence
-      .documentDetected ||
-    !extraction.identity
-      .documentDetected ||
-    !extraction.licence
-      .readable ||
-    !extraction.identity
-      .readable ||
-    extraction.identity
-      .selectedType !==
-      identityType
+      "retake" &&
+    licenceRetakeSides.length >
+      0;
+
+  if (
+    licenceCannotBeRead ||
+    licencePhotoNeedsRetake
   ) {
     const reasons =
       extraction.quality
@@ -537,7 +564,7 @@ function decide(
         ? extraction.quality
             .issues
         : [
-            "One or more required document photographs could not be read.",
+            "The driving licence could not be read clearly.",
           ];
 
     return {
@@ -546,18 +573,27 @@ function decide(
 
       message:
         reasons[0] ||
-        "One or more photographs are unclear. Please retake the requested image.",
+        "Please retake the driving licence photograph.",
 
       reasons,
 
       retakeSides:
-        validRetakeSides.length >
+        licenceRetakeSides.length >
         0
-          ? validRetakeSides
-          : fallbackRetakeSides,
+          ? licenceRetakeSides
+          : [
+              "dlFront",
+              "dlBack",
+            ] as StepKey[],
     };
   }
 
+  /*
+   * Reject only when an expiry date is
+   * clearly visible and is already past.
+   *
+   * Missing expiry dates are allowed.
+   */
   if (
     isPast(
       extraction.licence
@@ -580,28 +616,6 @@ function decide(
     };
   }
 
-  if (
-    isPast(
-      extraction.identity
-        .dateOfExpiry
-    )
-  ) {
-    return {
-      outcome:
-        "rejected" as Outcome,
-
-      message:
-        "The passport or identity document appears to be expired.",
-
-      reasons: [
-        "Identity document expired",
-      ],
-
-      retakeSides:
-        [] as StepKey[],
-    };
-  }
-
   const classes =
     extraction.licence
       .vehicleClasses
@@ -612,10 +626,41 @@ function decide(
           normalCategory(
             item.category
           ),
-      }));
+      }))
+      .filter(
+        (item) =>
+          Boolean(
+            item.normalized
+          )
+      );
 
-  const motorcycle =
-    classes.find(
+  /*
+   * If the AI could read the licence but
+   * could not confidently read its category
+   * table, allow the booking to continue
+   * for manual review.
+   */
+  if (
+    classes.length === 0
+  ) {
+    return {
+      outcome:
+        "manual_review" as Outcome,
+
+      message:
+        "Documents received. NEXA Rentals will confirm the driving licence manually before pickup.",
+
+      reasons: [
+        "Driving licence categories could not be read confidently",
+      ],
+
+      retakeSides:
+        [] as StepKey[],
+    };
+  }
+
+  const motorcycleCategories =
+    classes.filter(
       (item) =>
         [
           "A",
@@ -623,54 +668,128 @@ function decide(
           "A2",
         ].includes(
           item.normalized
-        ) &&
-        !isPast(
-          item.validUntil
         )
     );
 
-  const bClass =
-    classes.find(
+  const validMotorcycle =
+    motorcycleCategories.find(
+      (item) =>
+        !isPast(
+          item.validUntil
+        ) &&
+        !isFuture(
+          item.validFrom
+        )
+    );
+
+  /*
+   * A, A1 and A2 are directly valid for
+   * NEXA's 125cc scooters.
+   *
+   * No minimum holding period is required.
+   */
+  if (validMotorcycle) {
+    const manualReasons:
+      string[] = [];
+
+    if (
+      extraction.quality
+        .overall ===
+      "uncertain"
+    ) {
+      manualReasons.push(
+        ...(
+          extraction.quality
+            .issues.length >
+          0
+            ? extraction
+                .quality
+                .issues
+            : [
+                "Driving licence reading needs manual confirmation",
+              ]
+        )
+      );
+    }
+
+    if (
+      isFuture(
+        extraction.licence
+          .issueDate
+      )
+    ) {
+      manualReasons.push(
+        "The detected driving licence issue date needs manual confirmation"
+      );
+    }
+
+    if (
+      manualReasons.length >
+      0
+    ) {
+      return {
+        outcome:
+          "manual_review" as Outcome,
+
+        message:
+          "Documents received. NEXA Rentals will confirm the driving licence manually before pickup.",
+
+        reasons: [
+          ...new Set(
+            manualReasons
+          ),
+        ],
+
+        retakeSides:
+          [] as StepKey[],
+      };
+    }
+
+    return {
+      outcome:
+        "accepted" as Outcome,
+
+      message:
+        "Driving licence accepted.",
+
+      reasons:
+        [] as string[],
+
+      retakeSides:
+        [] as StepKey[],
+    };
+  }
+
+  const bCategories =
+    classes.filter(
       (item) =>
         item.normalized ===
-          "B" &&
+        "B"
+    );
+
+  const validBClass =
+    bCategories.find(
+      (item) =>
         !isPast(
           item.validUntil
+        ) &&
+        !isFuture(
+          item.validFrom
         )
     );
 
-  let licenceAllowed =
-    Boolean(motorcycle);
-
-  let needsBDateReview =
-    false;
-
-  let selectedClass:
-    | (VehicleClass & {
-        normalized: string;
-      })
-    | undefined =
-      motorcycle;
-
-  if (
-    !licenceAllowed &&
-    bClass
-  ) {
-    selectedClass =
-      bClass;
-
+  if (validBClass) {
     /*
-     * Important:
-     * Only use the category-B valid-from
-     * date from the licence category table.
+     * For category B, use only the B category's
+     * own valid-from date.
      *
-     * The general document issue date can
-     * be a renewal/replacement date and does
-     * not prove when category B was obtained.
+     * The general card issue date may represent
+     * a renewal or replacement and must not be
+     * used to calculate the three-year period.
      */
     const bHeld =
       heldForThreeYears(
-        bClass.validFrom
+        validBClass.validFrom
       );
 
     if (
@@ -681,7 +800,7 @@ function decide(
           "rejected" as Outcome,
 
         message:
-          "A category B driving licence must have been held for at least 3 years.",
+          "A category B driving licence must have been held for at least 3 years to ride a 125cc scooter in Spain.",
 
         reasons: [
           "Category B held for less than 3 years",
@@ -693,29 +812,102 @@ function decide(
     }
 
     if (
-      bHeld === true
+      bHeld === null
     ) {
-      licenceAllowed =
-        true;
-    } else {
-      needsBDateReview =
-        true;
+      return {
+        outcome:
+          "manual_review" as Outcome,
+
+        message:
+          "Documents received. NEXA Rentals will confirm the category B start date manually before pickup.",
+
+        reasons: [
+          "Category B valid-from date could not be read confidently",
+        ],
+
+        retakeSides:
+          [] as StepKey[],
+      };
     }
+
+    if (
+      extraction.quality
+        .overall ===
+      "uncertain"
+    ) {
+      return {
+        outcome:
+          "manual_review" as Outcome,
+
+        message:
+          "Documents received. NEXA Rentals will confirm the driving licence manually before pickup.",
+
+        reasons:
+          extraction.quality
+            .issues.length > 0
+            ? [
+                ...new Set(
+                  extraction
+                    .quality
+                    .issues
+                ),
+              ]
+            : [
+                "Driving licence reading needs manual confirmation",
+              ],
+
+        retakeSides:
+          [] as StepKey[],
+      };
+    }
+
+    return {
+      outcome:
+        "accepted" as Outcome,
+
+      message:
+        "Driving licence accepted.",
+
+      reasons:
+        [] as string[],
+
+      retakeSides:
+        [] as StepKey[],
+    };
   }
 
+  /*
+   * A clearly detected AM-only licence cannot
+   * be used for NEXA's 125cc scooters.
+   */
+  const hasAm =
+    classes.some(
+      (item) =>
+        item.normalized ===
+        "AM" &&
+        !isPast(
+          item.validUntil
+        )
+    );
+
+  const hasPotentiallyCompatible =
+    motorcycleCategories.length >
+      0 ||
+    bCategories.length > 0;
+
   if (
-    !licenceAllowed &&
-    !needsBDateReview
+    hasAm &&
+    !hasPotentiallyCompatible
   ) {
     return {
       outcome:
         "rejected" as Outcome,
 
       message:
-        "A valid A, A1, A2, or B licence held for 3+ years is required.",
+        "Category AM is only valid for mopeds up to 50cc. NEXA Rentals only provides 125cc scooters.",
 
       reasons: [
-        "No compatible driving licence category detected",
+        "AM licence is not valid for a 125cc scooter",
       ],
 
       retakeSides:
@@ -723,93 +915,23 @@ function decide(
     };
   }
 
-  const manualReasons:
-    string[] = [];
-
+  /*
+   * A relevant category was visible but its
+   * validity period has clearly expired or
+   * has not started yet.
+   */
   if (
-    needsBDateReview
-  ) {
-    manualReasons.push(
-      "The category B start date needs manual review"
-    );
-  }
-
-  if (
-    !parseIsoDate(
-      extraction.licence
-        .dateOfExpiry
-    )
-  ) {
-    manualReasons.push(
-      "The driving licence expiry date needs manual review"
-    );
-  }
-
-  if (
-    !parseIsoDate(
-      extraction.identity
-        .dateOfExpiry
-    )
-  ) {
-    manualReasons.push(
-      "The identity document expiry date needs manual review"
-    );
-  }
-
-  if (
-    selectedClass &&
-    !parseIsoDate(
-      selectedClass.validUntil
-    )
-  ) {
-    manualReasons.push(
-      "The driving licence category expiry date needs manual review"
-    );
-  }
-
-  if (
-    extraction.nameMatch !==
-    "match"
-  ) {
-    manualReasons.push(
-      "The names on the documents need manual review"
-    );
-  }
-
-  if (
-    extraction.quality
-      .overall ===
-    "uncertain"
-  ) {
-    if (
-      extraction.quality
-        .issues.length > 0
-    ) {
-      manualReasons.push(
-        ...extraction.quality
-          .issues
-      );
-    } else {
-      manualReasons.push(
-        "The document image quality needs manual review"
-      );
-    }
-  }
-
-  if (
-    manualReasons.length > 0
+    hasPotentiallyCompatible
   ) {
     return {
       outcome:
-        "manual_review" as Outcome,
+        "rejected" as Outcome,
 
       message:
-        "Documents received. NEXA Rentals will confirm them manually before pickup.",
+        "The detected driving licence category is not currently valid for a 125cc scooter.",
 
       reasons: [
-        ...new Set(
-          manualReasons
-        ),
+        "Compatible category is expired or not yet valid",
       ],
 
       retakeSides:
@@ -817,15 +939,20 @@ function decide(
     };
   }
 
+  /*
+   * Other clearly readable categories do not
+   * authorise one of NEXA's 125cc scooters.
+   */
   return {
     outcome:
-      "accepted" as Outcome,
+      "rejected" as Outcome,
 
     message:
-      "Documents accepted.",
+      "A valid A, A1, A2, or category B licence held for at least 3 years is required for a 125cc scooter.",
 
-    reasons:
-      [] as string[],
+    reasons: [
+      "No compatible driving licence category detected",
+    ],
 
     retakeSides:
       [] as StepKey[],
@@ -884,6 +1011,10 @@ async function toImageInput(
       image_url:
         `data:${mimeType};base64,${base64}`,
 
+      /*
+       * High detail is important for small
+       * licence categories and dates.
+       */
       detail:
         "high" as const,
     },
@@ -942,8 +1073,8 @@ export async function POST(
     }
 
     /*
-     * Never let an arbitrary request
-     * send documents to OpenAI.
+     * Prevent arbitrary requests from sending
+     * unrelated images to the OpenAI API.
      */
     const {
       data: session,
@@ -998,11 +1129,6 @@ export async function POST(
       );
     }
 
-    /*
-     * The scanner changes the session
-     * to "scanning" before photographs
-     * can be submitted.
-     */
     if (
       session.status !==
       "scanning"
@@ -1120,33 +1246,63 @@ export async function POST(
           "input_text",
 
         text:
-          `You screen rental documents for NEXA Rentals in Spain.
+          `You read rental documents for NEXA Rentals in Spain.
 
 The customer selected this identity-document option: ${identityType}.
 
-Read only information that is visibly present in the photographs. Never guess missing characters, names, categories, or dates. Never claim that a document is genuine or authentic.
+PRIMARY TASK — DRIVING LICENCE
 
-Return all clearly readable dates only as YYYY-MM-DD. Return an empty string when a date is missing, incomplete, permanent, obscured, or not clearly readable.
+Read the driving licence front and back carefully.
 
-For the driving licence, list every visible vehicle category separately. For each category, extract that category's own valid-from and valid-until dates from the category table when visible.
+Extract:
+- the licence holder details;
+- the general issue date when visible;
+- the general expiry date when visible;
+- every visible driving category;
+- each category's own valid-from date;
+- each category's own valid-until date.
 
-Do not use the general card issue date as the category-B valid-from date.
+Small text and the category table are extremely important. Inspect the high-detail images carefully.
 
-For identity.selectedType, report the type of identity document actually visible in the photograph. Do not simply repeat the customer's selected option when the visible document is a different type.
+Read only information visibly present in the photographs. Never invent missing characters, categories or dates.
 
-Mark quality.overall as "retake" when:
-- text required for the checks is blurred;
-- important document edges are cropped;
-- glare hides information;
-- the wrong document or wrong side is shown;
-- a required document is absent;
-- the visible identity document does not match the selected option.
+Return clearly readable dates as YYYY-MM-DD.
 
-Use quality.retakeSides to identify exactly which photographs must be taken again.
+If an expiry date is missing, permanent, lifetime, shown with a dash, or not printed on the licence, return an empty string. A missing expiry date is not an error and must not cause a retake.
 
-Compare the holder's name on the driving licence with the name on the passport or identity card.
+Do not use the general card issue date as the category B valid-from date. Category B's valid-from date must come from the category table.
 
-When information cannot be determined confidently but the photographs do not clearly require a retake, use "uncertain" and explain the issue.`,
+Do not judge whether the document is genuine or authentic.
+
+QUALITY RULES
+
+quality.overall and quality.retakeSides must be based only on whether the DRIVING LICENCE can be read well enough to identify its categories and relevant dates.
+
+Use "retake" only when the driving licence is genuinely unreadable because:
+- the category table cannot be read;
+- important driving-licence information is hidden by severe blur or glare;
+- the driving licence is absent;
+- the wrong side is shown.
+
+Do not demand a perfect photograph. Normal perspective, small hand movement, minor reflections and slightly cropped decorative edges are acceptable when the categories and dates remain readable.
+
+When a retake is necessary, include only dlFront and/or dlBack in quality.retakeSides.
+
+If the licence is mostly readable but one result is uncertain, use quality.overall "uncertain" instead of "retake". The booking will then continue for manual review.
+
+IDENTITY DOCUMENT
+
+The ID card or passport is collected only to prepare the rental contract.
+
+Extract any clearly visible identity details, but:
+- never use identity quality to reject the booking;
+- never request an identity-document retake;
+- never require the identity document to have an expiry date;
+- never compare its name or document number with the driving licence;
+- never use an identity mismatch in quality.overall;
+- never use a different selected identity type to reject the booking.
+
+For compatibility, always return nameMatch as "uncertain".`,
       },
     ];
 
@@ -1167,10 +1323,6 @@ When information cannot be determined confidently but the photographs do not cle
       );
     }
 
-    /*
-     * API key remains on the server.
-     * The browser never receives it.
-     */
     const controller =
       new AbortController();
 
@@ -1355,14 +1507,13 @@ When information cannot be determined confidently but the photographs do not cle
     }
 
     /*
-     * OpenAI extracts visible data.
-     * Our own code applies NEXA's
-     * actual rental rules.
+     * OpenAI reads the visible document data.
+     * The server-side code applies NEXA's
+     * 125cc licence rules.
      */
     const decision =
       decide(
-        extraction,
-        identityType
+        extraction
       );
 
     return NextResponse.json({

@@ -1784,7 +1784,9 @@ const SUPPORTED_LOCALES = new Set<ScannerLocale>(
   Object.keys(COPY) as ScannerLocale[]
 );
 
-const AUTO_CAPTURE_SAMPLES = 4;
+const AUTO_CAPTURE_SAMPLES = 1;
+const CAMERA_WARMUP_MS = 400;
+const QUALITY_CHECK_INTERVAL_MS = 150;
 
 function getScannerLocale(value: string): ScannerLocale {
   const locale = value.toLowerCase() as ScannerLocale;
@@ -2224,11 +2226,11 @@ export default function VerifyDocumentsPage() {
                 ideal: "environment",
               },
               width: {
-                ideal: 1920,
-              },
-              height: {
-                ideal: 1080,
-              },
+  ideal: 2560,
+},
+height: {
+  ideal: 1440,
+},
             },
           }
         );
@@ -2323,11 +2325,19 @@ export default function VerifyDocumentsPage() {
     const canvas =
       document.createElement("canvas");
 
-    canvas.width = 1600;
+    const outputWidth = Math.min(
+  2400,
+  Math.max(
+    1800,
+    Math.round(sw)
+  )
+);
 
-    canvas.height = Math.round(
-      1600 / aspect
-    );
+canvas.width = outputWidth;
+
+canvas.height = Math.round(
+  outputWidth / aspect
+);
 
     const ctx = canvas.getContext("2d");
 
@@ -2349,11 +2359,11 @@ export default function VerifyDocumentsPage() {
 
     const blob = await new Promise<Blob | null>(
       (resolve) =>
-        canvas.toBlob(
-          resolve,
-          "image/jpeg",
-          0.9
-        )
+       canvas.toBlob(
+  resolve,
+  "image/jpeg",
+  0.95
+)
     );
 
     if (!blob) {
@@ -2721,11 +2731,11 @@ export default function VerifyDocumentsPage() {
         sampleCanvasRef.current =
           canvas;
 
-        canvas.width = 144;
+        canvas.width = 180;
 
-        canvas.height = Math.round(
-          144 / aspect
-        );
+canvas.height = Math.round(
+  180 / aspect
+);
 
         const ctx = canvas.getContext(
           "2d",
@@ -2852,8 +2862,7 @@ export default function VerifyDocumentsPage() {
         const previous =
           previousFrameRef.current;
 
-        let motion =
-          Number.POSITIVE_INFINITY;
+        let motion = 0;
 
         if (
           previous &&
@@ -2882,47 +2891,55 @@ export default function VerifyDocumentsPage() {
         let nextQuality: Quality;
         let good = false;
 
-        if (brightness < 45) {
-          nextQuality = {
-            tone: "warn",
-            text: copy.tooDark,
-          };
-        } else if (
-          brightness > 225 ||
-          glareRatio > 0.18
-        ) {
-          nextQuality = {
-            tone: "warn",
-            text: copy.tooMuchGlare,
-          };
-        } else if (
-          contrast < 22 ||
-          edgeScore < 6.5
-        ) {
-          nextQuality = {
-            tone: "warn",
-            text: copy.moveCloser,
-          };
-        } else if (motion > 7.5) {
-          nextQuality = {
-            tone: "warn",
-            text: copy.holdStill,
-          };
-        } else {
-          good = true;
+       /*
+ * Fast customer-friendly capture.
+ *
+ * We reject only frames that are genuinely
+ * unusable. Normal hand movement is accepted.
+ * Sharpness is still checked so the AI can
+ * read the licence text properly.
+ */
+if (brightness < 30) {
+  nextQuality = {
+    tone: "warn",
+    text: copy.tooDark,
+  };
+} else if (
+  brightness > 242 ||
+  glareRatio > 0.38
+) {
+  nextQuality = {
+    tone: "warn",
+    text: copy.tooMuchGlare,
+  };
+} else if (
+  contrast < 13 ||
+  edgeScore < 3.8
+) {
+  nextQuality = {
+    tone: "warn",
+    text: copy.moveCloser,
+  };
+} else if (motion > 24) {
+  nextQuality = {
+    tone: "warn",
+    text: copy.holdStill,
+  };
+} else {
+  good = true;
 
-          nextQuality = {
-            tone: "good",
-            text: copy.automaticReady,
-          };
-        }
+  nextQuality = {
+    tone: "good",
+    text: copy.automaticReady,
+  };
+}
 
         setQuality(nextQuality);
 
         const warmedUp =
-          performance.now() -
-            cameraStartedAtRef.current >=
-          1200;
+  performance.now() -
+    cameraStartedAtRef.current >=
+  CAMERA_WARMUP_MS;
 
         if (good && warmedUp) {
           stableSamplesRef.current += 1;
@@ -2939,8 +2956,8 @@ export default function VerifyDocumentsPage() {
           void captureRef.current();
         }
       },
-      350
-    );
+QUALITY_CHECK_INTERVAL_MS
+);
 
     return () =>
       window.clearInterval(timer);
