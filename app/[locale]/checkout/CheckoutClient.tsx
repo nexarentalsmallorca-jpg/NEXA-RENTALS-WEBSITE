@@ -1367,7 +1367,12 @@ export default function CheckoutClient() {
         ?.lastName ||
       "";
 
-    
+    const extractedAddress =
+      payload.identityData
+        ?.address ||
+      payload.licenceData
+        ?.address ||
+      "";
 
     if (
       extractedFirstName
