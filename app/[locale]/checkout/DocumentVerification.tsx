@@ -69,6 +69,12 @@ export type DocumentVerificationPayload = {
 type Props = {
   autoStart?: boolean;
 
+  from?: Date | null;
+  to?: Date | null;
+
+  pickupTime: string;
+  dropoffTime: string;
+
   onComplete?: (
     payload: DocumentVerificationPayload
   ) => void;
@@ -146,6 +152,32 @@ function param(
   ).trim();
 }
 
+function localIsoDate(
+  value?: Date | null
+) {
+  if (
+    !value ||
+    !Number.isFinite(
+      value.getTime()
+    )
+  ) {
+    return "";
+  }
+
+  const year =
+    value.getFullYear();
+
+  const month = String(
+    value.getMonth() + 1
+  ).padStart(2, "0");
+
+  const day = String(
+    value.getDate()
+  ).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
 function makeScannerUrl(
   data: SessionData,
   includeReturnUrl: boolean
@@ -184,6 +216,10 @@ function makeScannerUrl(
 
 export default function DocumentVerification({
   autoStart = true,
+  from,
+  to,
+  pickupTime,
+  dropoffTime,
   onComplete,
   onCancel,
 }: Props) {
@@ -233,6 +269,16 @@ export default function DocumentVerification({
       "verification_session"
     );
   }, [searchParams]);
+
+  const rentalStartDate = useMemo(
+    () => localIsoDate(from),
+    [from]
+  );
+
+  const rentalEndDate = useMemo(
+    () => localIsoDate(to),
+    [to]
+  );
 
   const finish = useCallback(
     (data: SessionData) => {
@@ -353,6 +399,15 @@ export default function DocumentVerification({
       setError("");
       setQrUrl("");
 
+      if (
+        !rentalStartDate ||
+        !rentalEndDate
+      ) {
+        throw new Error(
+          "Please select valid pickup and return dates before verifying documents."
+        );
+      }
+
       const response = await fetch(
         "/api/document-verification/session",
         {
@@ -367,6 +422,10 @@ export default function DocumentVerification({
             locale,
             fleetGroup,
             vehicleName,
+            rentalStartDate,
+            rentalEndDate,
+            pickupTime,
+            dropoffTime,
           }),
         }
       );
@@ -409,6 +468,10 @@ export default function DocumentVerification({
       locale,
       fleetGroup,
       vehicleName,
+      rentalStartDate,
+      rentalEndDate,
+      pickupTime,
+      dropoffTime,
     ]);
 
   /*
@@ -1007,6 +1070,7 @@ function DesktopInstruction({
         <div
           className={[
             "relative z-10 flex h-10 w-10 items-center justify-center rounded-full text-[12px] font-black",
+
             active
               ? "bg-black text-white shadow-[0_8px_22px_rgba(0,0,0,0.18)]"
               : "border border-black/12 bg-white text-black/45",

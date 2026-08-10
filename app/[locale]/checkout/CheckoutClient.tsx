@@ -678,7 +678,6 @@ async function checkCheckoutAvailability({
     return null;
   }
 }
-
 export default function CheckoutClient() {
   const searchParams =
     useSearchParams();
@@ -1488,8 +1487,7 @@ export default function CheckoutClient() {
       450
     );
   }
-
-  /*
+    /*
    * If documents came from the phone,
    * this simply returns their existing
    * private Supabase paths.
@@ -2130,8 +2128,7 @@ export default function CheckoutClient() {
         );
       }
     };
-
-  return (
+      return (
     <div
       className={`${manrope.className} nexa-checkout-root min-h-screen bg-white text-[#111]`}
     >
@@ -2217,6 +2214,22 @@ export default function CheckoutClient() {
             "verification" ? (
               <DocumentVerification
                 autoStart
+
+                from={
+                  from
+                }
+
+                to={
+                  to
+                }
+
+                pickupTime={
+                  pickupTime
+                }
+
+                dropoffTime={
+                  dropoffTime
+                }
 
                 onComplete={
                   handleDocumentVerificationComplete
@@ -2710,7 +2723,6 @@ function PlainLine({
     </div>
   );
 }
-
 function CheckoutDetailsSide({
   firstName,
   setFirstName,
