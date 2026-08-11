@@ -533,6 +533,23 @@ function checkoutImageForVehicle(
     publicVehicleName.toLowerCase();
 
   if (
+    cleanName.includes(
+      "kymco"
+    ) ||
+    cleanName.includes(
+      "kimco"
+    ) ||
+    cleanName.includes(
+      "sky town"
+    ) ||
+    cleanName.includes(
+      "skytown"
+    )
+  ) {
+    return "/images/kymcocheckout.png";
+  }
+
+  if (
     cleanId === "s2" ||
     cleanName.includes(
       "piaggio"
