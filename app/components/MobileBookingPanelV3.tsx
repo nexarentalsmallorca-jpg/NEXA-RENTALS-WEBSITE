@@ -53,6 +53,13 @@ const MOBILE_VEHICLES: MobileVehicle[] = [
     subtitle: "125cc scooter rental in Magaluf",
   },
   {
+    id: "kymco-sky-town",
+    displayName: "Kymco Sky Town 125",
+    shortName: "Kymco Sky Town",
+    type: "scooter",
+    subtitle: "125cc scooter rental in Magaluf",
+  },
+  {
     id: "sym-symphony",
     displayName: "SYM Symphony 125",
     shortName: "SYM Symphony",
@@ -215,7 +222,9 @@ function MobileLanguageSelector({
   const [open, setOpen] = useState(false);
 
   const currentLanguage = useMemo(() => {
-    return LANGUAGES.find((language) => language.code === locale) || LANGUAGES[0];
+    return (
+      LANGUAGES.find((language) => language.code === locale) || LANGUAGES[0]
+    );
   }, [locale]);
 
   function handleChange(nextLocale: Locale) {
@@ -320,7 +329,9 @@ function MobileBookingContent() {
   const searchParams = useSearchParams();
 
   const pathLocale = getLocaleFromPath(pathname);
-  const locale: Locale = isLocale(providerLocale) ? providerLocale : pathLocale;
+  const locale: Locale = isLocale(providerLocale)
+    ? providerLocale
+    : pathLocale;
 
   const selectedVehicle = useMemo(() => {
     return getSelectedVehicle(searchParams.get("vehicle"));
@@ -413,9 +424,11 @@ function MobileBookingContent() {
             </h1>
 
             <p className="mt-2 text-[13px] font-bold leading-5 text-black/54">
-              {selectedVehicle.type === "scooter"
-                ? "Get up to €43 per day, All Inclusive when renting for 6 days."
-                : "Fast electric bike rental in Magaluf. Contact us for live availability."}
+              {selectedVehicle.type === "ebike"
+                ? "Fast electric bike rental in Magaluf. Contact us for live availability."
+                : selectedVehicle.id === "kymco-sky-town"
+                  ? "Get up to €53 per day, All Inclusive when renting for 6 days."
+                  : "Get up to €43 per day, All Inclusive when renting for 6 days."}
             </p>
           </section>
 
@@ -482,7 +495,8 @@ function MobileBookingContent() {
           box-shadow: none !important;
         }
 
-        .mobile-booking-v3-page .nexa-booking-panel-v3:has(.calendar-months-scroll) {
+        .mobile-booking-v3-page
+          .nexa-booking-panel-v3:has(.calendar-months-scroll) {
           position: relative !important;
           z-index: 2147483600 !important;
         }
@@ -511,7 +525,9 @@ function MobileBookingContent() {
           -webkit-overflow-scrolling: touch;
         }
 
-        .mobile-booking-v3-page .nexa-booking-panel-v3 > div:first-of-type {
+        .mobile-booking-v3-page
+          .nexa-booking-panel-v3
+          > div:first-of-type {
           display: none !important;
         }
 
@@ -562,7 +578,9 @@ function MobileBookingContent() {
             border-radius: 16px !important;
           }
 
-          .mobile-booking-v3-page .plan-choice-button span.text-\\[33px\\] {
+          .mobile-booking-v3-page
+            .plan-choice-button
+            span.text-\\[33px\\] {
             font-size: 29px !important;
           }
 
@@ -570,7 +588,10 @@ function MobileBookingContent() {
             height: 42px !important;
           }
 
-          .mobile-booking-v3-page .nexa-booking-panel-v3 > div.fixed > div {
+          .mobile-booking-v3-page
+            .nexa-booking-panel-v3
+            > div.fixed
+            > div {
             width: min(430px, calc(100vw - 16px)) !important;
             max-height: calc(100svh - 16px) !important;
             border-radius: 22px !important;
@@ -592,7 +613,9 @@ function MobileBookingContent() {
             padding: 9px !important;
           }
 
-          .mobile-booking-v3-page .plan-choice-button span.text-\\[33px\\] {
+          .mobile-booking-v3-page
+            .plan-choice-button
+            span.text-\\[33px\\] {
             font-size: 26px !important;
           }
         }
@@ -640,7 +663,9 @@ function MobileBookingContent() {
             min-height: 86px !important;
           }
 
-          .mobile-booking-v3-page .plan-choice-button span.text-\\[33px\\] {
+          .mobile-booking-v3-page
+            .plan-choice-button
+            span.text-\\[33px\\] {
             font-size: 24px !important;
           }
 
