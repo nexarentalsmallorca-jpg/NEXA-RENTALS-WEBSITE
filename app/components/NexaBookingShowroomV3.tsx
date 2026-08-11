@@ -9,6 +9,7 @@ import {
 } from "react";
 import Image from "next/image";
 import { Inter, Manrope, Montserrat, Poppins } from "next/font/google";
+import { useLocale } from "next-intl";
 import NavbarV3 from "../NavbarV3";
 import BookingPanelV3 from "./BookingPanelV3";
 import GoogleReviewsV3 from "./GoogleReviewsV3";
@@ -69,6 +70,654 @@ type OpenStatus = {
   localTime: string;
 };
 
+type ShowroomLocale =
+  | "en"
+  | "es"
+  | "de"
+  | "fr"
+  | "it"
+  | "nl"
+  | "pl"
+  | "sv"
+  | "da"
+  | "no"
+  | "pt"
+  | "sr"
+  | "uk";
+
+type ShowroomCopy = {
+  chooseYourRide: string;
+  from: string;
+  allInclusive: string;
+  select: string;
+  scooter: string;
+  vehicle: string;
+  ebikePrices: string;
+  ebikeAvailability: string;
+  whatsappButton: string;
+  whatsappMessage: (vehicleName: string) => string;
+  previousVehicle: string;
+  nextVehicle: string;
+  labels: {
+    engine125: string;
+    engine125Short: string;
+    riders2: string;
+    topSpeed100: string;
+    topSpeed110: string;
+    automaticTransmission: string;
+    automatic: string;
+    helmets2Included: string;
+    phoneMountIncluded: string;
+    freeLockIncluded: string;
+    freeTopCaseIncluded: string;
+    unlimitedKilometers: string;
+    rider1: string;
+    pedalAssist25: string;
+    helmetIncluded: string;
+    lockIncluded: string;
+    range100: string;
+    range60: string;
+    oneHour: string;
+    twoHours: string;
+    threeHours: string;
+    fourHours: string;
+    oneDay: string;
+  };
+};
+
+const SHOWROOM_COPY: Record<ShowroomLocale, ShowroomCopy> = {
+  en: {
+    chooseYourRide: "Choose Your Ride",
+    from: "From",
+    allInclusive: "All inclusive",
+    select: "Select",
+    scooter: "Scooter",
+    vehicle: "Vehicle",
+    ebikePrices: "E-Bike Prices",
+    ebikeAvailability:
+      "For e-bike rentals, please contact us on WhatsApp to confirm live availability. Looking to rent more days? Message us on WhatsApp.",
+    whatsappButton: "Message Us On WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Hey NEXA Rentals, I am looking to rent a ${vehicleName}. Is it available?`,
+    previousVehicle: "Previous vehicle",
+    nextVehicle: "Next vehicle",
+    labels: {
+      engine125: "125CC ENGINE",
+      engine125Short: "125CC",
+      riders2: "2 RIDERS",
+      topSpeed100: "TOP SPEED 100 KM/H",
+      topSpeed110: "TOP SPEED 110 KM/H",
+      automaticTransmission: "AUTOMATIC TRANSMISSION",
+      automatic: "AUTOMATIC",
+      helmets2Included: "FREE 2 HELMETS INCLUDED",
+      phoneMountIncluded: "FREE PHONE MOUNT INCLUDED",
+      freeLockIncluded: "FREE LOCK INCLUDED",
+      freeTopCaseIncluded: "FREE TOP CASE INCLUDED",
+      unlimitedKilometers: "UNLIMITED KILOMETERS",
+      rider1: "1 RIDER",
+      pedalAssist25: "25 KM/H PEDAL ASSIST",
+      helmetIncluded: "HELMET INCLUDED",
+      lockIncluded: "LOCK INCLUDED",
+      range100: "100KM RANGE",
+      range60: "60KM RANGE",
+      oneHour: "1 HOUR",
+      twoHours: "2 HOURS",
+      threeHours: "3 HOURS",
+      fourHours: "4 HOURS",
+      oneDay: "1 DAY",
+    },
+  },
+  es: {
+    chooseYourRide: "Elige tu vehículo",
+    from: "Desde",
+    allInclusive: "Todo incluido",
+    select: "Elegir",
+    scooter: "Scooter",
+    vehicle: "Vehículo",
+    ebikePrices: "Tarifas de e-bike",
+    ebikeAvailability:
+      "Para alquilar una e-bike, contáctanos por WhatsApp y confirma la disponibilidad al momento. ¿Quieres alquilarla más días? Escríbenos por WhatsApp.",
+    whatsappButton: "Escríbenos por WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Hola NEXA Rentals, quiero alquilar una ${vehicleName}. ¿Está disponible?`,
+    previousVehicle: "Vehículo anterior",
+    nextVehicle: "Vehículo siguiente",
+    labels: {
+      engine125: "MOTOR DE 125 CC",
+      engine125Short: "125 CC",
+      riders2: "2 PASAJEROS",
+      topSpeed100: "VELOCIDAD MÁXIMA 100 KM/H",
+      topSpeed110: "VELOCIDAD MÁXIMA 110 KM/H",
+      automaticTransmission: "TRANSMISIÓN AUTOMÁTICA",
+      automatic: "AUTOMÁTICA",
+      helmets2Included: "2 CASCOS GRATIS INCLUIDOS",
+      phoneMountIncluded: "SOPORTE PARA MÓVIL GRATIS INCLUIDO",
+      freeLockIncluded: "CANDADO GRATIS INCLUIDO",
+      freeTopCaseIncluded: "BAÚL TRASERO GRATIS INCLUIDO",
+      unlimitedKilometers: "KILÓMETROS ILIMITADOS",
+      rider1: "1 PERSONA",
+      pedalAssist25: "ASISTENCIA AL PEDALEO 25 KM/H",
+      helmetIncluded: "CASCO INCLUIDO",
+      lockIncluded: "CANDADO INCLUIDO",
+      range100: "AUTONOMÍA 100 KM",
+      range60: "AUTONOMÍA 60 KM",
+      oneHour: "1 HORA",
+      twoHours: "2 HORAS",
+      threeHours: "3 HORAS",
+      fourHours: "4 HORAS",
+      oneDay: "1 DÍA",
+    },
+  },
+  de: {
+    chooseYourRide: "Wähle dein Fahrzeug",
+    from: "Ab",
+    allInclusive: "Alles inklusive",
+    select: "Auswählen",
+    scooter: "Roller",
+    vehicle: "Fahrzeug",
+    ebikePrices: "E-Bike-Preise",
+    ebikeAvailability:
+      "Kontaktiere uns für E-Bike-Mieten per WhatsApp, um die aktuelle Verfügbarkeit zu bestätigen. Du möchtest länger mieten? Schreib uns auf WhatsApp.",
+    whatsappButton: "Per WhatsApp anfragen",
+    whatsappMessage: (vehicleName) =>
+      `Hallo NEXA Rentals, ich möchte ein ${vehicleName} mieten. Ist es verfügbar?`,
+    previousVehicle: "Vorheriges Fahrzeug",
+    nextVehicle: "Nächstes Fahrzeug",
+    labels: {
+      engine125: "125-CCM-MOTOR",
+      engine125Short: "125 CCM",
+      riders2: "2 PERSONEN",
+      topSpeed100: "HÖCHSTGESCHWINDIGKEIT 100 KM/H",
+      topSpeed110: "HÖCHSTGESCHWINDIGKEIT 110 KM/H",
+      automaticTransmission: "AUTOMATIKGETRIEBE",
+      automatic: "AUTOMATIK",
+      helmets2Included: "2 KOSTENLOSE HELME INKLUSIVE",
+      phoneMountIncluded: "KOSTENLOSE HANDYHALTERUNG INKLUSIVE",
+      freeLockIncluded: "KOSTENLOSES SCHLOSS INKLUSIVE",
+      freeTopCaseIncluded: "KOSTENLOSES TOPCASE INKLUSIVE",
+      unlimitedKilometers: "UNBEGRENZTE KILOMETER",
+      rider1: "1 FAHRER",
+      pedalAssist25: "PEDALUNTERSTÜTZUNG BIS 25 KM/H",
+      helmetIncluded: "HELM INKLUSIVE",
+      lockIncluded: "SCHLOSS INKLUSIVE",
+      range100: "100 KM REICHWEITE",
+      range60: "60 KM REICHWEITE",
+      oneHour: "1 STUNDE",
+      twoHours: "2 STUNDEN",
+      threeHours: "3 STUNDEN",
+      fourHours: "4 STUNDEN",
+      oneDay: "1 TAG",
+    },
+  },
+  fr: {
+    chooseYourRide: "Choisissez votre véhicule",
+    from: "À partir de",
+    allInclusive: "Tout compris",
+    select: "Choisir",
+    scooter: "Scooter",
+    vehicle: "Véhicule",
+    ebikePrices: "Tarifs des vélos électriques",
+    ebikeAvailability:
+      "Pour louer un vélo électrique, contactez-nous sur WhatsApp afin de confirmer la disponibilité en temps réel. Vous souhaitez louer plus longtemps ? Écrivez-nous sur WhatsApp.",
+    whatsappButton: "Nous écrire sur WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Bonjour NEXA Rentals, je souhaite louer un ${vehicleName}. Est-il disponible ?`,
+    previousVehicle: "Véhicule précédent",
+    nextVehicle: "Véhicule suivant",
+    labels: {
+      engine125: "MOTEUR 125 CC",
+      engine125Short: "125 CC",
+      riders2: "2 PERSONNES",
+      topSpeed100: "VITESSE MAXIMALE 100 KM/H",
+      topSpeed110: "VITESSE MAXIMALE 110 KM/H",
+      automaticTransmission: "TRANSMISSION AUTOMATIQUE",
+      automatic: "AUTOMATIQUE",
+      helmets2Included: "2 CASQUES OFFERTS INCLUS",
+      phoneMountIncluded: "SUPPORT TÉLÉPHONE OFFERT INCLUS",
+      freeLockIncluded: "ANTIVOL OFFERT INCLUS",
+      freeTopCaseIncluded: "TOP CASE OFFERT INCLUS",
+      unlimitedKilometers: "KILOMÉTRAGE ILLIMITÉ",
+      rider1: "1 CYCLISTE",
+      pedalAssist25: "ASSISTANCE AU PÉDALAGE 25 KM/H",
+      helmetIncluded: "CASQUE INCLUS",
+      lockIncluded: "ANTIVOL INCLUS",
+      range100: "AUTONOMIE 100 KM",
+      range60: "AUTONOMIE 60 KM",
+      oneHour: "1 HEURE",
+      twoHours: "2 HEURES",
+      threeHours: "3 HEURES",
+      fourHours: "4 HEURES",
+      oneDay: "1 JOUR",
+    },
+  },
+  it: {
+    chooseYourRide: "Scegli il tuo veicolo",
+    from: "Da",
+    allInclusive: "Tutto incluso",
+    select: "Scegli",
+    scooter: "Scooter",
+    vehicle: "Veicolo",
+    ebikePrices: "Tariffe e-bike",
+    ebikeAvailability:
+      "Per noleggiare un'e-bike, contattaci su WhatsApp per confermare la disponibilità in tempo reale. Vuoi noleggiarla per più giorni? Scrivici su WhatsApp.",
+    whatsappButton: "Scrivici su WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Ciao NEXA Rentals, vorrei noleggiare una ${vehicleName}. È disponibile?`,
+    previousVehicle: "Veicolo precedente",
+    nextVehicle: "Veicolo successivo",
+    labels: {
+      engine125: "MOTORE 125 CC",
+      engine125Short: "125 CC",
+      riders2: "2 PASSEGGERI",
+      topSpeed100: "VELOCITÀ MASSIMA 100 KM/H",
+      topSpeed110: "VELOCITÀ MASSIMA 110 KM/H",
+      automaticTransmission: "CAMBIO AUTOMATICO",
+      automatic: "AUTOMATICO",
+      helmets2Included: "2 CASCHI GRATIS INCLUSI",
+      phoneMountIncluded: "SUPPORTO TELEFONO GRATIS INCLUSO",
+      freeLockIncluded: "LUCCHETTO GRATIS INCLUSO",
+      freeTopCaseIncluded: "BAULETTO GRATIS INCLUSO",
+      unlimitedKilometers: "CHILOMETRI ILLIMITATI",
+      rider1: "1 CICLISTA",
+      pedalAssist25: "PEDALATA ASSISTITA 25 KM/H",
+      helmetIncluded: "CASCO INCLUSO",
+      lockIncluded: "LUCCHETTO INCLUSO",
+      range100: "AUTONOMIA 100 KM",
+      range60: "AUTONOMIA 60 KM",
+      oneHour: "1 ORA",
+      twoHours: "2 ORE",
+      threeHours: "3 ORE",
+      fourHours: "4 ORE",
+      oneDay: "1 GIORNO",
+    },
+  },
+  nl: {
+    chooseYourRide: "Kies je voertuig",
+    from: "Vanaf",
+    allInclusive: "Alles inbegrepen",
+    select: "Kiezen",
+    scooter: "Scooter",
+    vehicle: "Voertuig",
+    ebikePrices: "E-bikeprijzen",
+    ebikeAvailability:
+      "Neem voor het huren van een e-bike contact met ons op via WhatsApp om de actuele beschikbaarheid te bevestigen. Wil je langer huren? Stuur ons een WhatsApp-bericht.",
+    whatsappButton: "Stuur ons een WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Hallo NEXA Rentals, ik wil graag een ${vehicleName} huren. Is deze beschikbaar?`,
+    previousVehicle: "Vorig voertuig",
+    nextVehicle: "Volgend voertuig",
+    labels: {
+      engine125: "125 CC-MOTOR",
+      engine125Short: "125 CC",
+      riders2: "2 PERSONEN",
+      topSpeed100: "TOPSNELHEID 100 KM/U",
+      topSpeed110: "TOPSNELHEID 110 KM/U",
+      automaticTransmission: "AUTOMATISCHE TRANSMISSIE",
+      automatic: "AUTOMATISCH",
+      helmets2Included: "2 GRATIS HELMEN INBEGREPEN",
+      phoneMountIncluded: "GRATIS TELEFOONHOUDER INBEGREPEN",
+      freeLockIncluded: "GRATIS SLOT INBEGREPEN",
+      freeTopCaseIncluded: "GRATIS TOPKOFFER INBEGREPEN",
+      unlimitedKilometers: "ONBEPERKTE KILOMETERS",
+      rider1: "1 FIETSER",
+      pedalAssist25: "TRAPONDERSTEUNING TOT 25 KM/U",
+      helmetIncluded: "HELM INBEGREPEN",
+      lockIncluded: "SLOT INBEGREPEN",
+      range100: "ACTIERADIUS 100 KM",
+      range60: "ACTIERADIUS 60 KM",
+      oneHour: "1 UUR",
+      twoHours: "2 UUR",
+      threeHours: "3 UUR",
+      fourHours: "4 UUR",
+      oneDay: "1 DAG",
+    },
+  },
+  pl: {
+    chooseYourRide: "Wybierz pojazd",
+    from: "Od",
+    allInclusive: "Wszystko w cenie",
+    select: "Wybierz",
+    scooter: "Skuter",
+    vehicle: "Pojazd",
+    ebikePrices: "Ceny e-rowerów",
+    ebikeAvailability:
+      "Aby wynająć e-rower, skontaktuj się z nami przez WhatsApp i potwierdź aktualną dostępność. Chcesz wynająć go na dłużej? Napisz do nas na WhatsAppie.",
+    whatsappButton: "Napisz na WhatsAppie",
+    whatsappMessage: (vehicleName) =>
+      `Cześć NEXA Rentals, chcę wynająć ${vehicleName}. Czy jest dostępny?`,
+    previousVehicle: "Poprzedni pojazd",
+    nextVehicle: "Następny pojazd",
+    labels: {
+      engine125: "SILNIK 125 CM³",
+      engine125Short: "125 CM³",
+      riders2: "2 OSOBY",
+      topSpeed100: "PRĘDKOŚĆ MAKSYMALNA 100 KM/H",
+      topSpeed110: "PRĘDKOŚĆ MAKSYMALNA 110 KM/H",
+      automaticTransmission: "AUTOMATYCZNA SKRZYNIA BIEGÓW",
+      automatic: "AUTOMATYCZNA",
+      helmets2Included: "2 DARMOWE KASKI W CENIE",
+      phoneMountIncluded: "DARMOWY UCHWYT NA TELEFON W CENIE",
+      freeLockIncluded: "DARMOWA BLOKADA W CENIE",
+      freeTopCaseIncluded: "DARMOWY KUFER W CENIE",
+      unlimitedKilometers: "NIELIMITOWANE KILOMETRY",
+      rider1: "1 ROWERZYSTA",
+      pedalAssist25: "WSPOMAGANIE PEDAŁOWANIA DO 25 KM/H",
+      helmetIncluded: "KASK W CENIE",
+      lockIncluded: "BLOKADA W CENIE",
+      range100: "ZASIĘG 100 KM",
+      range60: "ZASIĘG 60 KM",
+      oneHour: "1 GODZINA",
+      twoHours: "2 GODZINY",
+      threeHours: "3 GODZINY",
+      fourHours: "4 GODZINY",
+      oneDay: "1 DZIEŃ",
+    },
+  },
+  sv: {
+    chooseYourRide: "Välj ditt fordon",
+    from: "Från",
+    allInclusive: "Allt ingår",
+    select: "Välj",
+    scooter: "Skoter",
+    vehicle: "Fordon",
+    ebikePrices: "Elcykelpriser",
+    ebikeAvailability:
+      "Kontakta oss på WhatsApp för att bekräfta aktuell tillgänglighet när du vill hyra en elcykel. Vill du hyra fler dagar? Skriv till oss på WhatsApp.",
+    whatsappButton: "Skriv till oss på WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Hej NEXA Rentals, jag vill hyra en ${vehicleName}. Är den tillgänglig?`,
+    previousVehicle: "Föregående fordon",
+    nextVehicle: "Nästa fordon",
+    labels: {
+      engine125: "125 CC-MOTOR",
+      engine125Short: "125 CC",
+      riders2: "2 PERSONER",
+      topSpeed100: "TOPPHASTIGHET 100 KM/H",
+      topSpeed110: "TOPPHASTIGHET 110 KM/H",
+      automaticTransmission: "AUTOMATLÅDA",
+      automatic: "AUTOMATISK",
+      helmets2Included: "2 GRATIS HJÄLMAR INGÅR",
+      phoneMountIncluded: "GRATIS MOBILHÅLLARE INGÅR",
+      freeLockIncluded: "GRATIS LÅS INGÅR",
+      freeTopCaseIncluded: "GRATIS TOPBOX INGÅR",
+      unlimitedKilometers: "OBEGRÄNSADE KILOMETER",
+      rider1: "1 CYKLIST",
+      pedalAssist25: "PEDALASSISTANS UPP TILL 25 KM/H",
+      helmetIncluded: "HJÄLM INGÅR",
+      lockIncluded: "LÅS INGÅR",
+      range100: "RÄCKVIDD 100 KM",
+      range60: "RÄCKVIDD 60 KM",
+      oneHour: "1 TIMME",
+      twoHours: "2 TIMMAR",
+      threeHours: "3 TIMMAR",
+      fourHours: "4 TIMMAR",
+      oneDay: "1 DAG",
+    },
+  },
+  da: {
+    chooseYourRide: "Vælg dit køretøj",
+    from: "Fra",
+    allInclusive: "Alt inkluderet",
+    select: "Vælg",
+    scooter: "Scooter",
+    vehicle: "Køretøj",
+    ebikePrices: "E-cykelpriser",
+    ebikeAvailability:
+      "Kontakt os på WhatsApp for at bekræfte den aktuelle tilgængelighed, når du vil leje en e-cykel. Vil du leje i flere dage? Skriv til os på WhatsApp.",
+    whatsappButton: "Skriv til os på WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Hej NEXA Rentals, jeg vil gerne leje en ${vehicleName}. Er den ledig?`,
+    previousVehicle: "Forrige køretøj",
+    nextVehicle: "Næste køretøj",
+    labels: {
+      engine125: "125 CC-MOTOR",
+      engine125Short: "125 CC",
+      riders2: "2 PERSONER",
+      topSpeed100: "TOPHASTIGHED 100 KM/T",
+      topSpeed110: "TOPHASTIGHED 110 KM/T",
+      automaticTransmission: "AUTOMATGEAR",
+      automatic: "AUTOMATISK",
+      helmets2Included: "2 GRATIS HJELME INKLUDERET",
+      phoneMountIncluded: "GRATIS MOBILHOLDER INKLUDERET",
+      freeLockIncluded: "GRATIS LÅS INKLUDERET",
+      freeTopCaseIncluded: "GRATIS TOPBOKS INKLUDERET",
+      unlimitedKilometers: "UBEGRÆNSEDE KILOMETER",
+      rider1: "1 CYKLIST",
+      pedalAssist25: "PEDALASSISTANCE OP TIL 25 KM/T",
+      helmetIncluded: "HJELM INKLUDERET",
+      lockIncluded: "LÅS INKLUDERET",
+      range100: "RÆKKEVIDDE 100 KM",
+      range60: "RÆKKEVIDDE 60 KM",
+      oneHour: "1 TIME",
+      twoHours: "2 TIMER",
+      threeHours: "3 TIMER",
+      fourHours: "4 TIMER",
+      oneDay: "1 DAG",
+    },
+  },
+  no: {
+    chooseYourRide: "Velg kjøretøy",
+    from: "Fra",
+    allInclusive: "Alt inkludert",
+    select: "Velg",
+    scooter: "Scooter",
+    vehicle: "Kjøretøy",
+    ebikePrices: "Elsykkelpriser",
+    ebikeAvailability:
+      "Kontakt oss på WhatsApp for å bekrefte aktuell tilgjengelighet når du vil leie en elsykkel. Vil du leie i flere dager? Skriv til oss på WhatsApp.",
+    whatsappButton: "Skriv til oss på WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Hei NEXA Rentals, jeg ønsker å leie en ${vehicleName}. Er den tilgjengelig?`,
+    previousVehicle: "Forrige kjøretøy",
+    nextVehicle: "Neste kjøretøy",
+    labels: {
+      engine125: "125 CC-MOTOR",
+      engine125Short: "125 CC",
+      riders2: "2 PERSONER",
+      topSpeed100: "TOPPHASTIGHET 100 KM/T",
+      topSpeed110: "TOPPHASTIGHET 110 KM/T",
+      automaticTransmission: "AUTOMATGIR",
+      automatic: "AUTOMATISK",
+      helmets2Included: "2 GRATIS HJELMER INKLUDERT",
+      phoneMountIncluded: "GRATIS MOBILHOLDER INKLUDERT",
+      freeLockIncluded: "GRATIS LÅS INKLUDERT",
+      freeTopCaseIncluded: "GRATIS TOPPBOKS INKLUDERT",
+      unlimitedKilometers: "UBEGRENSEDE KILOMETER",
+      rider1: "1 SYKLIST",
+      pedalAssist25: "PEDALASSISTANSE OPPTIL 25 KM/T",
+      helmetIncluded: "HJELM INKLUDERT",
+      lockIncluded: "LÅS INKLUDERT",
+      range100: "REKKEVIDDE 100 KM",
+      range60: "REKKEVIDDE 60 KM",
+      oneHour: "1 TIME",
+      twoHours: "2 TIMER",
+      threeHours: "3 TIMER",
+      fourHours: "4 TIMER",
+      oneDay: "1 DAG",
+    },
+  },
+  pt: {
+    chooseYourRide: "Escolha o seu veículo",
+    from: "Desde",
+    allInclusive: "Tudo incluído",
+    select: "Escolher",
+    scooter: "Scooter",
+    vehicle: "Veículo",
+    ebikePrices: "Preços das e-bikes",
+    ebikeAvailability:
+      "Para alugar uma e-bike, contacte-nos pelo WhatsApp para confirmar a disponibilidade atual. Quer alugar por mais dias? Envie-nos uma mensagem pelo WhatsApp.",
+    whatsappButton: "Fale connosco no WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Olá NEXA Rentals, gostaria de alugar uma ${vehicleName}. Está disponível?`,
+    previousVehicle: "Veículo anterior",
+    nextVehicle: "Veículo seguinte",
+    labels: {
+      engine125: "MOTOR 125 CC",
+      engine125Short: "125 CC",
+      riders2: "2 PASSAGEIROS",
+      topSpeed100: "VELOCIDADE MÁXIMA 100 KM/H",
+      topSpeed110: "VELOCIDADE MÁXIMA 110 KM/H",
+      automaticTransmission: "TRANSMISSÃO AUTOMÁTICA",
+      automatic: "AUTOMÁTICA",
+      helmets2Included: "2 CAPACETES GRÁTIS INCLUÍDOS",
+      phoneMountIncluded: "SUPORTE DE TELEMÓVEL GRÁTIS INCLUÍDO",
+      freeLockIncluded: "CADEADO GRÁTIS INCLUÍDO",
+      freeTopCaseIncluded: "TOP CASE GRÁTIS INCLUÍDO",
+      unlimitedKilometers: "QUILÓMETROS ILIMITADOS",
+      rider1: "1 CICLISTA",
+      pedalAssist25: "ASSISTÊNCIA AO PEDAL ATÉ 25 KM/H",
+      helmetIncluded: "CAPACETE INCLUÍDO",
+      lockIncluded: "CADEADO INCLUÍDO",
+      range100: "AUTONOMIA 100 KM",
+      range60: "AUTONOMIA 60 KM",
+      oneHour: "1 HORA",
+      twoHours: "2 HORAS",
+      threeHours: "3 HORAS",
+      fourHours: "4 HORAS",
+      oneDay: "1 DIA",
+    },
+  },
+  sr: {
+    chooseYourRide: "Izaberite vozilo",
+    from: "Od",
+    allInclusive: "Sve uključeno",
+    select: "Izaberi",
+    scooter: "Skuter",
+    vehicle: "Vozilo",
+    ebikePrices: "Cene e-bicikala",
+    ebikeAvailability:
+      "Za iznajmljivanje e-bicikla kontaktirajte nas putem WhatsApp-a da proverite trenutnu dostupnost. Želite više dana? Pišite nam na WhatsApp.",
+    whatsappButton: "Pišite nam na WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Zdravo NEXA Rentals, želim da iznajmim ${vehicleName}. Da li je dostupan?`,
+    previousVehicle: "Prethodno vozilo",
+    nextVehicle: "Sledeće vozilo",
+    labels: {
+      engine125: "MOTOR 125 CC",
+      engine125Short: "125 CC",
+      riders2: "2 PUTNIKA",
+      topSpeed100: "MAKSIMALNA BRZINA 100 KM/H",
+      topSpeed110: "MAKSIMALNA BRZINA 110 KM/H",
+      automaticTransmission: "AUTOMATSKI MENJAČ",
+      automatic: "AUTOMATIK",
+      helmets2Included: "2 BESPLATNE KACIGE UKLJUČENE",
+      phoneMountIncluded: "BESPLATAN DRŽAČ ZA TELEFON UKLJUČEN",
+      freeLockIncluded: "BESPLATNA BRAVA UKLJUČENA",
+      freeTopCaseIncluded: "BESPLATNI KOFER UKLJUČEN",
+      unlimitedKilometers: "NEOGRANIČENA KILOMETRAŽA",
+      rider1: "1 VOZAČ",
+      pedalAssist25: "POMOĆ PRI PEDALIRANJU DO 25 KM/H",
+      helmetIncluded: "KACIGA UKLJUČENA",
+      lockIncluded: "BRAVA UKLJUČENA",
+      range100: "DOMET 100 KM",
+      range60: "DOMET 60 KM",
+      oneHour: "1 SAT",
+      twoHours: "2 SATA",
+      threeHours: "3 SATA",
+      fourHours: "4 SATA",
+      oneDay: "1 DAN",
+    },
+  },
+  uk: {
+    chooseYourRide: "Оберіть транспорт",
+    from: "Від",
+    allInclusive: "Все включено",
+    select: "Обрати",
+    scooter: "Скутер",
+    vehicle: "Транспорт",
+    ebikePrices: "Ціни на електровелосипеди",
+    ebikeAvailability:
+      "Для оренди електровелосипеда напишіть нам у WhatsApp, щоб підтвердити актуальну наявність. Хочете орендувати на більше днів? Напишіть нам у WhatsApp.",
+    whatsappButton: "Написати у WhatsApp",
+    whatsappMessage: (vehicleName) =>
+      `Вітаю, NEXA Rentals! Я хочу орендувати ${vehicleName}. Чи доступний він?`,
+    previousVehicle: "Попередній транспорт",
+    nextVehicle: "Наступний транспорт",
+    labels: {
+      engine125: "ДВИГУН 125 КУБ. СМ",
+      engine125Short: "125 КУБ. СМ",
+      riders2: "2 ПАСАЖИРИ",
+      topSpeed100: "МАКСИМАЛЬНА ШВИДКІСТЬ 100 КМ/ГОД",
+      topSpeed110: "МАКСИМАЛЬНА ШВИДКІСТЬ 110 КМ/ГОД",
+      automaticTransmission: "АВТОМАТИЧНА ТРАНСМІСІЯ",
+      automatic: "АВТОМАТ",
+      helmets2Included: "2 БЕЗКОШТОВНІ ШОЛОМИ ВКЛЮЧЕНО",
+      phoneMountIncluded: "БЕЗКОШТОВНЕ КРІПЛЕННЯ ДЛЯ ТЕЛЕФОНА",
+      freeLockIncluded: "БЕЗКОШТОВНИЙ ЗАМОК ВКЛЮЧЕНО",
+      freeTopCaseIncluded: "БЕЗКОШТОВНИЙ КОФР ВКЛЮЧЕНО",
+      unlimitedKilometers: "НЕОБМЕЖЕНИЙ ПРОБІГ",
+      rider1: "1 ВЕЛОСИПЕДИСТ",
+      pedalAssist25: "ДОПОМОГА ПЕДАЛЮВАННЮ ДО 25 КМ/ГОД",
+      helmetIncluded: "ШОЛОМ ВКЛЮЧЕНО",
+      lockIncluded: "ЗАМОК ВКЛЮЧЕНО",
+      range100: "ЗАПАС ХОДУ 100 КМ",
+      range60: "ЗАПАС ХОДУ 60 КМ",
+      oneHour: "1 ГОДИНА",
+      twoHours: "2 ГОДИНИ",
+      threeHours: "3 ГОДИНИ",
+      fourHours: "4 ГОДИНИ",
+      oneDay: "1 ДЕНЬ",
+    },
+  },
+};
+
+function normalizeShowroomLocale(locale: string): ShowroomLocale {
+  const rawLocale = locale.toLowerCase().split("-")[0];
+  const aliases: Record<string, ShowroomLocale> = {
+    nb: "no",
+    nn: "no",
+    se: "sv",
+    dk: "da",
+    rs: "sr",
+    ua: "uk",
+  };
+  const normalizedLocale = aliases[rawLocale] || rawLocale;
+
+  return normalizedLocale in SHOWROOM_COPY
+    ? (normalizedLocale as ShowroomLocale)
+    : "en";
+}
+
+function translateVehicleLabel(label: string, copy: ShowroomCopy) {
+  if (copy === SHOWROOM_COPY.en) return label;
+
+  const labels = copy.labels;
+
+  const translatedLabels: Record<string, string> = {
+    "125CC ENGINE": labels.engine125,
+    "125CC": labels.engine125Short,
+    "2 PASSENGERS": labels.riders2,
+    "2 Riders": labels.riders2,
+    "TOP SPEED 100 KM/H": labels.topSpeed100,
+    "TOP SPEED 110 KM/H": labels.topSpeed110,
+    "AUTOMATIC TRANSMISSION": labels.automaticTransmission,
+    Automatic: labels.automatic,
+    "FREE 2 HELMETS INCLUDED": labels.helmets2Included,
+    "FREE PHONE MOUNT INCLUDED": labels.phoneMountIncluded,
+    "FREE LOCK INCLUDED": labels.freeLockIncluded,
+    "FREE TOP CASE INCLUDED": labels.freeTopCaseIncluded,
+    "UNLIMITED KILOMETERS": labels.unlimitedKilometers,
+    "1 RIDER": labels.rider1,
+    "1 Rider": labels.rider1,
+    "25 KM/H PEDAL ASSIST": labels.pedalAssist25,
+    "HELMET INCLUDED": labels.helmetIncluded,
+    "LOCK INCLUDED": labels.lockIncluded,
+    "Lock Included": labels.lockIncluded,
+    "100KM RANGE": labels.range100,
+    "100KM Range": labels.range100,
+    "60KM RANGE": labels.range60,
+    "60KM Range": labels.range60,
+    "All Inclusive": copy.allInclusive,
+    "1 Hour": labels.oneHour,
+    "2 Hours": labels.twoHours,
+    "3 Hours": labels.threeHours,
+    "4 Hours": labels.fourHours,
+    "1 Day": labels.oneDay,
+  };
+
+  return translatedLabels[label] || label;
+}
+
 declare global {
   interface Window {
     __nexaTriggerBookingPanelAttention?: boolean;
@@ -79,6 +728,17 @@ const PIAGGIO_FEATURES: VehicleFeature[] = [
   { image: "/images/engine.png", label: "125CC ENGINE" },
   { image: "/images/people.png", label: "2 PASSENGERS" },
   { image: "/images/speed.png", label: "TOP SPEED 100 KM/H" },
+  { image: "/images/helmet.png", label: "FREE 2 HELMETS INCLUDED" },
+  { image: "/images/phone.png", label: "FREE PHONE MOUNT INCLUDED" },
+  { image: "/images/lock.png", label: "FREE LOCK INCLUDED" },
+  { image: "/images/box.png", label: "FREE TOP CASE INCLUDED" },
+  { image: "/images/1111.png", label: "UNLIMITED KILOMETERS" },
+];
+
+const KYMCO_FEATURES: VehicleFeature[] = [
+  { image: "/images/engine.png", label: "125CC ENGINE" },
+  { image: "/images/people.png", label: "2 PASSENGERS" },
+  { image: "/images/speed.png", label: "AUTOMATIC TRANSMISSION" },
   { image: "/images/helmet.png", label: "FREE 2 HELMETS INCLUDED" },
   { image: "/images/phone.png", label: "FREE PHONE MOUNT INCLUDED" },
   { image: "/images/lock.png", label: "FREE LOCK INCLUDED" },
@@ -123,6 +783,14 @@ const VEHICLE_SLIDES: VehicleSlide[] = [
     features: PIAGGIO_FEATURES,
   },
   {
+    id: "kymco-sky-town",
+    name: "Kymco Sky Town",
+    displayName: "Kymco Sky Town 125",
+    image: "/images/kymco.png",
+    alt: "Kymco Sky Town 125 NEXA Rentals",
+    features: KYMCO_FEATURES,
+  },
+  {
     id: "sym-symphony",
     name: "SYM Symphony",
     displayName: "SYM Symphony 125",
@@ -159,6 +827,19 @@ const MOBILE_DIRECT_HERO_SLIDES: MobileDirectHeroSlide[] = [
     { image: "/images/engine.png", label: "125CC" },
     { image: "/images/people.png", label: "2 Riders" },
     { image: "/images/speed.png", label: "100 KM/H" },
+    { image: "/images/1111.png", label: "All Inclusive" },
+  ],
+},
+{
+  id: "mobile-kymco-sky-town",
+  vehicleId: "kymco-sky-town",
+  name: "Kymco Sky Town 125",
+  image: "/images/kymcomobile.png",
+  alt: "Kymco Sky Town 125 scooter rental NEXA Rentals Magaluf",
+  specs: [
+    { image: "/images/engine.png", label: "125CC" },
+    { image: "/images/people.png", label: "2 Riders" },
+    { image: "/images/speed.png", label: "Automatic" },
     { image: "/images/1111.png", label: "All Inclusive" },
   ],
 },
@@ -890,8 +1571,14 @@ function LocationV3() {
   );
 }
 
-function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
-  const whatsappMessage = `Hey NEXA Rentals, I am looking to rent a ${vehicleName}. Is it available?`;
+function EbikeWhatsAppPanel({
+  vehicleName,
+  copy,
+}: {
+  vehicleName: string;
+  copy: ShowroomCopy;
+}) {
+  const whatsappMessage = copy.whatsappMessage(vehicleName);
   const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(
     whatsappMessage
   )}`;
@@ -900,7 +1587,7 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
     <div className="nexa-ebike-panel relative z-20 w-full rounded-[28px] border border-black/10 bg-white p-4 text-black shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
       <div className="rounded-[18px] border border-black/10 bg-[linear-gradient(135deg,#ff7a00_0%,#ff9f1c_45%,#ffc15a_100%)]/[0.03] px-3 py-3">
         <div className="text-[9px] font-black uppercase tracking-[0.16em] text-black/46">
-          Vehicle
+          {copy.vehicle}
         </div>
         <div className="mt-0.5 truncate text-[15px] font-black text-black">
           {vehicleName}
@@ -909,7 +1596,7 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
 
       <div className="mt-3 rounded-[18px] border border-black/10 bg-black/[0.03] p-3">
         <div className="text-[10px] font-black uppercase tracking-[0.16em] text-black/46">
-          E-Bike Prices
+          {copy.ebikePrices}
         </div>
 
         <div className="mt-3 space-y-2">
@@ -919,7 +1606,7 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
               className="flex items-center justify-between rounded-[14px] border border-black/10 bg-white px-3 py-2.5"
             >
               <span className="text-[12px] font-black uppercase tracking-[0.06em] text-black/72">
-                {item.label}
+                {translateVehicleLabel(item.label, copy)}
               </span>
 
               <span className="text-[20px] font-black leading-none tracking-[-0.05em] text-black">
@@ -931,8 +1618,7 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
       </div>
 
       <div className="mt-3 rounded-[16px] border border-emerald-500/20 bg-emerald-50 px-3 py-3 text-[17px] font-black leading-5 text-emerald-700">
-        For e-bike rentals, please contact us on WhatsApp to confirm live
-        availability. Looking to rent more days? Message us on WhatsApp.
+        {copy.ebikeAvailability}
       </div>
 
       <a
@@ -941,7 +1627,7 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
         rel="noopener noreferrer"
         className="ebike-whatsapp-button mt-3 flex w-full items-center justify-center rounded-[16px] bg-[#25D366] px-5 py-4 text-[13px] font-black uppercase tracking-[0.16em] text-white shadow-[0_18px_42px_rgba(37,211,102,0.36)] transition hover:-translate-y-1 hover:bg-[#1fc15b] hover:shadow-[0_24px_58px_rgba(37,211,102,0.46)] active:translate-y-0 active:scale-[0.97]"
       >
-        Message Us On WhatsApp
+        {copy.whatsappButton}
       </a>
 
       <style jsx>{`
@@ -1002,6 +1688,9 @@ function EbikeWhatsAppPanel({ vehicleName }: { vehicleName: string }) {
 }
 
 export default function NexaBookingShowroomV3() {
+  const activeLocale = useLocale();
+  const showroomLocale = normalizeShowroomLocale(activeLocale);
+  const copy = SHOWROOM_COPY[showroomLocale];
   const [activeIndex, setActiveIndex] = useState(0);
   const [mobileHeroIndex, setMobileHeroIndex] = useState(0);
   const [bookingPanelAttention, setBookingPanelAttention] = useState(false);
@@ -1339,7 +2028,7 @@ useEffect(() => {
   ].join(" ")}
 >
   <div className="mobile-selector-kicker mx-auto block text-[9px] font-extrabold uppercase tracking-[0.36em] text-white/64 drop-shadow-[0_8px_22px_rgba(0,0,0,0.88)]">
-    Choose Your Ride
+    {copy.chooseYourRide}
   </div>
 
     <h1
@@ -1355,7 +2044,7 @@ useEffect(() => {
 
   <div className="mobile-price-line pointer-events-none mx-auto mt-1.5 flex w-full max-w-[350px] items-center justify-center gap-1.5 text-center lg:hidden">
   <span className="text-[8px] font-black uppercase leading-none tracking-[0.24em] text-white/62 drop-shadow-[0_8px_20px_rgba(0,0,0,0.9)]">
-    From
+    {copy.from}
   </span>
 
   <span className="bg-[linear-gradient(180deg,#fff6c8_0%,#ffd166_38%,#ff9d2e_72%,#ff7a00_100%)] bg-clip-text text-[30px] font-black leading-none tracking-[-0.065em] text-transparent drop-shadow-[0_8px_18px_rgba(0,0,0,0.85)]">
@@ -1366,7 +2055,7 @@ useEffect(() => {
   </span>
 
   <span className="text-[8.5px] font-black uppercase leading-none tracking-[0.14em] text-white/78 drop-shadow-[0_8px_20px_rgba(0,0,0,0.9)]">
-    All inclusive
+    {copy.allInclusive}
   </span>
 </div>
 </div>
@@ -1389,7 +2078,7 @@ useEffect(() => {
       fontWeight: 900,
     }}
   >
-    <span className="relative z-10">Select</span>
+    <span className="relative z-10">{copy.select}</span>
   </button>
 </div>
 
@@ -1419,7 +2108,7 @@ useEffect(() => {
               fontWeight: 900,
             }}
           >
-            {spec.label}
+            {translateVehicleLabel(spec.label, copy)}
           </span>
         </div>
       ))}
@@ -1444,7 +2133,7 @@ useEffect(() => {
         <button
           type="button"
           onClick={goToPreviousMobileHero}
-          aria-label="Previous mobile vehicle"
+          aria-label={copy.previousVehicle}
           className="mobile-direct-arrow mobile-direct-arrow-left group absolute left-2 top-1/2 z-40 flex h-20 w-12 -translate-y-1/2 items-center justify-center text-white/82 transition duration-300 hover:text-white active:scale-95 sm:left-5 lg:hidden"
         >
           <svg
@@ -1466,7 +2155,7 @@ useEffect(() => {
         <button
           type="button"
           onClick={goToNextMobileHero}
-          aria-label="Next mobile vehicle"
+          aria-label={copy.nextVehicle}
           className="mobile-direct-arrow mobile-direct-arrow-right group absolute right-2 top-1/2 z-40 flex h-20 w-12 -translate-y-1/2 items-center justify-center text-white/82 transition duration-300 hover:text-white active:scale-95 sm:right-5 lg:hidden"
         >
           <svg
@@ -1502,7 +2191,7 @@ useEffect(() => {
             }}
           >
             <TypedLine
-              text="SCOOTER"
+              text={copy.scooter.toUpperCase()}
               className="font-black uppercase"
               delayMs={0}
             />
@@ -1547,7 +2236,7 @@ useEffect(() => {
                   }}
                 >
                   <TypedLine
-                    text={feature.label}
+                    text={translateVehicleLabel(feature.label, copy)}
                     className="font-black uppercase"
                   />
                 </span>
@@ -1567,6 +2256,7 @@ useEffect(() => {
               <EbikeWhatsAppPanel
                 key={`desktop-ebike-${activeVehicle.id}`}
                 vehicleName={activeVehicle.displayName}
+                copy={copy}
               />
             ) : (
               <BookingPanelV3
@@ -1589,6 +2279,7 @@ useEffect(() => {
               <EbikeWhatsAppPanel
                 key={`mobile-ebike-${activeVehicle.id}`}
                 vehicleName={activeVehicle.displayName}
+                copy={copy}
               />
             ) : (
               <BookingPanelV3
@@ -1602,7 +2293,7 @@ useEffect(() => {
         <button
           type="button"
           onClick={goToPrevious}
-          aria-label="Previous vehicle"
+          aria-label={copy.previousVehicle}
           className="showroom-arrow showroom-arrow-left group absolute left-5 top-1/2 z-40 flex h-24 w-16 -translate-y-1/2 items-center justify-center text-white/75 transition-all duration-300 hover:text-white active:scale-95 sm:left-8 lg:left-12"
         >
           <svg
@@ -1624,7 +2315,7 @@ useEffect(() => {
         <button
           type="button"
           onClick={goToNext}
-          aria-label="Next vehicle"
+          aria-label={copy.nextVehicle}
           className="showroom-arrow showroom-arrow-right group absolute right-[390px] top-1/2 z-40 hidden h-24 w-16 -translate-y-1/2 items-center justify-center text-white/75 transition-all duration-300 hover:text-white active:scale-95 lg:flex"
         >
           <svg
@@ -1646,7 +2337,7 @@ useEffect(() => {
         <button
           type="button"
           onClick={goToNext}
-          aria-label="Next vehicle"
+          aria-label={copy.nextVehicle}
           className="showroom-arrow showroom-arrow-right group hidden"
         >
           <svg

@@ -13,7 +13,20 @@ import { useRouter } from "next/navigation";
 type RentalPlan = "half" | "full" | null;
 type ActiveDateField = "pickup" | "dropoff";
 type ActiveTimeField = "pickup" | "return" | null;
-type Locale = "en" | "es" | "de" | "fr" | "it" | "pt" | "sv";
+type Locale =
+  | "en"
+  | "es"
+  | "de"
+  | "fr"
+  | "it"
+  | "nl"
+  | "pl"
+  | "sv"
+  | "da"
+  | "no"
+  | "pt"
+  | "sr"
+  | "uk";
 type AvailabilityFleetGroup = "piaggio_liberty_125" | "sym_symphony_125";
 
 type SeasonalPricing = {
@@ -343,6 +356,105 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     sameDropoffTime: "L’orario di riconsegna è uguale all’orario di ritiro.",
     noTimesToday: "Non ci sono più orari disponibili per oggi.",
   }),
+  nl: copy({
+    vehicle: "Voertuig",
+    sameDayRental: "Huur op dezelfde dag",
+    fullDay: "Hele dag",
+    chooseQuantity: "Selecteer hoeveel scooters je nodig hebt",
+    multiDayDiscount: "Korting bij huur voor meerdere dagen",
+    mostPopular: "Meest populair",
+    pickupDate: "Ophaaldatum",
+    pickupTime: "Ophaaltijd",
+    returnTime: "Inlevertijd",
+    dropoffDate: "Inleverdatum",
+    selectDate: "Datum selecteren",
+    selectDates: "Selecteren",
+    selectTime: "Tijd selecteren",
+    choosePlanFirst: "Kies eerst Huur op dezelfde dag of Hele dag.",
+    chooseDateFirst: "Kies eerst je ophaaldatum.",
+    fullMin24: "Een boeking voor een hele dag moet minstens 24 uur duren.",
+    maxOnline6:
+      "De maximale huurperiode is 6 dagen. Je kunt online maximaal 6 dagen huren.",
+    checkingWait: "Beschikbaarheid controleren. Even geduld.",
+    unavailableNotice:
+      "Dit voertuig is niet beschikbaar voor de geselecteerde datum/tijd. Wijzig de datums of kies een ander voertuig.",
+    availabilityRequired:
+      "De actuele beschikbaarheid moet vóór het afrekenen worden bevestigd. Even geduld.",
+    completeDetails: "Vul eerst alle boekingsgegevens in.",
+    availabilityError:
+      "De actuele beschikbaarheid kon niet worden bevestigd. Probeer het opnieuw of neem contact met ons op via WhatsApp.",
+    checkingLive: "Actuele beschikbaarheid controleren...",
+    availableCount: "{available} beschikbaar",
+    notEnoughQuantity:
+      "Slechts {available} beschikbaar. Verlaag het aantal of neem contact met ons op via WhatsApp.",
+    summary: "Overzicht",
+    choosePlanBegin: "Kies een optie om te beginnen",
+    day: "dag",
+    days: "dagen",
+    hour: "uur",
+    hours: "uur",
+    total: "Totaal",
+    normalPrice: "Normale prijs",
+    nowPrice: "Nu",
+    checkout: "Doorgaan naar afrekenen",
+    checkingAvailability: "Beschikbaarheid controleren...",
+    notAvailable: "Niet beschikbaar",
+    confirmingAvailability: "Beschikbaarheid bevestigen...",
+    close: "Sluiten",
+    sameDropoffTime: "De inlevertijd is gelijk aan de ophaaltijd.",
+    noTimesToday:
+      "Er zijn vandaag geen ophaaltijden meer beschikbaar. Kies een andere datum.",
+  }),
+  pl: copy({
+    vehicle: "Pojazd",
+    sameDayRental: "Wynajem tego samego dnia",
+    fullDay: "Pełny dzień",
+    chooseQuantity: "Wybierz liczbę potrzebnych skuterów",
+    multiDayDiscount: "Niższa cena przy wynajmie na kilka dni",
+    mostPopular: "Najpopularniejsze",
+    pickupDate: "Data odbioru",
+    pickupTime: "Godzina odbioru",
+    returnTime: "Godzina zwrotu",
+    dropoffDate: "Data zwrotu",
+    selectDate: "Wybierz datę",
+    selectDates: "Wybierz",
+    selectTime: "Wybierz godzinę",
+    choosePlanFirst:
+      "Najpierw wybierz Wynajem tego samego dnia lub Pełny dzień.",
+    chooseDateFirst: "Najpierw wybierz datę odbioru.",
+    fullMin24: "Rezerwacja na pełny dzień musi trwać co najmniej 24 godziny.",
+    maxOnline6:
+      "Maksymalny okres wynajmu wynosi 6 dni. Online możesz wynająć skuter na maksymalnie 6 dni.",
+    checkingWait: "Sprawdzamy dostępność. Proszę czekać.",
+    unavailableNotice:
+      "Ten pojazd nie jest dostępny w wybranym terminie. Zmień daty lub wybierz inny pojazd.",
+    availabilityRequired:
+      "Dostępność musi zostać potwierdzona przed przejściem do płatności. Proszę czekać.",
+    completeDetails: "Najpierw uzupełnij dane rezerwacji.",
+    availabilityError:
+      "Nie udało się potwierdzić dostępności. Spróbuj ponownie lub skontaktuj się z nami przez WhatsApp.",
+    checkingLive: "Sprawdzamy aktualną dostępność...",
+    availableCount: "Dostępne: {available}",
+    notEnoughQuantity:
+      "Dostępne są tylko {available}. Zmniejsz liczbę lub skontaktuj się z nami przez WhatsApp.",
+    summary: "Podsumowanie",
+    choosePlanBegin: "Wybierz opcję, aby rozpocząć",
+    day: "dzień",
+    days: "dni",
+    hour: "godzina",
+    hours: "godziny",
+    total: "Razem",
+    normalPrice: "Cena regularna",
+    nowPrice: "Teraz",
+    checkout: "Przejdź do płatności",
+    checkingAvailability: "Sprawdzamy dostępność...",
+    notAvailable: "Niedostępny",
+    confirmingAvailability: "Potwierdzamy dostępność...",
+    close: "Zamknij",
+    sameDropoffTime: "Godzina zwrotu jest taka sama jak godzina odbioru.",
+    noTimesToday:
+      "Na dziś nie ma już dostępnych godzin odbioru. Wybierz inną datę.",
+  }),
   pt: copy({
     vehicle: "Veículo",
     sameDayRental: "Mesmo dia",
@@ -437,6 +549,203 @@ const I18N: Record<Locale, BookingPanelCopy> = {
     sameDropoffTime: "Återlämningstiden är samma som upphämtningstiden.",
     noTimesToday: "Inga fler tider finns tillgängliga idag.",
   }),
+  da: copy({
+    vehicle: "Køretøj",
+    sameDayRental: "Leje samme dag",
+    fullDay: "Hel dag",
+    chooseQuantity: "Vælg, hvor mange scootere du har brug for",
+    multiDayDiscount: "Rabatpris ved leje i flere dage",
+    mostPopular: "Mest populær",
+    pickupDate: "Afhentningsdato",
+    pickupTime: "Afhentningstid",
+    returnTime: "Afleveringstid",
+    dropoffDate: "Afleveringsdato",
+    selectDate: "Vælg dato",
+    selectDates: "Vælg",
+    selectTime: "Vælg tidspunkt",
+    choosePlanFirst: "Vælg først Leje samme dag eller Hel dag.",
+    chooseDateFirst: "Vælg først din afhentningsdato.",
+    fullMin24: "En heldagsbooking skal vare mindst 24 timer.",
+    maxOnline6:
+      "Den maksimale lejeperiode er 6 dage. Du kan højst leje i 6 dage online.",
+    checkingWait: "Tjekker tilgængelighed. Vent venligst.",
+    unavailableNotice:
+      "Dette køretøj er ikke tilgængeligt på den valgte dato/tid. Skift datoerne, eller vælg et andet køretøj.",
+    availabilityRequired:
+      "Den aktuelle tilgængelighed skal bekræftes før betaling. Vent venligst.",
+    completeDetails: "Udfyld først dine bookingoplysninger.",
+    availabilityError:
+      "Den aktuelle tilgængelighed kunne ikke bekræftes. Prøv igen, eller kontakt os på WhatsApp.",
+    checkingLive: "Tjekker aktuel tilgængelighed...",
+    availableCount: "{available} tilgængelige",
+    notEnoughQuantity:
+      "Kun {available} tilgængelige. Reducer antallet, eller kontakt os på WhatsApp.",
+    summary: "Oversigt",
+    choosePlanBegin: "Vælg en mulighed for at begynde",
+    day: "dag",
+    days: "dage",
+    hour: "time",
+    hours: "timer",
+    total: "I alt",
+    normalPrice: "Normalpris",
+    nowPrice: "Nu",
+    checkout: "Fortsæt til betaling",
+    checkingAvailability: "Tjekker tilgængelighed...",
+    notAvailable: "Ikke tilgængelig",
+    confirmingAvailability: "Bekræfter tilgængelighed...",
+    close: "Luk",
+    sameDropoffTime: "Afleveringstiden er den samme som afhentningstiden.",
+    noTimesToday:
+      "Der er ikke flere ledige afhentningstider i dag. Vælg en anden dato.",
+  }),
+  no: copy({
+    vehicle: "Kjøretøy",
+    sameDayRental: "Leie samme dag",
+    fullDay: "Hel dag",
+    chooseQuantity: "Velg hvor mange scootere du trenger",
+    multiDayDiscount: "Rabattert pris ved leie i flere dager",
+    mostPopular: "Mest populær",
+    pickupDate: "Hentedato",
+    pickupTime: "Hentetid",
+    returnTime: "Returtid",
+    dropoffDate: "Returdato",
+    selectDate: "Velg dato",
+    selectDates: "Velg",
+    selectTime: "Velg tidspunkt",
+    choosePlanFirst: "Velg først Leie samme dag eller Hel dag.",
+    chooseDateFirst: "Velg først hentedato.",
+    fullMin24: "En heldagsbestilling må vare i minst 24 timer.",
+    maxOnline6:
+      "Maksimal leieperiode er 6 dager. Du kan bare leie i opptil 6 dager på nett.",
+    checkingWait: "Sjekker tilgjengelighet. Vennligst vent.",
+    unavailableNotice:
+      "Dette kjøretøyet er ikke tilgjengelig på valgt dato/tid. Endre datoene eller velg et annet kjøretøy.",
+    availabilityRequired:
+      "Aktuell tilgjengelighet må bekreftes før betaling. Vennligst vent.",
+    completeDetails: "Fyll først ut bestillingsopplysningene.",
+    availabilityError:
+      "Aktuell tilgjengelighet kunne ikke bekreftes. Prøv igjen eller kontakt oss på WhatsApp.",
+    checkingLive: "Sjekker aktuell tilgjengelighet...",
+    availableCount: "{available} tilgjengelige",
+    notEnoughQuantity:
+      "Bare {available} tilgjengelige. Reduser antallet eller kontakt oss på WhatsApp.",
+    summary: "Sammendrag",
+    choosePlanBegin: "Velg et alternativ for å begynne",
+    day: "dag",
+    days: "dager",
+    hour: "time",
+    hours: "timer",
+    total: "Totalt",
+    normalPrice: "Normalpris",
+    nowPrice: "Nå",
+    checkout: "Fortsett til betaling",
+    checkingAvailability: "Sjekker tilgjengelighet...",
+    notAvailable: "Ikke tilgjengelig",
+    confirmingAvailability: "Bekrefter tilgjengelighet...",
+    close: "Lukk",
+    sameDropoffTime: "Returtiden er den samme som hentetiden.",
+    noTimesToday:
+      "Det er ingen flere hentetider tilgjengelig i dag. Velg en annen dato.",
+  }),
+  sr: copy({
+    vehicle: "Vozilo",
+    sameDayRental: "Iznajmljivanje istog dana",
+    fullDay: "Ceo dan",
+    chooseQuantity: "Izaberite koliko skutera vam je potrebno",
+    multiDayDiscount: "Snižena cena za iznajmljivanje na više dana",
+    mostPopular: "Najpopularnije",
+    pickupDate: "Datum preuzimanja",
+    pickupTime: "Vreme preuzimanja",
+    returnTime: "Vreme vraćanja",
+    dropoffDate: "Datum vraćanja",
+    selectDate: "Izaberite datum",
+    selectDates: "Izaberite",
+    selectTime: "Izaberite vreme",
+    choosePlanFirst: "Prvo izaberite Iznajmljivanje istog dana ili Ceo dan.",
+    chooseDateFirst: "Prvo izaberite datum preuzimanja.",
+    fullMin24: "Rezervacija za ceo dan mora trajati najmanje 24 sata.",
+    maxOnline6:
+      "Maksimalno trajanje najma je 6 dana. Onlajn možete iznajmiti najviše 6 dana.",
+    checkingWait: "Proveravamo dostupnost. Molimo sačekajte.",
+    unavailableNotice:
+      "Ovo vozilo nije dostupno za izabrani datum/vreme. Promenite datume ili izaberite drugo vozilo.",
+    availabilityRequired:
+      "Trenutna dostupnost mora biti potvrđena pre plaćanja. Molimo sačekajte.",
+    completeDetails: "Prvo popunite podatke za rezervaciju.",
+    availabilityError:
+      "Trenutna dostupnost nije mogla biti potvrđena. Pokušajte ponovo ili nas kontaktirajte putem WhatsApp-a.",
+    checkingLive: "Proveravamo trenutnu dostupnost...",
+    availableCount: "Dostupno: {available}",
+    notEnoughQuantity:
+      "Dostupno je samo {available}. Smanjite količinu ili nas kontaktirajte putem WhatsApp-a.",
+    summary: "Pregled",
+    choosePlanBegin: "Izaberite opciju za početak",
+    day: "dan",
+    days: "dana",
+    hour: "sat",
+    hours: "sata",
+    total: "Ukupno",
+    normalPrice: "Redovna cena",
+    nowPrice: "Sada",
+    checkout: "Nastavite na plaćanje",
+    checkingAvailability: "Proveravamo dostupnost...",
+    notAvailable: "Nije dostupno",
+    confirmingAvailability: "Potvrđujemo dostupnost...",
+    close: "Zatvori",
+    sameDropoffTime: "Vreme vraćanja je isto kao vreme preuzimanja.",
+    noTimesToday:
+      "Danas više nema dostupnih termina za preuzimanje. Izaberite drugi datum.",
+  }),
+  uk: copy({
+    vehicle: "Транспорт",
+    sameDayRental: "Оренда в той самий день",
+    fullDay: "Повний день",
+    chooseQuantity: "Оберіть потрібну кількість скутерів",
+    multiDayDiscount: "Знижена ціна при оренді на кілька днів",
+    mostPopular: "Найпопулярніше",
+    pickupDate: "Дата отримання",
+    pickupTime: "Час отримання",
+    returnTime: "Час повернення",
+    dropoffDate: "Дата повернення",
+    selectDate: "Оберіть дату",
+    selectDates: "Обрати",
+    selectTime: "Оберіть час",
+    choosePlanFirst:
+      "Спочатку оберіть Оренду в той самий день або Повний день.",
+    chooseDateFirst: "Спочатку оберіть дату отримання.",
+    fullMin24: "Оренда на повний день має тривати щонайменше 24 години.",
+    maxOnline6:
+      "Максимальний термін оренди — 6 днів. Онлайн можна орендувати не більше ніж на 6 днів.",
+    checkingWait: "Перевіряємо наявність. Будь ласка, зачекайте.",
+    unavailableNotice:
+      "Цей транспорт недоступний на вибрану дату/час. Змініть дати або оберіть інший транспорт.",
+    availabilityRequired:
+      "Актуальну наявність потрібно підтвердити перед оплатою. Будь ласка, зачекайте.",
+    completeDetails: "Спочатку заповніть дані бронювання.",
+    availabilityError:
+      "Не вдалося підтвердити актуальну наявність. Спробуйте ще раз або напишіть нам у WhatsApp.",
+    checkingLive: "Перевіряємо актуальну наявність...",
+    availableCount: "Доступно: {available}",
+    notEnoughQuantity:
+      "Доступно лише {available}. Зменште кількість або напишіть нам у WhatsApp.",
+    summary: "Підсумок",
+    choosePlanBegin: "Оберіть варіант, щоб почати",
+    day: "день",
+    days: "днів",
+    hour: "година",
+    hours: "години",
+    total: "Разом",
+    normalPrice: "Звичайна ціна",
+    nowPrice: "Зараз",
+    checkout: "Перейти до оплати",
+    checkingAvailability: "Перевіряємо наявність...",
+    notAvailable: "Недоступно",
+    confirmingAvailability: "Підтверджуємо наявність...",
+    close: "Закрити",
+    sameDropoffTime: "Час повернення збігається з часом отримання.",
+    noTimesToday:
+      "На сьогодні більше немає доступного часу отримання. Оберіть іншу дату.",
+  }),
 };
 
 const DEFAULT_PICKUP_LOCATION = "NEXA Rentals, Magaluf";
@@ -483,8 +792,14 @@ function normalizeLocale(value: string | undefined): Locale {
     value === "de" ||
     value === "fr" ||
     value === "it" ||
+    value === "nl" ||
+    value === "pl" ||
+    value === "da" ||
+    value === "no" ||
     value === "pt" ||
-    value === "sv"
+    value === "sv" ||
+    value === "sr" ||
+    value === "uk"
   ) {
     return value;
   }
@@ -1410,7 +1725,7 @@ export default function BookingPanelV3({
             setAvailability({
               ok: false,
               available: false,
-              message: data?.message || tt.availabilityError,
+              message: tt.availabilityError,
             });
           }
           return;
@@ -1719,7 +2034,7 @@ export default function BookingPanelV3({
     }
 
     if (isUnavailable) {
-      setNotice(availability?.message || tt.unavailableNotice);
+      setNotice(tt.unavailableNotice);
       return;
     }
 
@@ -1730,7 +2045,11 @@ export default function BookingPanelV3({
     }
 
     if (!availabilityConfirmed) {
-      setNotice(availability?.message || tt.availabilityRequired);
+      setNotice(
+        availability?.ok === false
+          ? tt.availabilityError
+          : tt.availabilityRequired
+      );
       return;
     }
 
@@ -2171,17 +2490,18 @@ export default function BookingPanelV3({
           {isCheckingAvailability
             ? tt.checkingLive
             : isUnavailable
-              ? availability?.message || tt.unavailableNotice
+              ? tt.unavailableNotice
               : quantityUnavailable
                 ? replaceTokens(tt.notEnoughQuantity, {
                     available: availability?.availableCount ?? 0,
                   })
                 : availabilityConfirmed
-                  ? availability?.message ||
-                    replaceTokens(tt.availableCount, {
+                  ? replaceTokens(tt.availableCount, {
                       available: availability?.availableCount ?? quantity,
                     })
-                  : availability?.message || tt.confirmingAvailability}
+                  : availability?.ok === false
+                    ? tt.availabilityError
+                    : tt.confirmingAvailability}
         </div>
       ) : null}
 
