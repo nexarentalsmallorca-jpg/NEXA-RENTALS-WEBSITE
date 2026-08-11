@@ -148,20 +148,6 @@ const MOBILE_PAGE_TOP_OFFSET_PX = 0;
 */
 const MOBILE_NAV_BLACK_SCROLL_TRIGGER_PX = 1;
 
-/*
-  TEMPORARY MAINTENANCE WARNING.
-
-  This is shown on BOTH desktop and mobile.
-
-  Remove/change these messages once the new booking
-  and document verification system is fully tested.
-*/
-const ANNOUNCEMENT_DESKTOP =
-  "IMPORTANT · WEBSITE UNDER MAINTENANCE · PLEASE DO NOT BOOK ONLINE · FOR BOOKINGS, PLEASE CONTACT NEXA RENTALS ON WHATSAPP";
-
-const ANNOUNCEMENT_MOBILE =
-  "WEBSITE UNDER MAINTENANCE · DO NOT BOOK ONLINE · CONTACT US ON WHATSAPP FOR BOOKINGS";
-
 const NAV_COPY: Record<
   Locale,
   {
@@ -374,40 +360,6 @@ function getLocaleFromPath(
   }
 
   return "en";
-}
-
-function AnnouncementBar() {
-  return (
-    <div
-      role="status"
-      aria-live="polite"
-      className="nexa-announcement-bar pointer-events-auto relative z-[120] h-[30px] overflow-hidden bg-[linear-gradient(90deg,#ff6500_0%,#ff8a00_48%,#ffb347_100%)] text-black lg:h-[34px]"
-    >
-      <div className="nexa-announcement-shine hidden lg:block" />
-
-      <div className="nexa-announcement-fade nexa-announcement-fade-left hidden lg:block" />
-
-      <div className="nexa-announcement-fade nexa-announcement-fade-right hidden lg:block" />
-
-      <div className="nexa-announcement-track">
-        <span className="nexa-announcement-text hidden lg:inline-flex">
-          {ANNOUNCEMENT_DESKTOP}
-        </span>
-
-        <span className="nexa-announcement-text hidden lg:inline-flex">
-          {ANNOUNCEMENT_DESKTOP}
-        </span>
-
-        <span className="nexa-announcement-text inline-flex lg:hidden">
-          {ANNOUNCEMENT_MOBILE}
-        </span>
-
-        <span className="nexa-announcement-text inline-flex lg:hidden">
-          {ANNOUNCEMENT_MOBILE}
-        </span>
-      </div>
-    </div>
-  );
 }
 
 export default function NavbarV3({
@@ -927,11 +879,8 @@ export default function NavbarV3({
       }
       className={`${navFont.className} ${headerPositionClass} nexa-navbar-shell pointer-events-none left-0 right-0 top-0 z-[2147483000] bg-transparent lg:z-[90]`}
     >
-      {/* TEMPORARY MAINTENANCE WARNING */}
-      <AnnouncementBar />
-
       {showAngledLogoPanel ? (
-        <div className="nexa-angled-logo-panel pointer-events-none absolute left-0 top-[34px] hidden lg:block" />
+        <div className="nexa-angled-logo-panel pointer-events-none absolute left-0 top-0 hidden lg:block" />
       ) : null}
 
       <div className="nexa-desktop-nav pointer-events-auto mx-auto hidden h-[96px] max-w-[1510px] items-center justify-between bg-transparent px-[clamp(28px,4vw,66px)] transition-all duration-300 lg:flex">
@@ -1635,8 +1584,6 @@ export default function NavbarV3({
           }
 
           .nexa-navbar-shell
-            .nexa-announcement-bar,
-          .nexa-navbar-shell
             .nexa-mobile-nav {
             position: relative !important;
             z-index: 2 !important;
@@ -1663,149 +1610,6 @@ export default function NavbarV3({
           box-shadow: none !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
-        }
-
-        .nexa-announcement-bar {
-          margin-bottom: 0 !important;
-          box-shadow:
-            0 4px 20px
-              rgba(
-                255,
-                122,
-                0,
-                0.22
-              ),
-            inset 0 -1px 0
-              rgba(
-                0,
-                0,
-                0,
-                0.12
-              ) !important;
-        }
-
-        .nexa-announcement-shine {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background:
-            radial-gradient(
-              circle at 18% 50%,
-              rgba(
-                255,
-                255,
-                255,
-                0.38
-              ),
-              transparent 34%
-            ),
-            radial-gradient(
-              circle at 84% 50%,
-              rgba(
-                255,
-                255,
-                255,
-                0.22
-              ),
-              transparent 32%
-            );
-          opacity: 0.75;
-        }
-
-        .nexa-announcement-track {
-          position: absolute;
-          top: 0;
-          left: 0;
-          display: flex;
-          height: 100%;
-          width: max-content;
-          align-items: center;
-          animation:
-            nexa-announcement-marquee
-            24s linear infinite;
-          will-change: transform;
-        }
-
-        .nexa-announcement-text {
-          align-items: center;
-          height: 100%;
-          padding-right: 5rem;
-          white-space: nowrap;
-          font-size: 11px;
-          font-weight: 900;
-          letter-spacing: 0.12em;
-          text-transform: uppercase;
-          color: rgba(
-            0,
-            0,
-            0,
-            0.92
-          );
-          text-shadow:
-            0 1px 0
-            rgba(
-              255,
-              255,
-              255,
-              0.32
-            );
-        }
-
-        .nexa-announcement-fade {
-          position: absolute;
-          top: 0;
-          bottom: 0;
-          z-index: 2;
-          width: 84px;
-          pointer-events: none;
-        }
-
-        .nexa-announcement-fade-left {
-          left: 0;
-          background:
-            linear-gradient(
-              90deg,
-              #ff6500 0%,
-              rgba(
-                255,
-                101,
-                0,
-                0
-              )
-                100%
-            );
-        }
-
-        .nexa-announcement-fade-right {
-          right: 0;
-          background:
-            linear-gradient(
-              270deg,
-              #ffb347 0%,
-              rgba(
-                255,
-                179,
-                71,
-                0
-              )
-                100%
-            );
-        }
-
-        @keyframes nexa-announcement-marquee {
-          0% {
-            transform:
-              translateX(
-                100vw
-              );
-          }
-
-          100% {
-            transform:
-              translateX(
-                -100%
-              );
-          }
         }
 
         .nexa-angled-logo-panel {
@@ -1964,67 +1768,11 @@ export default function NavbarV3({
         }
 
         @media (max-width: 1023px) {
-          .nexa-announcement-bar {
-            margin: 0 !important;
-            padding: 0 !important;
-            border: 0 !important;
-            box-shadow:
-              0 3px 14px
-              rgba(
-                255,
-                122,
-                0,
-                0.24
-              ) !important;
-            filter: none !important;
-            outline: 0 !important;
-            background: #ff7a00 !important;
-            background-image: none !important;
-          }
-
-          .nexa-announcement-bar::before,
-          .nexa-announcement-bar::after {
-            display: none !important;
-            content: none !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            background: none !important;
-            box-shadow: none !important;
-            filter: none !important;
-          }
-
-          .nexa-announcement-shine,
-          .nexa-announcement-fade,
-          .nexa-announcement-fade-left,
-          .nexa-announcement-fade-right {
-            display: none !important;
-            opacity: 0 !important;
-            visibility: hidden !important;
-            background: none !important;
-            background-image: none !important;
-            box-shadow: none !important;
-            filter: none !important;
-          }
-
           .nexa-mobile-nav {
             margin-top: 0 !important;
             border-top: 0 !important;
           }
 
-          .nexa-announcement-track {
-            animation-duration:
-              15s;
-          }
-
-          .nexa-announcement-text {
-            padding-right:
-              3.25rem;
-            font-size: 9px;
-            letter-spacing:
-              0.1em;
-            text-shadow:
-              none !important;
-          }
         }
 
         @media (min-width: 1024px) and (max-height: 700px) {
@@ -2107,10 +1855,6 @@ export default function NavbarV3({
             animation: none;
           }
 
-          .nexa-announcement-track {
-            animation-duration:
-              45s;
-          }
         }
       `}</style>
     </header>
