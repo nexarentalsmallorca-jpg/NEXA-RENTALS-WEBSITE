@@ -750,6 +750,7 @@ const I18N: Record<Locale, BookingPanelCopy> = {
 
 const DEFAULT_PICKUP_LOCATION = "NEXA Rentals, Magaluf";
 const MAX_ONLINE_DAYS = 6;
+const KYMCO_SKY_TOWN_PRICE_INCREASE = 10;
 
 const PLAN_ATTENTION_ACTIVE_MS = 3000;
 const PLAN_ATTENTION_REST_MS = 3000;
@@ -815,6 +816,36 @@ function getSeasonalPricing(date: Date): SeasonalPricing {
   if (month >= 6 && month <= 8) return SEASONAL_PRICING[2];
 
   return SEASONAL_PRICING[3];
+}
+
+function isKymcoSkyTown(vehicleName: string) {
+  const normalizedVehicleName = vehicleName.toLowerCase().replace(/[\s-]+/g, "");
+
+  return (
+    normalizedVehicleName.includes("kymco") ||
+    normalizedVehicleName.includes("kimco") ||
+    normalizedVehicleName.includes("skytown")
+  );
+}
+
+function getVehiclePricing(
+  pricing: SeasonalPricing,
+  vehicleName: string
+): SeasonalPricing {
+  if (!isKymcoSkyTown(vehicleName)) return pricing;
+
+  return {
+    ...pricing,
+    halfDayPrice: pricing.halfDayPrice + KYMCO_SKY_TOWN_PRICE_INCREASE,
+    halfDayOldPrice: pricing.halfDayOldPrice + KYMCO_SKY_TOWN_PRICE_INCREASE,
+    fullDayOldPrice: pricing.fullDayOldPrice + KYMCO_SKY_TOWN_PRICE_INCREASE,
+    fullDayPricing: Object.fromEntries(
+      Object.entries(pricing.fullDayPricing).map(([days, price]) => [
+        days,
+        price + KYMCO_SKY_TOWN_PRICE_INCREASE,
+      ])
+    ) as Record<number, number>,
+  };
 }
 
 function getRate(days: number, pricing: SeasonalPricing) {
@@ -1490,21 +1521,36 @@ export default function BookingPanelV3({
   const planAttentionRestTimeoutRef = useRef<number | null>(null);
   const planAttentionRestartTimeoutRef = useRef<number | null>(null);
 
-  const activePricing = useMemo(() => {
+  const baseActivePricing = useMemo(() => {
     return getSeasonalPricing(pickupDate || minBookableDate);
   }, [pickupDate, minBookableDate]);
+
+  const kymcoSkyTownPriceIncrease = isKymcoSkyTown(vehicleName)
+    ? KYMCO_SKY_TOWN_PRICE_INCREASE
+    : 0;
+
+  const activePricing = useMemo(() => {
+    return getVehiclePricing(baseActivePricing, vehicleName);
+  }, [baseActivePricing, vehicleName]);
 
   const sameDayRoundedHours = useMemo(() => {
     return getSameDayRoundedHours(pickupTime, halfReturnTime);
   }, [pickupTime, halfReturnTime]);
 
   const sameDayDynamicPrice = useMemo(() => {
-    return getSameDayHourlyRate(
-      pickupTime,
-      halfReturnTime,
-      activePricing.halfDayPrice
+    return (
+      getSameDayHourlyRate(
+        pickupTime,
+        halfReturnTime,
+        baseActivePricing.halfDayPrice
+      ) + kymcoSkyTownPriceIncrease
     );
-  }, [pickupTime, halfReturnTime, activePricing.halfDayPrice]);
+  }, [
+    pickupTime,
+    halfReturnTime,
+    baseActivePricing.halfDayPrice,
+    kymcoSkyTownPriceIncrease,
+  ]);
 
   useEffect(() => {
     onPricingChange?.(activePricing);
