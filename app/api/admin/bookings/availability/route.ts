@@ -4,49 +4,60 @@ import { createClient } from "@supabase/supabase-js";
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-type FleetGroup = "piaggio_liberty_125" | "sym_symphony_125" | "unknown";
+type FleetGroup =
+  | "piaggio_liberty_125"
+  | "kymco_sky_town_125"
+  | "sym_symphony_125"
+  | "unknown";
 
 type BookingRow = {
   id?: string | number;
   created_at?: string;
   stripe_payment_intent_id?: string;
-  status?: string;
-  source?: string;
+  status?: string | null;
+  source?: string | null;
 
-  pickup_date?: string;
-  pickup_time?: string;
-  dropoff_date?: string;
-  dropoff_time?: string;
+  pickup_date?: string | null;
+  pickup_time?: string | null;
+  dropoff_date?: string | null;
+  dropoff_time?: string | null;
 
-  vehicle_name?: string;
-  vehicle_code?: string;
+  vehicle_name?: string | null;
+  vehicle_id?: string | null;
+  fleet_group?: string | null;
 
-  customer_name?: string;
-  phone?: string;
+  vehicle_code?: string | null;
+  assigned_vehicle_code?: string | null;
+  scooter_code?: string | null;
 
-  contract_number?: string;
+  customer_name?: string | null;
+  phone?: string | null;
+
+  contract_number?: string | null;
 
   vehicle?: {
-    codigo?: string;
-    matricula?: string;
-    marca?: string;
-    modelo?: string;
-  };
+    codigo?: string | null;
+    code?: string | null;
+    matricula?: string | null;
+    marca?: string | null;
+    modelo?: string | null;
+  } | null;
 
   contractData?: {
-    numeroContrato?: string;
-    fechaEntrega?: string;
-    horaEntrega?: string;
-    fechaDevolucion?: string;
-    horaDevolucion?: string;
-    nombreCliente?: string;
-  };
+    numeroContrato?: string | null;
+    fechaEntrega?: string | null;
+    horaEntrega?: string | null;
+    fechaDevolucion?: string | null;
+    horaDevolucion?: string | null;
+    nombreCliente?: string | null;
+  } | null;
 };
 
 const BUFFER_MINUTES_AFTER_BOOKING = 60;
 
 const FLEET_CAPACITY: Record<FleetGroup, number> = {
   piaggio_liberty_125: 7,
+  kymco_sky_town_125: 1,
   sym_symphony_125: 1,
   unknown: 1,
 };
@@ -62,15 +73,22 @@ function getSupabaseAdmin() {
   return createClient(supabaseUrl, serviceRoleKey);
 }
 
-function cleanText(value: any) {
+function cleanText(value: unknown) {
   return String(value || "").trim();
+}
+
+function normalizeVehicleCode(value?: string | number | null) {
+  return cleanText(value).toUpperCase().replace(/\s+/g, "");
 }
 
 function addMinutes(date: Date, minutes: number) {
   return new Date(date.getTime() + minutes * 60 * 1000);
 }
 
-function buildDateTime(date?: string, time?: string) {
+function buildDateTime(
+  date?: string | null,
+  time?: string | null
+) {
   const cleanDate = cleanText(date);
   const cleanTime = cleanText(time) || "00:00";
 
@@ -92,11 +110,11 @@ function isOverlapping(
   return selectedStart < bookedEnd && bookedStart < selectedEnd;
 }
 
-function normalizeStatus(status?: string) {
+function normalizeStatus(status?: string | null) {
   return cleanText(status).toLowerCase();
 }
 
-function isInactiveBooking(status?: string) {
+function isInactiveBooking(status?: string | null) {
   const clean = normalizeStatus(status);
 
   return (
@@ -104,68 +122,114 @@ function isInactiveBooking(status?: string) {
     clean.includes("cancelada") ||
     clean.includes("cancelled") ||
     clean.includes("canceled") ||
+    clean.includes("rejected") ||
+    clean.includes("expired") ||
     clean.includes("failed") ||
     clean.includes("refunded") ||
     clean.includes("returned") ||
     clean.includes("finalizada") ||
     clean.includes("completed") ||
-    clean.includes("finished")
+    clean.includes("finished") ||
+    clean.includes("closed") ||
+    clean.includes("deleted")
   );
 }
 
 function extractVehicleCode(value?: string | null) {
   const match = cleanText(value).match(/\bN\d+\b/i);
+
   return match?.[0]?.toUpperCase() || "";
 }
 
-function resolveFleetGroupFromText(value?: string | null): FleetGroup {
+function resolveFleetGroupFromText(
+  value?: string | null
+): FleetGroup {
   const text = cleanText(value).toLowerCase();
+  const vehicleCode = extractVehicleCode(text);
 
-  if (
-    text.includes("sym") ||
+  const isKymco =
+    vehicleCode === "N9" ||
+    text.includes("kymco") ||
+    text.includes("sky town") ||
+    text.includes("sky-town") ||
+    text.includes("skytown") ||
+    text.includes("kymco_sky_town_125") ||
+    /\bs4\b/i.test(text);
+
+  if (isKymco) {
+    return "kymco_sky_town_125";
+  }
+
+  const isSym =
+    vehicleCode === "N8" ||
+    text.includes("sym_symphony_125") ||
     text.includes("symphony") ||
-    text.includes("n8")
-  ) {
+    /\bsym\b/i.test(text) ||
+    /\bs3\b/i.test(text);
+
+  if (isSym) {
     return "sym_symphony_125";
   }
 
-  if (
+  const isPiaggioCode = [
+    "N1",
+    "N2",
+    "N3",
+    "N4",
+    "N5",
+    "N6",
+    "N7",
+  ].includes(vehicleCode);
+
+  const isPiaggio =
+    isPiaggioCode ||
+    text.includes("piaggio_liberty_125") ||
     text.includes("piaggio") ||
     text.includes("liberty") ||
-    text.includes("s2") ||
-    text.includes("n1") ||
-    text.includes("n2") ||
-    text.includes("n3") ||
-    text.includes("n4") ||
-    text.includes("n5") ||
-    text.includes("n6") ||
-    text.includes("n7")
-  ) {
+    /\bs2\b/i.test(text);
+
+  if (isPiaggio) {
     return "piaggio_liberty_125";
   }
 
   return "unknown";
 }
 
-function resolveRequestedFleetGroup(params: URLSearchParams): FleetGroup {
+function resolveRequestedFleetGroup(
+  params: URLSearchParams
+): FleetGroup {
   const vehicleId = cleanText(params.get("vehicleId"));
   const vehicleName = cleanText(params.get("vehicleName"));
+  const fleetGroup = cleanText(params.get("fleetGroup"));
 
-  const combined = `${vehicleId} ${vehicleName}`;
+  const combined = `${vehicleId} ${vehicleName} ${fleetGroup}`;
 
   return resolveFleetGroupFromText(combined);
 }
 
-function resolveBookingFleetGroup(booking: BookingRow): FleetGroup {
-  const vehicleCode =
-    cleanText(booking.vehicle_code) ||
-    cleanText(booking.vehicle?.codigo) ||
-    extractVehicleCode(booking.vehicle_name);
+function getBookingVehicleCode(booking: BookingRow) {
+  return normalizeVehicleCode(
+    booking.assigned_vehicle_code ||
+      booking.vehicle_code ||
+      booking.scooter_code ||
+      booking.vehicle?.codigo ||
+      booking.vehicle?.code ||
+      extractVehicleCode(booking.vehicle_name)
+  );
+}
+
+function resolveBookingFleetGroup(
+  booking: BookingRow
+): FleetGroup {
+  const vehicleCode = getBookingVehicleCode(booking);
 
   const combined = [
+    booking.fleet_group,
+    booking.vehicle_id,
     vehicleCode,
     booking.vehicle_name,
     booking.vehicle?.codigo,
+    booking.vehicle?.code,
     booking.vehicle?.marca,
     booking.vehicle?.modelo,
   ]
@@ -200,7 +264,10 @@ function getBookingRange(booking: BookingRow) {
   return {
     start,
     end,
-    bufferedEnd: addMinutes(end, BUFFER_MINUTES_AFTER_BOOKING),
+    bufferedEnd: addMinutes(
+      end,
+      BUFFER_MINUTES_AFTER_BOOKING
+    ),
   };
 }
 
@@ -233,8 +300,18 @@ function formatDateTime(date: Date) {
 }
 
 function getFleetLabel(group: FleetGroup) {
-  if (group === "piaggio_liberty_125") return "Piaggio Liberty 125";
-  if (group === "sym_symphony_125") return "SYM Symphony 125";
+  if (group === "piaggio_liberty_125") {
+    return "Piaggio Liberty 125";
+  }
+
+  if (group === "kymco_sky_town_125") {
+    return "KYMCO Sky Town 125";
+  }
+
+  if (group === "sym_symphony_125") {
+    return "SYM Symphony 125";
+  }
+
   return "Selected vehicle";
 }
 
@@ -256,18 +333,25 @@ export async function GET(request: NextRequest) {
 
     const { searchParams } = new URL(request.url);
 
-    const vehicleName = cleanText(searchParams.get("vehicleName"));
+    const vehicleName = cleanText(
+      searchParams.get("vehicleName")
+    );
     const from = cleanText(searchParams.get("from"));
     const to = cleanText(searchParams.get("to"));
-    const pickupTime = cleanText(searchParams.get("pickupTime"));
-    const dropoffTime = cleanText(searchParams.get("dropoffTime"));
+    const pickupTime = cleanText(
+      searchParams.get("pickupTime")
+    );
+    const dropoffTime = cleanText(
+      searchParams.get("dropoffTime")
+    );
 
     if (!from || !to || !pickupTime || !dropoffTime) {
       return NextResponse.json(
         {
           ok: false,
           available: false,
-          message: "Missing date or time for availability check.",
+          message:
+            "Missing date or time for availability check.",
         },
         { status: 400 }
       );
@@ -292,7 +376,8 @@ export async function GET(request: NextRequest) {
         {
           ok: false,
           available: false,
-          message: "Return date/time must be after pickup date/time.",
+          message:
+            "Return date/time must be after pickup date/time.",
         },
         { status: 400 }
       );
@@ -303,8 +388,12 @@ export async function GET(request: NextRequest) {
       BUFFER_MINUTES_AFTER_BOOKING
     );
 
-    const requestedGroup = resolveRequestedFleetGroup(searchParams);
-    const totalFleet = FLEET_CAPACITY[requestedGroup] || 1;
+    const requestedGroup =
+      resolveRequestedFleetGroup(searchParams);
+
+    const totalFleet =
+      FLEET_CAPACITY[requestedGroup] || 1;
+
     const fleetLabel = getFleetLabel(requestedGroup);
 
     const { data, error } = await supabase
@@ -314,7 +403,10 @@ export async function GET(request: NextRequest) {
       .limit(1000);
 
     if (error) {
-      console.error("AVAILABILITY SUPABASE ERROR:", error);
+      console.error(
+        "AVAILABILITY SUPABASE ERROR:",
+        error
+      );
 
       return NextResponse.json(
         {
@@ -328,29 +420,48 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const bookings = Array.isArray(data) ? (data as BookingRow[]) : [];
+    const bookings = Array.isArray(data)
+      ? (data as BookingRow[])
+      : [];
 
-    const overlappingBookings = bookings.filter((booking) => {
-      if (isInactiveBooking(booking.status)) return false;
+    const overlappingBookings = bookings.filter(
+      (booking) => {
+        if (isInactiveBooking(booking.status)) {
+          return false;
+        }
 
-      const bookingGroup = resolveBookingFleetGroup(booking);
+        const bookingGroup =
+          resolveBookingFleetGroup(booking);
 
-      if (bookingGroup !== requestedGroup) return false;
+        if (bookingGroup !== requestedGroup) {
+          return false;
+        }
 
-      const range = getBookingRange(booking);
+        const range = getBookingRange(booking);
 
-      if (!range) return false;
+        if (!range) {
+          return false;
+        }
 
-      return isOverlapping(
-        selectedStart,
-        selectedBufferedEnd,
-        range.start,
-        range.bufferedEnd
-      );
-    });
+        return isOverlapping(
+          selectedStart,
+          selectedBufferedEnd,
+          range.start,
+          range.bufferedEnd
+        );
+      }
+    );
 
-    const bookedCount = overlappingBookings.length;
-    const availableCount = Math.max(0, totalFleet - bookedCount);
+    const bookedCount = Math.min(
+      totalFleet,
+      overlappingBookings.length
+    );
+
+    const availableCount = Math.max(
+      0,
+      totalFleet - bookedCount
+    );
+
     const available = availableCount > 0;
 
     if (available) {
@@ -370,6 +481,7 @@ export async function GET(request: NextRequest) {
     const nextReturn = overlappingBookings
       .map((booking) => {
         const range = getBookingRange(booking);
+
         if (!range) return null;
 
         return {
@@ -377,15 +489,20 @@ export async function GET(request: NextRequest) {
           bufferedEnd: range.bufferedEnd,
         };
       })
-      .filter(Boolean)
-      .sort((a: any, b: any) => {
-        return a.bufferedEnd.getTime() - b.bufferedEnd.getTime();
-      })[0] as
-      | {
+      .filter(
+        (
+          item
+        ): item is {
           booking: BookingRow;
           bufferedEnd: Date;
-        }
-      | undefined;
+        } => item !== null
+      )
+      .sort((a, b) => {
+        return (
+          a.bufferedEnd.getTime() -
+          b.bufferedEnd.getTime()
+        );
+      })[0];
 
     const nextAvailableText = nextReturn
       ? `Next possible availability may be after ${formatDateTime(
@@ -409,18 +526,31 @@ export async function GET(request: NextRequest) {
       conflicts: overlappingBookings.map((booking) => ({
         contract: getContractNumber(booking),
         customer: getCustomerName(booking),
-        vehicleName: booking.vehicle_name || booking.vehicle?.modelo || "",
-        pickupDate: booking.pickup_date || booking.contractData?.fechaEntrega,
-        pickupTime: booking.pickup_time || booking.contractData?.horaEntrega,
+        vehicleCode: getBookingVehicleCode(booking),
+        vehicleName:
+          booking.vehicle_name ||
+          booking.vehicle?.modelo ||
+          "",
+        pickupDate:
+          booking.pickup_date ||
+          booking.contractData?.fechaEntrega,
+        pickupTime:
+          booking.pickup_time ||
+          booking.contractData?.horaEntrega,
         dropoffDate:
-          booking.dropoff_date || booking.contractData?.fechaDevolucion,
+          booking.dropoff_date ||
+          booking.contractData?.fechaDevolucion,
         dropoffTime:
-          booking.dropoff_time || booking.contractData?.horaDevolucion,
+          booking.dropoff_time ||
+          booking.contractData?.horaDevolucion,
         status: booking.status,
       })),
     });
   } catch (error: any) {
-    console.error("AVAILABILITY CHECK FAILED:", error);
+    console.error(
+      "AVAILABILITY CHECK FAILED:",
+      error
+    );
 
     return NextResponse.json(
       {
@@ -428,7 +558,9 @@ export async function GET(request: NextRequest) {
         available: false,
         message:
           "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
-        error: error?.message || "Availability check failed.",
+        error:
+          error?.message ||
+          "Availability check failed.",
       },
       { status: 500 }
     );

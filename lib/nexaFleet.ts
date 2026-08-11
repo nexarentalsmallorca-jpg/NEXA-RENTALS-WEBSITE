@@ -1,5 +1,6 @@
 export type NexaFleetGroup =
   | "piaggio_liberty_125"
+  | "kymco_sky_town_125"
   | "sym_symphony_125"
   | "e_bike"
   | "scooter"
@@ -133,6 +134,20 @@ export const nexaFleet: NexaVehicle[] = [
     websiteVehicleId: "s3",
     websiteVehicleName: "SYM Symphony 125",
   },
+  {
+    codigo: "N9",
+    matricula: "2693NMF",
+    marca: "KYMCO",
+    modelo: "Sky Town 125",
+    imageUrl: "/images/kymcocheckout.png",
+    ano: "2026",
+    bastidor: "LC2CT0000S1003658",
+    combustible: "Gasolina",
+    tipo: "Scooter 125cc",
+    fleetGroup: "kymco_sky_town_125",
+    websiteVehicleId: "s4",
+    websiteVehicleName: "KYMCO Sky Town 125",
+  },
 ];
 
 export function normalizeVehicleText(value?: string | null) {
@@ -159,6 +174,12 @@ export function getPiaggioFleet() {
   );
 }
 
+export function getKymcoFleet() {
+  return nexaFleet.filter(
+    (vehicle) => vehicle.fleetGroup === "kymco_sky_town_125"
+  );
+}
+
 export function getSymFleet() {
   return nexaFleet.filter(
     (vehicle) => vehicle.fleetGroup === "sym_symphony_125"
@@ -173,6 +194,7 @@ export function getFleetByGroup(group?: string | null) {
   const cleanGroup = normalizeVehicleText(group);
 
   if (cleanGroup === "piaggio_liberty_125") return getPiaggioFleet();
+  if (cleanGroup === "kymco_sky_town_125") return getKymcoFleet();
   if (cleanGroup === "sym_symphony_125") return getSymFleet();
   if (cleanGroup === "e_bike") return getEBikeFleet();
   if (cleanGroup === "scooter") return getScooterFleet();
@@ -183,8 +205,18 @@ export function getFleetByGroup(group?: string | null) {
 export function getFleetGroupDisplayName(group?: string | null) {
   const cleanGroup = normalizeVehicleText(group);
 
-  if (cleanGroup === "piaggio_liberty_125") return "Piaggio Liberty 125";
-  if (cleanGroup === "sym_symphony_125") return "SYM Symphony 125";
+  if (cleanGroup === "piaggio_liberty_125") {
+    return "Piaggio Liberty 125";
+  }
+
+  if (cleanGroup === "kymco_sky_town_125") {
+    return "KYMCO Sky Town 125";
+  }
+
+  if (cleanGroup === "sym_symphony_125") {
+    return "SYM Symphony 125";
+  }
+
   if (cleanGroup === "e_bike") return "E-Bike";
   if (cleanGroup === "scooter") return "Scooter";
 
@@ -232,13 +264,24 @@ export function resolveFleetGroupKeyFromWebsiteVehicle({
   const cleanId = normalizeVehicleText(vehicleId);
   const cleanName = normalizeVehicleText(vehicleName);
 
-  if (cleanFleetGroup === "piaggio_liberty_125") return "piaggio_liberty_125";
-  if (cleanFleetGroup === "sym_symphony_125") return "sym_symphony_125";
+  if (cleanFleetGroup === "piaggio_liberty_125") {
+    return "piaggio_liberty_125";
+  }
+
+  if (cleanFleetGroup === "kymco_sky_town_125") {
+    return "kymco_sky_town_125";
+  }
+
+  if (cleanFleetGroup === "sym_symphony_125") {
+    return "sym_symphony_125";
+  }
+
   if (cleanFleetGroup === "e_bike") return "e_bike";
   if (cleanFleetGroup === "scooter") return "scooter";
 
   const exactCode =
-    extractVehicleCodeFromText(vehicleId) || extractVehicleCodeFromText(vehicleName);
+    extractVehicleCodeFromText(vehicleId) ||
+    extractVehicleCodeFromText(vehicleName);
 
   const exactVehicle = findVehicleByCodigo(exactCode);
 
@@ -253,6 +296,14 @@ export function resolveFleetGroupKeyFromWebsiteVehicle({
     cleanName.includes("p275");
 
   if (isEBike) return "e_bike";
+
+  const isKymco =
+    cleanId === "s4" ||
+    cleanName.includes("kymco") ||
+    cleanName.includes("sky town") ||
+    cleanName.includes("skytown");
+
+  if (isKymco) return "kymco_sky_town_125";
 
   const isSym =
     cleanId === "s3" ||
@@ -303,7 +354,6 @@ export function resolveSpecificVehicleFromWebsiteVehicle({
 }) {
   const codeFromId = extractVehicleCodeFromText(vehicleId);
   const codeFromName = extractVehicleCodeFromText(vehicleName);
-
   const exactCode = codeFromId || codeFromName;
 
   if (!exactCode) return null;
@@ -329,6 +379,10 @@ export function getVehicleCodesByFleetGroup(group?: string | null) {
 
 export function isPiaggioFleetGroup(group?: string | null) {
   return normalizeVehicleText(group) === "piaggio_liberty_125";
+}
+
+export function isKymcoFleetGroup(group?: string | null) {
+  return normalizeVehicleText(group) === "kymco_sky_town_125";
 }
 
 export function isSymFleetGroup(group?: string | null) {

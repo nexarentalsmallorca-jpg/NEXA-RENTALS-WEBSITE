@@ -18,6 +18,7 @@ export const dynamic = "force-dynamic";
 
 type NexaFleetGroup =
   | "piaggio_liberty_125"
+  | "kymco_sky_town_125"
   | "sym_symphony_125"
   | "e_bike"
   | "scooter";
@@ -206,17 +207,27 @@ function isPastBooking(booking: BookingRow) {
   return new Date() > range.bufferedEnd;
 }
 
+function getKymcoFleet() {
+  return getScooterFleet().filter(
+    (vehicle) => normalizeVehicleCode(vehicle.codigo) === "N9"
+  );
+}
+
 function getFleetByGroup(group: NexaFleetGroup) {
   if (group === "piaggio_liberty_125") return getPiaggioFleet();
+  if (group === "kymco_sky_town_125") return getKymcoFleet();
   if (group === "sym_symphony_125") return getSymFleet();
   if (group === "e_bike") return getEBikeFleet();
+
   return getScooterFleet();
 }
 
 function getFleetGroupDisplayName(group: NexaFleetGroup) {
   if (group === "piaggio_liberty_125") return "Piaggio Liberty 125";
+  if (group === "kymco_sky_town_125") return "KYMCO Sky Town 125";
   if (group === "sym_symphony_125") return "SYM Symphony 125";
   if (group === "e_bike") return "E-Bike";
+
   return "Scooter";
 }
 
@@ -224,12 +235,34 @@ function getVehiclePublicName(vehicle: NexaVehicle) {
   return `${vehicle.marca} ${vehicle.modelo}`;
 }
 
-function resolveVehicleFleetGroup(vehicle?: NexaVehicle | null): NexaFleetGroup {
+function resolveVehicleFleetGroup(
+  vehicle?: NexaVehicle | null
+): NexaFleetGroup {
   if (!vehicle) return "scooter";
 
-  if (vehicle.tipo === "E-Bike") return "e_bike";
-  if (safeNormalizeText(vehicle.marca) === "sym") return "sym_symphony_125";
-  if (safeNormalizeText(vehicle.marca) === "piaggio") {
+  const brand = safeNormalizeText(vehicle.marca);
+  const model = safeNormalizeText(vehicle.modelo);
+  const code = normalizeVehicleCode(vehicle.codigo);
+
+  if (vehicle.tipo === "E-Bike") {
+    return "e_bike";
+  }
+
+  if (
+    code === "N9" ||
+    brand === "kymco" ||
+    model.includes("sky town") ||
+    model.includes("sky-town") ||
+    model.includes("skytown")
+  ) {
+    return "kymco_sky_town_125";
+  }
+
+  if (brand === "sym") {
+    return "sym_symphony_125";
+  }
+
+  if (brand === "piaggio") {
     return "piaggio_liberty_125";
   }
 
@@ -249,9 +282,21 @@ function resolveFleetGroupKeyFromWebsiteVehicle({
   const cleanId = safeNormalizeText(vehicleId);
   const cleanName = safeNormalizeText(vehicleName);
 
-  if (cleanFleetGroup === "piaggio_liberty_125") return "piaggio_liberty_125";
-  if (cleanFleetGroup === "sym_symphony_125") return "sym_symphony_125";
-  if (cleanFleetGroup === "e_bike") return "e_bike";
+  if (cleanFleetGroup === "piaggio_liberty_125") {
+    return "piaggio_liberty_125";
+  }
+
+  if (cleanFleetGroup === "kymco_sky_town_125") {
+    return "kymco_sky_town_125";
+  }
+
+  if (cleanFleetGroup === "sym_symphony_125") {
+    return "sym_symphony_125";
+  }
+
+  if (cleanFleetGroup === "e_bike") {
+    return "e_bike";
+  }
 
   const exactCode =
     extractVehicleCodeFromText(String(vehicleId || "")) ||
@@ -259,10 +304,32 @@ function resolveFleetGroupKeyFromWebsiteVehicle({
 
   const exactVehicle = findVehicleByCodigo(exactCode);
 
-  if (exactVehicle) return resolveVehicleFleetGroup(exactVehicle);
+  if (exactVehicle) {
+    return resolveVehicleFleetGroup(exactVehicle);
+  }
+
+  const isKymco =
+    cleanId === "s4" ||
+    cleanId === "n9" ||
+    cleanId === "kymco_sky_town_125" ||
+    cleanId === "kymco-sky-town-125" ||
+    cleanId.includes("kymco") ||
+    cleanId.includes("sky town") ||
+    cleanId.includes("sky-town") ||
+    cleanId.includes("skytown") ||
+    cleanName.includes("kymco") ||
+    cleanName.includes("sky town") ||
+    cleanName.includes("sky-town") ||
+    cleanName.includes("skytown");
+
+  if (isKymco) {
+    return "kymco_sky_town_125";
+  }
 
   if (
     cleanId === "s3" ||
+    cleanId === "sym_symphony_125" ||
+    cleanId === "sym-symphony-125" ||
     cleanName.includes("sym") ||
     cleanName.includes("symphony")
   ) {
@@ -271,6 +338,8 @@ function resolveFleetGroupKeyFromWebsiteVehicle({
 
   if (
     cleanId === "s2" ||
+    cleanId === "piaggio_liberty_125" ||
+    cleanId === "piaggio-liberty-125" ||
     cleanName.includes("piaggio") ||
     cleanName.includes("liberty")
   ) {
@@ -743,7 +812,9 @@ async function checkAvailability({
     };
   }
 
-  const fleetCodes = fleet.map((vehicle) => vehicle.codigo);
+  const fleetCodes = fleet.map((vehicle) =>
+    normalizeVehicleCode(vehicle.codigo)
+  );
 
   const { data, error } = await supabaseAdmin
     .from("bookings")
@@ -803,7 +874,8 @@ async function checkAvailability({
   }
 
   let availableVehicles = fleet.filter(
-    (vehicle) => !bookedVehicleCodes.includes(vehicle.codigo)
+    (vehicle) =>
+      !bookedVehicleCodes.includes(normalizeVehicleCode(vehicle.codigo))
   );
 
   if (
@@ -811,7 +883,8 @@ async function checkAvailability({
     fleetCodes.includes(normalizedRequestedVehicleCode)
   ) {
     availableVehicles = availableVehicles.filter(
-      (vehicle) => vehicle.codigo === normalizedRequestedVehicleCode
+      (vehicle) =>
+        normalizeVehicleCode(vehicle.codigo) === normalizedRequestedVehicleCode
     );
   }
 
@@ -832,6 +905,7 @@ async function checkAvailability({
 
 function normalizeBookingForDashboard(row: any) {
   const vehicleName = cleanText(row.vehicle_name);
+
   const assignedVehicleCode = normalizeVehicleCode(
     row.assigned_vehicle_code ||
       row.vehicle_code ||
@@ -841,13 +915,21 @@ function normalizeBookingForDashboard(row: any) {
 
   const vehicle = findVehicleByCodigo(assignedVehicleCode);
 
-  const fleetGroup =
-    (cleanText(row.fleet_group) as NexaFleetGroup) ||
-    resolveVehicleFleetGroup(vehicle) ||
-    resolveFleetGroupKeyFromWebsiteVehicle({
-      vehicleId: row.vehicle_id || row.vehicle_code,
+  const fleetGroup = resolveFleetGroupKeyFromWebsiteVehicle({
+    vehicleId:
+      row.vehicle_id ||
+      row.vehicle_code ||
+      row.assigned_vehicle_code ||
+      assignedVehicleCode,
+    vehicleName: [
       vehicleName,
-    });
+      vehicle?.marca,
+      vehicle?.modelo,
+    ]
+      .filter(Boolean)
+      .join(" "),
+    fleetGroup: row.fleet_group,
+  });
 
   const amountCents = Number(row.amount || 0);
   const customerName = cleanText(row.customer_name) || "Customer";
@@ -872,6 +954,7 @@ function normalizeBookingForDashboard(row: any) {
 
   const rawSource = cleanText(row.source);
   const paymentIntentId = cleanText(row.stripe_payment_intent_id);
+
   const looksManual =
     safeNormalizeText(rawSource) === "manual" ||
     /^NX-\d+$/i.test(paymentIntentId) ||
@@ -929,12 +1012,22 @@ function normalizeBookingForDashboard(row: any) {
       matricula: vehicle?.matricula || "",
       marca:
         vehicle?.marca ||
-        (resolvedVehicleName.toLowerCase().includes("sym") ? "SYM" : "Piaggio"),
+        (fleetGroup === "kymco_sky_town_125"
+          ? "KYMCO"
+          : fleetGroup === "sym_symphony_125"
+            ? "SYM"
+            : fleetGroup === "piaggio_liberty_125"
+              ? "Piaggio"
+              : ""),
       modelo:
         vehicle?.modelo ||
-        (resolvedVehicleName.toLowerCase().includes("sym")
-          ? "Symphony 125"
-          : "Liberty 125"),
+        (fleetGroup === "kymco_sky_town_125"
+          ? "Sky Town 125"
+          : fleetGroup === "sym_symphony_125"
+            ? "Symphony 125"
+            : fleetGroup === "piaggio_liberty_125"
+              ? "Liberty 125"
+              : "Scooter"),
     },
 
     contractData: {
@@ -1131,7 +1224,10 @@ async function updateBookingByFilters({
       return result;
     }
 
-    if (result.error && !firstError) firstError = result.error;
+    if (result.error && !firstError) {
+      firstError = result.error;
+    }
+
     return null;
   }
 
@@ -1140,17 +1236,24 @@ async function updateBookingByFilters({
       "stripe_payment_intent_id",
       filters.stripePaymentIntentId
     );
+
     if (result) return result;
   }
 
   if (filters.contractNumber) {
-    const result = await tryUpdate("contract_number", filters.contractNumber);
+    const result = await tryUpdate(
+      "contract_number",
+      filters.contractNumber
+    );
+
     if (result) return result;
   }
 
   if (filters.bookingId) {
     const numericId = Number(filters.bookingId);
-    const idValue = Number.isFinite(numericId) ? numericId : filters.bookingId;
+    const idValue = Number.isFinite(numericId)
+      ? numericId
+      : filters.bookingId;
 
     const byId = await tryUpdate("id", idValue);
     if (byId) return byId;
@@ -1159,9 +1262,14 @@ async function updateBookingByFilters({
       "stripe_payment_intent_id",
       filters.bookingId
     );
+
     if (byPayment) return byPayment;
 
-    const byContract = await tryUpdate("contract_number", filters.bookingId);
+    const byContract = await tryUpdate(
+      "contract_number",
+      filters.bookingId
+    );
+
     if (byContract) return byContract;
   }
 
@@ -1178,10 +1286,14 @@ async function updateBookingByFilters({
   };
 }
 
-async function saveBookingPayload(payload: any): Promise<SupabaseWriteResult> {
+async function saveBookingPayload(
+  payload: any
+): Promise<SupabaseWriteResult> {
   let result: any = await supabaseAdmin
     .from("bookings")
-    .upsert(payload, { onConflict: "stripe_payment_intent_id" })
+    .upsert(payload, {
+      onConflict: "stripe_payment_intent_id",
+    })
     .select();
 
   if (!result.error) return result;
@@ -1297,8 +1409,15 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const selectedStart = buildDateTime(input.pickupDate, input.pickupTime);
-    const selectedEnd = buildDateTime(input.dropoffDate, input.dropoffTime);
+    const selectedStart = buildDateTime(
+      input.pickupDate,
+      input.pickupTime
+    );
+
+    const selectedEnd = buildDateTime(
+      input.dropoffDate,
+      input.dropoffTime
+    );
 
     if (!selectedStart || !selectedEnd) {
       return NextResponse.json(
@@ -1322,7 +1441,8 @@ export async function POST(request: NextRequest) {
 
     const availability = await checkAvailability({
       requestedGroup: input.fleetGroup,
-      requestedVehicleCode: input.assignedVehicleCode || input.vehicleCode,
+      requestedVehicleCode:
+        input.assignedVehicleCode || input.vehicleCode,
       selectedStart,
       selectedEnd,
     });
@@ -1353,9 +1473,15 @@ export async function POST(request: NextRequest) {
     }
 
     const assignedVehicle = availability.assignedVehicle;
-    const assignedVehicleCode = assignedVehicle.codigo;
-    const assignedVehicleDisplayName = vehicleDisplayName(assignedVehicle);
-    const publicVehicleName = getVehiclePublicName(assignedVehicle);
+    const assignedVehicleCode = normalizeVehicleCode(
+      assignedVehicle.codigo
+    );
+
+    const assignedVehicleDisplayName =
+      vehicleDisplayName(assignedVehicle);
+
+    const publicVehicleName =
+      getVehiclePublicName(assignedVehicle);
 
     const payload = {
       stripe_payment_intent_id: input.stripePaymentIntentId,
@@ -1373,7 +1499,9 @@ export async function POST(request: NextRequest) {
 
       vehicle_id: input.vehicleId,
       vehicle_name:
-        assignedVehicleDisplayName || input.vehicleName || publicVehicleName,
+        assignedVehicleDisplayName ||
+        input.vehicleName ||
+        publicVehicleName,
       vehicle_code: assignedVehicleCode,
       assigned_vehicle_code: assignedVehicleCode,
       scooter_code: assignedVehicleCode,
@@ -1419,11 +1547,16 @@ export async function POST(request: NextRequest) {
         fleetGroup: input.fleetGroup,
         totalFleet: availability.totalFleet,
         bookedCount: availability.bookedCount + 1,
-        availableCount: Math.max(0, availability.availableCount - 1),
-        bookedVehicleCodes: [
-          ...availability.bookedVehicleCodes,
-          assignedVehicleCode,
-        ],
+        availableCount: Math.max(
+          0,
+          availability.availableCount - 1
+        ),
+        bookedVehicleCodes: Array.from(
+          new Set([
+            ...availability.bookedVehicleCodes,
+            assignedVehicleCode,
+          ])
+        ),
         bufferMinutes: BUFFER_MINUTES_AFTER_BOOKING,
       },
     });
@@ -1443,7 +1576,9 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   try {
     const body = await request.json();
-    const actionResult = resolvePatchAction(body?.action || body?.status);
+    const actionResult = resolvePatchAction(
+      body?.action || body?.status
+    );
 
     if (!actionResult) {
       return NextResponse.json(
@@ -1503,7 +1638,9 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json(
         {
           ok: false,
-          error: result.error?.message || "Failed to update booking.",
+          error:
+            result.error?.message ||
+            "Failed to update booking.",
         },
         { status: 500 }
       );
@@ -1520,7 +1657,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const updatedBooking = normalizeBookingForDashboard(result.data[0]);
+    const updatedBooking = normalizeBookingForDashboard(
+      result.data[0]
+    );
 
     return NextResponse.json({
       ok: true,

@@ -16,6 +16,7 @@ export const dynamic = "force-dynamic";
 
 type NexaFleetGroup =
   | "piaggio_liberty_125"
+  | "kymco_sky_town_125"
   | "sym_symphony_125"
   | "e_bike"
   | "scooter";
@@ -117,13 +118,19 @@ function getScooterFleet() {
 
 function getPiaggioFleet() {
   return getScooterFleet().filter(
-    (vehicle) => safeNormalizeText(vehicle.marca) === "piaggio"
+    (vehicle) => vehicle.fleetGroup === "piaggio_liberty_125"
+  );
+}
+
+function getKymcoFleet() {
+  return getScooterFleet().filter(
+    (vehicle) => vehicle.fleetGroup === "kymco_sky_town_125"
   );
 }
 
 function getSymFleet() {
   return getScooterFleet().filter(
-    (vehicle) => safeNormalizeText(vehicle.marca) === "sym"
+    (vehicle) => vehicle.fleetGroup === "sym_symphony_125"
   );
 }
 
@@ -132,16 +139,42 @@ function getEBikeFleet() {
 }
 
 function getFleetGroupDisplayName(fleetGroup: NexaFleetGroup) {
-  if (fleetGroup === "piaggio_liberty_125") return "Piaggio Liberty 125";
-  if (fleetGroup === "sym_symphony_125") return "SYM Symphony 125";
-  if (fleetGroup === "e_bike") return "E-Bike";
+  if (fleetGroup === "piaggio_liberty_125") {
+    return "Piaggio Liberty 125";
+  }
+
+  if (fleetGroup === "kymco_sky_town_125") {
+    return "KYMCO Sky Town 125";
+  }
+
+  if (fleetGroup === "sym_symphony_125") {
+    return "SYM Symphony 125";
+  }
+
+  if (fleetGroup === "e_bike") {
+    return "E-Bike";
+  }
+
   return "Scooter";
 }
 
 function getFleetByGroup(fleetGroup: NexaFleetGroup) {
-  if (fleetGroup === "piaggio_liberty_125") return getPiaggioFleet();
-  if (fleetGroup === "sym_symphony_125") return getSymFleet();
-  if (fleetGroup === "e_bike") return getEBikeFleet();
+  if (fleetGroup === "piaggio_liberty_125") {
+    return getPiaggioFleet();
+  }
+
+  if (fleetGroup === "kymco_sky_town_125") {
+    return getKymcoFleet();
+  }
+
+  if (fleetGroup === "sym_symphony_125") {
+    return getSymFleet();
+  }
+
+  if (fleetGroup === "e_bike") {
+    return getEBikeFleet();
+  }
+
   return getScooterFleet();
 }
 
@@ -158,9 +191,25 @@ function resolveFleetGroupKeyFromWebsiteVehicle({
   const cleanId = safeNormalizeText(vehicleId);
   const cleanName = safeNormalizeText(vehicleName);
 
-  if (cleanFleetGroup === "piaggio_liberty_125") return "piaggio_liberty_125";
-  if (cleanFleetGroup === "sym_symphony_125") return "sym_symphony_125";
-  if (cleanFleetGroup === "e_bike") return "e_bike";
+  if (cleanFleetGroup === "piaggio_liberty_125") {
+    return "piaggio_liberty_125";
+  }
+
+  if (cleanFleetGroup === "kymco_sky_town_125") {
+    return "kymco_sky_town_125";
+  }
+
+  if (cleanFleetGroup === "sym_symphony_125") {
+    return "sym_symphony_125";
+  }
+
+  if (cleanFleetGroup === "e_bike") {
+    return "e_bike";
+  }
+
+  if (cleanFleetGroup === "scooter") {
+    return "scooter";
+  }
 
   const exactCode =
     extractVehicleCodeFromText(String(vehicleId || "")) ||
@@ -168,33 +217,65 @@ function resolveFleetGroupKeyFromWebsiteVehicle({
 
   const exactVehicle = findVehicleByCodigo(exactCode);
 
-  if (exactVehicle?.marca === "Piaggio") return "piaggio_liberty_125";
-  if (exactVehicle?.marca === "SYM") return "sym_symphony_125";
-  if (exactVehicle?.tipo === "E-Bike") return "e_bike";
-
-  if (
-    cleanId === "s3" ||
-    cleanName.includes("sym") ||
-    cleanName.includes("symphony")
-  ) {
-    return "sym_symphony_125";
-  }
-
-  if (
-    cleanId === "s2" ||
-    cleanName.includes("piaggio") ||
-    cleanName.includes("liberty")
-  ) {
+  if (exactVehicle?.fleetGroup === "piaggio_liberty_125") {
     return "piaggio_liberty_125";
   }
 
-  if (
+  if (exactVehicle?.fleetGroup === "kymco_sky_town_125") {
+    return "kymco_sky_town_125";
+  }
+
+  if (exactVehicle?.fleetGroup === "sym_symphony_125") {
+    return "sym_symphony_125";
+  }
+
+  if (exactVehicle?.tipo === "E-Bike") {
+    return "e_bike";
+  }
+
+  const isKymco =
+    cleanId === "s4" ||
+    cleanId === "kymco-sky-town-125" ||
+    cleanId.includes("kymco") ||
+    cleanId.includes("sky-town") ||
+    cleanName.includes("kymco") ||
+    cleanName.includes("sky town") ||
+    cleanName.includes("sky-town") ||
+    cleanName.includes("skytown");
+
+  if (isKymco) {
+    return "kymco_sky_town_125";
+  }
+
+  const isSym =
+    cleanId === "s3" ||
+    cleanId === "sym-symphony-125" ||
+    cleanName.includes("sym") ||
+    cleanName.includes("symphony");
+
+  if (isSym) {
+    return "sym_symphony_125";
+  }
+
+  const isPiaggio =
+    cleanId === "s2" ||
+    cleanId === "piaggio-liberty-125" ||
+    cleanName.includes("piaggio") ||
+    cleanName.includes("liberty");
+
+  if (isPiaggio) {
+    return "piaggio_liberty_125";
+  }
+
+  const isEBike =
     cleanId.startsWith("e") ||
     cleanName.includes("e-bike") ||
     cleanName.includes("ebike") ||
+    cleanName.includes("electric bike") ||
     cleanName.includes("engwe") ||
-    cleanName.includes("p275")
-  ) {
+    cleanName.includes("p275");
+
+  if (isEBike) {
     return "e_bike";
   }
 
@@ -258,7 +339,11 @@ function bookingOverlapsSelection({
 
   if (!bookingStart || !bookingEnd) return false;
 
-  const bookingBlockedEnd = addMinutes(bookingEnd, BUFFER_MINUTES_AFTER_BOOKING);
+  const bookingBlockedEnd = addMinutes(
+    bookingEnd,
+    BUFFER_MINUTES_AFTER_BOOKING
+  );
+
   const requestedBlockedEnd = addMinutes(
     requestedEnd,
     BUFFER_MINUTES_AFTER_BOOKING
@@ -278,11 +363,17 @@ function bookingBelongsToFleetGroup({
 }) {
   const code = getBookingVehicleCode(booking);
 
-  if (code && fleetCodes.includes(code)) return true;
+  if (code && fleetCodes.includes(code)) {
+    return true;
+  }
 
-  const bookingFleetGroupFromColumn = safeNormalizeText(booking.fleet_group);
+  const bookingFleetGroupFromColumn = safeNormalizeText(
+    booking.fleet_group
+  );
 
-  if (bookingFleetGroupFromColumn === fleetGroup) return true;
+  if (bookingFleetGroupFromColumn === fleetGroup) {
+    return true;
+  }
 
   const resolved = resolveFleetGroupFromWebsiteVehicle({
     vehicleId: booking.vehicle_id || code || "",
@@ -326,7 +417,10 @@ function getAvailabilityMessage({
     } available for these dates.`;
   }
 
-  if (fleetGroup === "sym_symphony_125") {
+  if (
+    fleetGroup === "kymco_sky_town_125" ||
+    fleetGroup === "sym_symphony_125"
+  ) {
     return `${vehicleName} is available for these dates.`;
   }
 
@@ -460,7 +554,9 @@ function getUnknownFleetBlockingCount({
   for (const booking of blockingBookings) {
     const code = getBookingVehicleCode(booking);
 
-    if (code && fleetCodes.includes(code)) continue;
+    if (code && fleetCodes.includes(code)) {
+      continue;
+    }
 
     const belongs = bookingBelongsToFleetGroup({
       booking,
@@ -468,7 +564,9 @@ function getUnknownFleetBlockingCount({
       fleetCodes,
     });
 
-    if (belongs) count += 1;
+    if (belongs) {
+      count += 1;
+    }
   }
 
   return count;
@@ -504,7 +602,8 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get("from") || "";
     const to = searchParams.get("to") || "";
     const pickupTime = searchParams.get("pickupTime") || "10:00";
-    const dropoffTime = searchParams.get("dropoffTime") || pickupTime;
+    const dropoffTime =
+      searchParams.get("dropoffTime") || pickupTime;
 
     if (!from || !to) {
       return createBadRequest("Missing pickup or drop-off date.");
@@ -514,7 +613,9 @@ export async function GET(request: NextRequest) {
     const requestedEnd = makeDateTime(to, dropoffTime);
 
     if (!requestedStart || !requestedEnd) {
-      return createBadRequest("Invalid pickup or drop-off date/time.");
+      return createBadRequest(
+        "Invalid pickup or drop-off date/time."
+      );
     }
 
     if (requestedEnd <= requestedStart) {
@@ -537,12 +638,17 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const fleetCodes = fleet.map((vehicle) => vehicle.codigo);
+    const fleetCodes = fleet.map((vehicle) =>
+      normalizeVehicleCode(vehicle.codigo)
+    );
 
     const { data, error, mode } = await loadBookings();
 
     if (error) {
-      console.error("❌ Availability check Supabase error:", error);
+      console.error(
+        "❌ Availability check Supabase error:",
+        error
+      );
 
       return NextResponse.json(
         {
@@ -557,44 +663,54 @@ export async function GET(request: NextRequest) {
 
     const bookings = (data || []) as BookingRow[];
 
-    const overlappingBlockingBookings = bookings.filter((booking) => {
-      if (!bookingShouldBlock(booking.status)) return false;
+    const overlappingBlockingBookings = bookings.filter(
+      (booking) => {
+        if (!bookingShouldBlock(booking.status)) {
+          return false;
+        }
 
-      if (
-        !bookingOverlapsSelection({
+        if (
+          !bookingOverlapsSelection({
+            booking,
+            requestedStart,
+            requestedEnd,
+          })
+        ) {
+          return false;
+        }
+
+        return bookingBelongsToFleetGroup({
           booking,
-          requestedStart,
-          requestedEnd,
-        })
-      ) {
-        return false;
+          fleetGroup,
+          fleetCodes,
+        });
       }
-
-      return bookingBelongsToFleetGroup({
-        booking,
-        fleetGroup,
-        fleetCodes,
-      });
-    });
+    );
 
     const bookedVehicleCodes = getBookedVehicleCodes({
       blockingBookings: overlappingBlockingBookings,
       fleetCodes,
     });
 
-    const unknownFleetBlockingCount = getUnknownFleetBlockingCount({
-      blockingBookings: overlappingBlockingBookings,
-      fleetGroup,
-      fleetCodes,
-    });
+    const unknownFleetBlockingCount =
+      getUnknownFleetBlockingCount({
+        blockingBookings: overlappingBlockingBookings,
+        fleetGroup,
+        fleetCodes,
+      });
 
     const directlyAvailableVehicles = fleet.filter(
-      (vehicle) => !bookedVehicleCodes.includes(vehicle.codigo)
+      (vehicle) =>
+        !bookedVehicleCodes.includes(
+          normalizeVehicleCode(vehicle.codigo)
+        )
     );
 
     const availableVehicles =
       unknownFleetBlockingCount > 0
-        ? directlyAvailableVehicles.slice(unknownFleetBlockingCount)
+        ? directlyAvailableVehicles.slice(
+            unknownFleetBlockingCount
+          )
         : directlyAvailableVehicles;
 
     const assignedVehicle = availableVehicles[0] || null;
@@ -605,7 +721,10 @@ export async function GET(request: NextRequest) {
       bookedVehicleCodes.length + unknownFleetBlockingCount
     );
 
-    const availableCount = Math.max(0, fleet.length - bookedCount);
+    const availableCount = Math.max(
+      0,
+      fleet.length - bookedCount
+    );
 
     return NextResponse.json({
       ok: true,
@@ -624,7 +743,8 @@ export async function GET(request: NextRequest) {
       assignedVehicleName: assignedVehicle
         ? getVehiclePublicName(assignedVehicle)
         : null,
-      assignedVehicleMatricula: assignedVehicle?.matricula || null,
+      assignedVehicleMatricula:
+        assignedVehicle?.matricula || null,
       assignedVehicleShortName: assignedVehicle
         ? vehicleShortName(assignedVehicle)
         : null,

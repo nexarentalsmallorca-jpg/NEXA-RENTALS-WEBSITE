@@ -27,7 +27,10 @@ type Locale =
   | "pt"
   | "sr"
   | "uk";
-type AvailabilityFleetGroup = "piaggio_liberty_125" | "sym_symphony_125";
+type AvailabilityFleetGroup =
+  | "piaggio_liberty_125"
+  | "kymco_sky_town_125"
+  | "sym_symphony_125";
 
 type SeasonalPricing = {
   seasonName: string;
@@ -995,6 +998,14 @@ function replaceTokens(text: string, tokens: Record<string, string | number>) {
 function getVehicleConfig(vehicleName: string) {
   const lower = vehicleName.toLowerCase();
   const quantityOptions = Array.from({ length: 15 }, (_, index) => index + 1);
+
+  if (isKymcoSkyTown(vehicleName)) {
+    return {
+      checkoutVehicleId: "kymco-sky-town-125",
+      availabilityFleetGroup: "kymco_sky_town_125" as AvailabilityFleetGroup,
+      quantityOptions,
+    };
+  }
 
   if (lower.includes("sym")) {
     return {
