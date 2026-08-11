@@ -1,6 +1,6 @@
 // i18n/request.ts
 import { getRequestConfig } from "next-intl/server";
-import { defaultLocale, isValidLocale, type Locale } from "./routing";
+import { defaultLocale, isValidLocale } from "./routing";
 
 import en from "../app/messages/en.json";
 import es from "../app/messages/es.json";
@@ -10,14 +10,20 @@ import it from "../app/messages/it.json";
 import pt from "../app/messages/pt.json";
 import sv from "../app/messages/sv.json";
 
-const MESSAGES: Record<Locale, typeof en> = {
+const MESSAGES = {
   en,
   es,
   de,
   fr,
   it,
-  pt,
+  nl: en,
+  pl: en,
   sv,
+  da: en,
+  no: en,
+  pt,
+  sr: en,
+  uk: en,
 };
 
 export default getRequestConfig(async ({ requestLocale }) => {
@@ -29,6 +35,6 @@ export default getRequestConfig(async ({ requestLocale }) => {
 
   return {
     locale,
-    messages: MESSAGES[locale] ?? MESSAGES[defaultLocale],
+    messages: MESSAGES[locale],
   };
 });
