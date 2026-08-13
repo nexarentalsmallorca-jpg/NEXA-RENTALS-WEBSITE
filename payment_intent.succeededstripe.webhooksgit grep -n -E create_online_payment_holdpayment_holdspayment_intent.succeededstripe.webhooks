@@ -1,0 +1,224 @@
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m157[m[36m:[mfunction isSame[1;31mCalendar[mDay(a?: Date | null, b?: Date | null) {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m168[m[36m:[m  return isSame[1;31mCalendar[mDay(date, new Date());
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m177[m[36m:[m  return isSame[1;31mCalendar[mDay(date, tomorrow);
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m557[m[36m:[mfunction dedupe[1;31mBookings[m(bookings: NormalizedBooking[]) {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m648[m[36m:[mfunction getStoredManual[1;31mBookings[m(): SavedBooking[] {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m652[m[36m:[m    const saved[1;31mBookings[m = JSON.parse(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m656[m[36m:[m    return Array.isArray(saved[1;31mBookings[m) ? saved[1;31mBookings[m : [];
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m662[m[36m:[mfunction saveManual[1;31mBookings[m(bookings: SavedBooking[]) {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m667[m[36m:[masync function fetchApi[1;31mBookings[m(): Promise<SavedBooking[]> {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m753[m[36m:[mexport default function [1;31mBookings[mPage() {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m754[m[36m:[m  const [raw[1;31mBookings[m, setRaw[1;31mBookings[m] = useState<SavedBooking[]>([]);
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m766[m[36m:[m  async function load[1;31mBookings[m() {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m769[m[36m:[m    const manual[1;31mBookings[m = getStoredManual[1;31mBookings[m();
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m770[m[36m:[m    const api[1;31mBookings[m = await fetchApi[1;31mBookings[m();
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m772[m[36m:[m    setRaw[1;31mBookings[m([...api[1;31mBookings[m, ...manual[1;31mBookings[m]);
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m777[m[36m:[m    load[1;31mBookings[m();
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m780[m[36m:[m      load[1;31mBookings[m();
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m791[m[36m:[m    const all[1;31mBookings[m = sortNewest(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m792[m[36m:[m      dedupe[1;31mBookings[m(raw[1;31mBookings[m.map((booking) => normalizeBooking(booking)))
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m795[m[36m:[m    const active[1;31mBookings[m = sortByPickup(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m796[m[36m:[m      all[1;31mBookings[m.filter((booking) => booking.status === "rented")
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m799[m[36m:[m    const upcoming[1;31mBookings[m = sortByPickup(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m800[m[36m:[m      all[1;31mBookings[m.filter((booking) => booking.status === "reserved")
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m803[m[36m:[m    const finished[1;31mBookings[m = all[1;31mBookings[m.filter(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m807[m[36m:[m    const cancelled[1;31mBookings[m = all[1;31mBookings[m.filter(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m812[m[36m:[m      all[1;31mBookings[m.filter(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m822[m[36m:[m      all[1;31mBookings[m.filter(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m831[m[36m:[m      all[1;31mBookings[m.filter(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m840[m[36m:[m      upcoming[1;31mBookings[m.filter((booking) => isTomorrow(booking.start))
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m845[m[36m:[m    const filtered[1;31mBookings[m = visibleSearch
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m846[m[36m:[m      ? all[1;31mBookings[m.filter((booking) => {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m868[m[36m:[m      : all[1;31mBookings[m;
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m870[m[36m:[m    const totalCents = all[1;31mBookings[m
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m874[m[36m:[m    const cashCents = all[1;31mBookings[m
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m881[m[36m:[m    const cardCents = all[1;31mBookings[m
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m889[m[36m:[m      const problemBooking = all[1;31mBookings[m.find(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m908[m[36m:[m      const rentedBooking = active[1;31mBookings[m.find(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m928[m[36m:[m      const reservedBooking = upcoming[1;31mBookings[m.find(
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m961[m[36m:[m      all[1;31mBookings[m,
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m962[m[36m:[m      filtered[1;31mBookings[m,
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m963[m[36m:[m      active[1;31mBookings[m,
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m964[m[36m:[m      upcoming[1;31mBookings[m,
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m965[m[36m:[m      finished[1;31mBookings[m,
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m966[m[36m:[m      cancelled[1;31mBookings[m,
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m976[m[36m:[m  }, [raw[1;31mBookings[m, search]);
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m984[m[36m:[m    setRaw[1;31mBookings[m((prev) =>
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1006[m[36m:[m    const manual[1;31mBookings[m = getStoredManual[1;31mBookings[m();
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1008[m[36m:[m    const updatedManual[1;31mBookings[m = manual[1;31mBookings[m.map((item) => {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1028[m[36m:[m    saveManual[1;31mBookings[m(updatedManual[1;31mBookings[m);
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1050[m[36m:[m      await load[1;31mBookings[m();
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1075[m[36m:[m    load[1;31mBookings[m();
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1089[m[36m:[m              [1;31mBookings[m & Fleet Status
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1099[m[36m:[m                label={loading ? "Loading bookings..." : "[1;31mBookings[m loaded"}
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1122[m[36m:[m              onClick={load[1;31mBookings[m}
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1139[m[36m:[m              + [1;31mCreate Booking[m
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1152[m[36m:[m        <StatCard label="Total" value={data.all[1;31mBookings[m.length} tone="orange" />
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1153[m[36m:[m        <StatCard label="Reserved" value={data.upcoming[1;31mBookings[m.length} tone="sky" />
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1154[m[36m:[m        <StatCard label="Rented out" value={data.active[1;31mBookings[m.length} tone="orange" />
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1155[m[36m:[m        <StatCard label="Finished" value={data.finished[1;31mBookings[m.length} tone="emerald" />
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1156[m[36m:[m        <StatCard label="Cancelled" value={data.cancelled[1;31mBookings[m.length} tone="red" />
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1270[m[36m:[m        {data.filtered[1;31mBookings[m.length === 0 ? (
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m1278[m[36m:[m          data.filtered[1;31mBookings[m.map((booking) => {
+[35mapp/admin-nexa-secret/calendar/page.tsx[m[36m:[m[32m26[m[36m:[mexport default function [1;31mCalendar[mPage() {
+[35mapp/admin-nexa-secret/calendar/page.tsx[m[36m:[m[32m35[m[36m:[m            Vehicle [1;31mCalendar[m
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m6[m[36m:[m  getManual[1;31mBookings[mFromLocalStorage,
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m7[m[36m:[m  setManual[1;31mBookings[mLocalStorage,
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m9[m[36m:[m} from "@/lib/manual[1;31mBookings[mLocalStorage";
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m68[m[36m:[mfunction getStoredManual[1;31mBookings[m(): ContractBooking[] {
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m69[m[36m:[m  return getManual[1;31mBookings[mFromLocalStorage<ContractBooking>();
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m79[m[36m:[m  const saved = getStoredManual[1;31mBookings[m();
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m101[m[36m:[m  setManual[1;31mBookings[mLocalStorage(saved);
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m413[m[36m:[mfunction dedupe[1;31mBookings[m(bookings: ContractBooking[]) {
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m451[m[36m:[m    const localContracts = getStoredManual[1;31mBookings[m();
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m468[m[36m:[m      const merged = dedupe[1;31mBookings[m([...localContracts, ...apiContracts]);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m7[m[36m:[m  getManual[1;31mBookings[mFromLocalStorage,
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m8[m[36m:[m  setManual[1;31mBookings[mLocalStorage,
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m10[m[36m:[m} from "@/lib/manual[1;31mBookings[mLocalStorage";
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m439[m[36m:[mfunction getStored[1;31mBookings[m(): ManualBooking[] {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m440[m[36m:[m  return getManual[1;31mBookings[mFromLocalStorage<ManualBooking>();
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m455[m[36m:[mfunction getNextContractNumberFrom[1;31mBookings[m(bookings: ManualBooking[]) {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m574[m[36m:[masync function fetchOnline[1;31mBookings[m(): Promise<ManualBooking[]> {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m829[m[36m:[m  const [manual[1;31mBookings[m, setManual[1;31mBookings[m] = useState<ManualBooking[]>([]);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m830[m[36m:[m  const [online[1;31mBookings[m, setOnline[1;31mBookings[m] = useState<ManualBooking[]>([]);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m835[m[36m:[m  const [isLoadingOnline[1;31mBookings[m, setIsLoadingOnline[1;31mBookings[m] = useState(true);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m851[m[36m:[m  async function refreshAll[1;31mBookings[m() {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m852[m[36m:[m    setManual[1;31mBookings[m(getStored[1;31mBookings[m());
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m854[m[36m:[m    setIsLoadingOnline[1;31mBookings[m(true);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m855[m[36m:[m    const loadedOnline[1;31mBookings[m = await fetchOnline[1;31mBookings[m();
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m856[m[36m:[m    setOnline[1;31mBookings[m(loadedOnline[1;31mBookings[m);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m857[m[36m:[m    setIsLoadingOnline[1;31mBookings[m(false);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m861[m[36m:[m    refreshAll[1;31mBookings[m();
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m863[m[36m:[m    function refreshStored[1;31mBookings[m() {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m864[m[36m:[m      refreshAll[1;31mBookings[m();
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m867[m[36m:[m    window.addEventListener("storage", refreshStored[1;31mBookings[m);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m870[m[36m:[m      window.removeEventListener("storage", refreshStored[1;31mBookings[m);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m874[m[36m:[m  const all[1;31mBookings[m = useMemo(() => {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m875[m[36m:[m    return [...online[1;31mBookings[m, ...manual[1;31mBookings[m];
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m876[m[36m:[m  }, [online[1;31mBookings[m, manual[1;31mBookings[m]);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m898[m[36m:[m  const active[1;31mBookings[m = useMemo(() => {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m901[m[36m:[m    return all[1;31mBookings[m
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m925[m[36m:[m  }, [all[1;31mBookings[m]);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m943[m[36m:[m      const activeItem = active[1;31mBookings[m.find(
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m956[m[36m:[m        const conflict = all[1;31mBookings[m
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1007[m[36m:[m  }, [active[1;31mBookings[m, all[1;31mBookings[m, selectedDateRange]);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1016[m[36m:[m    return getNextContractNumberFrom[1;31mBookings[m(all[1;31mBookings[m);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1017[m[36m:[m  }, [all[1;31mBookings[m, success]);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1032[m[36m:[m    const current[1;31mBookings[m = getStored[1;31mBookings[m();
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1033[m[36m:[m    return getNextContractNumberFrom[1;31mBookings[m([...all[1;31mBookings[m, ...current[1;31mBookings[m]);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1037[m[36m:[m    const current[1;31mBookings[m = getStored[1;31mBookings[m();
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1038[m[36m:[m    const updated[1;31mBookings[m = [
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1040[m[36m:[m      ...current[1;31mBookings[m,
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1044[m[36m:[m      setManual[1;31mBookings[mLocalStorage(updated[1;31mBookings[m);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1045[m[36m:[m      setManual[1;31mBookings[m(updated[1;31mBookings[m);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1057[m[36m:[m    const latest[1;31mBookings[m = getStored[1;31mBookings[m();
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1059[m[36m:[m    const replaced[1;31mBookings[m = latest[1;31mBookings[m.map((booking) =>
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1066[m[36m:[m      setManual[1;31mBookings[mLocalStorage(replaced[1;31mBookings[m);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1067[m[36m:[m      setManual[1;31mBookings[m(replaced[1;31mBookings[m);
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1423[m[36m:[m    await refreshAll[1;31mBookings[m();
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1460[m[36m:[m              Manual local: {manual[1;31mBookings[m.length}
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1464[m[36m:[m                isLoadingOnline[1;31mBookings[m
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1469[m[36m:[m              {isLoadingOnline[1;31mBookings[m
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1471[m[36m:[m                : `Online detectadas: ${online[1;31mBookings[m.length}`}
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m82[m[36m:[mfunction getStoredManual[1;31mBookings[m(): BookingCustomer[] {
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m277[m[36m:[mfunction dedupe[1;31mBookings[m(bookings: BookingCustomer[]) {
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m294[m[36m:[mfunction build[1;31mCustomers[m(bookings: BookingCustomer[]) {
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m375[m[36m:[mexport default function [1;31mCustomers[mPage() {
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m376[m[36m:[m  const [bookings, set[1;31mBookings[m] = useState<BookingCustomer[]>([]);
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m381[m[36m:[m  async function load[1;31mCustomers[m() {
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m385[m[36m:[m    const local[1;31mBookings[m = getStoredManual[1;31mBookings[m();
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m395[m[36m:[m      const api[1;31mBookings[m = Array.isArray(data?.bookings) ? data.bookings : [];
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m397[m[36m:[m      set[1;31mBookings[m(dedupe[1;31mBookings[m([...local[1;31mBookings[m, ...api[1;31mBookings[m]));
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m403[m[36m:[m      set[1;31mBookings[m(local[1;31mBookings[m);
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m414[m[36m:[m    load[1;31mCustomers[m();
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m417[m[36m:[m      load[1;31mCustomers[m();
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m427[m[36m:[m  const customers = useMemo(() => build[1;31mCustomers[m(bookings), [bookings]);
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m429[m[36m:[m  const filtered[1;31mCustomers[m = useMemo(() => {
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m476[m[36m:[m      total[1;31mCustomers[m: customers.length,
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m494[m[36m:[m                [1;31mCustomers[m
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m506[m[36m:[m              onClick={load[1;31mCustomers[m}
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m517[m[36m:[m              [1;31mCustomers[m
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m520[m[36m:[m              {summary.total[1;31mCustomers[m}
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m583[m[36m:[m          {!isLoading && filtered[1;31mCustomers[m.length === 0 ? (
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m590[m[36m:[m          {filtered[1;31mCustomers[m.map((customer) => {
+[35mapp/admin-nexa-secret/maintenance/page.tsx[m[36m:[m[32m315[m[36m:[m                  [1;31mVehicles[m
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m9[m[36m:[m  [1;31mCalendar[mClock,
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m157[m[36m:[mfunction isSame[1;31mCalendar[mDay(a?: Date | null, b?: Date | null) {
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m168[m[36m:[m  return isSame[1;31mCalendar[mDay(date, new Date());
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m176[m[36m:[m  return isSame[1;31mCalendar[mDay(date, tomorrow);
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m417[m[36m:[mfunction dedupe[1;31mBookings[m(bookings: NormalizedBooking[]) {
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m486[m[36m:[mfunction getStoredManual[1;31mBookings[m(): SavedBooking[] {
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m490[m[36m:[m    const saved[1;31mBookings[m = JSON.parse(localStorage.getItem("nexa_manual_bookings") || "[]");
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m491[m[36m:[m    return Array.isArray(saved[1;31mBookings[m) ? saved[1;31mBookings[m : [];
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m497[m[36m:[masync function fetchApi[1;31mBookings[m(): Promise<SavedBooking[]> {
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m715[m[36m:[m  const [raw[1;31mBookings[m, setRaw[1;31mBookings[m] = useState<SavedBooking[]>([]);
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m721[m[36m:[m    const manual[1;31mBookings[m = getStoredManual[1;31mBookings[m();
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m722[m[36m:[m    const api[1;31mBookings[m = await fetchApi[1;31mBookings[m();
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m723[m[36m:[m    setRaw[1;31mBookings[m([...api[1;31mBookings[m, ...manual[1;31mBookings[m]);
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m743[m[36m:[m    const bookings = sortNewest(dedupe[1;31mBookings[m(raw[1;31mBookings[m.map(normalizeBooking)));
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m744[m[36m:[m    const active[1;31mBookings[m = sortByPickup(bookings.filter((booking) => booking.computedStatus === "rented"));
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m745[m[36m:[m    const upcoming[1;31mBookings[m = sortByPickup(bookings.filter((booking) => booking.computedStatus === "reserved"));
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m746[m[36m:[m    const wanted[1;31mBookings[m = bookings.filter((booking) => booking.computedStatus === "wanted");
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m749[m[36m:[m      const wantedBooking = wanted[1;31mBookings[m.find((booking) => booking.vehicle.codigo === vehicle.codigo);
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m750[m[36m:[m      const activeBooking = active[1;31mBookings[m.find((booking) => booking.vehicle.codigo === vehicle.codigo);
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m751[m[36m:[m      const nextBooking = upcoming[1;31mBookings[m.find((booking) => booking.vehicle.codigo === vehicle.codigo);
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m826[m[36m:[m    const valid[1;31mBookings[m = bookings.filter((booking) => booking.computedStatus !== "cancelled");
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m827[m[36m:[m    const totalCents = valid[1;31mBookings[m.reduce((sum, booking) => sum + booking.amountCents, 0);
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m828[m[36m:[m    const todayCents = valid[1;31mBookings[m
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m839[m[36m:[m      active[1;31mBookings[m,
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m840[m[36m:[m      upcoming[1;31mBookings[m,
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m852[m[36m:[m  }, [raw[1;31mBookings[m, maintenanceRecords]);
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m877[m[36m:[m                    [1;31mVehicles[m release automatically after return time. Cancel or return a booking and the scooter becomes available again across the system.
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m931[m[36m:[m                  <h3 className="mt-1 text-2xl font-black text-white">[1;31mVehicles[m</h3>
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m1039[m[36m:[m                icon={<[1;31mCalendar[mClock size={17} />}
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m55[m[36m:[m  cash[1;31mBookings[m: number;
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m56[m[36m:[m  card[1;31mBookings[m: number;
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m57[m[36m:[m  unpaid[1;31mBookings[m: number;
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m276[m[36m:[mfunction getStoredManual[1;31mBookings[m(): SalesBooking[] {
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m290[m[36m:[masync function fetchApi[1;31mBookings[m(): Promise<SalesBooking[]> {
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m307[m[36m:[mfunction dedupe[1;31mBookings[m(bookings: SalesBooking[]) {
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m380[m[36m:[m      cash[1;31mBookings[m: 0,
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m381[m[36m:[m      card[1;31mBookings[m: 0,
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m382[m[36m:[m      unpaid[1;31mBookings[m: 0,
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m405[m[36m:[m      row.cash[1;31mBookings[m += 1;
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m408[m[36m:[m      row.card[1;31mBookings[m += 1;
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m411[m[36m:[m      row.unpaid[1;31mBookings[m += 1;
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m436[m[36m:[m  const [bookings, set[1;31mBookings[m] = useState<SalesBooking[]>([]);
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m443[m[36m:[m    const manual[1;31mBookings[m = getStoredManual[1;31mBookings[m();
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m444[m[36m:[m    const api[1;31mBookings[m = await fetchApi[1;31mBookings[m();
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m446[m[36m:[m    set[1;31mBookings[m(dedupe[1;31mBookings[m([...api[1;31mBookings[m, ...manual[1;31mBookings[m]));
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m495[m[36m:[m    const valid[1;31mBookings[m = bookings.filter(
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m499[m[36m:[m    const today[1;31mBookings[m = valid[1;31mBookings[m.filter((booking) =>
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m503[m[36m:[m    const week[1;31mBookings[m = valid[1;31mBookings[m.filter((booking) =>
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m507[m[36m:[m    const month[1;31mBookings[m = valid[1;31mBookings[m.filter((booking) =>
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m517[m[36m:[m    const previousMonth[1;31mBookings[m = valid[1;31mBookings[m.filter((booking) =>
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m521[m[36m:[m    const totalCents = valid[1;31mBookings[m.reduce(
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m526[m[36m:[m    const todayCents = today[1;31mBookings[m.reduce(
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m531[m[36m:[m    const weekCents = week[1;31mBookings[m.reduce(
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m536[m[36m:[m    const monthCents = month[1;31mBookings[m.reduce(
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m541[m[36m:[m    const previousMonthCents = previousMonth[1;31mBookings[m.reduce(
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m546[m[36m:[m    const cashCents = month[1;31mBookings[m
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m550[m[36m:[m    const cardCents = month[1;31mBookings[m
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m554[m[36m:[m    const unpaidCents = month[1;31mBookings[m
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m558[m[36m:[m    const reservationsCount = month[1;31mBookings[m.filter(isReservedBooking).length;
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m559[m[36m:[m    const dailyRows = buildDailySalesRows(valid[1;31mBookings[m, selectedMonthDate);
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m561[m[36m:[m    const averageSale = getAverageSale(monthCents, month[1;31mBookings[m.length);
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m564[m[36m:[m      valid[1;31mBookings[m,
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m565[m[36m:[m      today[1;31mBookings[m,
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m566[m[36m:[m      week[1;31mBookings[m,
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m567[m[36m:[m      month[1;31mBookings[m,
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m568[m[36m:[m      previousMonth[1;31mBookings[m,
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m582[m[36m:[m      monthBuckets: buildMonthBuckets(valid[1;31mBookings[m),
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m587[m[36m:[m    return [...sales.valid[1;31mBookings[m]
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m590[m[36m:[m  }, [sales.valid[1;31mBookings[m]);
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m631[m[36m:[m                  Total records: {sales.valid[1;31mBookings[m.length}
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m674[m[36m:[m            subtitle={`${sales.today[1;31mBookings[m.length} bookings today`}
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m681[m[36m:[m            subtitle={`${sales.week[1;31mBookings[m.length} bookings this week`}
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m688[m[36m:[m            subtitle={`${sales.month[1;31mBookings[m.length} bookings`}
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m869[m[36m:[m                          {row.bookings} bookings · Cash {row.cash[1;31mBookings[m} ·
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m870[m[36m:[m                          Card {row.card[1;31mBookings[m}
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m918[m[36m:[m                Open [1;31mBookings[m
+[35mapp/admin-nexa-secret/vehicles/page.tsx[m[36m:[m[32m88[m[36m:[mexport default function [1;31mVehicles[mPage() {
+[35mapp/admin-nexa-secret/vehicles/page.tsx[m[36m:[m[32m89[m[36m:[m  const [bookings, set[1;31mBookings[m] = useState<SavedBooking[]>([]);
+[35mapp/admin-nexa-secret/vehicles/page.tsx[m[36m:[m[32m92[m[36m:[m    const saved[1;31mBookings[m = JSON.parse(
+[35mapp/admin-nexa-secret/vehicles/page.tsx[m[36m:[m[32m96[m[36m:[m    set[1;31mBookings[m(saved[1;31mBookings[m);

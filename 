@@ -1,0 +1,25 @@
+[35mapp/[locale]/checkout/CheckoutClient.tsx[m[36m:[m[32m684[m[36m:[m        `[1;31m/api/admin/availability[m?${params.toString()}`,
+[35mapp/[locale]/checkout/CheckoutClient.tsx[m[36m:[m[32m1877[m[36m:[m            "/api/stripe/[1;31mcreate-payment[m-intent",
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m669[m[36m:[m    const response = await fetch("[1;31m/api/admin/bookings[m", {
+[35mapp/admin-nexa-secret/bookings/page.tsx[m[36m:[m[32m689[m[36m:[m    const response = await fetch("[1;31m/api/admin/bookings[m", {
+[35mapp/admin-nexa-secret/contracts/page.tsx[m[36m:[m[32m454[m[36m:[m      const response = await fetch("[1;31m/api/admin/bookings[m", {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m576[m[36m:[m    const response = await fetch("[1;31m/api/admin/bookings[m", {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m594[m[36m:[m    const response = await fetch("[1;31m/api/admin/bookings[m", {
+[35mapp/admin-nexa-secret/create-booking/page.tsx[m[36m:[m[32m1404[m[36m:[m          } bloqueado en localStorage con ${BUFFER_MINUTES_AFTER_BOOKING} minutos extra de margen. Cuando [1;31m/api/admin/bookings[m guarde en Supabase, también bloqueará la web.`
+[35mapp/admin-nexa-secret/customers/page.tsx[m[36m:[m[32m388[m[36m:[m      const response = await fetch("[1;31m/api/admin/bookings[m", {
+[35mapp/admin-nexa-secret/page.tsx[m[36m:[m[32m499[m[36m:[m    const response = await fetch("[1;31m/api/admin/bookings[m", {
+[35mapp/admin-nexa-secret/sales/page.tsx[m[36m:[m[32m292[m[36m:[m    const response = await fetch("[1;31m/api/admin/bookings[m", {
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m138[m[36m:[m   * this new [1;31mwebhook[m is deployed.
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m409[m[36m:[m   * Stripe may retry the same [1;31mwebhook[m.
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m1055[m[36m:[m  const [1;31mwebhook[mSecret =
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m1069[m[36m:[m  if (![1;31mwebhook[mSecret) {
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m1075[m[36m:[m      "Missing Stripe [1;31mwebhook[m configuration",
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m1097[m[36m:[m    event = stripe.[1;31mwebhook[ms.constructEvent(
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m1100[m[36m:[m      [1;31mwebhook[mSecret
+[35mapp/api/stripe/webhook/route.ts[m[36m:[m[32m1138[m[36m:[m         * Stripe [1;31mwebhook[m retries.
+[35mapp/api/whatsapp/webhook/route.ts[m[36m:[m[32m40[m[36m:[m    console.error("WhatsApp [1;31mwebhook[m error:", error);
+[35mapp/components/BookingPanelV2.tsx[m[36m:[m[32m1486[m[36m:[m        const response = await fetch(`[1;31m/api/admin/availability[m?${params.toString()}`, {
+[35mapp/components/BookingPanelV3.tsx[m[36m:[m[32m1771[m[36m:[m          `[1;31m/api/admin/availability[m?${params.toString()}`,
+[35mpackage-lock.json[m[36m:[m[32m8810[m[36m:[m    "node_modules/standard[1;31mwebhook[ms": {
+[35mpackage-lock.json[m[36m:[m[32m8812[m[36m:[m      "resolved": "https://registry.npmjs.org/standard[1;31mwebhook[ms/-/standard[1;31mwebhook[ms-1.0.0.tgz",
+[35mpackage-lock.json[m[36m:[m[32m9057[m[36m:[m        "standard[1;31mwebhook[ms": "1.0.0",

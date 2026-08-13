@@ -9,12 +9,13 @@ import {
   CalendarDays,
   Check,
   CircleGauge,
+  ClipboardList,
   FileText,
   LogOut,
+  Moon,
   Plus,
   Settings,
   ShieldCheck,
-  Moon,
   Sun,
   Users,
   Wrench,
@@ -23,7 +24,9 @@ import {
 
 type AdminSidebarProps = {
   mobileMenuOpen: boolean;
-  setMobileMenuOpen: React.Dispatch<React.SetStateAction<boolean>>;
+  setMobileMenuOpen: React.Dispatch<
+    React.SetStateAction<boolean>
+  >;
   theme: "dark" | "light";
   toggleTheme: () => void;
 };
@@ -32,7 +35,10 @@ type NavItem = {
   label: string;
   shortLabel?: string;
   href: string;
-  icon: React.ComponentType<{ size?: number; strokeWidth?: number }>;
+  icon: React.ComponentType<{
+    size?: number;
+    strokeWidth?: number;
+  }>;
   badge?: string;
   description?: string;
 };
@@ -57,6 +63,12 @@ const navSections: NavSection[] = [
         href: "/admin-nexa-secret/bookings",
         icon: CalendarDays,
         description: "Reservations & rentals",
+      },
+      {
+        label: "Reservations",
+        href: "/admin-nexa-secret/reservations",
+        icon: ClipboardList,
+        description: "Online & future bookings",
       },
       {
         label: "Create Booking",
@@ -124,18 +136,32 @@ const navSections: NavSection[] = [
   },
 ];
 
-function isActivePath(pathname: string, href: string) {
-  if (href === "/admin-nexa-secret") return pathname === href;
-  return pathname === href || pathname.startsWith(`${href}/`);
+function isActivePath(
+  pathname: string,
+  href: string
+) {
+  if (href === "/admin-nexa-secret") {
+    return pathname === href;
+  }
+
+  return (
+    pathname === href ||
+    pathname.startsWith(`${href}/`)
+  );
 }
 
-function getActiveSectionTitle(pathname: string) {
+function getActiveSectionTitle(
+  pathname: string
+) {
   for (const section of navSections) {
-    const activeItem = section.items.find((item) =>
-      isActivePath(pathname, item.href)
+    const activeItem = section.items.find(
+      (item) =>
+        isActivePath(pathname, item.href)
     );
 
-    if (activeItem) return activeItem.label;
+    if (activeItem) {
+      return activeItem.label;
+    }
   }
 
   return "Dashboard";
@@ -148,7 +174,9 @@ export default function AdminSidebar({
   toggleTheme,
 }: AdminSidebarProps) {
   const pathname = usePathname();
-  const activeTitle = getActiveSectionTitle(pathname);
+
+  const activeTitle =
+    getActiveSectionTitle(pathname);
 
   function closeMobileMenu() {
     setMobileMenuOpen(false);
@@ -156,13 +184,22 @@ export default function AdminSidebar({
 
   async function handleLogout() {
     try {
-      await fetch("/api/admin/logout", { method: "POST" });
+      await fetch("/api/admin/logout", {
+        method: "POST",
+      });
     } catch (error) {
-      console.error("NEXA OS logout error:", error);
+      console.error(
+        "NEXA OS logout error:",
+        error
+      );
     }
 
-    localStorage.removeItem("nexa_admin_logged_in");
-    window.location.href = "/admin-nexa-secret/login";
+    localStorage.removeItem(
+      "nexa_admin_logged_in"
+    );
+
+    window.location.href =
+      "/admin-nexa-secret/login";
   }
 
   const sidebarContent = (
@@ -173,41 +210,59 @@ export default function AdminSidebar({
           onClick={closeMobileMenu}
           className="group block flex-1"
         >
-          <div className={`rounded-2xl border p-4 transition ${
-            theme === "light"
-              ? "border-black/10 bg-white/75 hover:bg-white"
-              : "border-white/10 bg-white/[0.045] hover:bg-white/[0.07]"
-          }`}>
+          <div
+            className={`rounded-2xl border p-4 transition ${
+              theme === "light"
+                ? "border-black/10 bg-white/75 hover:bg-white"
+                : "border-white/10 bg-white/[0.045] hover:bg-white/[0.07]"
+            }`}
+          >
             <div className="flex items-center gap-3">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-white text-lg font-black text-black shadow-[0_16px_38px_rgba(255,255,255,0.11)]">
                 N
               </div>
 
               <div className="min-w-0">
-                <p className={`truncate text-lg font-black tracking-tight ${
-                  theme === "light" ? "text-black" : "text-white"
-                }`}>
+                <p
+                  className={`truncate text-lg font-black tracking-tight ${
+                    theme === "light"
+                      ? "text-black"
+                      : "text-white"
+                  }`}
+                >
                   Nexa OS
                 </p>
-                <p className={`truncate text-[10px] font-black uppercase tracking-[0.2em] ${
-                  theme === "light" ? "text-black/45" : "text-white/38"
-                }`}>
+
+                <p
+                  className={`truncate text-[10px] font-black uppercase tracking-[0.2em] ${
+                    theme === "light"
+                      ? "text-black/45"
+                      : "text-white/38"
+                  }`}
+                >
                   Private dashboard
                 </p>
               </div>
             </div>
 
-            <div className={`mt-4 rounded-xl border px-3 py-2 ${
-              theme === "light"
-                ? "border-black/10 bg-black/[0.035]"
-                : "border-white/10 bg-black/20"
-            }`}>
+            <div
+              className={`mt-4 rounded-xl border px-3 py-2 ${
+                theme === "light"
+                  ? "border-black/10 bg-black/[0.035]"
+                  : "border-white/10 bg-black/20"
+              }`}
+            >
               <p className="truncate text-[11px] font-black uppercase tracking-[0.18em] text-orange-300">
                 {activeTitle}
               </p>
-              <p className={`mt-1 text-xs font-semibold ${
-                theme === "light" ? "text-black/50" : "text-white/42"
-              }`}>
+
+              <p
+                className={`mt-1 text-xs font-semibold ${
+                  theme === "light"
+                    ? "text-black/50"
+                    : "text-white/42"
+                }`}
+              >
                 Rental operations
               </p>
             </div>
@@ -231,15 +286,24 @@ export default function AdminSidebar({
       <nav className="mt-6 flex-1 space-y-5 overflow-y-auto pr-1">
         {navSections.map((section) => (
           <div key={section.title}>
-            <p className={`mb-2 px-2 text-[10px] font-black uppercase tracking-[0.22em] ${
-              theme === "light" ? "text-black/35" : "text-white/25"
-            }`}>
+            <p
+              className={`mb-2 px-2 text-[10px] font-black uppercase tracking-[0.22em] ${
+                theme === "light"
+                  ? "text-black/35"
+                  : "text-white/25"
+              }`}
+            >
               {section.title}
             </p>
 
             <div className="space-y-1">
               {section.items.map((item) => {
-                const isActive = isActivePath(pathname, item.href);
+                const isActive =
+                  isActivePath(
+                    pathname,
+                    item.href
+                  );
+
                 const Icon = item.icon;
 
                 return (
@@ -264,19 +328,25 @@ export default function AdminSidebar({
                           : "bg-white/[0.055] text-white/48 group-hover:bg-white/[0.09] group-hover:text-white"
                       }`}
                     >
-                      <Icon size={17} strokeWidth={2.3} />
+                      <Icon
+                        size={17}
+                        strokeWidth={2.3}
+                      />
                     </span>
 
                     <span className="min-w-0 flex-1">
                       <span className="block truncate">
-                        {item.shortLabel || item.label}
+                        {item.shortLabel ||
+                          item.label}
                       </span>
+
                       {item.description ? (
                         <span
                           className={`mt-0.5 hidden truncate text-[11px] font-semibold lg:block ${
                             isActive
                               ? "text-black/52"
-                              : theme === "light"
+                              : theme ===
+                                "light"
                               ? "text-black/36"
                               : "text-white/28"
                           }`}
@@ -291,7 +361,9 @@ export default function AdminSidebar({
                         className={`shrink-0 rounded-full border px-2 py-0.5 text-[9px] font-black uppercase tracking-[0.12em] ${
                           isActive
                             ? "border-black/10 bg-black/10 text-black/65"
-                            : item.href.includes("maintenance")
+                            : item.href.includes(
+                                "maintenance"
+                              )
                             ? "border-orange-400/20 bg-orange-500/10 text-orange-300"
                             : "border-emerald-400/20 bg-emerald-500/10 text-emerald-300"
                         }`}
@@ -307,9 +379,13 @@ export default function AdminSidebar({
         ))}
       </nav>
 
-      <div className={`mt-5 space-y-3 border-t pt-4 ${
-        theme === "light" ? "border-black/10" : "border-white/10"
-      }`}>
+      <div
+        className={`mt-5 space-y-3 border-t pt-4 ${
+          theme === "light"
+            ? "border-black/10"
+            : "border-white/10"
+        }`}
+      >
         <button
           type="button"
           onClick={toggleTheme}
@@ -319,25 +395,47 @@ export default function AdminSidebar({
               : "border-white/10 bg-white/[0.045] text-white hover:bg-white/[0.08]"
           }`}
         >
-          <span>{theme === "light" ? "Light theme" : "Dark theme"}</span>
+          <span>
+            {theme === "light"
+              ? "Light theme"
+              : "Dark theme"}
+          </span>
+
           <span className="flex h-9 w-9 items-center justify-center rounded-xl bg-black text-white">
-            {theme === "light" ? <Sun size={17} /> : <Moon size={17} />}
+            {theme === "light" ? (
+              <Sun size={17} />
+            ) : (
+              <Moon size={17} />
+            )}
           </span>
         </button>
 
-        <div className={`rounded-2xl border p-4 ${
-          theme === "light"
-            ? "border-black/10 bg-white/75"
-            : "border-white/10 bg-white/[0.045]"
-        }`}>
+        <div
+          className={`rounded-2xl border p-4 ${
+            theme === "light"
+              ? "border-black/10 bg-white/75"
+              : "border-white/10 bg-white/[0.045]"
+          }`}
+        >
           <div className="flex items-center justify-between gap-3">
             <div>
-              <p className={`text-sm font-black ${
-                theme === "light" ? "text-black" : "text-white"
-              }`}>Fleet Health</p>
-              <p className={`mt-1 text-xs font-semibold ${
-                theme === "light" ? "text-black/50" : "text-white/42"
-              }`}>
+              <p
+                className={`text-sm font-black ${
+                  theme === "light"
+                    ? "text-black"
+                    : "text-white"
+                }`}
+              >
+                Fleet Health
+              </p>
+
+              <p
+                className={`mt-1 text-xs font-semibold ${
+                  theme === "light"
+                    ? "text-black/50"
+                    : "text-white/42"
+                }`}
+              >
                 Tracking active
               </p>
             </div>
@@ -348,7 +446,11 @@ export default function AdminSidebar({
           </div>
 
           <div className="mt-4 flex items-center gap-2 rounded-xl border border-emerald-400/15 bg-emerald-500/10 px-3 py-2">
-            <ShieldCheck size={14} className="text-emerald-300" />
+            <ShieldCheck
+              size={14}
+              className="text-emerald-300"
+            />
+
             <span className="text-[10px] font-black uppercase tracking-[0.18em] text-emerald-300">
               Online
             </span>
@@ -369,11 +471,13 @@ export default function AdminSidebar({
 
   return (
     <>
-      <aside className={`fixed left-0 top-0 z-40 hidden h-screen w-[276px] shrink-0 border-r p-5 shadow-[18px_0_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl lg:block ${
-        theme === "light"
-          ? "border-black/[0.08] bg-[#F7F2EA]/92 text-black"
-          : "border-white/[0.08] bg-[#07080A]/94 text-white"
-      }`}>
+      <aside
+        className={`fixed left-0 top-0 z-40 hidden h-screen w-[276px] shrink-0 border-r p-5 shadow-[18px_0_70px_rgba(0,0,0,0.18)] backdrop-blur-2xl lg:block ${
+          theme === "light"
+            ? "border-black/[0.08] bg-[#F7F2EA]/92 text-black"
+            : "border-white/[0.08] bg-[#07080A]/94 text-white"
+        }`}
+      >
         {sidebarContent}
       </aside>
 
@@ -392,7 +496,9 @@ export default function AdminSidebar({
             ? "border-black/[0.08] bg-[#F7F2EA]/98 text-black"
             : "border-white/[0.08] bg-[#07080A]/98 text-white"
         } ${
-          mobileMenuOpen ? "translate-x-0" : "-translate-x-full"
+          mobileMenuOpen
+            ? "translate-x-0"
+            : "-translate-x-full"
         }`}
       >
         {sidebarContent}
