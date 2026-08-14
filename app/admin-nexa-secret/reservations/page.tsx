@@ -2,6 +2,7 @@
 
 import {
   AlertTriangle,
+  BellRing,
   Bike,
   CalendarDays,
   CheckCircle2,
@@ -158,6 +159,14 @@ type ReservationForm = {
 
 type FormMode = "create" | "edit";
 
+type PickupReminderDay = {
+  dateKey: string;
+  label: string;
+  dateLabel: string;
+  tone: "orange" | "amber" | "sky";
+  reservations: Reservation[];
+};
+
 const EMPTY_FORM: ReservationForm = {
   contractNumber: "",
 
@@ -227,6 +236,8 @@ const DOCUMENT_DEFINITIONS = [
 const inputClasses =
   "w-full rounded-xl border border-white/10 bg-white/[0.045] px-4 py-3 text-sm font-bold text-white outline-none placeholder:text-white/25 focus:border-orange-400/45";
 
+const MADRID_TIME_ZONE = "Europe/Madrid";
+
 function cleanText(value: unknown) {
   return String(value ?? "").trim();
 }
@@ -289,6 +300,40 @@ function formatDate(date: string) {
     day: "2-digit",
     month: "short",
     year: "numeric",
+  });
+}
+
+function getMadridDateKey(reference: Date, offsetDays = 0) {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: MADRID_TIME_ZONE,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(reference);
+
+  const values: Record<string, number> = {};
+
+  for (const part of parts) {
+    if (part.type !== "literal") {
+      values[part.type] = Number(part.value);
+    }
+  }
+
+  const targetDate = new Date(
+    Date.UTC(values.year, values.month - 1, values.day + offsetDays, 12),
+  );
+
+  return targetDate.toISOString().slice(0, 10);
+}
+
+function formatReminderDate(dateKey: string) {
+  const date = new Date(`${dateKey}T12:00:00Z`);
+
+  return date.toLocaleDateString("en-GB", {
+    timeZone: MADRID_TIME_ZONE,
+    weekday: "short",
+    day: "2-digit",
+    month: "short",
   });
 }
 
@@ -542,6 +587,8 @@ export default function ReservationsPage() {
 
   const [documentsError, setDocumentsError] = useState("");
 
+  const [madridClock, setMadridClock] = useState<Date | null>(null);
+
   const loadReservations = useCallback(async (showLoader = true) => {
     if (showLoader) {
       setLoading(true);
@@ -582,6 +629,20 @@ export default function ReservationsPage() {
       window.clearInterval(interval);
     };
   }, [loadReservations]);
+
+  useEffect(() => {
+    const updateMadridClock = () => {
+      setMadridClock(new Date());
+    };
+
+    updateMadridClock();
+
+    const interval = window.setInterval(updateMadridClock, 60_000);
+
+    return () => {
+      window.clearInterval(interval);
+    };
+  }, []);
 
   useEffect(() => {
     if (!showForm) {
@@ -688,6 +749,52 @@ export default function ReservationsPage() {
     () => reservations.filter((reservation) => !isReservationPast(reservation)),
     [reservations],
   );
+
+  const pickupReminderDays = useMemo<PickupReminderDay[]>(() => {
+    if (!madridClock) {
+      return [];
+    }
+
+    const definitions: Array<
+      Pick<PickupReminderDay, "label" | "tone"> & { offset: number }
+    > = [
+      {
+        offset: 0,
+        label: "Today",
+        tone: "orange",
+      },
+      {
+        offset: 1,
+        label: "Tomorrow",
+        tone: "amber",
+      },
+      {
+        offset: 2,
+        label: "Day after tomorrow",
+        tone: "sky",
+      },
+    ];
+
+    return definitions.map((definition) => {
+      const dateKey = getMadridDateKey(madridClock, definition.offset);
+
+      const dayReservations = activeReservations
+        .filter((reservation) => reservation.pickupDate === dateKey)
+        .sort((first, second) =>
+          cleanText(first.pickupTime).localeCompare(
+            cleanText(second.pickupTime),
+          ),
+        );
+
+      return {
+        dateKey,
+        label: definition.label,
+        dateLabel: formatReminderDate(dateKey),
+        tone: definition.tone,
+        reservations: dayReservations,
+      };
+    });
+  }, [activeReservations, madridClock]);
 
   const filteredReservations = useMemo(() => {
     const query = search.trim().toLowerCase();
@@ -1120,6 +1227,10 @@ export default function ReservationsPage() {
           </button>
         </div>
 
+        {pickupReminderDays.length > 0 ? (
+          <PickupReminderBoard days={pickupReminderDays} />
+        ) : null}
+
         <section className="overflow-hidden rounded-2xl border border-white/10 bg-[#0B0D12]/90 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
           <div className="flex flex-col gap-3 border-b border-white/10 p-4 lg:flex-row lg:items-center">
             <div className="relative flex-1">
@@ -1264,6 +1375,189 @@ export default function ReservationsPage() {
         />
       ) : null}
     </AdminShell>
+  );
+}
+
+function PickupReminderBoard({ days }: { days: PickupReminderDay[] }) {
+  const totalPickups = days.reduce(
+    (total, day) => total + day.reservations.length,
+    0,
+  );
+
+  const totalScooters = days.reduce(
+    (total, day) =>
+      total +
+      day.reservations.reduce(
+        (dayTotal, reservation) =>
+          dayTotal + Math.max(1, Number(reservation.quantity || 1)),
+        0,
+      ),
+    0,
+  );
+
+  return (
+    <section className="overflow-hidden rounded-2xl border border-orange-400/20 bg-[#0B0D12]/95 shadow-[0_24px_80px_rgba(0,0,0,0.32)]">
+      <div className="flex flex-col gap-3 border-b border-white/10 bg-gradient-to-r from-orange-500/10 via-transparent to-sky-500/10 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
+        <div className="flex items-center gap-3">
+          <span className="relative flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-orange-400/25 bg-orange-500/10 text-orange-300">
+            <BellRing size={20} />
+
+            <span className="absolute -right-1 -top-1 h-3 w-3 rounded-full border-2 border-[#0B0D12] bg-emerald-400">
+              <span className="absolute inset-0 animate-ping rounded-full bg-emerald-400 opacity-60" />
+            </span>
+          </span>
+
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h2 className="text-lg font-black text-white">
+                Live pickup reminders
+              </h2>
+
+              <span className="rounded-full border border-emerald-400/20 bg-emerald-500/10 px-2.5 py-1 text-[9px] font-black uppercase tracking-[0.14em] text-emerald-300">
+                Live
+              </span>
+            </div>
+
+            <p className="mt-1 text-xs font-bold text-white/35">
+              Today and the next two days · Europe/Madrid
+            </p>
+          </div>
+        </div>
+
+        <div className="flex flex-wrap gap-2">
+          <span className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-black text-white/60">
+            {totalPickups} pickup{totalPickups === 1 ? "" : "s"}
+          </span>
+
+          <span className="rounded-xl border border-white/10 bg-white/[0.045] px-3 py-2 text-xs font-black text-white/60">
+            {totalScooters} scooter{totalScooters === 1 ? "" : "s"}
+          </span>
+        </div>
+      </div>
+
+      <div className="grid gap-3 p-4 lg:grid-cols-3">
+        {days.map((day) => {
+          const toneClasses =
+            day.tone === "orange"
+              ? "border-orange-400/25 bg-orange-500/[0.07]"
+              : day.tone === "amber"
+                ? "border-amber-400/20 bg-amber-500/[0.06]"
+                : "border-sky-400/20 bg-sky-500/[0.06]";
+
+          const labelClasses =
+            day.tone === "orange"
+              ? "text-orange-300"
+              : day.tone === "amber"
+                ? "text-amber-300"
+                : "text-sky-300";
+
+          return (
+            <article
+              key={day.dateKey}
+              className={`overflow-hidden rounded-2xl border ${toneClasses}`}
+            >
+              <div className="flex items-center justify-between gap-3 border-b border-white/10 px-4 py-3.5">
+                <div>
+                  <p
+                    className={`text-xs font-black uppercase tracking-[0.14em] ${labelClasses}`}
+                  >
+                    {day.label}
+                  </p>
+
+                  <p className="mt-1 text-xs font-bold text-white/35">
+                    {day.dateLabel}
+                  </p>
+                </div>
+
+                <span className="flex h-9 min-w-9 items-center justify-center rounded-xl border border-white/10 bg-black/20 px-2 text-sm font-black text-white">
+                  {day.reservations.length}
+                </span>
+              </div>
+
+              <div className="max-h-[360px] space-y-2 overflow-y-auto p-3">
+                {day.reservations.length === 0 ? (
+                  <div className="flex min-h-[132px] flex-col items-center justify-center rounded-xl border border-dashed border-white/10 bg-black/10 px-4 text-center">
+                    <CheckCircle2 size={22} className="text-emerald-300/70" />
+
+                    <p className="mt-2 text-xs font-black text-white/45">
+                      No pickups scheduled
+                    </p>
+                  </div>
+                ) : (
+                  day.reservations.map((reservation) => {
+                    const assignedCodes = getAssignedCodes(reservation);
+
+                    return (
+                      <div
+                        key={reservation.id}
+                        className="rounded-xl border border-white/10 bg-black/20 p-3"
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <Clock3
+                                size={14}
+                                className="shrink-0 text-orange-300"
+                              />
+
+                              <p className="text-sm font-black text-white">
+                                {reservation.pickupTime || "--:--"}
+                              </p>
+                            </div>
+
+                            <p className="mt-2 truncate text-sm font-black text-white/85">
+                              {reservation.customerName}
+                            </p>
+                          </div>
+
+                          <span
+                            className={`shrink-0 rounded-full border px-2.5 py-1 text-[9px] font-black uppercase ${paymentStatusClasses(
+                              reservation.paymentStatus,
+                            )}`}
+                          >
+                            {reservation.paymentStatus}
+                          </span>
+                        </div>
+
+                        <div className="mt-3 grid gap-2 border-t border-white/[0.07] pt-3 text-[11px] font-bold text-white/45">
+                          <div className="flex items-center gap-2">
+                            <Bike size={13} className="shrink-0" />
+
+                            <span className="truncate">
+                              {assignedCodes.length > 0
+                                ? assignedCodes.join(", ")
+                                : reservation.vehicleName}
+                              {reservation.quantity > 1
+                                ? ` · ${reservation.quantity} scooters`
+                                : ""}
+                            </span>
+                          </div>
+
+                          <div className="flex items-center gap-2">
+                            <Phone size={13} className="shrink-0" />
+
+                            {reservation.phone ? (
+                              <a
+                                href={`tel:${reservation.phone}`}
+                                className="truncate transition hover:text-white"
+                              >
+                                {reservation.phone}
+                              </a>
+                            ) : (
+                              <span>No phone</span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </article>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
@@ -2124,4 +2418,4 @@ function MessageBox({
       <p className="text-sm font-bold">{message}</p>
     </div>
   );
-}
+  }
