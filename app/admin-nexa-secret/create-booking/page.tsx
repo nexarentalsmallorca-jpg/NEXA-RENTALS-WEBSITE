@@ -273,7 +273,7 @@ function bookingDateRange(booking: ManualBooking) {
   const start = buildDateTime(data.fechaEntrega || "", data.horaEntrega || "");
   const end = buildDateTime(
     data.fechaDevolucion || "",
-    data.horaDevolucion || ""
+    data.horaDevolucion || "",
   );
 
   if (!start || !end) return null;
@@ -283,12 +283,7 @@ function bookingDateRange(booking: ManualBooking) {
   return { start, end, blockedEnd };
 }
 
-function isOverlapping(
-  startA: Date,
-  endA: Date,
-  startB: Date,
-  endB: Date
-) {
+function isOverlapping(startA: Date, endA: Date, startB: Date, endB: Date) {
   return startA < endB && startB < endA;
 }
 
@@ -348,7 +343,7 @@ function getReturnLabel(end: Date) {
 
   if (endDay.getTime() === today.getTime()) {
     return `Vuelve hoy a las ${formatTimeEs(end)}`;
-      }
+  }
 
   if (endDay.getTime() === tomorrow.getTime()) {
     return `Vuelve mañana a las ${formatTimeEs(end)}`;
@@ -363,7 +358,7 @@ function getReturnLabel(end: Date) {
 
 function getBlockedUntilLabel(blockedEnd: Date) {
   return `Bloqueado hasta el ${formatDateEs(blockedEnd)} a las ${formatTimeEs(
-    blockedEnd
+    blockedEnd,
   )}`;
 }
 
@@ -448,7 +443,7 @@ function extractContractNumberValue(value?: string | number | null) {
 function getBookingContractNumberValue(booking: ManualBooking) {
   return Math.max(
     extractContractNumberValue(booking.id),
-    extractContractNumberValue(booking.contractData?.numeroContrato)
+    extractContractNumberValue(booking.contractData?.numeroContrato),
   );
 }
 
@@ -477,7 +472,7 @@ function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
           row.contract_number ||
           row.contractData.numeroContrato ||
           row.id ||
-          Date.now()
+          Date.now(),
       ),
       createdAt: row.createdAt || row.created_at || new Date().toISOString(),
       status: row.status || "reserved",
@@ -518,8 +513,8 @@ function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
     typeof row.amount === "number"
       ? row.amount / 100
       : typeof row.amount_eur === "number"
-      ? row.amount_eur
-      : 0;
+        ? row.amount_eur
+        : 0;
 
   const vehicleCode =
     row.vehicle_code || extractVehicleCodeFromText(row.vehicle_name || "");
@@ -824,8 +819,7 @@ function PaymentMethodSelector({
 
 export default function CreateBookingPage() {
   const [form, setForm] = useState<BookingForm>(initialForm);
-  const [bookingAction, setBookingAction] =
-    useState<BookingAction>("rent_now");
+  const [bookingAction, setBookingAction] = useState<BookingAction>("rent_now");
   const [manualBookings, setManualBookings] = useState<ManualBooking[]>([]);
   const [onlineBookings, setOnlineBookings] = useState<ManualBooking[]>([]);
   const [error, setError] = useState("");
@@ -842,7 +836,7 @@ export default function CreateBookingPage() {
       selectedRouteIds
         .map((routeId) => getNexaSpecialRouteById(routeId))
         .filter(Boolean) as NexaSpecialRoute[],
-    [selectedRouteIds]
+    [selectedRouteIds],
   );
 
   const allSpecialRoutesSelected =
@@ -941,7 +935,7 @@ export default function CreateBookingPage() {
 
     nexaFleet.forEach((vehicle) => {
       const activeItem = activeBookings.find(
-        (item) => getBookingVehicleCode(item.booking) === vehicle.codigo
+        (item) => getBookingVehicleCode(item.booking) === vehicle.codigo,
       );
 
       let selectedConflict:
@@ -952,7 +946,10 @@ export default function CreateBookingPage() {
           }
         | undefined;
 
-      if (selectedDateRange && selectedDateRange.end > selectedDateRange.start) {
+      if (
+        selectedDateRange &&
+        selectedDateRange.end > selectedDateRange.start
+      ) {
         const conflict = allBookings
           .map((booking) => {
             const range = bookingDateRange(booking);
@@ -978,7 +975,7 @@ export default function CreateBookingPage() {
               selectedDateRange.start,
               selectedDateRange.blockedEnd,
               item.start,
-              item.blockedEnd
+              item.blockedEnd,
             );
           });
 
@@ -1030,7 +1027,10 @@ export default function CreateBookingPage() {
 
   function createContractNumber() {
     const currentBookings = getStoredBookings();
-    return getNextContractNumberFromBookings([...allBookings, ...currentBookings]);
+    return getNextContractNumberFromBookings([
+      ...allBookings,
+      ...currentBookings,
+    ]);
   }
 
   function saveBookingToLocalStorage(bookingToSave: ManualBooking) {
@@ -1046,7 +1046,7 @@ export default function CreateBookingPage() {
     } catch (error: unknown) {
       const message =
         error instanceof Error
-                  ? error.message
+          ? error.message
           : "No se pudo guardar la reserva en el navegador.";
       setContractStatus(message);
       throw error;
@@ -1059,7 +1059,7 @@ export default function CreateBookingPage() {
     const replacedBookings = latestBookings.map((booking) =>
       booking.id === updatedBooking.id
         ? stripBookingForLocalStorage(updatedBooking)
-        : booking
+        : booking,
     );
 
     try {
@@ -1079,7 +1079,7 @@ export default function CreateBookingPage() {
     setSelectedRouteIds((current) =>
       current.includes(routeId)
         ? current.filter((id) => id !== routeId)
-        : [...current, routeId]
+        : [...current, routeId],
     );
   }
 
@@ -1087,7 +1087,7 @@ export default function CreateBookingPage() {
     setSelectedRouteIds((current) =>
       current.length === NEXA_SPECIAL_ROUTES.length
         ? []
-        : NEXA_SPECIAL_ROUTES.map((route) => route.id)
+        : NEXA_SPECIAL_ROUTES.map((route) => route.id),
     );
   }
 
@@ -1141,7 +1141,7 @@ export default function CreateBookingPage() {
               }`
             : `Ruta no enviada por email: ${
                 data?.error || "revisa /api/admin/send-route-email"
-              }`
+              }`,
         );
         return;
       }
@@ -1149,14 +1149,14 @@ export default function CreateBookingPage() {
       setContractStatus((previous) =>
         previous
           ? `${previous} Ruta enviada por email a ${customerEmail}.`
-          : `Ruta enviada por email a ${customerEmail}.`
+          : `Ruta enviada por email a ${customerEmail}.`,
       );
     } catch (error) {
       console.warn("NEXA route email failed:", error);
       setContractStatus((previous) =>
         previous
           ? `${previous} Ruta no enviada por email: error de conexión.`
-          : "Ruta no enviada por email: error de conexión."
+          : "Ruta no enviada por email: error de conexión.",
       );
     }
   }
@@ -1186,13 +1186,12 @@ export default function CreateBookingPage() {
         throw new Error(
           response.ok
             ? "Invalid server response while generating PDF."
-            : `PDF API error (${response.status}): ${rawText.slice(0, 200)}`
+            : `PDF API error (${response.status}): ${rawText.slice(0, 200)}`,
         );
       }
 
       const storage = data.storage as
-        | { signedUrl?: string; path?: string; ok?: boolean }
-        | undefined;
+        { signedUrl?: string; path?: string; ok?: boolean } | undefined;
       const drive = data.drive as { uploaded?: boolean } | undefined;
 
       const hasPdfArtifact =
@@ -1211,7 +1210,7 @@ export default function CreateBookingPage() {
           ]
             .filter(Boolean)
             .join(" — ") ||
-            "La reserva se ha guardado, pero el PDF no se pudo generar."
+            "La reserva se ha guardado, pero el PDF no se pudo generar.",
         );
         return;
       }
@@ -1236,7 +1235,7 @@ export default function CreateBookingPage() {
             : "Error al guardar en el navegador.";
         if (storage?.ok || drive?.uploaded) {
           setContractStatus(
-            `PDF en Supabase/Drive OK, pero ${msg} Abre Contratos para ver el PDF.`
+            `PDF en Supabase/Drive OK, pero ${msg} Abre Contratos para ver el PDF.`,
           );
         } else {
           setContractStatus(msg);
@@ -1250,36 +1249,37 @@ export default function CreateBookingPage() {
 
       if (drive?.uploaded && storage?.ok) {
         setContractStatus(
-          `PDF guardado en Supabase y Google Drive: ${data.fileName}`
+          `PDF guardado en Supabase y Google Drive: ${data.fileName}`,
         );
       } else if (drive?.uploaded) {
         setContractStatus(`PDF subido a Google Drive: ${data.fileName}`);
       } else if (storage?.ok && (data.drive as { failed?: boolean })?.failed) {
-        const needsNewOAuthToken =
-          /invalid_grant|expired|revoked/i.test(driveReason);
+        const needsNewOAuthToken = /invalid_grant|expired|revoked/i.test(
+          driveReason,
+        );
         setContractStatus(
           needsNewOAuthToken
             ? "PDF guardado en Supabase. Google Drive: token caducado/revocado. Crea un nuevo GOOGLE_DRIVE_REFRESH_TOKEN (OAuth Playground) → pégalo en Vercel → Redeploy. Luego abre /api/admin/contracts/diagnose"
             : `PDF guardado en Supabase. Google Drive NO subió: ${
                 driveReason ||
                 "sin permiso — revisa Vercel env y acceso Editor a la carpeta NEXA Rentals Contract"
-              }`
+              }`,
         );
       } else if (storage?.ok) {
         setContractStatus(
           (data.drive as { skipped?: boolean })?.skipped
             ? `PDF guardado en Supabase. Google Drive pendiente (revisa ENV vars en Vercel): ${data.fileName}`
-            : `PDF guardado en Supabase: ${data.fileName}`
+            : `PDF guardado en Supabase: ${data.fileName}`,
         );
       } else if ((data.drive as { skipped?: boolean })?.skipped) {
         setContractStatus(
-          `PDF generado. Google Drive pendiente de configurar (GOOGLE_DRIVE_* en Vercel).`
+          `PDF generado. Google Drive pendiente de configurar (GOOGLE_DRIVE_* en Vercel).`,
         );
       } else if ((data.drive as { failed?: boolean })?.failed) {
         setContractStatus(
           `PDF generado. Google Drive falló: ${
             driveReason || "error desconocido"
-          }`
+          }`,
         );
       } else {
         setContractStatus(`PDF generado correctamente: ${data.fileName}`);
@@ -1297,7 +1297,7 @@ export default function CreateBookingPage() {
           ? err.message
           : "Error desconocido al generar el PDF.";
       setContractStatus(
-        `La reserva se ha guardado, pero el PDF falló: ${message}`
+        `La reserva se ha guardado, pero el PDF falló: ${message}`,
       );
     } finally {
       setIsGeneratingContract(false);
@@ -1314,7 +1314,7 @@ export default function CreateBookingPage() {
 
     if (missingFields.length > 0) {
       setError(
-        "Faltan campos obligatorios. Revisa el formulario antes de generar el contrato."
+        "Faltan campos obligatorios. Revisa el formulario antes de generar el contrato.",
       );
       return;
     }
@@ -1331,19 +1331,6 @@ export default function CreateBookingPage() {
 
     if (selectedDateRange.end <= selectedDateRange.start) {
       setError("La fecha/hora de devolución debe ser posterior a la entrega.");
-      return;
-    }
-
-    if (selectedVehicleAvailability?.isBlockedForSelectedDates) {
-      const returnText = selectedVehicleAvailability.selectedConflictBlockedEnd
-        ? getBlockedUntilLabel(
-            selectedVehicleAvailability.selectedConflictBlockedEnd
-          )
-        : "ya está bloqueado para esas fechas";
-
-      setError(
-        `No puedes crear esta reserva. El vehículo ${selectedVehicle.codigo} ${returnText}.`
-      );
       return;
     }
 
@@ -1377,8 +1364,7 @@ export default function CreateBookingPage() {
         specialRouteNames: selectedRoutes.map((route) => route.name),
         fianza: "150 €",
         franquicia: "800 €",
-        extras:
-          "Casco 1, Casco 2, Soporte móvil, Baúl, Antirrobo con alarma",
+        extras: "Casco 1, Casco 2, Soporte móvil, Baúl, Antirrobo con alarma",
       },
     };
 
@@ -1389,25 +1375,25 @@ export default function CreateBookingPage() {
     setSuccess(
       sharedSave.ok
         ? `Reserva creada correctamente con contrato ${numeroContratoAutomatico} para ${form.nombreCliente}. Estado: ${bookingActionLabel(
-            bookingAction
+            bookingAction,
           )}. Pago guardado como ${paymentMethodLabel(
-            paymentMethod
+            paymentMethod,
           )}. Vehículo ${
             selectedVehicle.codigo
           } bloqueado en el sistema compartido con ${BUFFER_MINUTES_AFTER_BOOKING} minutos extra de margen.`
         : `Reserva creada correctamente con contrato ${numeroContratoAutomatico} para ${form.nombreCliente}. Estado: ${bookingActionLabel(
-            bookingAction
+            bookingAction,
           )}. Pago guardado como ${paymentMethodLabel(
-            paymentMethod
+            paymentMethod,
           )}. Vehículo ${
             selectedVehicle.codigo
-          } bloqueado en localStorage con ${BUFFER_MINUTES_AFTER_BOOKING} minutos extra de margen. Cuando /api/admin/bookings guarde en Supabase, también bloqueará la web.`
+          } bloqueado en localStorage con ${BUFFER_MINUTES_AFTER_BOOKING} minutos extra de margen. Cuando /api/admin/bookings guarde en Supabase, también bloqueará la web.`,
     );
 
     console.log("NEXA booking created:", newBooking);
 
     await generateContractPdf(newBooking);
-        if (selectedRoutes.length > 0 && form.email.trim()) {
+    if (selectedRoutes.length > 0 && form.email.trim()) {
       await sendSelectedRouteEmail({
         customerName: form.nombreCliente,
         customerEmail: form.email.trim(),
@@ -1451,8 +1437,8 @@ export default function CreateBookingPage() {
           <p className="mt-3 max-w-3xl text-sm font-medium leading-6 text-white/55">
             Rellena los datos del cliente, conductor, vehículo y alquiler. El
             sistema guardará la reserva, bloqueará el vehículo, generará el PDF
-            del contrato y lo subirá a Google Drive cuando estén configuradas las
-            ENV vars.
+            del contrato y lo subirá a Google Drive cuando estén configuradas
+            las ENV vars.
           </p>
 
           <div className="mt-4 flex flex-wrap gap-2 text-xs font-black">
@@ -1510,21 +1496,17 @@ export default function CreateBookingPage() {
                 <option value="">Seleccionar vehículo *</option>
                 {nexaFleet.map((vehicle) => {
                   const availability = vehicleAvailabilityMap.get(
-                    vehicle.codigo
+                    vehicle.codigo,
                   );
 
                   const statusText = availability?.isBlockedForSelectedDates
-                    ? "NO DISPONIBLE EN ESTAS FECHAS"
+                    ? "RESERVADO · ADMIN PUEDE CONTINUAR"
                     : availability?.isActiveNow && availability.activeEnd
-                    ? getReturnLabel(availability.activeEnd)
-                    : "Disponible";
+                      ? getReturnLabel(availability.activeEnd)
+                      : "Disponible";
 
                   return (
-                    <option
-                      key={vehicle.codigo}
-                      value={vehicle.codigo}
-                      disabled={availability?.isBlockedForSelectedDates}
-                    >
+                    <option key={vehicle.codigo} value={vehicle.codigo}>
                       {vehicle.codigo} · {vehicle.matricula} · {vehicle.marca}{" "}
                       {vehicle.modelo} · {statusText}
                     </option>
@@ -1547,16 +1529,19 @@ export default function CreateBookingPage() {
 
               {selectedVehicleAvailability?.isBlockedForSelectedDates &&
               selectedVehicleAvailability.selectedConflictBlockedEnd ? (
-                <div className="rounded-2xl border border-red-400/20 bg-red-500/10 px-4 py-4 md:col-span-2">
-                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-300">
-                    No disponible para estas fechas
+                <div className="rounded-2xl border border-amber-400/25 bg-amber-500/10 px-4 py-4 md:col-span-2">
+                  <p className="text-[11px] font-black uppercase tracking-[0.2em] text-amber-300">
+                    Aviso de reserva existente · anulación administrativa
+                    permitida
                   </p>
                   <p className="mt-1 text-sm font-bold text-white/75">
                     Este vehículo ya tiene una reserva cruzada.{" "}
                     {getBlockedUntilLabel(
-                      selectedVehicleAvailability.selectedConflictBlockedEnd
+                      selectedVehicleAvailability.selectedConflictBlockedEnd,
                     )}
-                    .
+                    . Como administrador puedes continuar, crear el contrato y
+                    asignar este vehículo. La reserva manual seguirá guardándose
+                    para bloquear la disponibilidad de la web.
                   </p>
                 </div>
               ) : null}
@@ -1690,7 +1675,7 @@ export default function CreateBookingPage() {
                 placeholder="Dirección *"
               />
             </div>
-                        <div>
+            <div>
               <h3 className="text-2xl font-black text-white">
                 Datos del Conductor/a
               </h3>
@@ -1968,8 +1953,8 @@ export default function CreateBookingPage() {
                   <span className="font-black text-white">Fianza:</span> 150 €
                 </p>
                 <p>
-                  <span className="font-black text-white">Franquicia:</span>{" "}
-                  800 €
+                  <span className="font-black text-white">Franquicia:</span> 800
+                  €
                 </p>
               </div>
             </div>
@@ -2000,8 +1985,8 @@ export default function CreateBookingPage() {
               {isGeneratingContract
                 ? "Generando contrato PDF..."
                 : bookingAction === "rent_now"
-                ? "Rent Now + generar contrato"
-                : "Reserve Now + generar contrato"}
+                  ? "Rent Now + generar contrato"
+                  : "Reserve Now + generar contrato"}
             </button>
           </section>
         </form>

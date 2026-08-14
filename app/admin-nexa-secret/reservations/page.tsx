@@ -21,24 +21,14 @@ import {
   X,
 } from "lucide-react";
 import type { ReactNode } from "react";
-import {
-  useCallback,
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 
 import AdminShell from "../../components/dashboard/AdminShell";
 
 type FleetGroup =
-  | "piaggio_liberty_125"
-  | "kymco_sky_town_125"
-  | "sym_symphony_125";
+  "piaggio_liberty_125" | "kymco_sky_town_125" | "sym_symphony_125";
 
-type PaymentStatus =
-  | "paid"
-  | "partial"
-  | "unpaid";
+type PaymentStatus = "paid" | "partial" | "unpaid";
 
 type Reservation = {
   id: string;
@@ -166,9 +156,7 @@ type ReservationForm = {
   status: string;
 };
 
-type FormMode =
-  | "create"
-  | "edit";
+type FormMode = "create" | "edit";
 
 const EMPTY_FORM: ReservationForm = {
   contractNumber: "",
@@ -244,9 +232,7 @@ function cleanText(value: unknown) {
 }
 
 function normalizeVehicleCode(value: unknown) {
-  return cleanText(value)
-    .toUpperCase()
-    .replace(/\s+/g, "");
+  return cleanText(value).toUpperCase().replace(/\s+/g, "");
 }
 
 function euroText(cents: number) {
@@ -259,9 +245,7 @@ function euroText(cents: number) {
 function centsToInput(cents: number) {
   const amount = Number(cents || 0) / 100;
 
-  return amount > 0
-    ? amount.toFixed(2)
-    : "";
+  return amount > 0 ? amount.toFixed(2) : "";
 }
 
 function euroInputToCents(value: string) {
@@ -277,27 +261,17 @@ function euroInputToCents(value: string) {
     return 0;
   }
 
-  return Math.max(
-    0,
-    Math.round(amount * 100)
-  );
+  return Math.max(0, Math.round(amount * 100));
 }
 
-function buildDateTime(
-  date: string,
-  time: string
-) {
+function buildDateTime(date: string, time: string) {
   if (!date || !time) {
     return null;
   }
 
-  const value = new Date(
-    `${date}T${time}:00`
-  );
+  const value = new Date(`${date}T${time}:00`);
 
-  return Number.isNaN(value.getTime())
-    ? null
-    : value;
+  return Number.isNaN(value.getTime()) ? null : value;
 }
 
 function formatDate(date: string) {
@@ -305,47 +279,34 @@ function formatDate(date: string) {
     return "No date";
   }
 
-  const value = new Date(
-    `${date}T00:00:00`
-  );
+  const value = new Date(`${date}T00:00:00`);
 
   if (Number.isNaN(value.getTime())) {
     return date;
   }
 
-  return value.toLocaleDateString(
-    "en-GB",
-    {
-      day: "2-digit",
-      month: "short",
-      year: "numeric",
-    }
-  );
+  return value.toLocaleDateString("en-GB", {
+    day: "2-digit",
+    month: "short",
+    year: "numeric",
+  });
 }
 
 function createContractNumber() {
-  const timestamp =
-    Date.now()
-      .toString()
-      .slice(-8);
+  const timestamp = Date.now().toString().slice(-8);
 
   return `NX-R-${timestamp}`;
 }
 
 function getPaymentStatus(
   totalAmount: string,
-  amountPaid: string
+  amountPaid: string,
 ): PaymentStatus {
-  const total =
-    euroInputToCents(totalAmount);
+  const total = euroInputToCents(totalAmount);
 
-  const paid =
-    euroInputToCents(amountPaid);
+  const paid = euroInputToCents(amountPaid);
 
-  if (
-    total > 0 &&
-    paid >= total
-  ) {
+  if (total > 0 && paid >= total) {
     return "paid";
   }
 
@@ -356,9 +317,7 @@ function getPaymentStatus(
   return "unpaid";
 }
 
-function paymentStatusClasses(
-  status: string
-) {
+function paymentStatusClasses(status: string) {
   if (status === "paid") {
     return "border-emerald-400/25 bg-emerald-500/10 text-emerald-300";
   }
@@ -371,21 +330,16 @@ function paymentStatusClasses(
 }
 
 function sourceClasses(source: string) {
-  const normalized =
-    source.toLowerCase();
+  const normalized = source.toLowerCase();
 
-  if (
-    normalized.includes("manual")
-  ) {
+  if (normalized.includes("manual")) {
     return "border-violet-400/25 bg-violet-500/10 text-violet-300";
   }
 
   return "border-sky-400/25 bg-sky-500/10 text-sky-300";
 }
 
-function isWebsiteReservation(
-  reservation: Reservation
-) {
+function isWebsiteReservation(reservation: Reservation) {
   const source = [
     reservation.source,
     reservation.reservationOrigin,
@@ -402,445 +356,230 @@ function isWebsiteReservation(
   );
 }
 
-function getAssignedCodes(
-  reservation: Reservation
-) {
-  const rawCodes =
-    Array.isArray(
-      reservation.assignedVehicleCodes
-    )
-      ? reservation.assignedVehicleCodes
-      : reservation.assignedVehicleCode
-      ? [
-          reservation.assignedVehicleCode,
-        ]
+function getAssignedCodes(reservation: Reservation) {
+  const rawCodes = Array.isArray(reservation.assignedVehicleCodes)
+    ? reservation.assignedVehicleCodes
+    : reservation.assignedVehicleCode
+      ? [reservation.assignedVehicleCode]
       : [];
 
   return Array.from(
-    new Set(
-      rawCodes
-        .map(normalizeVehicleCode)
-        .filter(Boolean)
-    )
+    new Set(rawCodes.map(normalizeVehicleCode).filter(Boolean)),
   );
 }
 
-function reservationToForm(
-  reservation: Reservation
-): ReservationForm {
-  const knownGroup =
-    FLEET_OPTIONS.some(
-      (option) =>
-        option.value ===
-        reservation.fleetGroup
-    )
-      ? (reservation.fleetGroup as FleetGroup)
-      : "piaggio_liberty_125";
+function reservationToForm(reservation: Reservation): ReservationForm {
+  const knownGroup = FLEET_OPTIONS.some(
+    (option) => option.value === reservation.fleetGroup,
+  )
+    ? (reservation.fleetGroup as FleetGroup)
+    : "piaggio_liberty_125";
 
   return {
-    contractNumber:
-      reservation.contractNumber,
+    contractNumber: reservation.contractNumber,
 
-    customerName:
-      reservation.customerName,
+    customerName: reservation.customerName,
 
-    customerEmail:
-      reservation.customerEmail,
+    customerEmail: reservation.customerEmail,
 
-    phone:
-      reservation.phone,
+    phone: reservation.phone,
 
-    pickupDate:
-      reservation.pickupDate,
+    pickupDate: reservation.pickupDate,
 
-    pickupTime:
-      reservation.pickupTime ||
-      "10:00",
+    pickupTime: reservation.pickupTime || "10:00",
 
-    dropoffDate:
-      reservation.dropoffDate,
+    dropoffDate: reservation.dropoffDate,
 
-    dropoffTime:
-      reservation.dropoffTime ||
-      "10:00",
+    dropoffTime: reservation.dropoffTime || "10:00",
 
-    fleetGroup:
-      knownGroup,
+    fleetGroup: knownGroup,
 
-    quantity:
-      Math.max(
-        1,
-        Number(
-          reservation.quantity || 1
-        )
-      ),
+    quantity: Math.max(1, Number(reservation.quantity || 1)),
 
-    assignedVehicleCodes:
-      getAssignedCodes(reservation),
+    assignedVehicleCodes: getAssignedCodes(reservation),
 
-    totalAmount:
-      centsToInput(
-        reservation.totalAmount
-      ),
+    totalAmount: centsToInput(reservation.totalAmount),
 
-    amountPaid:
-      centsToInput(
-        reservation.amountPaid
-      ),
+    amountPaid: centsToInput(reservation.amountPaid),
 
-    paymentMethod:
-      reservation.paymentMethod ||
-      "unpaid",
+    paymentMethod: reservation.paymentMethod || "unpaid",
 
-    notes:
-      reservation.notes || "",
+    notes: reservation.notes || "",
 
-    status:
-      reservation.status ||
-      "confirmed",
+    status: reservation.status || "confirmed",
   };
 }
 
-function isReservationPast(
-  reservation: Reservation
-) {
-  const dropoff =
-    buildDateTime(
-      reservation.dropoffDate,
-      reservation.dropoffTime ||
-        "23:59"
-    );
+function isReservationPast(reservation: Reservation) {
+  const dropoff = buildDateTime(
+    reservation.dropoffDate,
+    reservation.dropoffTime || "23:59",
+  );
 
   if (!dropoff) {
     return false;
   }
 
-  return dropoff.getTime() <
-    Date.now();
+  return dropoff.getTime() < Date.now();
 }
 
-function getDocumentValue(
-  data: any,
-  key: string
-) {
+function getDocumentValue(data: any, key: string) {
   return (
-    data?.documents?.[key] ??
-    data?.documentUrls?.[key] ??
-    data?.[key] ??
-    null
+    data?.documents?.[key] ?? data?.documentUrls?.[key] ?? data?.[key] ?? null
   );
 }
 
-function normalizeDocuments(
-  data: any
-): ReservationDocument[] {
-  if (
-    Array.isArray(data?.documents)
-  ) {
+function normalizeDocuments(data: any): ReservationDocument[] {
+  if (Array.isArray(data?.documents)) {
     return data.documents
-      .map(
-        (
-          document: any,
-          index: number
-        ) => ({
-          key:
-            cleanText(
-              document.key
-            ) || `document-${index}`,
+      .map((document: any, index: number) => ({
+        key: cleanText(document.key) || `document-${index}`,
 
-          label:
-            cleanText(
-              document.label
-            ) || "Document",
+        label: cleanText(document.label) || "Document",
 
-          name:
-            cleanText(
-              document.name ||
-                document.fileName
-            ) || "Document",
+        name: cleanText(document.name || document.fileName) || "Document",
 
-          url:
-            cleanText(
-              document.url ||
-                document.signedUrl ||
-                document.previewUrl ||
-                document.downloadUrl
-            ),
+        url: cleanText(
+          document.url ||
+            document.signedUrl ||
+            document.previewUrl ||
+            document.downloadUrl,
+        ),
 
-          downloadUrl:
-            cleanText(
-              document.downloadUrl ||
-                document.url ||
-                document.signedUrl
-            ),
-        })
-      )
-      .filter(
-        (
-          document: ReservationDocument
-        ) => Boolean(document.url)
-      );
+        downloadUrl: cleanText(
+          document.downloadUrl || document.url || document.signedUrl,
+        ),
+      }))
+      .filter((document: ReservationDocument) => Boolean(document.url));
   }
 
-  return DOCUMENT_DEFINITIONS
-    .map((definition) => {
-      const value =
-        getDocumentValue(
-          data,
-          definition.key
-        );
+  return DOCUMENT_DEFINITIONS.map((definition) => {
+    const value = getDocumentValue(data, definition.key);
 
-      if (!value) {
-        return null;
-      }
+    if (!value) {
+      return null;
+    }
 
-      if (
-        typeof value === "string"
-      ) {
-        return {
-          key:
-            definition.key,
-
-          label:
-            definition.label,
-
-          name:
-            definition.label,
-
-          url:
-            value,
-
-          downloadUrl:
-            value,
-        };
-      }
-
-      const url =
-        cleanText(
-          value.signedUrl ||
-            value.url ||
-            value.previewUrl ||
-            value.downloadUrl
-        );
-
-      if (!url) {
-        return null;
-      }
-
+    if (typeof value === "string") {
       return {
-        key:
-          definition.key,
+        key: definition.key,
 
-        label:
-          definition.label,
+        label: definition.label,
 
-        name:
-          cleanText(
-            value.name ||
-              value.fileName
-          ) ||
-          definition.label,
+        name: definition.label,
 
-        url,
+        url: value,
 
-        downloadUrl:
-          cleanText(
-            value.downloadUrl ||
-              value.signedUrl ||
-              value.url
-          ) || url,
+        downloadUrl: value,
       };
-    })
-    .filter(
-      (
-        document
-      ): document is ReservationDocument =>
-        document !== null
+    }
+
+    const url = cleanText(
+      value.signedUrl || value.url || value.previewUrl || value.downloadUrl,
     );
+
+    if (!url) {
+      return null;
+    }
+
+    return {
+      key: definition.key,
+
+      label: definition.label,
+
+      name: cleanText(value.name || value.fileName) || definition.label,
+
+      url,
+
+      downloadUrl:
+        cleanText(value.downloadUrl || value.signedUrl || value.url) || url,
+    };
+  }).filter((document): document is ReservationDocument => document !== null);
 }
 
 export default function ReservationsPage() {
-  const [
-    reservations,
-    setReservations,
-  ] = useState<Reservation[]>([]);
+  const [reservations, setReservations] = useState<Reservation[]>([]);
 
-  const [
-    loading,
-    setLoading,
-  ] = useState(true);
+  const [loading, setLoading] = useState(true);
 
-  const [
-    loadError,
-    setLoadError,
-  ] = useState("");
+  const [loadError, setLoadError] = useState("");
 
-  const [
-    search,
-    setSearch,
-  ] = useState("");
+  const [search, setSearch] = useState("");
 
-  const [
-    paymentFilter,
-    setPaymentFilter,
-  ] = useState("all");
+  const [paymentFilter, setPaymentFilter] = useState("all");
 
-  const [
-    showForm,
-    setShowForm,
-  ] = useState(false);
+  const [showForm, setShowForm] = useState(false);
 
-  const [
-    formMode,
-    setFormMode,
-  ] = useState<FormMode>("create");
+  const [formMode, setFormMode] = useState<FormMode>("create");
 
-  const [
-    editingReservation,
-    setEditingReservation,
-  ] = useState<Reservation | null>(
-    null
+  const [editingReservation, setEditingReservation] =
+    useState<Reservation | null>(null);
+
+  const [form, setForm] = useState<ReservationForm>(EMPTY_FORM);
+
+  const [availability, setAvailability] = useState<AvailabilityResponse | null>(
+    null,
   );
 
-  const [
-    form,
-    setForm,
-  ] = useState<ReservationForm>(
-    EMPTY_FORM
-  );
+  const [checkingAvailability, setCheckingAvailability] = useState(false);
 
-  const [
-    availability,
-    setAvailability,
-  ] =
-    useState<AvailabilityResponse | null>(
-      null
-    );
+  const [availabilityError, setAvailabilityError] = useState("");
 
-  const [
-    checkingAvailability,
-    setCheckingAvailability,
-  ] = useState(false);
+  const [saving, setSaving] = useState(false);
 
-  const [
-    availabilityError,
-    setAvailabilityError,
-  ] = useState("");
+  const [formError, setFormError] = useState("");
 
-  const [
-    saving,
-    setSaving,
-  ] = useState(false);
+  const [success, setSuccess] = useState("");
 
-  const [
-    formError,
-    setFormError,
-  ] = useState("");
+  const [documentsOpen, setDocumentsOpen] = useState(false);
 
-  const [
-    success,
-    setSuccess,
-  ] = useState("");
+  const [documentReservation, setDocumentReservation] =
+    useState<Reservation | null>(null);
 
-  const [
-    documentsOpen,
-    setDocumentsOpen,
-  ] = useState(false);
+  const [documents, setDocuments] = useState<ReservationDocument[]>([]);
 
-  const [
-    documentReservation,
-    setDocumentReservation,
-  ] = useState<Reservation | null>(
-    null
-  );
+  const [documentsLoading, setDocumentsLoading] = useState(false);
 
-  const [
-    documents,
-    setDocuments,
-  ] = useState<
-    ReservationDocument[]
-  >([]);
+  const [documentsError, setDocumentsError] = useState("");
 
-  const [
-    documentsLoading,
-    setDocumentsLoading,
-  ] = useState(false);
+  const loadReservations = useCallback(async (showLoader = true) => {
+    if (showLoader) {
+      setLoading(true);
+    }
 
-  const [
-    documentsError,
-    setDocumentsError,
-  ] = useState("");
+    setLoadError("");
 
-  const loadReservations =
-    useCallback(
-      async (
-        showLoader = true
-      ) => {
-        if (showLoader) {
-          setLoading(true);
-        }
+    try {
+      const response = await fetch("/api/admin/reservations", {
+        method: "GET",
+        cache: "no-store",
+      });
 
-        setLoadError("");
+      const data = await response.json();
 
-        try {
-          const response =
-            await fetch(
-              "/api/admin/reservations",
-              {
-                method: "GET",
-                cache: "no-store",
-              }
-            );
+      if (!response.ok || !data?.ok) {
+        throw new Error(data?.error || "Could not load reservations.");
+      }
 
-          const data =
-            await response.json();
+      const rows = Array.isArray(data.reservations) ? data.reservations : [];
 
-          if (
-            !response.ok ||
-            !data?.ok
-          ) {
-            throw new Error(
-              data?.error ||
-                "Could not load reservations."
-            );
-          }
-
-          const rows =
-            Array.isArray(
-              data.reservations
-            )
-              ? data.reservations
-              : [];
-
-          setReservations(rows);
-        } catch (error: any) {
-          setLoadError(
-            error?.message ||
-              "Could not load reservations."
-          );
-        } finally {
-          if (showLoader) {
-            setLoading(false);
-          }
-        }
-      },
-      []
-    );
+      setReservations(rows);
+    } catch (error: any) {
+      setLoadError(error?.message || "Could not load reservations.");
+    } finally {
+      if (showLoader) {
+        setLoading(false);
+      }
+    }
+  }, []);
 
   useEffect(() => {
     loadReservations();
 
-    const interval =
-      window.setInterval(
-        () =>
-          loadReservations(false),
-        30_000
-      );
+    const interval = window.setInterval(() => loadReservations(false), 30_000);
 
     return () => {
-      window.clearInterval(
-        interval
-      );
+      window.clearInterval(interval);
     };
   }, [loadReservations]);
 
@@ -849,13 +588,8 @@ export default function ReservationsPage() {
       return;
     }
 
-    const {
-      fleetGroup,
-      pickupDate,
-      pickupTime,
-      dropoffDate,
-      dropoffTime,
-    } = form;
+    const { fleetGroup, pickupDate, pickupTime, dropoffDate, dropoffTime } =
+      form;
 
     setAvailability(null);
     setAvailabilityError("");
@@ -870,113 +604,67 @@ export default function ReservationsPage() {
       return;
     }
 
-    const pickup =
-      buildDateTime(
-        pickupDate,
-        pickupTime
-      );
+    const pickup = buildDateTime(pickupDate, pickupTime);
 
-    const dropoff =
-      buildDateTime(
-        dropoffDate,
-        dropoffTime
-      );
+    const dropoff = buildDateTime(dropoffDate, dropoffTime);
 
-    if (
-      !pickup ||
-      !dropoff ||
-      dropoff <= pickup
-    ) {
+    if (!pickup || !dropoff || dropoff <= pickup) {
       return;
     }
 
-    const controller =
-      new AbortController();
+    const controller = new AbortController();
 
-    const timeout =
-      window.setTimeout(
-        async () => {
-          setCheckingAvailability(
-            true
+    const timeout = window.setTimeout(async () => {
+      setCheckingAvailability(true);
+
+      try {
+        const params = new URLSearchParams({
+          action: "availability",
+
+          fleetGroup,
+
+          pickupDate,
+          pickupTime,
+
+          dropoffDate,
+          dropoffTime,
+        });
+
+        if (editingReservation?.id) {
+          params.set("reservationId", editingReservation.id);
+
+          params.set("excludeReservationId", editingReservation.id);
+        }
+
+        const response = await fetch(
+          `/api/admin/reservations?${params.toString()}`,
+          {
+            method: "GET",
+            cache: "no-store",
+            signal: controller.signal,
+          },
+        );
+
+        const data = await response.json();
+
+        if (!response.ok || !data?.ok) {
+          throw new Error(data?.error || "Could not check availability.");
+        }
+
+        setAvailability(data);
+      } catch (error: any) {
+        if (error?.name !== "AbortError") {
+          setAvailabilityError(
+            error?.message || "Could not check availability.",
           );
-
-          try {
-            const params =
-              new URLSearchParams({
-                action:
-                  "availability",
-
-                fleetGroup,
-
-                pickupDate,
-                pickupTime,
-
-                dropoffDate,
-                dropoffTime,
-              });
-
-            if (
-              editingReservation?.id
-            ) {
-              params.set(
-                "reservationId",
-                editingReservation.id
-              );
-
-              params.set(
-                "excludeReservationId",
-                editingReservation.id
-              );
-            }
-
-            const response =
-              await fetch(
-                `/api/admin/reservations?${params.toString()}`,
-                {
-                  method: "GET",
-                  cache: "no-store",
-                  signal:
-                    controller.signal,
-                }
-              );
-
-            const data =
-              await response.json();
-
-            if (
-              !response.ok ||
-              !data?.ok
-            ) {
-              throw new Error(
-                data?.error ||
-                  "Could not check availability."
-              );
-            }
-
-            setAvailability(data);
-          } catch (error: any) {
-            if (
-              error?.name !==
-              "AbortError"
-            ) {
-              setAvailabilityError(
-                error?.message ||
-                  "Could not check availability."
-              );
-            }
-          } finally {
-            setCheckingAvailability(
-              false
-            );
-          }
-        },
-        350
-      );
+        }
+      } finally {
+        setCheckingAvailability(false);
+      }
+    }, 350);
 
     return () => {
-      window.clearTimeout(
-        timeout
-      );
+      window.clearTimeout(timeout);
 
       controller.abort();
     };
@@ -996,63 +684,42 @@ export default function ReservationsPage() {
    * ensures a reservation disappears
    * without waiting for the next refresh.
    */
-  const activeReservations =
-    useMemo(
-      () =>
-        reservations.filter(
-          (reservation) =>
-            !isReservationPast(
-              reservation
-            )
-        ),
-      [reservations]
-    );
+  const activeReservations = useMemo(
+    () => reservations.filter((reservation) => !isReservationPast(reservation)),
+    [reservations],
+  );
 
-  const filteredReservations =
-    useMemo(() => {
-      const query =
-        search
-          .trim()
-          .toLowerCase();
+  const filteredReservations = useMemo(() => {
+    const query = search.trim().toLowerCase();
 
-      return activeReservations.filter(
-        (reservation) => {
-          if (
-            paymentFilter !==
-              "all" &&
-            reservation.paymentStatus !==
-              paymentFilter
-          ) {
-            return false;
-          }
+    return activeReservations.filter((reservation) => {
+      if (
+        paymentFilter !== "all" &&
+        reservation.paymentStatus !== paymentFilter
+      ) {
+        return false;
+      }
 
-          if (!query) {
-            return true;
-          }
+      if (!query) {
+        return true;
+      }
 
-          return [
-            reservation.customerName,
-            reservation.customerEmail,
-            reservation.phone,
-            reservation.contractNumber,
-            reservation.assignedVehicleCode,
-            ...getAssignedCodes(
-              reservation
-            ),
-            reservation.vehicleName,
-            reservation.fleetName,
-            reservation.notes,
-          ]
-            .join(" ")
-            .toLowerCase()
-            .includes(query);
-        }
-      );
-    }, [
-      activeReservations,
-      search,
-      paymentFilter,
-    ]);
+      return [
+        reservation.customerName,
+        reservation.customerEmail,
+        reservation.phone,
+        reservation.contractNumber,
+        reservation.assignedVehicleCode,
+        ...getAssignedCodes(reservation),
+        reservation.vehicleName,
+        reservation.fleetName,
+        reservation.notes,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(query);
+    });
+  }, [activeReservations, search, paymentFilter]);
 
   function openCreateForm() {
     setFormMode("create");
@@ -1061,8 +728,7 @@ export default function ReservationsPage() {
     setForm({
       ...EMPTY_FORM,
 
-      contractNumber:
-        createContractNumber(),
+      contractNumber: createContractNumber(),
 
       assignedVehicleCodes: [],
     });
@@ -1074,19 +740,11 @@ export default function ReservationsPage() {
     setShowForm(true);
   }
 
-  function openEditForm(
-    reservation: Reservation
-  ) {
+  function openEditForm(reservation: Reservation) {
     setFormMode("edit");
-    setEditingReservation(
-      reservation
-    );
+    setEditingReservation(reservation);
 
-    setForm(
-      reservationToForm(
-        reservation
-      )
-    );
+    setForm(reservationToForm(reservation));
 
     setAvailability(null);
     setAvailabilityError("");
@@ -1113,17 +771,14 @@ export default function ReservationsPage() {
 
   function updateForm(
     field: keyof ReservationForm,
-    value: string | number | string[]
+    value: string | number | string[],
   ) {
     setForm((current) => {
-      if (
-        field === "fleetGroup"
-      ) {
+      if (field === "fleetGroup") {
         return {
           ...current,
 
-          fleetGroup:
-            value as FleetGroup,
+          fleetGroup: value as FleetGroup,
 
           assignedVehicleCodes: [],
         };
@@ -1139,66 +794,40 @@ export default function ReservationsPage() {
     setSuccess("");
   }
 
-  function toggleVehicle(
-    vehicleCode: string
-  ) {
-    const normalizedCode =
-      normalizeVehicleCode(
-        vehicleCode
-      );
+  function toggleVehicle(vehicleCode: string) {
+    const normalizedCode = normalizeVehicleCode(vehicleCode);
 
     setForm((current) => {
-      const selected =
-        current.assignedVehicleCodes.includes(
-          normalizedCode
-        );
+      const selected = current.assignedVehicleCodes.includes(normalizedCode);
 
       if (selected) {
         return {
           ...current,
 
-          assignedVehicleCodes:
-            current.assignedVehicleCodes.filter(
-              (code) =>
-                code !==
-                normalizedCode
-            ),
+          assignedVehicleCodes: current.assignedVehicleCodes.filter(
+            (code) => code !== normalizedCode,
+          ),
         };
       }
 
-      const maximum =
-        formMode === "create"
-          ? 1
-          : Math.max(
-              1,
-              current.quantity
-            );
+      const maximum = Math.max(1, current.quantity);
 
       if (maximum === 1) {
         return {
           ...current,
 
-          assignedVehicleCodes: [
-            normalizedCode,
-          ],
+          assignedVehicleCodes: [normalizedCode],
         };
       }
 
-      if (
-        current
-          .assignedVehicleCodes
-          .length >= maximum
-      ) {
+      if (current.assignedVehicleCodes.length >= maximum) {
         return current;
       }
 
       return {
         ...current,
 
-        assignedVehicleCodes: [
-          ...current.assignedVehicleCodes,
-          normalizedCode,
-        ],
+        assignedVehicleCodes: [...current.assignedVehicleCodes, normalizedCode],
       };
     });
 
@@ -1215,58 +844,38 @@ export default function ReservationsPage() {
       return;
     }
 
-    const params =
-      new URLSearchParams({
-        action:
-          "availability",
+    const params = new URLSearchParams({
+      action: "availability",
 
-        fleetGroup:
-          form.fleetGroup,
+      fleetGroup: form.fleetGroup,
 
-        pickupDate:
-          form.pickupDate,
+      pickupDate: form.pickupDate,
 
-        pickupTime:
-          form.pickupTime,
+      pickupTime: form.pickupTime,
 
-        dropoffDate:
-          form.dropoffDate,
+      dropoffDate: form.dropoffDate,
 
-        dropoffTime:
-          form.dropoffTime,
-      });
+      dropoffTime: form.dropoffTime,
+    });
 
-    if (
-      editingReservation?.id
-    ) {
-      params.set(
-        "reservationId",
-        editingReservation.id
-      );
+    if (editingReservation?.id) {
+      params.set("reservationId", editingReservation.id);
 
-      params.set(
-        "excludeReservationId",
-        editingReservation.id
-      );
+      params.set("excludeReservationId", editingReservation.id);
     }
 
     try {
-      const response =
-        await fetch(
-          `/api/admin/reservations?${params.toString()}`,
-          {
-            method: "GET",
-            cache: "no-store",
-          }
-        );
+      const response = await fetch(
+        `/api/admin/reservations?${params.toString()}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
-      if (
-        response.ok &&
-        data?.ok
-      ) {
+      if (response.ok && data?.ok) {
         setAvailability(data);
       }
     } catch {
@@ -1281,22 +890,12 @@ export default function ReservationsPage() {
     setFormError("");
     setSuccess("");
 
-    const totalAmount =
-      euroInputToCents(
-        form.totalAmount
-      );
+    const totalAmount = euroInputToCents(form.totalAmount);
 
-    const amountPaid =
-      euroInputToCents(
-        form.amountPaid
-      );
+    const amountPaid = euroInputToCents(form.amountPaid);
 
-    if (
-      !form.customerName.trim()
-    ) {
-      setFormError(
-        "Enter the customer name."
-      );
+    if (!form.customerName.trim()) {
+      setFormError("Enter the customer name.");
 
       return;
     }
@@ -1307,88 +906,53 @@ export default function ReservationsPage() {
       !form.dropoffDate ||
       !form.dropoffTime
     ) {
-      setFormError(
-        "Select the pickup and return date/time."
-      );
+      setFormError("Select the pickup and return date/time.");
 
       return;
     }
 
-    const pickup =
-      buildDateTime(
-        form.pickupDate,
-        form.pickupTime
-      );
+    const pickup = buildDateTime(form.pickupDate, form.pickupTime);
 
-    const dropoff =
-      buildDateTime(
-        form.dropoffDate,
-        form.dropoffTime
-      );
+    const dropoff = buildDateTime(form.dropoffDate, form.dropoffTime);
 
-    if (
-      !pickup ||
-      !dropoff ||
-      dropoff <= pickup
-    ) {
-      setFormError(
-        "Return date/time must be after pickup date/time."
-      );
+    if (!pickup || !dropoff || dropoff <= pickup) {
+      setFormError("Return date/time must be after pickup date/time.");
 
       return;
     }
 
-    if (
-      amountPaid > totalAmount
-    ) {
-      setFormError(
-        "Amount paid cannot exceed the total amount."
-      );
+    if (amountPaid > totalAmount) {
+      setFormError("Amount paid cannot exceed the total amount.");
 
       return;
     }
 
     const isManual =
       formMode === "create" ||
-      cleanText(
-        editingReservation?.source
-      )
+      cleanText(editingReservation?.source).toLowerCase().includes("manual") ||
+      cleanText(editingReservation?.reservationOrigin)
         .toLowerCase()
-        .includes("manual") ||
-      cleanText(
-        editingReservation
-          ?.reservationOrigin
-      )
-        .toLowerCase()
-        .includes(
-          "manual_reservation"
-        );
+        .includes("manual_reservation");
 
     if (
-      form.status !==
-        "cancelled" &&
+      form.status !== "cancelled" &&
       isManual &&
-      form.assignedVehicleCodes
-        .length !== 1
+      form.assignedVehicleCodes.length !== form.quantity
     ) {
       setFormError(
-        "Select exactly one available scooter for this manual reservation."
+        `Select exactly ${form.quantity} available scooter${
+          form.quantity === 1 ? "" : "s"
+        } for this manual reservation.`,
       );
 
       return;
     }
 
-    if (
-      form.assignedVehicleCodes
-        .length >
-      Math.max(1, form.quantity)
-    ) {
+    if (form.assignedVehicleCodes.length > Math.max(1, form.quantity)) {
       setFormError(
         `You can assign a maximum of ${form.quantity} scooter${
-          form.quantity === 1
-            ? ""
-            : "s"
-        }.`
+          form.quantity === 1 ? "" : "s"
+        }.`,
       );
 
       return;
@@ -1397,122 +961,79 @@ export default function ReservationsPage() {
     setSaving(true);
 
     try {
-      const requestMethod =
-        formMode === "edit"
-          ? "PATCH"
-          : "POST";
+      const requestMethod = formMode === "edit" ? "PATCH" : "POST";
 
       const requestBody = {
-        id:
-          editingReservation?.id,
+        id: editingReservation?.id,
 
-        reservationId:
-          editingReservation?.id,
+        reservationId: editingReservation?.id,
 
-        contractNumber:
-          form.contractNumber,
+        contractNumber: form.contractNumber,
 
-        customerName:
-          form.customerName,
+        customerName: form.customerName,
 
-        customerEmail:
-          form.customerEmail,
+        customerEmail: form.customerEmail,
 
-        phone:
-          form.phone,
+        phone: form.phone,
 
-        pickupDate:
-          form.pickupDate,
+        pickupDate: form.pickupDate,
 
-        pickupTime:
-          form.pickupTime,
+        pickupTime: form.pickupTime,
 
-        dropoffDate:
-          form.dropoffDate,
+        dropoffDate: form.dropoffDate,
 
-        dropoffTime:
-          form.dropoffTime,
+        dropoffTime: form.dropoffTime,
 
-        fleetGroup:
-          form.fleetGroup,
+        fleetGroup: form.fleetGroup,
 
-        quantity:
-          form.quantity,
+        quantity: form.quantity,
 
-        assignedVehicleCode:
-          form
-            .assignedVehicleCodes[0] ||
-          "",
+        assignedVehicleCode: form.assignedVehicleCodes[0] || "",
 
-        assignedVehicleCodes:
-          form.assignedVehicleCodes,
+        assignedVehicleCodes: form.assignedVehicleCodes,
 
         totalAmount,
         amountPaid,
 
-        paymentStatus:
-          getPaymentStatus(
-            form.totalAmount,
-            form.amountPaid
-          ),
+        paymentStatus: getPaymentStatus(form.totalAmount, form.amountPaid),
 
-        paymentMethod:
-          form.paymentMethod,
+        paymentMethod: form.paymentMethod,
 
-        notes:
-          form.notes,
+        notes: form.notes,
 
-        status:
-          form.status,
+        status: form.status,
       };
 
-      const response =
-        await fetch(
-          "/api/admin/reservations",
-          {
-            method:
-              requestMethod,
+      const response = await fetch("/api/admin/reservations", {
+        method: requestMethod,
 
-            headers: {
-              "Content-Type":
-                "application/json",
-            },
+        headers: {
+          "Content-Type": "application/json",
+        },
 
-            body:
-              JSON.stringify(
-                requestBody
-              ),
-          }
-        );
+        body: JSON.stringify(requestBody),
+      });
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
-      if (
-        !response.ok ||
-        !data?.ok
-      ) {
+      if (!response.ok || !data?.ok) {
         throw new Error(
           data?.error ||
-            (formMode ===
-            "edit"
+            (formMode === "edit"
               ? "Could not update the reservation."
-              : "Could not create the reservation.")
+              : "Could not create the reservation."),
         );
       }
 
       const assignedText =
-        form.assignedVehicleCodes
-          .length > 0
-          ? form.assignedVehicleCodes.join(
-              ", "
-            )
+        form.assignedVehicleCodes.length > 0
+          ? form.assignedVehicleCodes.join(", ")
           : "No exact scooter assigned";
 
       setSuccess(
         formMode === "edit"
           ? `Reservation updated successfully. ${assignedText}.`
-          : `Reservation ${form.contractNumber} created successfully. ${assignedText} is now blocked for these dates.`
+          : `Reservation ${form.contractNumber} created successfully. ${assignedText} is now blocked for these dates.`,
       );
 
       await loadReservations(false);
@@ -1521,10 +1042,7 @@ export default function ReservationsPage() {
         closeForm();
       }, 1100);
     } catch (error: any) {
-      setFormError(
-        error?.message ||
-          "The reservation could not be saved."
-      );
+      setFormError(error?.message || "The reservation could not be saved.");
 
       await checkAvailabilityAgain();
     } finally {
@@ -1532,12 +1050,8 @@ export default function ReservationsPage() {
     }
   }
 
-  async function openDocuments(
-    reservation: Reservation
-  ) {
-    setDocumentReservation(
-      reservation
-    );
+  async function openDocuments(reservation: Reservation) {
+    setDocumentReservation(reservation);
 
     setDocuments([]);
     setDocumentsError("");
@@ -1545,55 +1059,40 @@ export default function ReservationsPage() {
     setDocumentsLoading(true);
 
     try {
-      const params =
-        new URLSearchParams({
-          action: "documents",
+      const params = new URLSearchParams({
+        action: "documents",
 
-          reservationId:
-            reservation.id,
+        reservationId: reservation.id,
 
-          id:
-            reservation.id,
-        });
+        id: reservation.id,
+      });
 
-      const response =
-        await fetch(
-          `/api/admin/reservations?${params.toString()}`,
-          {
-            method: "GET",
-            cache: "no-store",
-          }
-        );
+      const response = await fetch(
+        `/api/admin/reservations?${params.toString()}`,
+        {
+          method: "GET",
+          cache: "no-store",
+        },
+      );
 
-      const data =
-        await response.json();
+      const data = await response.json();
 
-      if (
-        !response.ok ||
-        !data?.ok
-      ) {
+      if (!response.ok || !data?.ok) {
         throw new Error(
-          data?.error ||
-            "Could not load the customer documents."
+          data?.error || "Could not load the customer documents.",
         );
       }
 
-      const normalized =
-        normalizeDocuments(data);
+      const normalized = normalizeDocuments(data);
 
       setDocuments(normalized);
 
-      if (
-        normalized.length === 0
-      ) {
-        setDocumentsError(
-          "No uploaded documents were found for this booking."
-        );
+      if (normalized.length === 0) {
+        setDocumentsError("No uploaded documents were found for this booking.");
       }
     } catch (error: any) {
       setDocumentsError(
-        error?.message ||
-          "Could not load the customer documents."
+        error?.message || "Could not load the customer documents.",
       );
     } finally {
       setDocumentsLoading(false);
@@ -1631,11 +1130,7 @@ export default function ReservationsPage() {
 
               <input
                 value={search}
-                onChange={(event) =>
-                  setSearch(
-                    event.target.value
-                  )
-                }
+                onChange={(event) => setSearch(event.target.value)}
                 placeholder="Search customer, contact, scooter, notes..."
                 className="w-full rounded-xl border border-white/10 bg-white/[0.045] py-3 pl-11 pr-4 text-sm font-semibold text-white outline-none placeholder:text-white/25 focus:border-orange-400/40"
               />
@@ -1643,46 +1138,24 @@ export default function ReservationsPage() {
 
             <select
               value={paymentFilter}
-              onChange={(event) =>
-                setPaymentFilter(
-                  event.target.value
-                )
-              }
+              onChange={(event) => setPaymentFilter(event.target.value)}
               className="rounded-xl border border-white/10 bg-[#111318] px-4 py-3 text-sm font-bold text-white outline-none"
             >
-              <option value="all">
-                All payments
-              </option>
+              <option value="all">All payments</option>
 
-              <option value="paid">
-                Paid
-              </option>
+              <option value="paid">Paid</option>
 
-              <option value="partial">
-                Partial
-              </option>
+              <option value="partial">Partial</option>
 
-              <option value="unpaid">
-                Unpaid
-              </option>
+              <option value="unpaid">Unpaid</option>
             </select>
 
             <button
               type="button"
-              onClick={() =>
-                loadReservations()
-              }
+              onClick={() => loadReservations()}
               className="inline-flex items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-4 py-3 text-sm font-black text-white/65 transition hover:bg-white/[0.09] hover:text-white"
             >
-              <RefreshCw
-                size={17}
-                className={
-                  loading
-                    ? "animate-spin"
-                    : ""
-                }
-              />
-
+              <RefreshCw size={17} className={loading ? "animate-spin" : ""} />
               Refresh
             </button>
           </div>
@@ -1709,80 +1182,53 @@ export default function ReservationsPage() {
                     "Notes",
                     "Source",
                     "Actions",
-                  ].map(
-                    (heading) => (
-                      <th
-                        key={heading}
-                        className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.18em] text-white/35"
-                      >
-                        {heading}
-                      </th>
-                    )
-                  )}
+                  ].map((heading) => (
+                    <th
+                      key={heading}
+                      className="px-4 py-4 text-[10px] font-black uppercase tracking-[0.18em] text-white/35"
+                    >
+                      {heading}
+                    </th>
+                  ))}
                 </tr>
               </thead>
 
               <tbody>
-                {loading &&
-                reservations.length ===
-                  0 ? (
+                {loading && reservations.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={11}
-                      className="px-5 py-16 text-center"
-                    >
+                    <td colSpan={11} className="px-5 py-16 text-center">
                       <Loader2
                         size={28}
                         className="mx-auto animate-spin text-orange-300"
                       />
 
                       <p className="mt-3 text-sm font-bold text-white/45">
-                        Loading
-                        reservations...
+                        Loading reservations...
                       </p>
                     </td>
                   </tr>
-                ) : filteredReservations
-                    .length === 0 ? (
+                ) : filteredReservations.length === 0 ? (
                   <tr>
-                    <td
-                      colSpan={11}
-                      className="px-5 py-16 text-center"
-                    >
+                    <td colSpan={11} className="px-5 py-16 text-center">
                       <CalendarDays
                         size={32}
                         className="mx-auto text-white/20"
                       />
 
                       <p className="mt-3 text-sm font-bold text-white/45">
-                        No future
-                        reservations found.
+                        No future reservations found.
                       </p>
                     </td>
                   </tr>
                 ) : (
-                  filteredReservations.map(
-                    (reservation) => (
-                      <ReservationRow
-                        key={
-                          reservation.id
-                        }
-                        reservation={
-                          reservation
-                        }
-                        onEdit={() =>
-                          openEditForm(
-                            reservation
-                          )
-                        }
-                        onDocuments={() =>
-                          openDocuments(
-                            reservation
-                          )
-                        }
-                      />
-                    )
-                  )
+                  filteredReservations.map((reservation) => (
+                    <ReservationRow
+                      key={reservation.id}
+                      reservation={reservation}
+                      onEdit={() => openEditForm(reservation)}
+                      onDocuments={() => openDocuments(reservation)}
+                    />
+                  ))
                 )}
               </tbody>
             </table>
@@ -1794,39 +1240,25 @@ export default function ReservationsPage() {
         <ReservationFormModal
           mode={formMode}
           form={form}
-          reservation={
-            editingReservation
-          }
-          availability={
-            availability
-          }
-          availabilityError={
-            availabilityError
-          }
-          checkingAvailability={
-            checkingAvailability
-          }
+          reservation={editingReservation}
+          availability={availability}
+          availabilityError={availabilityError}
+          checkingAvailability={checkingAvailability}
           saving={saving}
           formError={formError}
           success={success}
           onClose={closeForm}
           onChange={updateForm}
-          onToggleVehicle={
-            toggleVehicle
-          }
+          onToggleVehicle={toggleVehicle}
           onSave={saveReservation}
         />
       ) : null}
 
       {documentsOpen ? (
         <DocumentsModal
-          reservation={
-            documentReservation
-          }
+          reservation={documentReservation}
           documents={documents}
-          loading={
-            documentsLoading
-          }
+          loading={documentsLoading}
           error={documentsError}
           onClose={closeDocuments}
         />
@@ -1844,41 +1276,29 @@ function ReservationRow({
   onEdit: () => void;
   onDocuments: () => void;
 }) {
-  const assignedCodes =
-    getAssignedCodes(
-      reservation
-    );
+  const assignedCodes = getAssignedCodes(reservation);
 
-  const website =
-    isWebsiteReservation(
-      reservation
-    );
+  const website = isWebsiteReservation(reservation);
 
   return (
     <tr className="border-b border-white/[0.07] transition hover:bg-white/[0.025]">
       <td className="px-4 py-4">
         <p className="text-sm font-black text-white">
-          {formatDate(
-            reservation.pickupDate
-          )}
+          {formatDate(reservation.pickupDate)}
         </p>
 
         <p className="mt-1 text-xs font-bold text-orange-300">
-          {reservation.pickupTime ||
-            "--:--"}
+          {reservation.pickupTime || "--:--"}
         </p>
       </td>
 
       <td className="px-4 py-4">
         <p className="text-sm font-black text-white">
-          {formatDate(
-            reservation.dropoffDate
-          )}
+          {formatDate(reservation.dropoffDate)}
         </p>
 
         <p className="mt-1 text-xs font-bold text-white/45">
-          {reservation.dropoffTime ||
-            "--:--"}
+          {reservation.dropoffTime || "--:--"}
         </p>
       </td>
 
@@ -1888,9 +1308,7 @@ function ReservationRow({
         </p>
 
         <p className="mt-1 text-xs font-bold text-white/35">
-          {
-            reservation.contractNumber
-          }
+          {reservation.contractNumber}
         </p>
       </td>
 
@@ -1900,17 +1318,14 @@ function ReservationRow({
         </p>
 
         <p className="mt-1 max-w-[220px] truncate text-xs font-semibold text-white/35">
-          {reservation.customerEmail ||
-            "-"}
+          {reservation.customerEmail || "-"}
         </p>
       </td>
 
       <td className="px-4 py-4">
         <div className="flex items-center gap-3">
           <span className="flex h-10 min-w-10 items-center justify-center rounded-xl bg-white/[0.06] px-2 text-sm font-black text-white">
-            {assignedCodes.length > 0
-              ? assignedCodes.join(", ")
-              : "—"}
+            {assignedCodes.length > 0 ? assignedCodes.join(", ") : "—"}
           </span>
 
           <div>
@@ -1919,8 +1334,7 @@ function ReservationRow({
             </p>
 
             <p className="mt-1 text-xs font-bold text-white/35">
-              Quantity:{" "}
-              {reservation.quantity}
+              Quantity: {reservation.quantity}
             </p>
           </div>
         </div>
@@ -1929,7 +1343,7 @@ function ReservationRow({
       <td className="px-4 py-4">
         <span
           className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] ${paymentStatusClasses(
-            reservation.paymentStatus
+            reservation.paymentStatus,
           )}`}
         >
           {reservation.paymentStatus}
@@ -1938,50 +1352,39 @@ function ReservationRow({
 
       <td className="px-4 py-4">
         <p className="text-sm font-black text-white">
-          {euroText(
-            reservation.amountPaid
-          )}
+          {euroText(reservation.amountPaid)}
         </p>
 
         <p className="mt-1 text-xs font-bold text-white/35">
-          of{" "}
-          {euroText(
-            reservation.totalAmount
-          )}
+          of {euroText(reservation.totalAmount)}
         </p>
       </td>
 
       <td className="px-4 py-4">
         <p
           className={`text-sm font-black ${
-            reservation.remainingAmount >
-            0
+            reservation.remainingAmount > 0
               ? "text-amber-300"
               : "text-emerald-300"
           }`}
         >
-          {euroText(
-            reservation.remainingAmount
-          )}
+          {euroText(reservation.remainingAmount)}
         </p>
       </td>
 
       <td className="max-w-[260px] px-4 py-4">
         <p className="line-clamp-3 text-xs font-semibold leading-5 text-white/50">
-          {reservation.notes ||
-            "No notes"}
+          {reservation.notes || "No notes"}
         </p>
       </td>
 
       <td className="px-4 py-4">
         <span
           className={`rounded-full border px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.1em] ${sourceClasses(
-            reservation.source
+            reservation.source,
           )}`}
         >
-          {website
-            ? "Website"
-            : "Manual"}
+          {website ? "Website" : "Manual"}
         </span>
       </td>
 
@@ -2039,34 +1442,14 @@ function ReservationFormModal({
   onClose: () => void;
   onChange: (
     field: keyof ReservationForm,
-    value: string | number | string[]
+    value: string | number | string[],
   ) => void;
-  onToggleVehicle: (
-    vehicleCode: string
-  ) => void;
+  onToggleVehicle: (vehicleCode: string) => void;
   onSave: () => void;
 }) {
-  const originalCodes =
-    reservation
-      ? getAssignedCodes(
-          reservation
-        )
-      : [];
+  const originalCodes = reservation ? getAssignedCodes(reservation) : [];
 
-  const maximumAssignments =
-    mode === "create"
-      ? 1
-      : Math.max(
-          1,
-          form.quantity
-        );
-
-  const isWebsite =
-    reservation
-      ? isWebsiteReservation(
-          reservation
-        )
-      : false;
+  const maximumAssignments = Math.max(1, form.quantity);
 
   return (
     <div className="fixed inset-0 z-[100] overflow-y-auto bg-black/75 px-4 py-8 backdrop-blur-md">
@@ -2080,9 +1463,7 @@ function ReservationFormModal({
             </p>
 
             <h2 className="mt-1 text-2xl font-black text-white">
-              {mode === "edit"
-                ? "Edit reservation"
-                : "New reservation"}
+              {mode === "edit" ? "Edit reservation" : "New reservation"}
             </h2>
           </div>
 
@@ -2096,113 +1477,51 @@ function ReservationFormModal({
         </div>
 
         <div className="space-y-6 p-5 sm:p-6">
-          {formError ? (
-            <MessageBox
-              tone="error"
-              message={formError}
-            />
-          ) : null}
+          {formError ? <MessageBox tone="error" message={formError} /> : null}
 
-          {success ? (
-            <MessageBox
-              tone="success"
-              message={success}
-            />
-          ) : null}
+          {success ? <MessageBox tone="success" message={success} /> : null}
 
           <div className="grid gap-4 md:grid-cols-2">
-            <Field
-              label="Reservation number"
-              icon={
-                <CalendarDays
-                  size={16}
-                />
-              }
-            >
+            <Field label="Reservation number" icon={<CalendarDays size={16} />}>
               <input
-                value={
-                  form.contractNumber
-                }
+                value={form.contractNumber}
                 onChange={(event) =>
-                  onChange(
-                    "contractNumber",
-                    event.target.value
-                  )
+                  onChange("contractNumber", event.target.value)
                 }
-                disabled={
-                  mode === "edit"
-                }
+                disabled={mode === "edit"}
                 className={`${inputClasses} disabled:cursor-not-allowed disabled:opacity-50`}
               />
             </Field>
 
-            <Field
-              label="Customer name"
-              icon={
-                <UserRound
-                  size={16}
-                />
-              }
-            >
+            <Field label="Customer name" icon={<UserRound size={16} />}>
               <input
-                value={
-                  form.customerName
-                }
+                value={form.customerName}
                 onChange={(event) =>
-                  onChange(
-                    "customerName",
-                    event.target.value
-                  )
+                  onChange("customerName", event.target.value)
                 }
                 placeholder="Customer full name"
-                className={
-                  inputClasses
-                }
+                className={inputClasses}
               />
             </Field>
 
-            <Field
-              label="Email"
-              icon={
-                <Mail size={16} />
-              }
-            >
+            <Field label="Email (optional)" icon={<Mail size={16} />}>
               <input
                 type="email"
-                value={
-                  form.customerEmail
-                }
+                value={form.customerEmail}
                 onChange={(event) =>
-                  onChange(
-                    "customerEmail",
-                    event.target.value
-                  )
+                  onChange("customerEmail", event.target.value)
                 }
                 placeholder="customer@email.com"
-                className={
-                  inputClasses
-                }
+                className={inputClasses}
               />
             </Field>
 
-            <Field
-              label="Phone"
-              icon={
-                <Phone size={16} />
-              }
-            >
+            <Field label="Phone" icon={<Phone size={16} />}>
               <input
                 value={form.phone}
-                onChange={(event) =>
-                  onChange(
-                    "phone",
-                    event.target.value
-                  )
-                }
+                onChange={(event) => onChange("phone", event.target.value)}
                 placeholder="+34..."
-                className={
-                  inputClasses
-                }
+                className={inputClasses}
               />
             </Field>
           </div>
@@ -2213,99 +1532,47 @@ function ReservationFormModal({
             </p>
 
             <div className="grid gap-4 md:grid-cols-4">
-              <Field
-                label="Pickup date"
-                icon={
-                  <CalendarDays
-                    size={16}
-                  />
-                }
-              >
+              <Field label="Pickup date" icon={<CalendarDays size={16} />}>
                 <input
                   type="date"
-                  value={
-                    form.pickupDate
-                  }
+                  value={form.pickupDate}
                   onChange={(event) =>
-                    onChange(
-                      "pickupDate",
-                      event.target.value
-                    )
+                    onChange("pickupDate", event.target.value)
                   }
-                  className={
-                    inputClasses
-                  }
+                  className={inputClasses}
                 />
               </Field>
 
-              <Field
-                label="Pickup time"
-                icon={
-  <Clock3 size={16} />
-}
-              >
+              <Field label="Pickup time" icon={<Clock3 size={16} />}>
                 <input
                   type="time"
-                  value={
-                    form.pickupTime
-                  }
+                  value={form.pickupTime}
                   onChange={(event) =>
-                    onChange(
-                      "pickupTime",
-                      event.target.value
-                    )
+                    onChange("pickupTime", event.target.value)
                   }
-                  className={
-                    inputClasses
-                  }
+                  className={inputClasses}
                 />
               </Field>
 
-              <Field
-                label="Return date"
-                icon={
-                  <CalendarDays
-                    size={16}
-                  />
-                }
-              >
+              <Field label="Return date" icon={<CalendarDays size={16} />}>
                 <input
                   type="date"
-                  value={
-                    form.dropoffDate
-                  }
+                  value={form.dropoffDate}
                   onChange={(event) =>
-                    onChange(
-                      "dropoffDate",
-                      event.target.value
-                    )
+                    onChange("dropoffDate", event.target.value)
                   }
-                  className={
-                    inputClasses
-                  }
+                  className={inputClasses}
                 />
               </Field>
 
-              <Field
-                label="Return time"
-                icon={
-                  <Clock3 size={16} />
-                }
-              >
+              <Field label="Return time" icon={<Clock3 size={16} />}>
                 <input
                   type="time"
-                  value={
-                    form.dropoffTime
-                  }
+                  value={form.dropoffTime}
                   onChange={(event) =>
-                    onChange(
-                      "dropoffTime",
-                      event.target.value
-                    )
+                    onChange("dropoffTime", event.target.value)
                   }
-                  className={
-                    inputClasses
-                  }
+                  className={inputClasses}
                 />
               </Field>
             </div>
@@ -2317,398 +1584,256 @@ function ReservationFormModal({
             </p>
 
             <div className="grid gap-3 md:grid-cols-3">
-              {FLEET_OPTIONS.map(
-                (option) => {
-                  const selected =
-                    form.fleetGroup ===
-                    option.value;
+              {FLEET_OPTIONS.map((option) => {
+                const selected = form.fleetGroup === option.value;
 
-                  return (
-                    <button
-                      key={
-                        option.value
-                      }
-                      type="button"
-                      onClick={() =>
-                        onChange(
-                          "fleetGroup",
-                          option.value
-                        )
-                      }
-                      className={`rounded-2xl border p-4 text-left transition ${
-                        selected
-                          ? "border-orange-400/50 bg-orange-500/12"
-                          : "border-white/10 bg-white/[0.035] hover:bg-white/[0.065]"
-                      }`}
-                    >
-                      <p className="text-sm font-black text-white">
-                        {option.label}
-                      </p>
+                return (
+                  <button
+                    key={option.value}
+                    type="button"
+                    onClick={() => onChange("fleetGroup", option.value)}
+                    className={`rounded-2xl border p-4 text-left transition ${
+                      selected
+                        ? "border-orange-400/50 bg-orange-500/12"
+                        : "border-white/10 bg-white/[0.035] hover:bg-white/[0.065]"
+                    }`}
+                  >
+                    <p className="text-sm font-black text-white">
+                      {option.label}
+                    </p>
 
-                      <p className="mt-1 text-xs font-bold text-white/35">
-                        {
-                          option.description
-                        }
-                      </p>
-                    </button>
-                  );
-                }
-              )}
+                    <p className="mt-1 text-xs font-bold text-white/35">
+                      {option.description}
+                    </p>
+                  </button>
+                );
+              })}
             </div>
           </div>
 
-          {mode === "edit" ? (
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field
-                label="Scooter quantity"
-                icon={
-                  <Bike size={16} />
+          <div className="grid gap-4 md:grid-cols-2">
+            <Field label="Scooter quantity" icon={<Bike size={16} />}>
+              <input
+                type="number"
+                min={1}
+                max={15}
+                value={form.quantity}
+                onChange={(event) =>
+                  onChange(
+                    "quantity",
+                    Math.max(1, Number(event.target.value || 1)),
+                  )
                 }
-              >
-                <input
-                  type="number"
-                  min={1}
-                  max={15}
-                  value={
-                    form.quantity
-                  }
-                  disabled={
-                    !isWebsite
-                  }
-                  onChange={(event) =>
-                    onChange(
-                      "quantity",
-                      Math.max(
-                        1,
-                        Number(
-                          event.target
-                            .value || 1
-                        )
-                      )
-                    )
-                  }
-                  className={`${inputClasses} disabled:cursor-not-allowed disabled:opacity-50`}
-                />
-              </Field>
+                className={inputClasses}
+              />
+            </Field>
 
+            {mode === "edit" ? (
               <Field
                 label="Reservation status"
-                icon={
-                  <CheckCircle2
-                    size={16}
-                  />
-                }
+                icon={<CheckCircle2 size={16} />}
               >
                 <select
                   value={form.status}
-                  onChange={(event) =>
-                    onChange(
-                      "status",
-                      event.target.value
-                    )
-                  }
-                  className={
-                    inputClasses
-                  }
+                  onChange={(event) => onChange("status", event.target.value)}
+                  className={inputClasses}
                 >
-                  <option value="confirmed">
-                    Confirmed
-                  </option>
+                  <option value="confirmed">Confirmed</option>
 
-                  <option value="reserved">
-                    Reserved
-                  </option>
+                  <option value="reserved">Reserved</option>
 
-                  <option value="cancelled">
-                    Cancelled
-                  </option>
+                  <option value="cancelled">Cancelled</option>
 
-                  <option value="returned">
-                    Returned
-                  </option>
+                  <option value="returned">Returned</option>
                 </select>
               </Field>
-            </div>
-          ) : null}
+            ) : (
+              <div className="flex items-center rounded-xl border border-white/10 bg-white/[0.035] px-4 py-3 text-xs font-bold leading-5 text-white/40">
+                Select how many scooters will be reserved under this customer.
+                Email is optional.
+              </div>
+            )}
+          </div>
 
           <div>
             <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
               <div>
                 <p className="text-xs font-black uppercase tracking-[0.16em] text-white/40">
-                  Exact scooter
-                  availability
+                  Exact scooter availability
                 </p>
 
                 <p className="mt-1 text-xs font-bold text-white/30">
-                  Assigned{" "}
-                  {
-                    form
-                      .assignedVehicleCodes
-                      .length
-                  }
-                  /{maximumAssignments}
+                  Assigned {form.assignedVehicleCodes.length}/
+                  {maximumAssignments}
                 </p>
               </div>
 
               {checkingAvailability ? (
                 <span className="inline-flex items-center gap-2 text-xs font-bold text-orange-300">
-                  <Loader2
-                    size={14}
-                    className="animate-spin"
-                  />
-
-                  Checking live
-                  availability
+                  <Loader2 size={14} className="animate-spin" />
+                  Checking live availability
                 </span>
               ) : null}
             </div>
 
             {availabilityError ? (
-              <MessageBox
-                tone="error"
-                message={
-                  availabilityError
-                }
-              />
+              <MessageBox tone="error" message={availabilityError} />
             ) : availability ? (
               <>
                 <div className="mb-4 grid gap-3 sm:grid-cols-4">
                   <SmallMetric
                     label="Available"
-                    value={
-                      availability.availableCount
-                    }
+                    value={availability.availableCount}
                   />
 
-                  <SmallMetric
-                    label="Fleet"
-                    value={
-                      availability.totalFleet
-                    }
-                  />
+                  <SmallMetric label="Fleet" value={availability.totalFleet} />
 
                   <SmallMetric
                     label="Booked"
-                    value={
-                      availability.bookedQuantity
-                    }
+                    value={availability.bookedQuantity}
                   />
 
                   <SmallMetric
                     label="Checkout holds"
-                    value={
-                      availability.heldQuantity
-                    }
+                    value={availability.heldQuantity}
                   />
                 </div>
 
                 <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-                  {availability.vehicles.map(
-                    (
-                      availableVehicle
-                    ) => {
-                      const code =
-                        normalizeVehicleCode(
-                          availableVehicle.vehicleCode
-                        );
+                  {availability.vehicles.map((availableVehicle) => {
+                    const code = normalizeVehicleCode(
+                      availableVehicle.vehicleCode,
+                    );
 
-                      const selected =
-                        form.assignedVehicleCodes.includes(
-                          code
-                        );
+                    const selected = form.assignedVehicleCodes.includes(code);
 
-                      /*
-                       * When editing, the availability
-                       * RPC may still count the current
-                       * reservation. Its existing scooter
-                       * remains selectable. The protected
-                       * PATCH function performs the final
-                       * conflict check while excluding the
-                       * current reservation.
-                       */
-                      const existingAssignment =
-                        originalCodes.includes(
-                          code
-                        );
+                    /*
+                     * When editing, the availability
+                     * RPC may still count the current
+                     * reservation. Its existing scooter
+                     * remains selectable. The protected
+                     * PATCH function performs the final
+                     * conflict check while excluding the
+                     * current reservation.
+                     */
+                    const existingAssignment = originalCodes.includes(code);
 
-                      const selectable =
-                        availableVehicle.exactAvailable ||
-                        existingAssignment ||
-                        selected;
+                    const selectable =
+                      availableVehicle.exactAvailable ||
+                      existingAssignment ||
+                      selected;
 
-                      const maximumReached =
-                        !selected &&
-                        form
-                          .assignedVehicleCodes
-                          .length >=
-                          maximumAssignments;
+                    const maximumReached =
+                      !selected &&
+                      form.assignedVehicleCodes.length >= maximumAssignments;
 
-                      const disabled =
-                        !selectable ||
-                        maximumReached;
+                    const disabled = !selectable || maximumReached;
 
-                      return (
-                        <button
-                          key={code}
-                          type="button"
-                          disabled={
-                            disabled
-                          }
-                          onClick={() =>
-                            onToggleVehicle(
-                              code
-                            )
-                          }
-                          className={`rounded-2xl border p-4 text-left transition ${
-                            selected
-                              ? "border-emerald-400/60 bg-emerald-500/15"
-                              : selectable &&
-                                !maximumReached
+                    return (
+                      <button
+                        key={code}
+                        type="button"
+                        disabled={disabled}
+                        onClick={() => onToggleVehicle(code)}
+                        className={`rounded-2xl border p-4 text-left transition ${
+                          selected
+                            ? "border-emerald-400/60 bg-emerald-500/15"
+                            : selectable && !maximumReached
                               ? "border-emerald-400/20 bg-emerald-500/[0.07] hover:bg-emerald-500/12"
                               : "cursor-not-allowed border-red-400/15 bg-red-500/[0.06] opacity-55"
-                          }`}
-                        >
-                          <div className="flex items-start justify-between gap-3">
-                            <div>
-                              <p className="text-2xl font-black text-white">
-                                {code}
-                              </p>
+                        }`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div>
+                            <p className="text-2xl font-black text-white">
+                              {code}
+                            </p>
 
-                              <p className="mt-1 text-xs font-bold text-white/45">
-                                {availableVehicle
-                                  .vehicle
-                                  ?.matricula ||
-                                  "-"}
-                              </p>
-                            </div>
-
-                            <span
-                              className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${
-                                selected
-                                  ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
-                                  : selectable
-                                  ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300"
-                                  : "border-red-400/25 bg-red-500/10 text-red-300"
-                              }`}
-                            >
-                              {selected
-                                ? "Selected"
-                                : selectable
-                                ? "Available"
-                                : "Booked"}
-                            </span>
+                            <p className="mt-1 text-xs font-bold text-white/45">
+                              {availableVehicle.vehicle?.matricula || "-"}
+                            </p>
                           </div>
 
-                          <p className="mt-3 text-xs font-bold text-white/45">
-                            {availableVehicle.vehicle
-                              ? `${availableVehicle.vehicle.marca} ${availableVehicle.vehicle.modelo}`
-                              : availableVehicle.publicVehicleName}
-                          </p>
-                        </button>
-                      );
-                    }
-                  )}
+                          <span
+                            className={`rounded-full border px-2.5 py-1 text-[10px] font-black uppercase ${
+                              selected
+                                ? "border-emerald-400/30 bg-emerald-500/15 text-emerald-300"
+                                : selectable
+                                  ? "border-emerald-400/25 bg-emerald-500/10 text-emerald-300"
+                                  : "border-red-400/25 bg-red-500/10 text-red-300"
+                            }`}
+                          >
+                            {selected
+                              ? "Selected"
+                              : selectable
+                                ? "Available"
+                                : "Booked"}
+                          </span>
+                        </div>
+
+                        <p className="mt-3 text-xs font-bold text-white/45">
+                          {availableVehicle.vehicle
+                            ? `${availableVehicle.vehicle.marca} ${availableVehicle.vehicle.modelo}`
+                            : availableVehicle.publicVehicleName}
+                        </p>
+                      </button>
+                    );
+                  })}
                 </div>
 
                 <p className="mt-3 text-xs font-bold text-white/35">
-                  The final save is
-                  checked atomically in
-                  Supabase and includes
-                  active checkout holds
-                  plus the 60-minute
-                  preparation margin.
+                  The final save is checked atomically in Supabase and includes
+                  active checkout holds plus the 60-minute preparation margin.
                 </p>
               </>
             ) : (
               <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 text-sm font-bold text-white/40">
-                Select the pickup and
-                return date/time to see
-                available scooters
+                Select the pickup and return date/time to see available scooters
                 automatically.
               </div>
             )}
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
-            <Field
-              label="Total amount"
-              icon={<Euro size={16} />}
-            >
+            <Field label="Total amount" icon={<Euro size={16} />}>
               <input
                 inputMode="decimal"
-                value={
-                  form.totalAmount
-                }
+                value={form.totalAmount}
                 onChange={(event) =>
-                  onChange(
-                    "totalAmount",
-                    event.target.value
-                  )
+                  onChange("totalAmount", event.target.value)
                 }
                 placeholder="0.00"
-                className={
-                  inputClasses
-                }
+                className={inputClasses}
               />
             </Field>
 
-            <Field
-              label="Amount paid"
-              icon={<Euro size={16} />}
-            >
+            <Field label="Amount paid" icon={<Euro size={16} />}>
               <input
                 inputMode="decimal"
                 value={form.amountPaid}
-                onChange={(event) =>
-                  onChange(
-                    "amountPaid",
-                    event.target.value
-                  )
-                }
+                onChange={(event) => onChange("amountPaid", event.target.value)}
                 placeholder="0.00"
-                className={
-                  inputClasses
-                }
+                className={inputClasses}
               />
             </Field>
 
-            <Field
-              label="Payment method"
-              icon={<Euro size={16} />}
-            >
+            <Field label="Payment method" icon={<Euro size={16} />}>
               <select
-                value={
-                  form.paymentMethod
-                }
+                value={form.paymentMethod}
                 onChange={(event) =>
-                  onChange(
-                    "paymentMethod",
-                    event.target.value
-                  )
+                  onChange("paymentMethod", event.target.value)
                 }
-                className={
-                  inputClasses
-                }
+                className={inputClasses}
               >
-                <option value="unpaid">
-                  Unpaid
-                </option>
+                <option value="unpaid">Unpaid</option>
 
-                <option value="cash">
-                  Cash
-                </option>
+                <option value="cash">Cash</option>
 
-                <option value="card">
-                  Card
-                </option>
+                <option value="card">Card</option>
 
-                <option value="stripe">
-                  Stripe
-                </option>
+                <option value="stripe">Stripe</option>
 
-                <option value="bank_transfer">
-                  Bank transfer
-                </option>
+                <option value="bank_transfer">Bank transfer</option>
               </select>
             </Field>
           </div>
@@ -2716,11 +1841,7 @@ function ReservationFormModal({
           <div className="grid gap-3 sm:grid-cols-3">
             <PaymentMetric
               label="Paid"
-              value={euroText(
-                euroInputToCents(
-                  form.amountPaid
-                )
-              )}
+              value={euroText(euroInputToCents(form.amountPaid))}
               tone="emerald"
             />
 
@@ -2728,56 +1849,32 @@ function ReservationFormModal({
               label="Remaining"
               value={euroText(
                 Math.max(
-                  euroInputToCents(
-                    form.totalAmount
-                  ) -
-                    euroInputToCents(
-                      form.amountPaid
-                    ),
-                  0
-                )
+                  euroInputToCents(form.totalAmount) -
+                    euroInputToCents(form.amountPaid),
+                  0,
+                ),
               )}
               tone="amber"
             />
 
             <PaymentMetric
               label="Status"
-              value={getPaymentStatus(
-                form.totalAmount,
-                form.amountPaid
-              )}
+              value={getPaymentStatus(form.totalAmount, form.amountPaid)}
               tone={
-                getPaymentStatus(
-                  form.totalAmount,
-                  form.amountPaid
-                ) === "paid"
+                getPaymentStatus(form.totalAmount, form.amountPaid) === "paid"
                   ? "emerald"
-                  : getPaymentStatus(
-                      form.totalAmount,
-                      form.amountPaid
-                    ) === "partial"
-                  ? "amber"
-                  : "red"
+                  : getPaymentStatus(form.totalAmount, form.amountPaid) ===
+                      "partial"
+                    ? "amber"
+                    : "red"
               }
             />
           </div>
 
-          <Field
-            label="Notes"
-            icon={
-              <StickyNote
-                size={16}
-              />
-            }
-          >
+          <Field label="Notes" icon={<StickyNote size={16} />}>
             <textarea
               value={form.notes}
-              onChange={(event) =>
-                onChange(
-                  "notes",
-                  event.target.value
-                )
-              }
+              onChange={(event) => onChange("notes", event.target.value)}
               placeholder="Add reservation notes..."
               rows={4}
               className={inputClasses}
@@ -2798,28 +1895,20 @@ function ReservationFormModal({
           <button
             type="button"
             onClick={onSave}
-            disabled={
-              saving ||
-              checkingAvailability
-            }
+            disabled={saving || checkingAvailability}
             className="inline-flex items-center justify-center gap-2 rounded-xl bg-orange-500 px-5 py-3 text-sm font-black text-white transition hover:bg-orange-400 disabled:cursor-not-allowed disabled:opacity-45"
           >
             {saving ? (
-              <Loader2
-                size={18}
-                className="animate-spin"
-              />
+              <Loader2 size={18} className="animate-spin" />
             ) : (
-              <CheckCircle2
-                size={18}
-              />
+              <CheckCircle2 size={18} />
             )}
 
             {saving
               ? "Checking and saving..."
               : mode === "edit"
-              ? "Save all changes"
-              : "Create reservation"}
+                ? "Save all changes"
+                : "Create reservation"}
           </button>
         </div>
       </div>
@@ -2846,19 +1935,15 @@ function DocumentsModal({
         <div className="flex items-center justify-between border-b border-white/10 p-5 sm:p-6">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.18em] text-sky-300">
-              Secure booking
-              documents
+              Secure booking documents
             </p>
 
             <h2 className="mt-1 text-2xl font-black text-white">
-              {reservation
-                ?.customerName ||
-                "Customer documents"}
+              {reservation?.customerName || "Customer documents"}
             </h2>
 
             <p className="mt-1 text-xs font-bold text-white/35">
-              {reservation
-                ?.contractNumber || ""}
+              {reservation?.contractNumber || ""}
             </p>
           </div>
 
@@ -2880,99 +1965,70 @@ function DocumentsModal({
               />
 
               <p className="mt-3 text-sm font-bold text-white/45">
-                Creating secure
-                document links...
+                Creating secure document links...
               </p>
             </div>
           ) : error ? (
-            <MessageBox
-              tone="error"
-              message={error}
-            />
+            <MessageBox tone="error" message={error} />
           ) : (
             <div className="grid gap-4 md:grid-cols-2">
-              {documents.map(
-                (document) => (
-                  <div
-                    key={document.key}
-                    className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]"
-                  >
-                    <div className="flex min-h-[320px] items-center justify-center bg-black/30 p-3">
-                      <img
-                        src={
-                          document.url
-                        }
-                        alt={
-                          document.label
-                        }
-                        className="max-h-[440px] w-full rounded-xl object-contain"
-                      />
-                    </div>
+              {documents.map((document) => (
+                <div
+                  key={document.key}
+                  className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]"
+                >
+                  <div className="flex min-h-[320px] items-center justify-center bg-black/30 p-3">
+                    <img
+                      src={document.url}
+                      alt={document.label}
+                      className="max-h-[440px] w-full rounded-xl object-contain"
+                    />
+                  </div>
 
-                    <div className="p-4">
-                      <p className="text-sm font-black text-white">
-                        {
-                          document.label
-                        }
-                      </p>
+                  <div className="p-4">
+                    <p className="text-sm font-black text-white">
+                      {document.label}
+                    </p>
 
-                      <p className="mt-1 truncate text-xs font-bold text-white/35">
-                        {
-                          document.name
-                        }
-                      </p>
+                    <p className="mt-1 truncate text-xs font-bold text-white/35">
+                      {document.name}
+                    </p>
 
-                      <div className="mt-4 grid grid-cols-2 gap-2">
-                        <a
-                          href={
-                            document.url
-                          }
-                          target="_blank"
-                          rel="noreferrer"
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5 text-xs font-black text-sky-300"
-                        >
-                          <FileText
-                            size={15}
-                          />
-                          Open
-                        </a>
+                    <div className="mt-4 grid grid-cols-2 gap-2">
+                      <a
+                        href={document.url}
+                        target="_blank"
+                        rel="noreferrer"
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-sky-400/25 bg-sky-500/10 px-3 py-2.5 text-xs font-black text-sky-300"
+                      >
+                        <FileText size={15} />
+                        Open
+                      </a>
 
-                        <a
-                          href={
-                            document.downloadUrl
-                          }
-                          target="_blank"
-                          rel="noreferrer"
-                          download
-                          className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5 text-xs font-black text-emerald-300"
-                        >
-                          <Download
-                            size={15}
-                          />
-                          Download
-                        </a>
-                      </div>
+                      <a
+                        href={document.downloadUrl}
+                        target="_blank"
+                        rel="noreferrer"
+                        download
+                        className="inline-flex items-center justify-center gap-2 rounded-xl border border-emerald-400/25 bg-emerald-500/10 px-3 py-2.5 text-xs font-black text-emerald-300"
+                      >
+                        <Download size={15} />
+                        Download
+                      </a>
                     </div>
                   </div>
-                )
-              )}
+                </div>
+              ))}
             </div>
           )}
 
           <div className="mt-5 rounded-2xl border border-amber-400/20 bg-amber-500/10 p-4">
             <div className="flex gap-3 text-amber-300">
-              <AlertTriangle
-                size={18}
-                className="shrink-0"
-              />
+              <AlertTriangle size={18} className="shrink-0" />
 
               <p className="text-xs font-bold leading-5">
-                These are private
-                identity documents.
-                Secure links expire
-                automatically and must
-                not be shared outside
-                Nexa Rentals.
+                These are private identity documents. Secure links expire
+                automatically and must not be shared outside Nexa Rentals.
               </p>
             </div>
           </div>
@@ -3003,22 +2059,14 @@ function Field({
   );
 }
 
-function SmallMetric({
-  label,
-  value,
-}: {
-  label: string;
-  value: number;
-}) {
+function SmallMetric({ label, value }: { label: string; value: number }) {
   return (
     <div className="rounded-xl border border-white/10 bg-white/[0.035] p-3">
       <p className="text-[9px] font-black uppercase tracking-[0.14em] text-white/30">
         {label}
       </p>
 
-      <p className="mt-1 text-xl font-black text-white">
-        {value}
-      </p>
+      <p className="mt-1 text-xl font-black text-white">{value}</p>
     </div>
   );
 }
@@ -3030,29 +2078,22 @@ function PaymentMetric({
 }: {
   label: string;
   value: string;
-  tone:
-    | "emerald"
-    | "amber"
-    | "red";
+  tone: "emerald" | "amber" | "red";
 }) {
   const classes =
     tone === "emerald"
       ? "border-emerald-400/20 bg-emerald-500/10 text-emerald-300"
       : tone === "amber"
-      ? "border-amber-400/20 bg-amber-500/10 text-amber-300"
-      : "border-red-400/20 bg-red-500/10 text-red-300";
+        ? "border-amber-400/20 bg-amber-500/10 text-amber-300"
+        : "border-red-400/20 bg-red-500/10 text-red-300";
 
   return (
-    <div
-      className={`rounded-2xl border p-4 ${classes}`}
-    >
+    <div className={`rounded-2xl border p-4 ${classes}`}>
       <p className="text-[9px] font-black uppercase tracking-[0.16em] opacity-70">
         {label}
       </p>
 
-      <p className="mt-1 text-lg font-black uppercase">
-        {value}
-      </p>
+      <p className="mt-1 text-lg font-black uppercase">{value}</p>
     </div>
   );
 }
@@ -3061,13 +2102,10 @@ function MessageBox({
   tone,
   message,
 }: {
-  tone:
-    | "error"
-    | "success";
+  tone: "error" | "success";
   message: string;
 }) {
-  const successful =
-    tone === "success";
+  const successful = tone === "success";
 
   return (
     <div
@@ -3078,20 +2116,12 @@ function MessageBox({
       }`}
     >
       {successful ? (
-        <CheckCircle2
-          size={19}
-          className="shrink-0"
-        />
+        <CheckCircle2 size={19} className="shrink-0" />
       ) : (
-        <AlertTriangle
-          size={19}
-          className="shrink-0"
-        />
+        <AlertTriangle size={19} className="shrink-0" />
       )}
 
-      <p className="text-sm font-bold">
-        {message}
-      </p>
+      <p className="text-sm font-bold">{message}</p>
     </div>
   );
 }
