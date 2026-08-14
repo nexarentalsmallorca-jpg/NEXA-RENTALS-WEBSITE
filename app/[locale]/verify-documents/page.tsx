@@ -1537,7 +1537,7 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
   },
 };
 
-const AUTO_CAPTURE_SAMPLES = 5;
+const AUTO_CAPTURE_SAMPLES = 4;
 const CAMERA_WARMUP_MS = 900;
 const QUALITY_CHECK_INTERVAL_MS = 160;
 const MANUAL_CAPTURE_DELAY_MS = 4200;
@@ -1610,6 +1610,7 @@ type DocumentDetection = {
 };
 
 function detectDocumentRectangle(
+  rgba: Uint8ClampedArray,
   gray: Uint8ClampedArray,
   width: number,
   height: number,
@@ -1627,6 +1628,7 @@ function detectDocumentRectangle(
   if (
     width < 80 ||
     height < 50 ||
+    rgba.length !== width * height * 4 ||
     gray.length !== width * height ||
     !Number.isFinite(expectedAspect)
   ) {
@@ -1650,10 +1652,19 @@ function detectDocumentRectangle(
 
     for (let y = verticalStart; y < verticalEnd; y += 1) {
       const offset = y * width + x;
-      const gradient = Math.abs(gray[offset + 1] - gray[offset - 1]);
+      const rgbaOffset = offset * 4;
+      const colorGradient =
+        (Math.abs(rgba[rgbaOffset + 4] - rgba[rgbaOffset - 4]) +
+          Math.abs(rgba[rgbaOffset + 5] - rgba[rgbaOffset - 3]) +
+          Math.abs(rgba[rgbaOffset + 6] - rgba[rgbaOffset - 2])) /
+        3;
+      const gradient = Math.max(
+        Math.abs(gray[offset + 1] - gray[offset - 1]),
+        colorGradient * 0.9,
+      );
 
       gradientTotal += gradient;
-      strongPixels += gradient >= 18 ? 1 : 0;
+      strongPixels += gradient >= 14 ? 1 : 0;
       samples += 1;
     }
 
@@ -1668,12 +1679,29 @@ function detectDocumentRectangle(
 
     for (let x = horizontalStart; x < horizontalEnd; x += 1) {
       const offset = y * width + x;
-      const gradient = Math.abs(
-        gray[offset + width] - gray[offset - width],
+      const rgbaOffset = offset * 4;
+      const rgbaRowOffset = width * 4;
+      const colorGradient =
+        (Math.abs(
+          rgba[rgbaOffset + rgbaRowOffset] -
+            rgba[rgbaOffset - rgbaRowOffset],
+        ) +
+          Math.abs(
+            rgba[rgbaOffset + rgbaRowOffset + 1] -
+              rgba[rgbaOffset - rgbaRowOffset + 1],
+          ) +
+          Math.abs(
+            rgba[rgbaOffset + rgbaRowOffset + 2] -
+              rgba[rgbaOffset - rgbaRowOffset + 2],
+          )) /
+        3;
+      const gradient = Math.max(
+        Math.abs(gray[offset + width] - gray[offset - width]),
+        colorGradient * 0.9,
       );
 
       gradientTotal += gradient;
-      strongPixels += gradient >= 18 ? 1 : 0;
+      strongPixels += gradient >= 14 ? 1 : 0;
       samples += 1;
     }
 
@@ -1805,21 +1833,26 @@ function detectDocumentRectangle(
 
   const detailRatio = detailSamples ? detailPixels / detailSamples : 0;
 
+  const supportedBoundaries = boundaries.filter(
+    (item) => item.strength >= 3.6 && item.coverage >= 0.045,
+  ).length;
+
   const found =
-    widthRatio >= 0.58 &&
-    widthRatio <= 0.98 &&
-    heightRatio >= 0.52 &&
-    heightRatio <= 0.98 &&
-    areaRatio >= 0.36 &&
-    areaRatio <= 0.94 &&
-    aspectError <= 0.25 &&
-    Math.abs(centerX - 0.5) <= 0.13 &&
-    Math.abs(centerY - 0.5) <= 0.13 &&
-    averageStrength >= 6.2 &&
-    averageCoverage >= 0.12 &&
-    weakestStrength >= 3.8 &&
-    weakestCoverage >= 0.055 &&
-    detailRatio >= 0.035;
+    widthRatio >= 0.54 &&
+    widthRatio <= 0.94 &&
+    heightRatio >= 0.48 &&
+    heightRatio <= 0.94 &&
+    areaRatio >= 0.3 &&
+    areaRatio <= 0.88 &&
+    aspectError <= 0.2 &&
+    Math.abs(centerX - 0.5) <= 0.17 &&
+    Math.abs(centerY - 0.5) <= 0.17 &&
+    averageStrength >= 4.6 &&
+    averageCoverage >= 0.075 &&
+    weakestStrength >= 2.1 &&
+    weakestCoverage >= 0.02 &&
+    supportedBoundaries >= 3 &&
+    detailRatio >= 0.025;
 
   const confidence = Math.max(
     0,
@@ -1976,8 +2009,6 @@ export default function VerifyDocumentsPage() {
 
   const previousFrameRef = useRef<Uint8ClampedArray | null>(null);
 
-  const detectedDocumentRef = useRef<DocumentDetection | null>(null);
-
   const stableSamplesRef = useRef(0);
   const cameraStartedAtRef = useRef(0);
   const capturingRef = useRef(false);
@@ -2045,7 +2076,6 @@ export default function VerifyDocumentsPage() {
     }
 
     previousFrameRef.current = null;
-    detectedDocumentRef.current = null;
     stableSamplesRef.current = 0;
     cameraStartedAtRef.current = 0;
     if (!preserveCaptureLock) {
@@ -2878,31 +2908,12 @@ export default function VerifyDocumentsPage() {
       const edgeScore = edgeCount ? edgeSum / edgeCount : 0;
 
       const documentDetection = detectDocumentRectangle(
+        rgba,
         gray,
         canvas.width,
         canvas.height,
         aspect,
       );
-
-      const previousDocument = detectedDocumentRef.current;
-
-      const documentPositionShift = previousDocument
-        ? (Math.abs(documentDetection.left - previousDocument.left) +
-            Math.abs(documentDetection.top - previousDocument.top) +
-            Math.abs(documentDetection.right - previousDocument.right) +
-            Math.abs(documentDetection.bottom - previousDocument.bottom)) /
-          4
-        : Number.POSITIVE_INFINITY;
-
-      const documentPositionStable = Boolean(
-        documentDetection.found &&
-          previousDocument?.found &&
-          documentPositionShift <= 0.035,
-      );
-
-      detectedDocumentRef.current = documentDetection.found
-        ? documentDetection
-        : null;
 
       const previous = previousFrameRef.current;
 
@@ -2926,10 +2937,10 @@ export default function VerifyDocumentsPage() {
       /*
        * Fast customer-friendly capture.
        *
-       * Automatic capture requires a document-shaped
-       * rectangle with four stable boundaries inside
-       * the guide. Brightness and sharpness alone are
-       * never enough to trigger a photograph.
+       * Automatic capture requires repeated detection
+       * of a document-shaped rectangle inside the guide.
+       * Brightness and sharpness alone are never enough
+       * to trigger a photograph.
        */
       if (brightness < 24) {
         nextQuality = {
@@ -2970,10 +2981,10 @@ export default function VerifyDocumentsPage() {
       const warmedUp =
         performance.now() - cameraStartedAtRef.current >= CAMERA_WARMUP_MS;
 
-      if (good && warmedUp && documentPositionStable) {
+      if (good && warmedUp) {
         stableSamplesRef.current += 1;
       } else {
-        stableSamplesRef.current = 0;
+        stableSamplesRef.current = Math.max(0, stableSamplesRef.current - 1);
       }
 
       if (stableSamplesRef.current >= AUTO_CAPTURE_SAMPLES) {
@@ -4010,4 +4021,4 @@ function Choice({
       <div className="mt-1 text-[11px] font-bold text-white/40">{detail}</div>
     </button>
   );
-}
+  }
