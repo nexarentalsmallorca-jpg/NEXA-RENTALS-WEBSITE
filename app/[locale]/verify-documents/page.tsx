@@ -10,6 +10,14 @@ import {
   useState,
 } from "react";
 import { useLocale } from "next-intl";
+import { Manrope } from "next/font/google";
+
+const scannerFont = Manrope({
+  subsets: ["latin", "cyrillic"],
+  weight: ["400", "500", "600", "700", "800"],
+  display: "swap",
+  variable: "--font-nexa-scanner",
+});
 
 type ScannerLocale =
   | "en"
@@ -2892,7 +2900,7 @@ export default function VerifyDocumentsPage() {
   return (
     <div
       id="nexa-document-scanner-root"
-      className="fixed inset-0 z-[2147483647] min-h-[100svh] overflow-y-auto bg-black font-sans text-white"
+      className={`${scannerFont.variable} ${scannerFont.className} fixed inset-0 z-[2147483647] min-h-[100svh] overflow-y-auto bg-black text-white`}
     >
       <input
         ref={fileInputRef}
@@ -2973,7 +2981,18 @@ export default function VerifyDocumentsPage() {
             </div>
 
             <div className="mx-auto mt-5 w-full max-w-[700px] text-center">
-              <DocumentMotion side={step.endsWith("Back") ? "back" : "front"} />
+              <DocumentMotion
+                side={step.endsWith("Back") ? "back" : "front"}
+                kind={
+                  step.startsWith("dl")
+                    ? "licence"
+                    : identityType === "passport"
+                      ? "passport"
+                      : "identity"
+                }
+                active={cameraReady}
+                capturing={capturing}
+              />
 
               <h2 className="mt-3 text-[21px] font-black tracking-[-0.04em] sm:text-[25px]">
                 {stepCopy.title}
@@ -3270,6 +3289,24 @@ export default function VerifyDocumentsPage() {
           display: none !important;
         }
 
+        #nexa-document-scanner-root,
+        #nexa-document-scanner-root * {
+          font-family:
+            var(--font-nexa-scanner), Manrope, Inter, "Helvetica Neue", Arial,
+            sans-serif !important;
+          font-synthesis: none;
+        }
+
+        #nexa-document-scanner-root h1,
+        #nexa-document-scanner-root h2 {
+          font-weight: 650 !important;
+          letter-spacing: -0.025em !important;
+        }
+
+        #nexa-document-scanner-root p {
+          font-weight: 500 !important;
+        }
+
         @keyframes nexa-scan {
           0% {
             top: 8%;
@@ -3286,14 +3323,118 @@ export default function VerifyDocumentsPage() {
           }
         }
 
-        @keyframes nexa-card {
+        @keyframes nexa-document-enter {
           0%,
-          100% {
-            transform: translateX(-7px) rotate(-2deg);
+          12% {
+            opacity: 0;
+            transform: translate3d(0, 34px, 0) scale(0.88) rotateX(9deg);
           }
 
-          50% {
-            transform: translateX(7px) rotate(2deg);
+          25%,
+          76% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1) rotateX(0deg);
+          }
+
+          90%,
+          100% {
+            opacity: 0;
+            transform: translate3d(0, -8px, 0) scale(0.97) rotateX(0deg);
+          }
+        }
+
+        @keyframes nexa-document-scan {
+          0%,
+          25% {
+            opacity: 0;
+            transform: translateY(0);
+          }
+
+          32% {
+            opacity: 1;
+          }
+
+          67% {
+            opacity: 1;
+            transform: translateY(48px);
+          }
+
+          73%,
+          100% {
+            opacity: 0;
+            transform: translateY(48px);
+          }
+        }
+
+        @keyframes nexa-reader-glow {
+          0%,
+          24%,
+          76%,
+          100% {
+            opacity: 0.35;
+            transform: scaleX(0.72);
+          }
+
+          34%,
+          68% {
+            opacity: 1;
+            transform: scaleX(1);
+          }
+        }
+
+        @keyframes nexa-data-read {
+          0%,
+          38% {
+            opacity: 0.22;
+            transform: scaleX(0.45);
+          }
+
+          54%,
+          76% {
+            opacity: 0.9;
+            transform: scaleX(1);
+          }
+
+          90%,
+          100% {
+            opacity: 0.22;
+            transform: scaleX(0.45);
+          }
+        }
+
+        @keyframes nexa-sensor-pulse {
+          0%,
+          28%,
+          80%,
+          100% {
+            background: rgba(255, 255, 255, 0.28);
+            box-shadow: 0 0 0 rgba(255, 255, 255, 0);
+          }
+
+          45%,
+          68% {
+            background: rgb(110 231 183);
+            box-shadow: 0 0 11px rgba(110, 231, 183, 0.9);
+          }
+        }
+
+        @keyframes nexa-corner-lock {
+          0%,
+          30% {
+            opacity: 0;
+            transform: scale(1.55);
+          }
+
+          43%,
+          76% {
+            opacity: 1;
+            transform: scale(1);
+          }
+
+          90%,
+          100% {
+            opacity: 0;
+            transform: scale(0.92);
           }
         }
 
@@ -3307,8 +3448,81 @@ export default function VerifyDocumentsPage() {
           animation: nexa-scan 2.2s ease-in-out infinite;
         }
 
-        .nexa-card-motion {
-          animation: nexa-card 2.4s ease-in-out infinite;
+        .nexa-document-motion {
+          perspective: 700px;
+        }
+
+        .nexa-animated-document {
+          animation: nexa-document-enter 3.8s cubic-bezier(0.22, 0.8, 0.24, 1)
+            infinite;
+          transform-origin: 50% 100%;
+          will-change: transform, opacity;
+        }
+
+        .nexa-document-beam {
+          animation: nexa-document-scan 3.8s cubic-bezier(0.4, 0, 0.2, 1)
+            infinite;
+          will-change: transform, opacity;
+        }
+
+        .nexa-reader-glow {
+          animation: nexa-reader-glow 3.8s ease-in-out infinite;
+          transform-origin: center;
+        }
+
+        .nexa-data-line {
+          animation: nexa-data-read 3.8s ease-in-out infinite;
+          transform-origin: left center;
+        }
+
+        .nexa-data-line:nth-child(2) {
+          animation-delay: 80ms;
+        }
+
+        .nexa-data-line:nth-child(3) {
+          animation-delay: 160ms;
+        }
+
+        .nexa-reader-sensor {
+          animation: nexa-sensor-pulse 3.8s ease-in-out infinite;
+        }
+
+        .nexa-reader-sensor:nth-child(2) {
+          animation-delay: 90ms;
+        }
+
+        .nexa-reader-sensor:nth-child(3) {
+          animation-delay: 180ms;
+        }
+
+        .nexa-lock-corner {
+          animation: nexa-corner-lock 3.8s cubic-bezier(0.22, 0.8, 0.24, 1)
+            infinite;
+        }
+
+        .nexa-document-motion[data-active="false"]
+          .nexa-animated-document,
+        .nexa-document-motion[data-active="false"] .nexa-document-beam,
+        .nexa-document-motion[data-active="false"] .nexa-reader-glow,
+        .nexa-document-motion[data-active="false"] .nexa-data-line,
+        .nexa-document-motion[data-active="false"] .nexa-reader-sensor,
+        .nexa-document-motion[data-active="false"] .nexa-lock-corner {
+          animation-play-state: paused;
+        }
+
+        .nexa-document-motion[data-active="false"]
+          .nexa-animated-document {
+          opacity: 0.5;
+          transform: translate3d(0, 8px, 0) scale(0.96);
+        }
+
+        .nexa-document-motion[data-active="false"] .nexa-document-beam {
+          opacity: 0;
+        }
+
+        .nexa-document-motion[data-capturing="true"] .nexa-reader-glow {
+          opacity: 1;
+          filter: brightness(1.35);
         }
 
         .nexa-spinner {
@@ -3317,7 +3531,12 @@ export default function VerifyDocumentsPage() {
 
         @media (prefers-reduced-motion: reduce) {
           .nexa-scan-line,
-          .nexa-card-motion,
+          .nexa-animated-document,
+          .nexa-document-beam,
+          .nexa-reader-glow,
+          .nexa-data-line,
+          .nexa-reader-sensor,
+          .nexa-lock-corner,
           .nexa-spinner {
             animation: none;
           }
@@ -3354,20 +3573,104 @@ function FrameCorners() {
   );
 }
 
-function DocumentMotion({ side }: { side: "front" | "back" }) {
+function DocumentMotion({
+  side,
+  kind,
+  active,
+  capturing,
+}: {
+  side: "front" | "back";
+  kind: "licence" | "identity" | "passport";
+  active: boolean;
+  capturing: boolean;
+}) {
+  const isPassport = kind === "passport";
+  const documentLabel =
+    kind === "licence" ? "DL" : kind === "identity" ? "ID" : "P";
+
   return (
-    <div className="nexa-card-motion mx-auto flex h-10 w-16 items-center rounded-[5px] border border-white/20 bg-white/10 px-2">
-      <div className="h-5 w-4 rounded-sm bg-white/20" />
+    <div
+      className="nexa-document-motion relative mx-auto h-[108px] w-[190px] overflow-hidden"
+      data-active={active ? "true" : "false"}
+      data-capturing={capturing ? "true" : "false"}
+      aria-hidden="true"
+    >
+      <div className="absolute left-1/2 top-0 z-30 h-[26px] w-[122px] -translate-x-1/2 rounded-[8px] border border-white/[0.14] bg-[linear-gradient(180deg,#292929_0%,#121212_100%)] shadow-[0_8px_20px_rgba(0,0,0,.7),inset_0_1px_0_rgba(255,255,255,.12)]">
+        <div className="absolute inset-x-[12px] bottom-[5px] flex items-center justify-between">
+          <div className="flex gap-[5px]">
+            <span className="nexa-reader-sensor h-[3px] w-[3px] rounded-full" />
+            <span className="nexa-reader-sensor h-[3px] w-[3px] rounded-full" />
+            <span className="nexa-reader-sensor h-[3px] w-[3px] rounded-full" />
+          </div>
 
-      <div className="ml-2 flex-1 space-y-1">
-        <div className="h-0.5 w-full bg-white/30" />
+          <div className="h-[2px] w-[27px] rounded-full bg-white/20" />
+        </div>
 
-        <div className="h-0.5 w-4/5 bg-white/20" />
-
-        <div className="h-0.5 w-3/5 bg-white/20" />
+        <div className="nexa-reader-glow absolute -bottom-px left-[13px] right-[13px] h-px bg-emerald-300 shadow-[0_0_10px_rgba(110,231,183,.95)]" />
       </div>
 
-      <span className="sr-only">{side}</span>
+      <div className="absolute left-1/2 top-[18px] h-[78px] w-[154px] -translate-x-1/2">
+        <div
+          className={`nexa-animated-document absolute inset-x-0 top-[10px] h-[72px] overflow-hidden border border-white/25 bg-[linear-gradient(135deg,rgba(255,255,255,.20),rgba(255,255,255,.07)_48%,rgba(255,255,255,.14))] shadow-[0_13px_30px_rgba(0,0,0,.58),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-sm ${
+            isPassport ? "rounded-[4px]" : "rounded-[9px]"
+          }`}
+        >
+          <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(110,231,183,.16),transparent_28%)]" />
+
+          {side === "front" ? (
+            <>
+              <div className="absolute left-[10px] top-[11px] flex h-[37px] w-[31px] items-center justify-center overflow-hidden rounded-[5px] border border-white/10 bg-black/35">
+                <svg
+                  viewBox="0 0 32 38"
+                  className="h-full w-full text-white/48"
+                  fill="none"
+                  aria-hidden="true"
+                >
+                  <circle cx="16" cy="12" r="6" fill="currentColor" />
+                  <path
+                    d="M5 34c1.8-8 5.4-12 11-12s9.2 4 11 12"
+                    fill="currentColor"
+                  />
+                </svg>
+              </div>
+
+              <div className="absolute left-[49px] right-[12px] top-[13px] space-y-[6px]">
+                <div className="nexa-data-line h-[3px] w-[82%] rounded-full bg-white/52" />
+                <div className="nexa-data-line h-[3px] w-full rounded-full bg-white/27" />
+                <div className="nexa-data-line h-[3px] w-[69%] rounded-full bg-white/27" />
+              </div>
+
+              <div className="absolute bottom-[10px] left-[10px] rounded-[4px] border border-white/15 bg-black/25 px-[5px] py-[2px] text-[6px] font-extrabold tracking-[0.16em] text-white/65">
+                {documentLabel}
+              </div>
+
+              <div className="absolute bottom-[11px] right-[12px] h-[9px] w-[27px] rounded-[2px] bg-[repeating-linear-gradient(90deg,rgba(255,255,255,.42)_0_1px,transparent_1px_3px)]" />
+            </>
+          ) : (
+            <>
+              <div className="absolute left-[11px] right-[11px] top-[12px] h-[20px] rounded-[3px] bg-[repeating-linear-gradient(90deg,rgba(255,255,255,.35)_0_1px,transparent_1px_4px)]" />
+
+              <div className="absolute left-[11px] right-[11px] top-[42px] space-y-[5px]">
+                <div className="nexa-data-line h-[3px] w-full rounded-full bg-white/32" />
+                <div className="nexa-data-line h-[3px] w-[74%] rounded-full bg-white/22" />
+              </div>
+
+              <div className="absolute bottom-[8px] right-[10px] text-[6px] font-extrabold tracking-[0.16em] text-white/55">
+                {documentLabel}
+              </div>
+            </>
+          )}
+
+          <span className="nexa-lock-corner absolute left-[5px] top-[5px] h-[10px] w-[10px] rounded-tl-[3px] border-l border-t border-emerald-300" />
+          <span className="nexa-lock-corner absolute right-[5px] top-[5px] h-[10px] w-[10px] rounded-tr-[3px] border-r border-t border-emerald-300" />
+          <span className="nexa-lock-corner absolute bottom-[5px] left-[5px] h-[10px] w-[10px] rounded-bl-[3px] border-b border-l border-emerald-300" />
+          <span className="nexa-lock-corner absolute bottom-[5px] right-[5px] h-[10px] w-[10px] rounded-br-[3px] border-b border-r border-emerald-300" />
+        </div>
+
+        <div className="nexa-document-beam pointer-events-none absolute left-[3px] right-[3px] top-[13px] z-20 h-px bg-emerald-200 shadow-[0_0_6px_1px_rgba(110,231,183,.9),0_0_16px_3px_rgba(110,231,183,.34)]" />
+      </div>
+
+      <div className="absolute bottom-[1px] left-1/2 h-[6px] w-[168px] -translate-x-1/2 rounded-[50%] bg-black shadow-[0_0_18px_8px_rgba(255,255,255,.045)]" />
     </div>
   );
 }
