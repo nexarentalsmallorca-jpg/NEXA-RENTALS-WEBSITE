@@ -1537,7 +1537,7 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
   },
 };
 
-const AUTO_CAPTURE_SAMPLES = 4;
+const AUTO_CAPTURE_SAMPLES = 5;
 const CAMERA_WARMUP_MS = 900;
 const QUALITY_CHECK_INTERVAL_MS = 160;
 const MANUAL_CAPTURE_DELAY_MS = 4200;
@@ -1597,6 +1597,249 @@ function sourceCrop(video: HTMLVideoElement, aspect: number) {
     sy,
     sw,
     sh,
+  };
+}
+
+type DocumentDetection = {
+  found: boolean;
+  left: number;
+  top: number;
+  right: number;
+  bottom: number;
+  confidence: number;
+};
+
+function detectDocumentRectangle(
+  gray: Uint8ClampedArray,
+  width: number,
+  height: number,
+  expectedAspect: number,
+): DocumentDetection {
+  const missing: DocumentDetection = {
+    found: false,
+    left: 0,
+    top: 0,
+    right: 1,
+    bottom: 1,
+    confidence: 0,
+  };
+
+  if (
+    width < 80 ||
+    height < 50 ||
+    gray.length !== width * height ||
+    !Number.isFinite(expectedAspect)
+  ) {
+    return missing;
+  }
+
+  const verticalStrength = new Float32Array(width);
+  const verticalCoverage = new Float32Array(width);
+  const horizontalStrength = new Float32Array(height);
+  const horizontalCoverage = new Float32Array(height);
+
+  const verticalStart = Math.max(2, Math.round(height * 0.06));
+  const verticalEnd = Math.min(height - 2, Math.round(height * 0.94));
+  const horizontalStart = Math.max(2, Math.round(width * 0.06));
+  const horizontalEnd = Math.min(width - 2, Math.round(width * 0.94));
+
+  for (let x = 2; x < width - 2; x += 1) {
+    let gradientTotal = 0;
+    let strongPixels = 0;
+    let samples = 0;
+
+    for (let y = verticalStart; y < verticalEnd; y += 1) {
+      const offset = y * width + x;
+      const gradient = Math.abs(gray[offset + 1] - gray[offset - 1]);
+
+      gradientTotal += gradient;
+      strongPixels += gradient >= 18 ? 1 : 0;
+      samples += 1;
+    }
+
+    verticalStrength[x] = samples ? gradientTotal / samples : 0;
+    verticalCoverage[x] = samples ? strongPixels / samples : 0;
+  }
+
+  for (let y = 2; y < height - 2; y += 1) {
+    let gradientTotal = 0;
+    let strongPixels = 0;
+    let samples = 0;
+
+    for (let x = horizontalStart; x < horizontalEnd; x += 1) {
+      const offset = y * width + x;
+      const gradient = Math.abs(
+        gray[offset + width] - gray[offset - width],
+      );
+
+      gradientTotal += gradient;
+      strongPixels += gradient >= 18 ? 1 : 0;
+      samples += 1;
+    }
+
+    horizontalStrength[y] = samples ? gradientTotal / samples : 0;
+    horizontalCoverage[y] = samples ? strongPixels / samples : 0;
+  }
+
+  function strongestBoundary(
+    strengths: Float32Array,
+    coverages: Float32Array,
+    startRatio: number,
+    endRatio: number,
+  ) {
+    const length = strengths.length;
+    const start = Math.max(2, Math.floor(length * startRatio));
+    const end = Math.min(length - 3, Math.ceil(length * endRatio));
+
+    let bestIndex = start;
+    let bestStrength = 0;
+    let bestCoverage = 0;
+    let bestScore = -1;
+
+    for (let index = start; index <= end; index += 1) {
+      let localStrength = 0;
+      let localCoverage = 0;
+      let localSamples = 0;
+
+      for (let offset = -2; offset <= 2; offset += 1) {
+        const sampleIndex = index + offset;
+
+        if (sampleIndex < 0 || sampleIndex >= length) {
+          continue;
+        }
+
+        localStrength += strengths[sampleIndex];
+        localCoverage += coverages[sampleIndex];
+        localSamples += 1;
+      }
+
+      localStrength /= Math.max(1, localSamples);
+      localCoverage /= Math.max(1, localSamples);
+
+      const score = localStrength + localCoverage * 22;
+
+      if (score > bestScore) {
+        bestScore = score;
+        bestIndex = index;
+        bestStrength = localStrength;
+        bestCoverage = localCoverage;
+      }
+    }
+
+    return {
+      index: bestIndex,
+      strength: bestStrength,
+      coverage: bestCoverage,
+    };
+  }
+
+  const left = strongestBoundary(
+    verticalStrength,
+    verticalCoverage,
+    0.015,
+    0.28,
+  );
+  const right = strongestBoundary(
+    verticalStrength,
+    verticalCoverage,
+    0.72,
+    0.985,
+  );
+  const top = strongestBoundary(
+    horizontalStrength,
+    horizontalCoverage,
+    0.015,
+    0.3,
+  );
+  const bottom = strongestBoundary(
+    horizontalStrength,
+    horizontalCoverage,
+    0.7,
+    0.985,
+  );
+
+  const detectedWidth = right.index - left.index;
+  const detectedHeight = bottom.index - top.index;
+
+  if (detectedWidth <= 0 || detectedHeight <= 0) {
+    return missing;
+  }
+
+  const widthRatio = detectedWidth / width;
+  const heightRatio = detectedHeight / height;
+  const areaRatio = widthRatio * heightRatio;
+  const detectedAspect = detectedWidth / detectedHeight;
+  const aspectError = Math.abs(detectedAspect - expectedAspect) / expectedAspect;
+  const centerX = (left.index + right.index) / (2 * width);
+  const centerY = (top.index + bottom.index) / (2 * height);
+
+  const boundaries = [left, right, top, bottom];
+  const averageStrength =
+    boundaries.reduce((total, item) => total + item.strength, 0) /
+    boundaries.length;
+  const averageCoverage =
+    boundaries.reduce((total, item) => total + item.coverage, 0) /
+    boundaries.length;
+  const weakestStrength = Math.min(...boundaries.map((item) => item.strength));
+  const weakestCoverage = Math.min(...boundaries.map((item) => item.coverage));
+
+  const innerLeft = Math.min(right.index - 3, left.index + 5);
+  const innerRight = Math.max(innerLeft + 1, right.index - 5);
+  const innerTop = Math.min(bottom.index - 3, top.index + 5);
+  const innerBottom = Math.max(innerTop + 1, bottom.index - 5);
+
+  let detailPixels = 0;
+  let detailSamples = 0;
+
+  for (let y = innerTop + 1; y < innerBottom - 1; y += 2) {
+    for (let x = innerLeft + 1; x < innerRight - 1; x += 2) {
+      const offset = y * width + x;
+      const detail =
+        Math.abs(gray[offset + 1] - gray[offset - 1]) +
+        Math.abs(gray[offset + width] - gray[offset - width]);
+
+      detailPixels += detail >= 24 ? 1 : 0;
+      detailSamples += 1;
+    }
+  }
+
+  const detailRatio = detailSamples ? detailPixels / detailSamples : 0;
+
+  const found =
+    widthRatio >= 0.58 &&
+    widthRatio <= 0.98 &&
+    heightRatio >= 0.52 &&
+    heightRatio <= 0.98 &&
+    areaRatio >= 0.36 &&
+    areaRatio <= 0.94 &&
+    aspectError <= 0.25 &&
+    Math.abs(centerX - 0.5) <= 0.13 &&
+    Math.abs(centerY - 0.5) <= 0.13 &&
+    averageStrength >= 6.2 &&
+    averageCoverage >= 0.12 &&
+    weakestStrength >= 3.8 &&
+    weakestCoverage >= 0.055 &&
+    detailRatio >= 0.035;
+
+  const confidence = Math.max(
+    0,
+    Math.min(
+      1,
+      (averageStrength / 12 +
+        averageCoverage / 0.28 +
+        detailRatio / 0.16 +
+        (1 - Math.min(1, aspectError / 0.25))) /
+        4,
+    ),
+  );
+
+  return {
+    found,
+    left: left.index / width,
+    top: top.index / height,
+    right: right.index / width,
+    bottom: bottom.index / height,
+    confidence,
   };
 }
 
@@ -1733,6 +1976,8 @@ export default function VerifyDocumentsPage() {
 
   const previousFrameRef = useRef<Uint8ClampedArray | null>(null);
 
+  const detectedDocumentRef = useRef<DocumentDetection | null>(null);
+
   const stableSamplesRef = useRef(0);
   const cameraStartedAtRef = useRef(0);
   const capturingRef = useRef(false);
@@ -1800,6 +2045,7 @@ export default function VerifyDocumentsPage() {
     }
 
     previousFrameRef.current = null;
+    detectedDocumentRef.current = null;
     stableSamplesRef.current = 0;
     cameraStartedAtRef.current = 0;
     if (!preserveCaptureLock) {
@@ -2631,6 +2877,33 @@ export default function VerifyDocumentsPage() {
 
       const edgeScore = edgeCount ? edgeSum / edgeCount : 0;
 
+      const documentDetection = detectDocumentRectangle(
+        gray,
+        canvas.width,
+        canvas.height,
+        aspect,
+      );
+
+      const previousDocument = detectedDocumentRef.current;
+
+      const documentPositionShift = previousDocument
+        ? (Math.abs(documentDetection.left - previousDocument.left) +
+            Math.abs(documentDetection.top - previousDocument.top) +
+            Math.abs(documentDetection.right - previousDocument.right) +
+            Math.abs(documentDetection.bottom - previousDocument.bottom)) /
+          4
+        : Number.POSITIVE_INFINITY;
+
+      const documentPositionStable = Boolean(
+        documentDetection.found &&
+          previousDocument?.found &&
+          documentPositionShift <= 0.035,
+      );
+
+      detectedDocumentRef.current = documentDetection.found
+        ? documentDetection
+        : null;
+
       const previous = previousFrameRef.current;
 
       let motion = 0;
@@ -2653,10 +2926,10 @@ export default function VerifyDocumentsPage() {
       /*
        * Fast customer-friendly capture.
        *
-       * We reject only frames that are genuinely
-       * unusable. Normal hand movement is accepted.
-       * Sharpness is still checked so the AI can
-       * read the licence text properly.
+       * Automatic capture requires a document-shaped
+       * rectangle with four stable boundaries inside
+       * the guide. Brightness and sharpness alone are
+       * never enough to trigger a photograph.
        */
       if (brightness < 24) {
         nextQuality = {
@@ -2667,6 +2940,11 @@ export default function VerifyDocumentsPage() {
         nextQuality = {
           tone: "warn",
           text: copy.tooMuchGlare,
+        };
+      } else if (!documentDetection.found) {
+        nextQuality = {
+          tone: "neutral",
+          text: copy.alignDocument,
         };
       } else if (contrast < 13 || edgeScore < (step === "dlBack" ? 5.4 : 4.5)) {
         nextQuality = {
@@ -2692,7 +2970,7 @@ export default function VerifyDocumentsPage() {
       const warmedUp =
         performance.now() - cameraStartedAtRef.current >= CAMERA_WARMUP_MS;
 
-      if (good && warmedUp) {
+      if (good && warmedUp && documentPositionStable) {
         stableSamplesRef.current += 1;
       } else {
         stableSamplesRef.current = 0;
@@ -3343,6 +3621,31 @@ export default function VerifyDocumentsPage() {
           }
         }
 
+        @keyframes nexa-document-enter-back {
+          0%,
+          8% {
+            opacity: 0;
+            transform: translate3d(0, 34px, 0) scale(0.88) rotateY(-180deg);
+          }
+
+          20% {
+            opacity: 0.65;
+            transform: translate3d(0, 15px, 0) scale(0.94) rotateY(-105deg);
+          }
+
+          34%,
+          76% {
+            opacity: 1;
+            transform: translate3d(0, 0, 0) scale(1) rotateY(0deg);
+          }
+
+          90%,
+          100% {
+            opacity: 0;
+            transform: translate3d(0, -8px, 0) scale(0.97) rotateY(0deg);
+          }
+        }
+
         @keyframes nexa-document-scan {
           0%,
           25% {
@@ -3456,7 +3759,13 @@ export default function VerifyDocumentsPage() {
           animation: nexa-document-enter 3.8s cubic-bezier(0.22, 0.8, 0.24, 1)
             infinite;
           transform-origin: 50% 100%;
+          transform-style: preserve-3d;
           will-change: transform, opacity;
+        }
+
+        .nexa-animated-document.nexa-document-back {
+          animation-name: nexa-document-enter-back;
+          transform-origin: center center;
         }
 
         .nexa-document-beam {
@@ -3612,8 +3921,8 @@ function DocumentMotion({
       <div className="absolute left-1/2 top-[18px] h-[78px] w-[154px] -translate-x-1/2">
         <div
           className={`nexa-animated-document absolute inset-x-0 top-[10px] h-[72px] overflow-hidden border border-white/25 bg-[linear-gradient(135deg,rgba(255,255,255,.20),rgba(255,255,255,.07)_48%,rgba(255,255,255,.14))] shadow-[0_13px_30px_rgba(0,0,0,.58),inset_0_1px_0_rgba(255,255,255,.18)] backdrop-blur-sm ${
-            isPassport ? "rounded-[4px]" : "rounded-[9px]"
-          }`}
+            side === "back" ? "nexa-document-back" : ""
+          } ${isPassport ? "rounded-[4px]" : "rounded-[9px]"}`}
         >
           <div className="absolute inset-0 bg-[radial-gradient(circle_at_78%_18%,rgba(110,231,183,.16),transparent_28%)]" />
 
