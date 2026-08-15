@@ -1,12 +1,14 @@
-import { NextResponse } from "next/server";
 import { randomUUID } from "node:crypto";
+import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TABLE = "document_verification_sessions";
-const SESSION_MINUTES = 20;
+const BASE_SESSION_MINUTES = 20;
+const MAX_GROUP_AGE_MS =
+  2 * 60 * 60 * 1000;
 
 type SessionStatus =
   | "pending"
@@ -16,12 +18,27 @@ type SessionStatus =
   | "expired"
   | "cancelled";
 
-type IdentityType = "id" | "passport";
+type IdentityType =
+  | "id"
+  | "passport";
+
+type DriverProfile = {
+  driverIndex: number;
+  firstName: string;
+  lastName: string;
+  phone: string;
+  email: string;
+  address: string;
+};
 
 type CompleteSessionBody = {
   sessionToken?: string;
 
-  action?: "start" | "complete" | "fail" | "cancel";
+  action?:
+    | "start"
+    | "complete"
+    | "fail"
+    | "cancel";
 
   identityType?: IdentityType;
 
@@ -29,8 +46,8 @@ type CompleteSessionBody = {
   lastName?: string;
   homeAddress?: string;
 
-  licenceData?: unknown;
-  identityData?: unknown;
+  licenceData?: any;
+  identityData?: any;
 
   dlFrontPath?: string;
   dlBackPath?: string;
@@ -55,14 +72,16 @@ type VerificationSessionRow = {
 
   locale: string | null;
 
-  identity_type: IdentityType | null;
+  identity_type:
+    | IdentityType
+    | null;
 
   first_name: string | null;
   last_name: string | null;
   home_address: string | null;
 
-  licence_data: unknown;
-  identity_data: unknown;
+  licence_data: any;
+  identity_data: any;
 
   dl_front_path: string | null;
   dl_back_path: string | null;
@@ -78,17 +97,24 @@ type VerificationSessionRow = {
 
   created_at: string;
   updated_at: string;
-
   expires_at: string;
   completed_at: string | null;
 };
 
-function cleanText(value: unknown) {
-  return String(value ?? "").trim();
+function cleanText(
+  value: unknown
+) {
+  return String(
+    value ?? ""
+  ).trim();
 }
 
-function cleanLocale(value: unknown) {
-  const locale = cleanText(value).toLowerCase();
+function cleanLocale(
+  value: unknown
+) {
+  const locale =
+    cleanText(value)
+      .toLowerCase();
 
   const allowed = [
     "en",
@@ -106,86 +132,329 @@ function cleanLocale(value: unknown) {
     "uk",
   ];
 
-  return allowed.includes(locale) ? locale : "en";
+  return allowed.includes(
+    locale
+  )
+    ? locale
+    : "en";
 }
 
-function cleanFleetGroup(value: unknown) {
-  const raw = cleanText(value).toLowerCase();
-
-  if (!raw) {
-    return "scooter";
-  }
-
-  return raw
-    .replace(/[^a-z0-9_-]/g, "")
-    .slice(0, 80) || "scooter";
-}
-
-function isExpired(expiresAt: string | null | undefined) {
-  if (!expiresAt) {
-    return true;
-  }
-
-  const expiry = new Date(expiresAt).getTime();
-
-  if (!Number.isFinite(expiry)) {
-    return true;
-  }
-
-  return Date.now() >= expiry;
-}
-
-function isTerminalStatus(status: SessionStatus) {
+function cleanFleetGroup(
+  value: unknown
+) {
   return (
-    status === "completed" ||
-    status === "failed" ||
-    status === "expired" ||
-    status === "cancelled"
+    cleanText(value)
+      .toLowerCase()
+      .replace(
+        /[^a-z0-9_-]/g,
+        ""
+      )
+      .slice(
+        0,
+        80
+      ) ||
+    "scooter"
   );
 }
 
-function publicSessionData(row: VerificationSessionRow) {
+function cleanDriverProfile(
+  value: any,
+  driverCount: number
+): DriverProfile {
+  const driverIndex =
+    Math.min(
+      driverCount,
+      Math.max(
+        1,
+        Number.isInteger(
+          Number(
+            value?.driverIndex
+          )
+        )
+          ? Number(
+              value.driverIndex
+            )
+          : 1
+      )
+    );
+
+  const profile = {
+    driverIndex,
+
+    firstName:
+      cleanText(
+        value?.firstName
+      ).slice(
+        0,
+        100
+      ),
+
+    lastName:
+      cleanText(
+        value?.lastName
+      ).slice(
+        0,
+        100
+      ),
+
+    phone:
+      cleanText(
+        value?.phone
+      ).slice(
+        0,
+        80
+      ),
+
+    email:
+      cleanText(
+        value?.email
+      ).slice(
+        0,
+        250
+      ),
+
+    address:
+      cleanText(
+        value?.address
+      ).slice(
+        0,
+        500
+      ),
+  };
+
+  if (
+    profile.firstName.length <
+      2 ||
+    profile.lastName.length <
+      2 ||
+    profile.phone.length <
+      6 ||
+    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+      profile.email
+    ) ||
+    profile.address.length <
+      8
+  ) {
+    throw new Error(
+      `Driver ${driverIndex} details are incomplete.`
+    );
+  }
+
+  return profile;
+}
+
+function isExpired(
+  expiresAt:
+    | string
+    | null
+    | undefined
+) {
+  const expiry =
+    expiresAt
+      ? new Date(
+          expiresAt
+        ).getTime()
+      : NaN;
+
+  return (
+    !Number.isFinite(
+      expiry
+    ) ||
+    Date.now() >=
+      expiry
+  );
+}
+
+function isTerminalStatus(
+  status: SessionStatus
+) {
+  return [
+    "completed",
+    "failed",
+    "expired",
+    "cancelled",
+  ].includes(
+    status
+  );
+}
+
+function sessionMetadata(
+  row: VerificationSessionRow
+) {
+  return (
+    row.licence_data &&
+    typeof row.licence_data ===
+      "object"
+  )
+    ? row.licence_data
+    : {};
+}
+
+function publicSessionData(
+  row: VerificationSessionRow
+) {
+  const licenceData =
+    sessionMetadata(
+      row
+    );
+
+  const driverProfile =
+    licenceData
+      .driverProfile ||
+    null;
+
   return {
-    sessionToken: row.session_token,
-    bookingId: row.booking_id,
+    sessionToken:
+      row.session_token,
 
-    status: row.status,
+    bookingId:
+      row.booking_id,
 
-    locale: row.locale,
+    status:
+      row.status,
 
-    identityType: row.identity_type,
+    locale:
+      row.locale,
 
-    firstName: row.first_name || "",
-    lastName: row.last_name || "",
-    homeAddress: row.home_address || "",
+    identityType:
+      row.identity_type,
 
-    dlFrontPath: row.dl_front_path || "",
-    dlBackPath: row.dl_back_path || "",
-    idFrontPath: row.id_front_path || "",
-    idBackPath: row.id_back_path || "",
+    firstName:
+      row.first_name ||
+      driverProfile
+        ?.firstName ||
+      "",
 
-    dlFrontName: row.dl_front_name || "",
-    dlBackName: row.dl_back_name || "",
-    idFrontName: row.id_front_name || "",
-    idBackName: row.id_back_name || "",
+    lastName:
+      row.last_name ||
+      driverProfile
+        ?.lastName ||
+      "",
 
-    errorMessage: row.error_message || "",
+    homeAddress:
+      row.home_address ||
+      driverProfile
+        ?.address ||
+      "",
 
-    createdAt: row.created_at,
-    updatedAt: row.updated_at,
-    expiresAt: row.expires_at,
-    completedAt: row.completed_at,
+    driverProfile,
+
+    driverCount:
+      Number(
+        licenceData
+          .driverCount ||
+          1
+      ),
+
+    vehicleName:
+      cleanText(
+        licenceData
+          .vehicleName
+      ),
+
+    fleetGroup:
+      cleanText(
+        licenceData
+          .fleetGroup
+      ),
+
+    analysisOutcome:
+      licenceData
+        .verificationOutcome ||
+      null,
+
+    messageKey:
+      cleanText(
+        licenceData
+          .verificationMessageKey
+      ),
+
+    reasons:
+      Array.isArray(
+        licenceData
+          .verificationReasons
+      )
+        ? licenceData
+            .verificationReasons
+        : [],
+
+    licenceData,
+
+    identityData:
+      row.identity_data ||
+      null,
+
+    dlFrontPath:
+      row.dl_front_path ||
+      "",
+
+    dlBackPath:
+      row.dl_back_path ||
+      "",
+
+    idFrontPath:
+      row.id_front_path ||
+      "",
+
+    idBackPath:
+      row.id_back_path ||
+      "",
+
+    dlFrontName:
+      row.dl_front_name ||
+      "",
+
+    dlBackName:
+      row.dl_back_name ||
+      "",
+
+    idFrontName:
+      row.id_front_name ||
+      "",
+
+    idBackName:
+      row.id_back_name ||
+      "",
+
+    errorMessage:
+      row.error_message ||
+      "",
+
+    createdAt:
+      row.created_at,
+
+    updatedAt:
+      row.updated_at,
+
+    expiresAt:
+      row.expires_at,
+
+    completedAt:
+      row.completed_at,
   };
 }
 
 async function findSession(
   sessionToken: string
-): Promise<VerificationSessionRow | null> {
-  const { data, error } = await supabaseAdmin
-    .from(TABLE)
-    .select("*")
-    .eq("session_token", sessionToken)
-    .maybeSingle();
+): Promise<
+  VerificationSessionRow | null
+> {
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from(
+        TABLE
+      )
+      .select(
+        "*"
+      )
+      .eq(
+        "session_token",
+        sessionToken
+      )
+      .maybeSingle();
 
   if (error) {
     throw new Error(
@@ -193,29 +462,57 @@ async function findSession(
     );
   }
 
-  return (data as VerificationSessionRow | null) ?? null;
+  return (
+    data as
+      | VerificationSessionRow
+      | null
+  ) ?? null;
 }
 
-async function markExpired(row: VerificationSessionRow) {
+async function markExpired(
+  row: VerificationSessionRow
+) {
   if (
-    !isExpired(row.expires_at) ||
-    isTerminalStatus(row.status)
+    !isExpired(
+      row.expires_at
+    ) ||
+    isTerminalStatus(
+      row.status
+    )
   ) {
     return row;
   }
 
-  const now = new Date().toISOString();
+  const now =
+    new Date()
+      .toISOString();
 
-  const { data, error } = await supabaseAdmin
-    .from(TABLE)
-    .update({
-      status: "expired",
-      updated_at: now,
-      error_message: "Verification session expired.",
-    })
-    .eq("session_token", row.session_token)
-    .select("*")
-    .single();
+  const {
+    data,
+    error,
+  } =
+    await supabaseAdmin
+      .from(
+        TABLE
+      )
+      .update({
+        status:
+          "expired",
+
+        updated_at:
+          now,
+
+        error_message:
+          "Verification session expired.",
+      })
+      .eq(
+        "session_token",
+        row.session_token
+      )
+      .select(
+        "*"
+      )
+      .single();
 
   if (error) {
     throw new Error(
@@ -223,76 +520,335 @@ async function markExpired(row: VerificationSessionRow) {
     );
   }
 
-  return data as VerificationSessionRow;
+  return (
+    data as
+      VerificationSessionRow
+  );
 }
 
-/*
- * POST
- *
- * Desktop checkout uses this to create a new
- * QR/document-verification session.
- */
-export async function POST(req: Request) {
+export async function POST(
+  req: Request
+) {
   try {
-    let body: any = {};
+    const body =
+      await req
+        .json()
+        .catch(
+          () => ({})
+        );
 
-    try {
-      body = await req.json();
-    } catch {
-      body = {};
+    const locale =
+      cleanLocale(
+        body?.locale
+      );
+
+    const fleetGroup =
+      cleanFleetGroup(
+        body?.fleetGroup
+      );
+
+    const driverCount =
+      Math.min(
+        15,
+        Math.max(
+          1,
+          Math.floor(
+            Number(
+              body?.driverCount
+            ) ||
+              1
+          )
+        )
+      );
+
+    const driverProfile =
+      cleanDriverProfile(
+        body?.driverProfile,
+        driverCount
+      );
+
+    const parentSessionToken =
+      cleanText(
+        body?.parentSessionToken
+      );
+
+    let bookingId =
+      "";
+
+    if (
+      parentSessionToken
+    ) {
+      const parent =
+        await findSession(
+          parentSessionToken
+        );
+
+      if (!parent) {
+        return NextResponse.json(
+          {
+            success:
+              false,
+
+            error:
+              "The group verification session was not found.",
+          },
+          {
+            status:
+              404,
+          }
+        );
+      }
+
+      const parentCreated =
+        new Date(
+          parent.created_at
+        ).getTime();
+
+      if (
+        !Number.isFinite(
+          parentCreated
+        ) ||
+        Date.now() -
+          parentCreated >
+          MAX_GROUP_AGE_MS
+      ) {
+        return NextResponse.json(
+          {
+            success:
+              false,
+
+            error:
+              "The group verification session expired. Please restart checkout.",
+          },
+          {
+            status:
+              410,
+          }
+        );
+      }
+
+      bookingId =
+        parent.booking_id;
+    } else {
+      bookingId = [
+        "bk",
+        fleetGroup,
+        Date.now(),
+        randomUUID()
+          .replace(
+            /-/g,
+            ""
+          )
+          .slice(
+            0,
+            8
+          ),
+      ].join(
+        "_"
+      );
     }
 
-    const locale = cleanLocale(body?.locale);
+    const duplicateQuery =
+      await supabaseAdmin
+        .from(
+          TABLE
+        )
+        .select(
+          "id,status,licence_data,created_at"
+        )
+        .eq(
+          "booking_id",
+          bookingId
+        )
+        .order(
+          "created_at",
+          {
+            ascending:
+              false,
+          }
+        );
 
-    const fleetGroup = cleanFleetGroup(
-      body?.fleetGroup
-    );
+    if (
+      duplicateQuery.error
+    ) {
+      throw new Error(
+        `Could not check group verification: ${duplicateQuery.error.message}`
+      );
+    }
 
-    const sessionToken = randomUUID();
+    const activeDuplicate =
+      (
+        duplicateQuery.data ||
+        []
+      ).find(
+        (
+          item: any
+        ) => {
+          const metadata =
+            item.licence_data ||
+            {};
 
-    /*
-     * We create the booking ID now instead of waiting
-     * until Stripe starts.
-     *
-     * The phone can therefore upload the documents
-     * directly into this booking folder.
-     *
-     * Later the same bookingId will be used when
-     * CheckoutClient creates the Stripe payment.
-     */
-    const bookingId = [
-      "bk",
+          return (
+            Number(
+              metadata
+                ?.driverProfile
+                ?.driverIndex
+            ) ===
+              driverProfile
+                .driverIndex &&
+            [
+              "pending",
+              "scanning",
+            ].includes(
+              cleanText(
+                item.status
+              ).toLowerCase()
+            )
+          );
+        }
+      );
+
+    if (
+      activeDuplicate
+    ) {
+      return NextResponse.json(
+        {
+          success:
+            false,
+
+          error:
+            `Driver ${driverProfile.driverIndex} already has an active scanner session.`,
+        },
+        {
+          status:
+            409,
+        }
+      );
+    }
+
+    const sessionToken =
+      randomUUID();
+
+    const now =
+      new Date();
+
+    const sessionMinutes =
+      Math.min(
+        120,
+        Math.max(
+          BASE_SESSION_MINUTES,
+          driverCount * 10
+        )
+      );
+
+    const expiresAt =
+      new Date(
+        now.getTime() +
+          sessionMinutes *
+            60 *
+            1000
+      );
+
+    const licenceData = {
+      driverProfile,
+
+      driverCount,
+
+      vehicleName:
+        cleanText(
+          body?.vehicleName
+        ).slice(
+          0,
+          220
+        ),
+
       fleetGroup,
-      Date.now(),
-      randomUUID().replace(/-/g, "").slice(0, 8),
-    ].join("_");
 
-    const now = new Date();
+      rentalStartDate:
+        cleanText(
+          body?.rentalStartDate
+        ).slice(
+          0,
+          20
+        ),
 
-    const expiresAt = new Date(
-      now.getTime() +
-        SESSION_MINUTES * 60 * 1000
-    );
+      rentalEndDate:
+        cleanText(
+          body?.rentalEndDate
+        ).slice(
+          0,
+          20
+        ),
 
-    const { data, error } = await supabaseAdmin
-      .from(TABLE)
-      .insert({
-        session_token: sessionToken,
+      pickupTime:
+        cleanText(
+          body?.pickupTime
+        ).slice(
+          0,
+          20
+        ),
 
-        booking_id: bookingId,
+      dropoffTime:
+        cleanText(
+          body?.dropoffTime
+        ).slice(
+          0,
+          20
+        ),
 
-        status: "pending",
+      verificationOutcome:
+        "pending",
+    };
 
-        locale,
+    const {
+      data,
+      error,
+    } =
+      await supabaseAdmin
+        .from(
+          TABLE
+        )
+        .insert({
+          session_token:
+            sessionToken,
 
-        created_at: now.toISOString(),
+          booking_id:
+            bookingId,
 
-        updated_at: now.toISOString(),
+          status:
+            "pending",
 
-        expires_at: expiresAt.toISOString(),
-      })
-      .select("*")
-      .single();
+          locale,
+
+          first_name:
+            driverProfile
+              .firstName,
+
+          last_name:
+            driverProfile
+              .lastName,
+
+          home_address:
+            driverProfile
+              .address,
+
+          licence_data:
+            licenceData,
+
+          created_at:
+            now.toISOString(),
+
+          updated_at:
+            now.toISOString(),
+
+          expires_at:
+            expiresAt
+              .toISOString(),
+        })
+        .select(
+          "*"
+        )
+        .single();
 
     if (error) {
       throw new Error(
@@ -300,22 +856,27 @@ export async function POST(req: Request) {
       );
     }
 
-    const row = data as VerificationSessionRow;
+    const row =
+      data as
+        VerificationSessionRow;
 
     return NextResponse.json({
-      success: true,
+      success:
+        true,
 
-      ...publicSessionData(row),
+      ...publicSessionData(
+        row
+      ),
 
-      /*
-       * CheckoutClient will convert this relative path
-       * into the QR-code URL.
-       */
       verifyPath:
         `/${locale}/verify-documents` +
-        `?session=${encodeURIComponent(sessionToken)}`,
+        `?session=${encodeURIComponent(
+          sessionToken
+        )}`,
     });
-  } catch (error: any) {
+  } catch (
+    error: any
+  ) {
     console.error(
       "DOCUMENT VERIFICATION SESSION CREATE ERROR:",
       error
@@ -323,74 +884,87 @@ export async function POST(req: Request) {
 
     return NextResponse.json(
       {
-        success: false,
+        success:
+          false,
 
         error:
           error?.message ||
           "Could not create document verification session.",
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
   }
 }
 
-/*
- * GET
- *
- * Used by:
- *
- * 1. Desktop checkout while waiting for the phone.
- * 2. Phone verification page to check that the QR
- *    session still exists.
- *
- * Example:
- *
- * /api/document-verification/session?session=UUID
- */
-export async function GET(req: Request) {
+export async function GET(
+  req: Request
+) {
   try {
-    const url = new URL(req.url);
-
-    const sessionToken = cleanText(
-      url.searchParams.get("session")
-    );
+    const sessionToken =
+      cleanText(
+        new URL(
+          req.url
+        ).searchParams.get(
+          "session"
+        )
+      );
 
     if (!sessionToken) {
       return NextResponse.json(
         {
-          success: false,
-          error: "Missing verification session.",
+          success:
+            false,
+
+          error:
+            "Missing verification session.",
         },
         {
-          status: 400,
+          status:
+            400,
         }
       );
     }
 
-    let row = await findSession(sessionToken);
+    let row =
+      await findSession(
+        sessionToken
+      );
 
     if (!row) {
       return NextResponse.json(
         {
-          success: false,
-          error: "Verification session was not found.",
+          success:
+            false,
+
+          error:
+            "Verification session was not found.",
         },
         {
-          status: 404,
+          status:
+            404,
         }
       );
     }
 
-    row = await markExpired(row);
+    row =
+      await markExpired(
+        row
+      );
 
     return NextResponse.json({
-      success: true,
+      success:
+        true,
 
-      ...publicSessionData(row),
+      ...publicSessionData(
+        row
+      ),
     });
-  } catch (error: any) {
+  } catch (
+    error: any
+  ) {
     console.error(
       "DOCUMENT VERIFICATION SESSION READ ERROR:",
       error
@@ -398,169 +972,183 @@ export async function GET(req: Request) {
 
     return NextResponse.json(
       {
-        success: false,
+        success:
+          false,
 
         error:
           error?.message ||
           "Could not read document verification session.",
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
   }
 }
 
-/*
- * PATCH
- *
- * Phone verification page uses this to update the
- * current session.
- *
- * Supported actions:
- *
- * start
- * complete
- * fail
- * cancel
- */
-export async function PATCH(req: Request) {
+export async function PATCH(
+  req: Request
+) {
   try {
-    let body: CompleteSessionBody;
+    const body =
+      (
+        await req.json()
+      ) as CompleteSessionBody;
 
-    try {
-      body =
-        (await req.json()) as CompleteSessionBody;
-    } catch {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Invalid request body.",
-        },
-        {
-          status: 400,
-        }
+    const sessionToken =
+      cleanText(
+        body.sessionToken
       );
-    }
 
-    const sessionToken = cleanText(
-      body.sessionToken
-    );
+    const action =
+      body.action;
 
-    const action = body.action;
-
-    if (!sessionToken) {
+    if (
+      !sessionToken ||
+      !action
+    ) {
       return NextResponse.json(
         {
-          success: false,
-          error: "Missing verification session.",
-        },
-        {
-          status: 400,
-        }
-      );
-    }
+          success:
+            false,
 
-    if (!action) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: "Missing verification action.",
+          error:
+            "Missing verification session or action.",
         },
         {
-          status: 400,
+          status:
+            400,
         }
       );
     }
 
     let existing =
-      await findSession(sessionToken);
+      await findSession(
+        sessionToken
+      );
 
     if (!existing) {
       return NextResponse.json(
         {
-          success: false,
-          error: "Verification session was not found.",
+          success:
+            false,
+
+          error:
+            "Verification session was not found.",
         },
         {
-          status: 404,
+          status:
+            404,
         }
       );
     }
 
     existing =
-      await markExpired(existing);
+      await markExpired(
+        existing
+      );
 
-    if (existing.status === "expired") {
+    if (
+      existing.status ===
+      "expired"
+    ) {
       return NextResponse.json(
         {
-          success: false,
+          success:
+            false,
 
-          status: "expired",
+          status:
+            "expired",
 
           error:
             "This verification session has expired. Please restart checkout.",
         },
         {
-          status: 410,
+          status:
+            410,
         }
       );
     }
 
-    /*
-     * A completed session must never be overwritten.
-     */
     if (
-      existing.status === "completed"
+      existing.status ===
+      "completed"
     ) {
       return NextResponse.json({
-        success: true,
+        success:
+          true,
 
-        ...publicSessionData(existing),
+        ...publicSessionData(
+          existing
+        ),
       });
     }
 
     const now =
-      new Date().toISOString();
+      new Date()
+        .toISOString();
 
-    /*
-     * PHONE OPENED THE QR LINK
-     */
-    if (action === "start") {
+    const existingLicence =
+      sessionMetadata(
+        existing
+      );
+
+    if (
+      action ===
+      "start"
+    ) {
       if (
-        existing.status === "failed" ||
-        existing.status === "cancelled"
+        [
+          "failed",
+          "cancelled",
+        ].includes(
+          existing.status
+        )
       ) {
         return NextResponse.json(
           {
-            success: false,
+            success:
+              false,
 
-            status: existing.status,
+            status:
+              existing.status,
 
             error:
               "This verification session can no longer be started.",
           },
           {
-            status: 409,
+            status:
+              409,
           }
         );
       }
 
-      const { data, error } =
+      const {
+        data,
+        error,
+      } =
         await supabaseAdmin
-          .from(TABLE)
+          .from(
+            TABLE
+          )
           .update({
-            status: "scanning",
+            status:
+              "scanning",
 
-            updated_at: now,
+            updated_at:
+              now,
 
-            error_message: null,
+            error_message:
+              null,
           })
           .eq(
             "session_token",
             sessionToken
           )
-          .select("*")
+          .select(
+            "*"
+          )
           .single();
 
       if (error) {
@@ -570,193 +1158,199 @@ export async function PATCH(req: Request) {
       }
 
       return NextResponse.json({
-        success: true,
+        success:
+          true,
 
         ...publicSessionData(
-          data as VerificationSessionRow
+          data as
+            VerificationSessionRow
         ),
       });
     }
 
-    /*
-     * PHONE FINISHED SCANNING
-     */
-    if (action === "complete") {
+    if (
+      action ===
+      "complete"
+    ) {
       const identityType =
         body.identityType;
 
       if (
-        identityType !== "id" &&
-        identityType !== "passport"
+        identityType !==
+          "id" &&
+        identityType !==
+          "passport"
       ) {
         return NextResponse.json(
           {
-            success: false,
+            success:
+              false,
 
             error:
               "Identity document type must be ID or passport.",
           },
           {
-            status: 400,
+            status:
+              400,
           }
         );
       }
 
       const dlFrontPath =
-        cleanText(body.dlFrontPath);
+        cleanText(
+          body.dlFrontPath
+        );
 
       const dlBackPath =
-        cleanText(body.dlBackPath);
+        cleanText(
+          body.dlBackPath
+        );
 
       const idFrontPath =
-        cleanText(body.idFrontPath);
+        cleanText(
+          body.idFrontPath
+        );
 
       const idBackPath =
-        cleanText(body.idBackPath);
+        cleanText(
+          body.idBackPath
+        );
 
       if (
         !dlFrontPath ||
-        !dlBackPath
+        !dlBackPath ||
+        !idFrontPath ||
+        (
+          identityType ===
+            "id" &&
+          !idBackPath
+        )
       ) {
         return NextResponse.json(
           {
-            success: false,
+            success:
+              false,
 
             error:
-              "Both sides of the driving licence are required.",
+              "All required driver documents must be uploaded.",
           },
           {
-            status: 400,
+            status:
+              400,
           }
         );
       }
 
-      if (
-        identityType === "id" &&
-        (!idFrontPath ||
-          !idBackPath)
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
+      const mergedLicence = {
+        ...existingLicence,
 
-            error:
-              "Both sides of the ID card are required.",
-          },
-          {
-            status: 400,
-          }
-        );
-      }
-
-      /*
-       * Passport is stored in idFrontPath.
-       * There is naturally no idBackPath.
-       */
-      if (
-        identityType === "passport" &&
-        !idFrontPath
-      ) {
-        return NextResponse.json(
-          {
-            success: false,
-
-            error:
-              "Passport image is required.",
-          },
-          {
-            status: 400,
-          }
-        );
-      }
-
-      const updatePayload = {
-        status:
-          "completed" as const,
-
-        identity_type:
-          identityType,
-
-        first_name:
-          cleanText(
-            body.firstName
-          ) || null,
-
-        last_name:
-          cleanText(
-            body.lastName
-          ) || null,
-
-        home_address:
-          cleanText(
-            body.homeAddress
-          ) || null,
-
-        licence_data:
-          body.licenceData ??
-          null,
-
-        identity_data:
-          body.identityData ??
-          null,
-
-        dl_front_path:
-          dlFrontPath,
-
-        dl_back_path:
-          dlBackPath,
-
-        id_front_path:
-          idFrontPath,
-
-        id_back_path:
-          identityType === "id"
-            ? idBackPath
-            : null,
-
-        dl_front_name:
-          cleanText(
-            body.dlFrontName
-          ) || null,
-
-        dl_back_name:
-          cleanText(
-            body.dlBackName
-          ) || null,
-
-        id_front_name:
-          cleanText(
-            body.idFrontName
-          ) || null,
-
-        id_back_name:
-          identityType === "id"
-            ? cleanText(
-                body.idBackName
-              ) || null
-            : null,
-
-        error_message:
-          null,
-
-        updated_at:
-          now,
-
-        completed_at:
-          now,
+        ...(
+          body.licenceData &&
+          typeof body.licenceData ===
+            "object"
+            ? body.licenceData
+            : {}
+        ),
       };
 
-      const { data, error } =
+      const {
+        data,
+        error,
+      } =
         await supabaseAdmin
-          .from(TABLE)
-          .update(
-            updatePayload
+          .from(
+            TABLE
           )
+          .update({
+            status:
+              "completed",
+
+            identity_type:
+              identityType,
+
+            first_name:
+              cleanText(
+                body.firstName
+              ) ||
+              existing.first_name,
+
+            last_name:
+              cleanText(
+                body.lastName
+              ) ||
+              existing.last_name,
+
+            home_address:
+              cleanText(
+                body.homeAddress
+              ) ||
+              existing.home_address,
+
+            licence_data:
+              mergedLicence,
+
+            identity_data:
+              body.identityData ??
+              null,
+
+            dl_front_path:
+              dlFrontPath,
+
+            dl_back_path:
+              dlBackPath,
+
+            id_front_path:
+              idFrontPath,
+
+            id_back_path:
+              identityType ===
+              "id"
+                ? idBackPath
+                : null,
+
+            dl_front_name:
+              cleanText(
+                body.dlFrontName
+              ) ||
+              null,
+
+            dl_back_name:
+              cleanText(
+                body.dlBackName
+              ) ||
+              null,
+
+            id_front_name:
+              cleanText(
+                body.idFrontName
+              ) ||
+              null,
+
+            id_back_name:
+              identityType ===
+              "id"
+                ? cleanText(
+                    body.idBackName
+                  ) ||
+                  null
+                : null,
+
+            error_message:
+              null,
+
+            updated_at:
+              now,
+
+            completed_at:
+              now,
+          })
           .eq(
             "session_token",
             sessionToken
           )
-          .select("*")
+          .select(
+            "*"
+          )
           .single();
 
       if (error) {
@@ -766,41 +1360,128 @@ export async function PATCH(req: Request) {
       }
 
       return NextResponse.json({
-        success: true,
+        success:
+          true,
 
         ...publicSessionData(
-          data as VerificationSessionRow
+          data as
+            VerificationSessionRow
         ),
       });
     }
 
-    /*
-     * SCANNER FAILED
-     */
-    if (action === "fail") {
+    if (
+      action ===
+      "fail"
+    ) {
       const errorMessage =
         cleanText(
           body.errorMessage
         ) ||
         "Document verification failed.";
 
-      const { data, error } =
+      const mergedLicence = {
+        ...existingLicence,
+
+        ...(
+          body.licenceData &&
+          typeof body.licenceData ===
+            "object"
+            ? body.licenceData
+            : {}
+        ),
+
+        verificationOutcome:
+          "rejected",
+      };
+
+      const {
+        data,
+        error,
+      } =
         await supabaseAdmin
-          .from(TABLE)
+          .from(
+            TABLE
+          )
           .update({
-            status: "failed",
+            status:
+              "failed",
+
+            identity_type:
+              body.identityType ||
+              existing.identity_type,
+
+            licence_data:
+              mergedLicence,
+
+            identity_data:
+              body.identityData ??
+              existing.identity_data,
+
+            dl_front_path:
+              cleanText(
+                body.dlFrontPath
+              ) ||
+              existing.dl_front_path,
+
+            dl_back_path:
+              cleanText(
+                body.dlBackPath
+              ) ||
+              existing.dl_back_path,
+
+            id_front_path:
+              cleanText(
+                body.idFrontPath
+              ) ||
+              existing.id_front_path,
+
+            id_back_path:
+              cleanText(
+                body.idBackPath
+              ) ||
+              existing.id_back_path,
+
+            dl_front_name:
+              cleanText(
+                body.dlFrontName
+              ) ||
+              existing.dl_front_name,
+
+            dl_back_name:
+              cleanText(
+                body.dlBackName
+              ) ||
+              existing.dl_back_name,
+
+            id_front_name:
+              cleanText(
+                body.idFrontName
+              ) ||
+              existing.id_front_name,
+
+            id_back_name:
+              cleanText(
+                body.idBackName
+              ) ||
+              existing.id_back_name,
 
             error_message:
               errorMessage,
 
             updated_at:
               now,
+
+            completed_at:
+              now,
           })
           .eq(
             "session_token",
             sessionToken
           )
-          .select("*")
+          .select(
+            "*"
+          )
           .single();
 
       if (error) {
@@ -810,21 +1491,28 @@ export async function PATCH(req: Request) {
       }
 
       return NextResponse.json({
-        success: true,
+        success:
+          true,
 
         ...publicSessionData(
-          data as VerificationSessionRow
+          data as
+            VerificationSessionRow
         ),
       });
     }
 
-    /*
-     * CUSTOMER CANCELLED
-     */
-    if (action === "cancel") {
-      const { data, error } =
+    if (
+      action ===
+      "cancel"
+    ) {
+      const {
+        data,
+        error,
+      } =
         await supabaseAdmin
-          .from(TABLE)
+          .from(
+            TABLE
+          )
           .update({
             status:
               "cancelled",
@@ -839,7 +1527,9 @@ export async function PATCH(req: Request) {
             "session_token",
             sessionToken
           )
-          .select("*")
+          .select(
+            "*"
+          )
           .single();
 
       if (error) {
@@ -849,26 +1539,32 @@ export async function PATCH(req: Request) {
       }
 
       return NextResponse.json({
-        success: true,
+        success:
+          true,
 
         ...publicSessionData(
-          data as VerificationSessionRow
+          data as
+            VerificationSessionRow
         ),
       });
     }
 
     return NextResponse.json(
       {
-        success: false,
+        success:
+          false,
 
         error:
           "Unknown verification action.",
       },
       {
-        status: 400,
+        status:
+          400,
       }
     );
-  } catch (error: any) {
+  } catch (
+    error: any
+  ) {
     console.error(
       "DOCUMENT VERIFICATION SESSION UPDATE ERROR:",
       error
@@ -876,14 +1572,16 @@ export async function PATCH(req: Request) {
 
     return NextResponse.json(
       {
-        success: false,
+        success:
+          false,
 
         error:
           error?.message ||
           "Could not update document verification session.",
       },
       {
-        status: 500,
+        status:
+          500,
       }
     );
   }

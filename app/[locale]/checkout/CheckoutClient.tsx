@@ -889,6 +889,55 @@ export default function CheckoutClient() {
       !requiresDocumentVerification
     );
 
+  /*
+   * The URL quantity is the number originally requested.
+   * After all drivers finish verification, only approved
+   * drivers count toward the final scooter quantity.
+   */
+  const [
+    verificationRequestedQuantity,
+    setVerificationRequestedQuantity,
+  ] =
+    useState(
+      quantity
+    );
+
+  const [
+    approvedQuantity,
+    setApprovedQuantity,
+  ] =
+    useState(
+      requiresDocumentVerification
+        ? 0
+        : quantity
+    );
+
+  const [
+    rejectedQuantity,
+    setRejectedQuantity,
+  ] =
+    useState(
+      0
+    );
+
+  const [
+    passengerDriverIndexes,
+    setPassengerDriverIndexes,
+  ] =
+    useState<number[]>(
+      []
+    );
+
+  const finalQuantity =
+    requiresDocumentVerification
+      ? documentsCaptured
+        ? Math.max(
+            1,
+            approvedQuantity
+          )
+        : quantity
+      : quantity;
+
   const [
     identityDocumentType,
     setIdentityDocumentType,
@@ -1045,18 +1094,27 @@ export default function CheckoutClient() {
         totalFromParams >
           0
       ) {
-        return totalFromParams;
+        const proportionalTotal =
+          totalFromParams *
+          finalQuantity /
+          quantity;
+
+        return Math.round(
+          proportionalTotal *
+          100
+        ) / 100;
       }
 
       return (
         discountedPerDayEur *
         rentalDays *
-        quantity
+        finalQuantity
       );
     }, [
       totalFromParams,
       discountedPerDayEur,
       rentalDays,
+      finalQuantity,
       quantity,
     ]);
 
@@ -1266,6 +1324,96 @@ export default function CheckoutClient() {
   ) {
     setPayError(null);
 
+    const nextRequestedQuantity =
+      Math.min(
+        15,
+        Math.max(
+          1,
+          Math.floor(
+            Number(
+              payload.requestedQuantity
+            ) ||
+              quantity
+          )
+        )
+      );
+
+    const nextApprovedQuantity =
+      Math.min(
+        nextRequestedQuantity,
+        Math.max(
+          0,
+          Math.floor(
+            Number(
+              payload.approvedQuantity
+            ) ||
+              0
+          )
+        )
+      );
+
+    const nextRejectedQuantity =
+      Math.min(
+        nextRequestedQuantity,
+        Math.max(
+          0,
+          Math.floor(
+            Number(
+              payload.rejectedQuantity
+            ) ||
+              0
+          )
+        )
+      );
+
+    const nextPassengerDriverIndexes =
+      Array.from(
+        new Set(
+          (
+            Array.isArray(
+              payload.passengers
+            )
+              ? payload.passengers
+              : []
+          )
+            .map(
+              (profile) =>
+                Number(
+                  profile.driverIndex
+                )
+            )
+            .filter(
+              (driverIndex) =>
+                Number.isInteger(
+                  driverIndex
+                ) &&
+                driverIndex >=
+                  1 &&
+                driverIndex <=
+                  15
+            )
+        )
+      ).sort(
+        (a, b) =>
+          a - b
+      );
+
+    setVerificationRequestedQuantity(
+      nextRequestedQuantity
+    );
+
+    setApprovedQuantity(
+      nextApprovedQuantity
+    );
+
+    setRejectedQuantity(
+      nextRejectedQuantity
+    );
+
+    setPassengerDriverIndexes(
+      nextPassengerDriverIndexes
+    );
+
     setIdentityDocumentType(
       payload.identityType
     );
@@ -1451,14 +1599,45 @@ export default function CheckoutClient() {
           )
         : Boolean(
             payload.idFront &&
-              payload.idBack
+            payload.idBack
           );
 
-    const verificationComplete =
-      remoteComplete ||
+    const approvedDrivers =
       (
-        localLicenceComplete &&
-        localIdentityComplete
+        Array.isArray(
+          payload.drivers
+        )
+          ? payload.drivers
+          : []
+      ).filter(
+        (driver) =>
+          driver.status ===
+            "approved" ||
+          driver.status ===
+            "manual_review"
+      );
+
+    const allApprovedDocumentsComplete =
+      approvedDrivers.length ===
+        nextApprovedQuantity &&
+      approvedDrivers.every(
+        (driver) =>
+          hasRemoteDocumentPaths(
+            driver,
+            driver.identityType
+          )
+      );
+
+    const verificationComplete =
+      nextApprovedQuantity >
+        0 &&
+      allApprovedDocumentsComplete &&
+      (
+        remoteComplete ||
+        (
+          localLicenceComplete &&
+          localIdentityComplete
+        )
       );
 
     setDocumentsCaptured(
@@ -1535,6 +1714,17 @@ export default function CheckoutClient() {
     formData.append(
       "bookingId",
       bookingId
+    );
+
+    formData.append(
+      "sessionToken",
+      verificationSessionToken
+    );
+
+    formData.append(
+      "identityType",
+      identityDocumentType ||
+        ""
     );
 
     if (dlFront) {
@@ -1715,7 +1905,8 @@ export default function CheckoutClient() {
               fleetGroup:
                 resolvedFleetGroup,
 
-              quantity,
+              quantity:
+                finalQuantity,
 
               plan,
 
@@ -1755,7 +1946,7 @@ export default function CheckoutClient() {
             ?.availableCount ===
             "number" &&
           liveAvailability.availableCount <
-            quantity
+            finalQuantity
         ) {
           throw new Error(
             liveAvailability.availableCount >
@@ -1863,6 +2054,10 @@ export default function CheckoutClient() {
               ? `Document verification session: ${verificationSessionToken}`
               : "",
 
+            requiresDocumentVerification
+              ? `Requested scooters: ${verificationRequestedQuantity}. Approved scooters: ${approvedQuantity}. Rejected drivers: ${rejectedQuantity}. Passengers: ${passengerDriverIndexes.length}.`
+              : "",
+
             notes.trim()
               ? `Notes: ${notes.trim()}`
               : "",
@@ -1949,7 +2144,16 @@ export default function CheckoutClient() {
                   fleetGroup:
                     finalFleetGroup,
 
-                  quantity,
+                  quantity:
+                    finalQuantity,
+
+                  requestedQuantity:
+                    verificationRequestedQuantity,
+
+                  passengerCount:
+                    passengerDriverIndexes.length,
+
+                  passengerDriverIndexes,
 
                   plan,
 
@@ -2211,8 +2415,8 @@ export default function CheckoutClient() {
                 planLabel
               }
 
-              durationLabel={`${durationLabel} · ${quantity} scooter${
-                quantity ===
+              durationLabel={`${durationLabel} · ${finalQuantity} scooter${
+                finalQuantity ===
                 1
                   ? ""
                   : "s"
@@ -2246,6 +2450,18 @@ export default function CheckoutClient() {
 
                 dropoffTime={
                   dropoffTime
+                }
+
+                quantity={
+                  quantity
+                }
+
+                vehicleName={
+                  publicVehicleName
+                }
+
+                fleetGroup={
+                  resolvedFleetGroup
                 }
 
                 onComplete={
@@ -2393,8 +2609,8 @@ export default function CheckoutClient() {
               />
             ) : (
               <PaymentSide
-                planLabel={`${planLabel} · ${quantity} scooter${
-                  quantity ===
+                planLabel={`${planLabel} · ${finalQuantity} scooter${
+                  finalQuantity ===
                   1
                     ? ""
                     : "s"

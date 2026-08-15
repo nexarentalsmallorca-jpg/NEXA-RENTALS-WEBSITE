@@ -10,7 +10,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const BUCKET = "booking-documents";
-const SESSION_TABLE = "document_verification_sessions";
+const SESSION_TABLE =
+  "document_verification_sessions";
 
 const MAX_IMAGE_BYTES =
   8 * 1024 * 1024;
@@ -47,10 +48,12 @@ type GoogleDriveResult = {
   uploaded?: boolean;
   skipped?: boolean;
   failed?: boolean;
+
   reason?: string | null;
 
   fileId?: string | null;
   fileName?: string | null;
+
   webViewLink?: string | null;
   webContentLink?: string | null;
 
@@ -62,6 +65,23 @@ type GoogleDriveResult = {
   [key: string]: unknown;
 };
 
+type DocumentUploadData = {
+  driverIndex: number;
+  identityType: IdentityType;
+
+  dlFrontPath: string;
+  dlBackPath: string;
+  idFrontPath: string;
+  idBackPath: string;
+
+  dlFrontName: string;
+  dlBackName: string;
+  idFrontName: string;
+  idBackName: string;
+
+  uploadedAt: string;
+};
+
 class ApiError extends Error {
   status: number;
 
@@ -69,25 +89,28 @@ class ApiError extends Error {
     message: string,
     status: number
   ) {
-    super(message);
+    super(
+      message
+    );
 
-    this.name = "ApiError";
-    this.status = status;
+    this.name =
+      "ApiError";
+
+    this.status =
+      status;
   }
 }
 
 function cleanText(
   value:
-    FormDataEntryValue | null
+    | FormDataEntryValue
+    | null
+    | unknown
 ) {
-  if (
-    typeof value !==
+  return typeof value ===
     "string"
-  ) {
-    return "";
-  }
-
-  return value.trim();
+    ? value.trim()
+    : "";
 }
 
 function getTextField(
@@ -96,7 +119,9 @@ function getTextField(
   maxLength = 250
 ) {
   return cleanText(
-    formData.get(key)
+    formData.get(
+      key
+    )
   ).slice(
     0,
     maxLength
@@ -108,9 +133,12 @@ function sanitizeFileName(
 ) {
   const sanitized =
     String(
-      value || "file"
+      value ||
+      "file"
     )
-      .normalize("NFKD")
+      .normalize(
+        "NFKD"
+      )
       .replace(
         /[\u0300-\u036f]/g,
         ""
@@ -132,15 +160,15 @@ function sanitizeFileName(
         180
       );
 
-  if (
+  return (
     !sanitized ||
-    sanitized === "." ||
-    sanitized === ".."
-  ) {
-    return "file";
-  }
-
-  return sanitized;
+    sanitized ===
+      "." ||
+    sanitized ===
+      ".."
+  )
+    ? "file"
+    : sanitized;
 }
 
 function withExtension(
@@ -151,17 +179,14 @@ function withExtension(
   const safeName =
     sanitizeFileName(
       originalName ||
-        fallbackStem
-    );
-
-  const withoutExtension =
-    safeName.replace(
-      /\.[^.]*$/,
-      ""
+      fallbackStem
     );
 
   const stem =
-    withoutExtension ||
+    safeName.replace(
+      /\.[^.]*$/,
+      ""
+    ) ||
     fallbackStem;
 
   return `${stem.slice(
@@ -173,15 +198,6 @@ function withExtension(
 function validateBookingId(
   value: string
 ) {
-  /*
-   * Booking IDs may be UUIDs,
-   * Stripe-style IDs, or internal
-   * NEXA references.
-   *
-   * Slashes, dots, spaces, and
-   * path-control characters are
-   * deliberately rejected.
-   */
   if (
     !value ||
     !/^[a-zA-Z0-9][a-zA-Z0-9_-]{0,127}$/.test(
@@ -201,7 +217,25 @@ function isUploadFile(
   value:
     FormDataEntryValue | null
 ): value is File {
-  return value instanceof File;
+  return value instanceof
+    File;
+}
+
+function isRecord(
+  value: unknown
+): value is Record<
+  string,
+  unknown
+> {
+  return (
+    typeof value ===
+      "object" &&
+    value !==
+      null &&
+    !Array.isArray(
+      value
+    )
+  );
 }
 
 function getOptionalFile(
@@ -209,14 +243,21 @@ function getOptionalFile(
   key: string
 ) {
   const value =
-    formData.get(key);
+    formData.get(
+      key
+    );
 
-  if (value === null) {
+  if (
+    value ===
+    null
+  ) {
     return null;
   }
 
   if (
-    !isUploadFile(value)
+    !isUploadFile(
+      value
+    )
   ) {
     throw new ApiError(
       `${key} must be a file.`,
@@ -225,7 +266,8 @@ function getOptionalFile(
   }
 
   if (
-    value.size <= 0
+    value.size <=
+    0
   ) {
     throw new ApiError(
       `${key} is empty.`,
@@ -251,17 +293,25 @@ function getContractFile(
     possibleKeys
   ) {
     const value =
-      formData.get(key);
+      formData.get(
+        key
+      );
 
-    if (value === null) {
+    if (
+      value ===
+      null
+    ) {
       continue;
     }
 
     if (
-      isUploadFile(value)
+      isUploadFile(
+        value
+      )
     ) {
       if (
-        value.size <= 0
+        value.size <=
+        0
       ) {
         throw new ApiError(
           "The contract PDF is empty.",
@@ -273,7 +323,9 @@ function getContractFile(
     }
 
     if (
-      cleanText(value)
+      cleanText(
+        value
+      )
     ) {
       throw new ApiError(
         `${key} must be a PDF file.`,
@@ -289,65 +341,87 @@ function detectImageType(
   buffer: Buffer
 ) {
   if (
-    buffer.length >= 3 &&
-    buffer[0] === 0xff &&
-    buffer[1] === 0xd8 &&
-    buffer[2] === 0xff
+    buffer.length >=
+      3 &&
+    buffer[0] ===
+      0xff &&
+    buffer[1] ===
+      0xd8 &&
+    buffer[2] ===
+      0xff
   ) {
     return {
       contentType:
         "image/jpeg",
+
       extension:
         "jpg",
     };
   }
 
   if (
-    buffer.length >= 8 &&
-    buffer[0] === 0x89 &&
-    buffer[1] === 0x50 &&
-    buffer[2] === 0x4e &&
-    buffer[3] === 0x47 &&
-    buffer[4] === 0x0d &&
-    buffer[5] === 0x0a &&
-    buffer[6] === 0x1a &&
-    buffer[7] === 0x0a
+    buffer.length >=
+      8 &&
+    buffer[0] ===
+      0x89 &&
+    buffer[1] ===
+      0x50 &&
+    buffer[2] ===
+      0x4e &&
+    buffer[3] ===
+      0x47 &&
+    buffer[4] ===
+      0x0d &&
+    buffer[5] ===
+      0x0a &&
+    buffer[6] ===
+      0x1a &&
+    buffer[7] ===
+      0x0a
   ) {
     return {
       contentType:
         "image/png",
+
       extension:
         "png",
     };
   }
 
   if (
-    buffer.length >= 12 &&
+    buffer.length >=
+      12 &&
     buffer
       .subarray(
         0,
         4
       )
-      .toString("ascii") ===
+      .toString(
+        "ascii"
+      ) ===
       "RIFF" &&
     buffer
       .subarray(
         8,
         12
       )
-      .toString("ascii") ===
+      .toString(
+        "ascii"
+      ) ===
       "WEBP"
   ) {
     return {
       contentType:
         "image/webp",
+
       extension:
         "webp",
     };
   }
 
   if (
-    buffer.length >= 6
+    buffer.length >=
+    6
   ) {
     const signature =
       buffer
@@ -355,7 +429,9 @@ function detectImageType(
           0,
           6
         )
-        .toString("ascii");
+        .toString(
+          "ascii"
+        );
 
     if (
       signature ===
@@ -366,6 +442,7 @@ function detectImageType(
       return {
         contentType:
           "image/gif",
+
         extension:
           "gif",
       };
@@ -400,7 +477,9 @@ async function prepareImage(
       buffer
     );
 
-  if (!detected) {
+  if (
+    !detected
+  ) {
     throw new ApiError(
       `${label} must be a real JPEG, PNG, WEBP, or GIF image.`,
       400
@@ -441,13 +520,16 @@ async function preparePdf(
     );
 
   if (
-    buffer.length < 5 ||
+    buffer.length <
+      5 ||
     buffer
       .subarray(
         0,
         5
       )
-      .toString("ascii") !==
+      .toString(
+        "ascii"
+      ) !==
       "%PDF-"
   ) {
     throw new ApiError(
@@ -472,13 +554,19 @@ async function preparePdf(
 }
 
 async function validateVerificationSession(
-  supabase: SupabaseClient,
-  sessionToken: string
+  supabase:
+    SupabaseClient,
+  sessionToken:
+    string,
+  bookingId:
+    string
 ) {
   if (
     !sessionToken ||
-    sessionToken.length < 16 ||
-    sessionToken.length > 512
+    sessionToken.length <
+      16 ||
+    sessionToken.length >
+      512
   ) {
     throw new ApiError(
       "Missing or invalid verification session.",
@@ -487,7 +575,8 @@ async function validateVerificationSession(
   }
 
   const {
-    data: session,
+    data:
+      session,
     error,
   } =
     await supabase
@@ -495,7 +584,7 @@ async function validateVerificationSession(
         SESSION_TABLE
       )
       .select(
-        "session_token,status,expires_at"
+        "session_token,booking_id,status,expires_at,licence_data"
       )
       .eq(
         "session_token",
@@ -503,7 +592,9 @@ async function validateVerificationSession(
       )
       .maybeSingle();
 
-  if (error) {
+  if (
+    error
+  ) {
     console.error(
       "DOCUMENT UPLOAD SESSION LOOKUP ERROR:",
       error.message
@@ -515,10 +606,25 @@ async function validateVerificationSession(
     );
   }
 
-  if (!session) {
+  if (
+    !session
+  ) {
     throw new ApiError(
       "Verification session not found.",
       404
+    );
+  }
+
+  if (
+    String(
+      session.booking_id ||
+      ""
+    ) !==
+    bookingId
+  ) {
+    throw new ApiError(
+      "The verification session does not belong to this booking.",
+      403
     );
   }
 
@@ -550,7 +656,8 @@ async function validateVerificationSession(
 
   const status =
     String(
-      session.status || ""
+      session.status ||
+      ""
     ).toLowerCase();
 
   if (
@@ -559,7 +666,9 @@ async function validateVerificationSession(
       "expired",
       "cancelled",
       "rejected",
-    ].includes(status)
+    ].includes(
+      status
+    )
   ) {
     throw new ApiError(
       "Verification session is no longer active.",
@@ -567,28 +676,53 @@ async function validateVerificationSession(
     );
   }
 
-  return session;
+  const driverIndex =
+    Math.min(
+      15,
+      Math.max(
+        1,
+        Number(
+          session
+            .licence_data
+            ?.driverProfile
+            ?.driverIndex
+        ) ||
+          1
+      )
+    );
+
+  return {
+    ...session,
+
+    driverIndex,
+  };
 }
 
 async function uploadPreparedFile(
-  supabase: SupabaseClient,
-  bookingId: string,
-  label: string,
+  supabase:
+    SupabaseClient,
+  folder:
+    string,
+  label:
+    string,
   prepared:
     PreparedUpload
 ): Promise<UploadResult> {
   const path =
-    `${bookingId}/` +
+    `${folder}/` +
     `${label}-` +
     `${Date.now()}-` +
     `${randomUUID()}-` +
-    prepared.safeName;
+    `${prepared.safeName}`;
 
   const {
     error,
   } =
-    await supabase.storage
-      .from(BUCKET)
+    await supabase
+      .storage
+      .from(
+        BUCKET
+      )
       .upload(
         path,
         prepared.buffer,
@@ -604,11 +738,14 @@ async function uploadPreparedFile(
         }
       );
 
-  if (error) {
+  if (
+    error
+  ) {
     console.error(
       "SUPABASE DOCUMENT UPLOAD ERROR:",
       {
         label,
+
         message:
           error.message,
       }
@@ -622,17 +759,20 @@ async function uploadPreparedFile(
 
   return {
     path,
+
     name:
       prepared.safeName,
   };
 }
 
 async function removePartialUploads(
-  supabase: SupabaseClient,
-  paths: string[]
+  supabase:
+    SupabaseClient,
+  paths:
+    string[]
 ) {
   if (
-    paths.length === 0
+    !paths.length
   ) {
     return;
   }
@@ -640,11 +780,18 @@ async function removePartialUploads(
   const {
     error,
   } =
-    await supabase.storage
-      .from(BUCKET)
-      .remove(paths);
+    await supabase
+      .storage
+      .from(
+        BUCKET
+      )
+      .remove(
+        paths
+      );
 
-  if (error) {
+  if (
+    error
+  ) {
     console.error(
       "PARTIAL DOCUMENT CLEANUP ERROR:",
       error.message
@@ -655,9 +802,149 @@ async function removePartialUploads(
 function emptyUploadResult():
   UploadResult {
   return {
-    path: "",
-    name: "",
+    path:
+      "",
+
+    name:
+      "",
   };
+}
+
+/*
+ * Save the secure document references inside the same
+ * verification session that belongs to this driver.
+ *
+ * This allows the Stripe webhook to read every driver's
+ * documents directly from Supabase instead of placing
+ * private storage paths inside Stripe metadata.
+ */
+async function persistDocumentUpload(
+  supabase:
+    SupabaseClient,
+  sessionToken:
+    string,
+  bookingId:
+    string,
+  driverIndex:
+    number,
+  identityType:
+    IdentityType,
+  existingLicenceData:
+    unknown,
+  upload:
+    Omit<
+      DocumentUploadData,
+      | "driverIndex"
+      | "identityType"
+      | "uploadedAt"
+    >
+) {
+  const currentLicenceData =
+    isRecord(
+      existingLicenceData
+    )
+      ? existingLicenceData
+      : {};
+
+  const currentDocumentUpload =
+    isRecord(
+      currentLicenceData
+        .documentUpload
+    )
+      ? currentLicenceData
+          .documentUpload
+      : {};
+
+  const documentUpload:
+    DocumentUploadData = {
+      ...currentDocumentUpload,
+
+      driverIndex,
+      identityType,
+
+      dlFrontPath:
+        upload.dlFrontPath,
+
+      dlBackPath:
+        upload.dlBackPath,
+
+      idFrontPath:
+        upload.idFrontPath,
+
+      idBackPath:
+        upload.idBackPath,
+
+      dlFrontName:
+        upload.dlFrontName,
+
+      dlBackName:
+        upload.dlBackName,
+
+      idFrontName:
+        upload.idFrontName,
+
+      idBackName:
+        upload.idBackName,
+
+      uploadedAt:
+        new Date()
+          .toISOString(),
+    };
+
+  const nextLicenceData = {
+    ...currentLicenceData,
+
+    documentUpload,
+  };
+
+  const {
+    data:
+      updatedSession,
+    error,
+  } =
+    await supabase
+      .from(
+        SESSION_TABLE
+      )
+      .update({
+        licence_data:
+          nextLicenceData,
+      })
+      .eq(
+        "session_token",
+        sessionToken
+      )
+      .eq(
+        "booking_id",
+        bookingId
+      )
+      .select(
+        "session_token"
+      )
+      .maybeSingle();
+
+  if (
+    error
+  ) {
+    console.error(
+      "DOCUMENT SESSION PATH SAVE ERROR:",
+      error.message
+    );
+
+    throw new ApiError(
+      "The documents were uploaded, but their secure references could not be saved.",
+      500
+    );
+  }
+
+  if (
+    !updatedSession
+  ) {
+    throw new ApiError(
+      "The verification session disappeared before the document references could be saved.",
+      409
+    );
+  }
 }
 
 function initialGoogleDriveResult(
@@ -730,15 +1017,22 @@ export async function POST(
         512
       );
 
-    /*
-     * This prevents an arbitrary public
-     * request from uploading files using
-     * only a guessed booking ID.
-     */
-    await validateVerificationSession(
-      supabaseAdmin,
-      sessionToken
-    );
+    const verifiedSession =
+      await validateVerificationSession(
+        supabaseAdmin,
+        sessionToken,
+        bookingId
+      );
+
+    const driverFolder =
+      `${bookingId}/` +
+      `driver-${String(
+        verifiedSession
+          .driverIndex
+      ).padStart(
+        2,
+        "0"
+      )}`;
 
     const rawIdentityType =
       getTextField(
@@ -839,7 +1133,7 @@ export async function POST(
       ) {
         throw new ApiError(
           identityType ===
-            "passport"
+          "passport"
             ? "Passport photo page is missing."
             : "Identity card front is missing.",
           400
@@ -868,7 +1162,9 @@ export async function POST(
       (
         file
       ): file is File =>
-        Boolean(file)
+        Boolean(
+          file
+        )
     );
 
     const totalBytes =
@@ -892,24 +1188,33 @@ export async function POST(
       );
     }
 
-    /*
-     * Validate every file completely
-     * before uploading anything.
-     */
     const preparedUploads:
       Array<{
-        key: UploadKey;
-        storageLabel: string;
-        prepared: PreparedUpload;
+        key:
+          UploadKey;
+
+        storageLabel:
+          string;
+
+        folder:
+          string;
+
+        prepared:
+          PreparedUpload;
       }> = [];
 
-    if (dlFrontFile) {
+    if (
+      dlFrontFile
+    ) {
       preparedUploads.push({
         key:
           "dlFront",
 
         storageLabel:
           "dl-front",
+
+        folder:
+          driverFolder,
 
         prepared:
           await prepareImage(
@@ -920,13 +1225,18 @@ export async function POST(
       });
     }
 
-    if (dlBackFile) {
+    if (
+      dlBackFile
+    ) {
       preparedUploads.push({
         key:
           "dlBack",
 
         storageLabel:
           "dl-back",
+
+        folder:
+          driverFolder,
 
         prepared:
           await prepareImage(
@@ -937,24 +1247,31 @@ export async function POST(
       });
     }
 
-    if (idFrontFile) {
+    if (
+      idFrontFile
+    ) {
       preparedUploads.push({
         key:
           "idFront",
 
         storageLabel:
           identityType ===
-            "passport"
+          "passport"
             ? "passport"
             : "id-front",
+
+        folder:
+          driverFolder,
 
         prepared:
           await prepareImage(
             idFrontFile,
+
             identityType ===
               "passport"
               ? "Passport photo page"
               : "Identity card front",
+
             identityType ===
               "passport"
               ? "passport"
@@ -963,13 +1280,18 @@ export async function POST(
       });
     }
 
-    if (idBackFile) {
+    if (
+      idBackFile
+    ) {
       preparedUploads.push({
         key:
           "idBack",
 
         storageLabel:
           "id-back",
+
+        folder:
+          driverFolder,
 
         prepared:
           await prepareImage(
@@ -984,7 +1306,9 @@ export async function POST(
       PreparedUpload | null =
         null;
 
-    if (contractPdfFile) {
+    if (
+      contractPdfFile
+    ) {
       preparedContract =
         await preparePdf(
           contractPdfFile
@@ -997,37 +1321,31 @@ export async function POST(
         storageLabel:
           "contract",
 
+        folder:
+          bookingId,
+
         prepared:
           preparedContract,
       });
     }
 
-    /*
-     * Wait for every Supabase upload to
-     * settle. If one fails, remove every
-     * successful file from this attempt.
-     */
     const settledUploads =
       await Promise.allSettled(
         preparedUploads.map(
           async (
             upload
-          ) => {
-            const result =
+          ) => ({
+            key:
+              upload.key,
+
+            result:
               await uploadPreparedFile(
                 supabaseAdmin,
-                bookingId,
+                upload.folder,
                 upload.storageLabel,
                 upload.prepared
-              );
-
-            return {
-              key:
-                upload.key,
-
-              result,
-            };
-          }
+              ),
+          })
         )
       );
 
@@ -1037,29 +1355,40 @@ export async function POST(
           (
             item
           ): item is PromiseFulfilledResult<{
-            key: UploadKey;
-            result: UploadResult;
+            key:
+              UploadKey;
+
+            result:
+              UploadResult;
           }> =>
             item.status ===
             "fulfilled"
         )
         .map(
-          (item) =>
+          (
+            item
+          ) =>
             item.value
         );
 
     const failedUpload =
       settledUploads.find(
-        (item) =>
+        (
+          item
+        ) =>
           item.status ===
           "rejected"
       );
 
-    if (failedUpload) {
+    if (
+      failedUpload
+    ) {
       await removePartialUploads(
         supabaseAdmin,
         successfulUploads.map(
-          (item) =>
+          (
+            item
+          ) =>
             item.result.path
         )
       );
@@ -1073,7 +1402,9 @@ export async function POST(
         UploadResult
       >(
         successfulUploads.map(
-          (item) => [
+          (
+            item
+          ) => [
             item.key,
             item.result,
           ]
@@ -1110,117 +1441,146 @@ export async function POST(
       ) ||
       emptyUploadResult();
 
-    const customerName =
-      getTextField(
-        formData,
-        "customerName",
-        180
-      );
+    /*
+     * Persist every driver's secure document references.
+     *
+     * If this database update fails, remove all files uploaded
+     * during this request so the operation remains consistent.
+     */
+    if (
+      hasAnyDocuments &&
+      identityType
+    ) {
+      try {
+        await persistDocumentUpload(
+          supabaseAdmin,
+          sessionToken,
+          bookingId,
+          verifiedSession
+            .driverIndex,
+          identityType,
+          verifiedSession
+            .licence_data,
+          {
+            dlFrontPath:
+              dlFrontRes.path,
 
-    const contractDate =
-      getTextField(
-        formData,
-        "contractDate",
-        50
-      );
+            dlBackPath:
+              dlBackRes.path,
 
-    const contractNumber =
-      getTextField(
-        formData,
-        "contractNumber",
-        120
-      );
+            idFrontPath:
+              idFrontRes.path,
 
-    const vehicleCode =
-      getTextField(
-        formData,
-        "vehicleCode",
-        120
-      );
+            idBackPath:
+              idBackRes.path,
 
-    const vehiclePlate =
-      getTextField(
-        formData,
-        "vehiclePlate",
-        50
-      );
+            dlFrontName:
+              dlFrontRes.name,
 
-    const customerFolderName =
-      getTextField(
-        formData,
-        "customerFolderName",
-        180
-      );
+            dlBackName:
+              dlBackRes.name,
 
-    const folderName =
-      getTextField(
-        formData,
-        "folderName",
-        180
-      );
+            idFrontName:
+              idFrontRes.name,
+
+            idBackName:
+              idBackRes.name,
+          }
+        );
+      } catch (
+        sessionSaveError
+      ) {
+        await removePartialUploads(
+          supabaseAdmin,
+          successfulUploads.map(
+            (
+              item
+            ) =>
+              item.result.path
+          )
+        );
+
+        throw sessionSaveError;
+      }
+    }
 
     let googleDriveContract =
       initialGoogleDriveResult(
         "No contract PDF file was sent to the upload API."
       );
 
-    /*
-     * Supabase is the secure primary
-     * contract copy.
-     *
-     * Google Drive is secondary. A Drive
-     * outage must not make the browser
-     * repeat already successful document
-     * uploads.
-     */
     if (
       preparedContract
     ) {
       try {
-        const driveResult =
-          await uploadContractPdfToGoogleDrive(
-            {
-              fileName:
-                preparedContract.safeName,
-
-              pdfBuffer:
-                preparedContract.buffer,
-
-              folderName:
-                folderName ||
-                undefined,
-
-              customerFolderName:
-                customerFolderName ||
-                undefined,
-
-              customerName:
-                customerName ||
-                undefined,
-
-              contractDate:
-                contractDate ||
-                undefined,
-
-              contractNumber:
-                contractNumber ||
-                bookingId,
-
-              vehicleCode:
-                vehicleCode ||
-                undefined,
-
-              vehiclePlate:
-                vehiclePlate ||
-                undefined,
-            }
-          );
-
         googleDriveContract =
           (
-            driveResult ||
-            initialGoogleDriveResult(
-              "Google Drive returned no upload result."
+            await uploadContractPdfToGoogleDrive(
+              {
+                fileName:
+                  preparedContract
+                    .safeName,
+
+                pdfBuffer:
+                  preparedContract
+                    .buffer,
+
+                folderName:
+                  getTextField(
+                    formData,
+                    "folderName",
+                    180
+                  ) ||
+                  undefined,
+
+                customerFolderName:
+                  getTextField(
+                    formData,
+                    "customerFolderName",
+                    180
+                  ) ||
+                  undefined,
+
+                customerName:
+                  getTextField(
+                    formData,
+                    "customerName",
+                    180
+                  ) ||
+                  undefined,
+
+                contractDate:
+                  getTextField(
+                    formData,
+                    "contractDate",
+                    50
+                  ) ||
+                  undefined,
+
+                contractNumber:
+                  getTextField(
+                    formData,
+                    "contractNumber",
+                    120
+                  ) ||
+                  bookingId,
+
+                vehicleCode:
+                  getTextField(
+                    formData,
+                    "vehicleCode",
+                    120
+                  ) ||
+                  undefined,
+
+                vehiclePlate:
+                  getTextField(
+                    formData,
+                    "vehiclePlate",
+                    50
+                  ) ||
+                  undefined,
+              }
             )
           ) as GoogleDriveResult;
       } catch (
@@ -1230,7 +1590,8 @@ export async function POST(
           "GOOGLE DRIVE CONTRACT UPLOAD ERROR:",
           {
             message:
-              driveError?.message,
+              driveError
+                ?.message,
           }
         );
 
@@ -1248,45 +1609,13 @@ export async function POST(
       }
     }
 
-    /*
-     * Do not log private storage paths,
-     * document names, or Google Drive
-     * links.
-     */
-    console.log(
-      "Booking documents upload completed:",
-      {
-        bookingId,
-
-        documentUploadCount:
-          successfulUploads.filter(
-            (item) =>
-              item.key !==
-              "contractPdf"
-          ).length,
-
-        contractSavedToSupabase:
-          Boolean(
-            contractSupabaseRes.path
-          ),
-
-        googleDriveUploaded:
-          Boolean(
-            googleDriveContract
-              .uploaded
-          ),
-
-        googleDriveFailed:
-          Boolean(
-            googleDriveContract
-              .failed
-          ),
-      }
-    );
-
     return NextResponse.json({
       success:
         true,
+
+      driverIndex:
+        verifiedSession
+          .driverIndex,
 
       dlFrontPath:
         dlFrontRes.path,
@@ -1321,64 +1650,64 @@ export async function POST(
       googleDriveContractUploaded:
         Boolean(
           googleDriveContract
-            .uploaded
+            ?.uploaded
         ),
 
       googleDriveContractSkipped:
         Boolean(
           googleDriveContract
-            .skipped
+            ?.skipped
         ),
 
       googleDriveContractFailed:
         Boolean(
           googleDriveContract
-            .failed
+            ?.failed
         ),
 
       googleDriveContractReason:
         googleDriveContract
-          .reason ||
+          ?.reason ||
         null,
 
       googleDriveFileId:
         googleDriveContract
-          .fileId ||
+          ?.fileId ||
         null,
 
       googleDriveFileName:
         googleDriveContract
-          .fileName ||
+          ?.fileName ||
         null,
 
       googleDriveFileLink:
         googleDriveContract
-          .webViewLink ||
+          ?.webViewLink ||
         null,
 
       googleDriveFileDownloadLink:
         googleDriveContract
-          .webContentLink ||
+          ?.webContentLink ||
         null,
 
       googleDriveFolderId:
         googleDriveContract
-          .folderId ||
+          ?.folderId ||
         null,
 
       googleDriveFolderName:
         googleDriveContract
-          .folderName ||
+          ?.folderName ||
         null,
 
       googleDriveFolderLink:
         googleDriveContract
-          .folderWebViewLink ||
+          ?.folderWebViewLink ||
         null,
 
       googleDriveParentFolderId:
         googleDriveContract
-          .parentFolderId ||
+          ?.parentFolderId ||
         null,
 
       googleDrive:
@@ -1399,7 +1728,8 @@ export async function POST(
     );
 
     const status =
-      error instanceof ApiError
+      error instanceof
+          ApiError
         ? error.status
         : 500;
 
