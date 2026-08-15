@@ -52,6 +52,8 @@ type DecisionKey =
   | "licence_expired"
   | "identity_expired"
   | "b_less_than_three_years"
+  | "kymco_a1_less_than_one_year"
+  | "kymco_motorcycle_category_required"
   | "no_compatible_category"
   | "category_not_yet_valid"
   | "manual_review"
@@ -233,6 +235,10 @@ const COPY: Record<ScannerLocale, Copy> = {
         "The passport or identity document appears to be expired.",
       b_less_than_three_years:
         "In Spain, a category B driving licence must have been held for at least 3 years to ride a 125cc scooter. Your category B does not yet meet this requirement.",
+      kymco_a1_less_than_one_year:
+        "The Kymco SkyTown 125 requires category A1 to have been held for at least 1 year. Category A2 or A is also accepted.",
+      kymco_motorcycle_category_required:
+        "The Kymco SkyTown 125 requires a valid motorcycle licence: A1 held for at least 1 year, A2, or A. Category B is not accepted for this scooter.",
       no_compatible_category:
         "A valid A, A1, A2, or category B licence held for at least 3 years is required.",
       category_not_yet_valid:
@@ -332,6 +338,10 @@ const COPY: Record<ScannerLocale, Copy> = {
         "El pasaporte o documento de identidad parece estar caducado.",
       b_less_than_three_years:
         "En España, debes tener el permiso de categoría B desde hace al menos 3 años para conducir un scooter de 125 cc. Tu categoría B todavía no cumple este requisito.",
+      kymco_a1_less_than_one_year:
+        "Para la Kymco SkyTown 125 debes tener el permiso A1 desde hace al menos 1 año. También se aceptan A2 o A.",
+      kymco_motorcycle_category_required:
+        "Para la Kymco SkyTown 125 se requiere un permiso de moto válido: A1 con al menos 1 año de antigüedad, A2 o A. El permiso B no se acepta para este scooter.",
       no_compatible_category:
         "Se requiere un permiso A, A1, A2 válido o un permiso B con al menos 3 años de antigüedad.",
       category_not_yet_valid:
@@ -430,6 +440,10 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Der Reisepass oder Ausweis scheint abgelaufen zu sein.",
       b_less_than_three_years:
         "In Spanien muss ein Führerschein der Klasse B seit mindestens 3 Jahren bestehen, um einen 125-ccm-Roller zu fahren. Deine Klasse B erfüllt diese Voraussetzung noch nicht.",
+      kymco_a1_less_than_one_year:
+        "Für die Kymco SkyTown 125 muss die Klasse A1 seit mindestens 1 Jahr bestehen. Klasse A2 oder A wird ebenfalls akzeptiert.",
+      kymco_motorcycle_category_required:
+        "Für die Kymco SkyTown 125 ist ein gültiger Motorradführerschein erforderlich: A1 seit mindestens 1 Jahr, A2 oder A. Klasse B wird für diesen Roller nicht akzeptiert.",
       no_compatible_category:
         "Erforderlich ist ein gültiger Führerschein A, A1, A2 oder Klasse B seit mindestens 3 Jahren.",
       category_not_yet_valid:
@@ -529,6 +543,10 @@ const COPY: Record<ScannerLocale, Copy> = {
       identity_expired: "Le passeport ou la pièce d’identité semble expiré.",
       b_less_than_three_years:
         "En Espagne, le permis de catégorie B doit être détenu depuis au moins 3 ans pour conduire un scooter de 125 cm³. Votre catégorie B ne remplit pas encore cette condition.",
+      kymco_a1_less_than_one_year:
+        "Pour la Kymco SkyTown 125, le permis A1 doit être détenu depuis au moins 1 an. Les permis A2 et A sont également acceptés.",
+      kymco_motorcycle_category_required:
+        "La Kymco SkyTown 125 nécessite un permis moto valide : A1 détenu depuis au moins 1 an, A2 ou A. Le permis B n’est pas accepté pour ce scooter.",
       no_compatible_category:
         "Un permis A, A1, A2 valide ou un permis B détenu depuis au moins 3 ans est requis.",
       category_not_yet_valid:
@@ -627,6 +645,10 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Il passaporto o il documento d’identità sembra scaduto.",
       b_less_than_three_years:
         "In Spagna, la patente di categoria B deve essere posseduta da almeno 3 anni per guidare uno scooter 125 cc. La tua categoria B non soddisfa ancora questo requisito.",
+      kymco_a1_less_than_one_year:
+        "Per la Kymco SkyTown 125, la patente A1 deve essere posseduta da almeno 1 anno. Sono accettate anche le patenti A2 e A.",
+      kymco_motorcycle_category_required:
+        "Per la Kymco SkyTown 125 è richiesta una patente moto valida: A1 posseduta da almeno 1 anno, A2 o A. La patente B non è accettata per questo scooter.",
       no_compatible_category:
         "È richiesta una patente A, A1, A2 valida oppure una patente B posseduta da almeno 3 anni.",
       category_not_yet_valid:
@@ -724,6 +746,10 @@ const COPY: Record<ScannerLocale, Copy> = {
         "O passaporte ou documento de identidade parece estar caducado.",
       b_less_than_three_years:
         "Em Espanha, é necessário possuir a carta de categoria B há pelo menos 3 anos para conduzir uma scooter de 125 cc. A sua categoria B ainda não cumpre este requisito.",
+      kymco_a1_less_than_one_year:
+        "Para a Kymco SkyTown 125, é necessário possuir a categoria A1 há pelo menos 1 ano. As categorias A2 e A também são aceites.",
+      kymco_motorcycle_category_required:
+        "A Kymco SkyTown 125 exige uma carta de motociclo válida: A1 há pelo menos 1 ano, A2 ou A. A categoria B não é aceite para esta scooter.",
       no_compatible_category:
         "É necessária uma carta A, A1 ou A2 válida, ou uma carta B com pelo menos 3 anos.",
       category_not_yet_valid:
@@ -819,6 +845,10 @@ const COPY: Record<ScannerLocale, Copy> = {
       identity_expired: "Passet eller identitetshandlingen verkar ha gått ut.",
       b_less_than_three_years:
         "I Spanien måste ett körkort i kategori B ha innehafts i minst 3 år för att köra en 125-kubiksskoter. Din kategori B uppfyller ännu inte kravet.",
+      kymco_a1_less_than_one_year:
+        "För Kymco SkyTown 125 måste A1-körkortet ha innehafts i minst 1 år. A2 eller A godtas också.",
+      kymco_motorcycle_category_required:
+        "Kymco SkyTown 125 kräver ett giltigt motorcykelkörkort: A1 i minst 1 år, A2 eller A. Kategori B godtas inte för denna skoter.",
       no_compatible_category:
         "Ett giltigt A-, A1- eller A2-körkort, eller B-körkort som innehafts i minst 3 år, krävs.",
       category_not_yet_valid:
@@ -914,6 +944,10 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Passet eller identitetsdokumentet ser ud til at være udløbet.",
       b_less_than_three_years:
         "I Spanien skal et kategori B-kørekort have været gyldigt i mindst 3 år for at køre en 125cc-scooter. Din kategori B opfylder endnu ikke kravet.",
+      kymco_a1_less_than_one_year:
+        "Til Kymco SkyTown 125 skal kategori A1 have været gyldig i mindst 1 år. A2 eller A accepteres også.",
+      kymco_motorcycle_category_required:
+        "Kymco SkyTown 125 kræver et gyldigt motorcykelkørekort: A1 i mindst 1 år, A2 eller A. Kategori B accepteres ikke til denne scooter.",
       no_compatible_category:
         "Der kræves et gyldigt A-, A1- eller A2-kørekort eller et B-kørekort, der har været gyldigt i mindst 3 år.",
       category_not_yet_valid:
@@ -1008,6 +1042,10 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Passet eller identitetsdokumentet ser ut til å være utløpt.",
       b_less_than_three_years:
         "I Spania må et førerkort i kategori B ha vært gyldig i minst 3 år for å kjøre en 125cc-scooter. Din kategori B oppfyller ennå ikke kravet.",
+      kymco_a1_less_than_one_year:
+        "For Kymco SkyTown 125 må klasse A1 ha vært gyldig i minst 1 år. A2 eller A godtas også.",
+      kymco_motorcycle_category_required:
+        "Kymco SkyTown 125 krever et gyldig motorsykkelførerkort: A1 i minst 1 år, A2 eller A. Klasse B godtas ikke for denne scooteren.",
       no_compatible_category:
         "Det kreves et gyldig A-, A1- eller A2-førerkort, eller et B-førerkort som har vært gyldig i minst 3 år.",
       category_not_yet_valid:
@@ -1105,6 +1143,10 @@ const COPY: Record<ScannerLocale, Copy> = {
       identity_expired: "Het paspoort of identiteitsdocument lijkt verlopen.",
       b_less_than_three_years:
         "In Spanje moet je een rijbewijs categorie B minimaal 3 jaar hebben om een scooter van 125 cc te besturen. Je categorie B voldoet nog niet aan deze eis.",
+      kymco_a1_less_than_one_year:
+        "Voor de Kymco SkyTown 125 moet je rijbewijs A1 minimaal 1 jaar in bezit zijn. A2 of A wordt ook geaccepteerd.",
+      kymco_motorcycle_category_required:
+        "Voor de Kymco SkyTown 125 is een geldig motorrijbewijs vereist: A1 minimaal 1 jaar in bezit, A2 of A. Rijbewijs B wordt voor deze scooter niet geaccepteerd.",
       no_compatible_category:
         "Een geldig rijbewijs A, A1 of A2, of een rijbewijs B dat minimaal 3 jaar in bezit is, is vereist.",
       category_not_yet_valid:
@@ -1201,6 +1243,10 @@ const COPY: Record<ScannerLocale, Copy> = {
       identity_expired: "Paszport lub dokument tożsamości wygląda na nieważny.",
       b_less_than_three_years:
         "W Hiszpanii prawo jazdy kategorii B musi być posiadane od co najmniej 3 lat, aby prowadzić skuter 125 cm³. Twoja kategoria B nie spełnia jeszcze tego wymogu.",
+      kymco_a1_less_than_one_year:
+        "Aby wynająć Kymco SkyTown 125, trzeba posiadać kategorię A1 od co najmniej 1 roku. Akceptowane są również kategorie A2 i A.",
+      kymco_motorcycle_category_required:
+        "Kymco SkyTown 125 wymaga ważnego motocyklowego prawa jazdy: A1 posiadanego od co najmniej 1 roku, A2 lub A. Kategoria B nie jest akceptowana dla tego skutera.",
       no_compatible_category:
         "Wymagane jest ważne prawo jazdy A, A1, A2 lub kategoria B posiadana od co najmniej 3 lat.",
       category_not_yet_valid:
@@ -1297,6 +1343,10 @@ const COPY: Record<ScannerLocale, Copy> = {
       identity_expired: "Pas nebo doklad totožnosti je zřejmě neplatný.",
       b_less_than_three_years:
         "Ve Španělsku musíte vlastnit řidičský průkaz skupiny B alespoň 3 roky, abyste mohli řídit skútr o objemu 125 ccm. Vaše skupina B tuto podmínku zatím nesplňuje.",
+      kymco_a1_less_than_one_year:
+        "Pro Kymco SkyTown 125 je nutné vlastnit skupinu A1 alespoň 1 rok. Přijímány jsou také skupiny A2 a A.",
+      kymco_motorcycle_category_required:
+        "Kymco SkyTown 125 vyžaduje platné motocyklové oprávnění: A1 vlastněné alespoň 1 rok, A2 nebo A. Skupina B není pro tento skútr přijímána.",
       no_compatible_category:
         "Je vyžadován platný průkaz A, A1, A2 nebo skupina B vlastněná alespoň 3 roky.",
       category_not_yet_valid:
@@ -1392,6 +1442,10 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Схоже, строк дії паспорта або документа особи закінчився.",
       b_less_than_three_years:
         "В Іспанії посвідчення категорії B потрібно мати щонайменше 3 роки, щоб керувати скутером 125 куб. см. Ваша категорія B ще не відповідає цій вимозі.",
+      kymco_a1_less_than_one_year:
+        "Для Kymco SkyTown 125 посвідчення категорії A1 потрібно мати щонайменше 1 рік. Категорії A2 та A також приймаються.",
+      kymco_motorcycle_category_required:
+        "Для Kymco SkyTown 125 потрібне чинне мотоциклетне посвідчення: A1 щонайменше 1 рік, A2 або A. Категорія B для цього скутера не приймається.",
       no_compatible_category:
         "Потрібне чинне посвідчення A, A1, A2 або категорія B, отримана щонайменше 3 роки тому.",
       category_not_yet_valid:

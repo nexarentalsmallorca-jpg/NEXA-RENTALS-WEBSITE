@@ -6,27 +6,23 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const TABLE = "document_verification_sessions";
-
 const MAX_FILE_BYTES = 8 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 28 * 1024 * 1024;
-
-const MODEL =
-  process.env.OPENAI_DOCUMENT_MODEL?.trim() ||
-  "gpt-4o";
+const MODEL = process.env.OPENAI_DOCUMENT_MODEL?.trim() || "gpt-4o";
 
 type IdentityType = "id" | "passport";
-
-type StepKey =
-  | "dlFront"
-  | "dlBack"
-  | "idFront"
-  | "idBack";
-
-type Outcome =
-  | "accepted"
+type StepKey = "dlFront" | "dlBack" | "idFront" | "idBack";
+type Outcome = "accepted" | "retake" | "manual_review" | "rejected";
+type DecisionKey =
   | "retake"
+  | "licence_expired"
+  | "b_less_than_three_years"
+  | "kymco_a1_less_than_one_year"
+  | "kymco_motorcycle_category_required"
+  | "no_compatible_category"
+  | "category_not_yet_valid"
   | "manual_review"
-  | "rejected";
+  | "accepted";
 
 type VehicleClass = {
   category: string;
@@ -37,312 +33,161 @@ type VehicleClass = {
 type ExtractedDocument = {
   documentDetected: boolean;
   readable: boolean;
-
   firstName: string;
   lastName: string;
   fullName: string;
-
   dateOfBirth: string;
   dateOfExpiry: string;
-
   documentNumber: string;
-
   nationality: string;
   address: string;
   countryCode: string;
-
   documentType: string;
   issueDate: string;
-
   vehicleClasses: VehicleClass[];
 };
 
 type AiExtraction = {
   quality: {
-    overall:
-      | "good"
-      | "retake"
-      | "uncertain";
-
+    overall: "good" | "retake" | "uncertain";
     retakeSides: StepKey[];
     issues: string[];
   };
-
   licence: ExtractedDocument;
-
   identity: ExtractedDocument & {
     selectedType: IdentityType;
   };
+  nameMatch: "match" | "mismatch" | "uncertain";
+};
 
-  nameMatch:
-    | "match"
-    | "mismatch"
-    | "uncertain";
+type Decision = {
+  outcome: Outcome;
+  messageKey: DecisionKey;
+  message: string;
+  reasons: string[];
+  retakeSides: StepKey[];
 };
 
 class ApiError extends Error {
   status: number;
 
-  constructor(
-    message: string,
-    status: number
-  ) {
+  constructor(message: string, status: number) {
     super(message);
-
     this.name = "ApiError";
     this.status = status;
   }
 }
 
-function documentSchema(
-  withSelectedType: boolean
-) {
-  const properties: Record<
-    string,
-    unknown
-  > = {
-    documentDetected: {
-      type: "boolean",
-    },
-
-    readable: {
-      type: "boolean",
-    },
-
-    firstName: {
-      type: "string",
-    },
-
-    lastName: {
-      type: "string",
-    },
-
-    fullName: {
-      type: "string",
-    },
-
-    dateOfBirth: {
-      type: "string",
-    },
-
-    dateOfExpiry: {
-      type: "string",
-    },
-
-    documentNumber: {
-      type: "string",
-    },
-
-    nationality: {
-      type: "string",
-    },
-
-    address: {
-      type: "string",
-    },
-
-    countryCode: {
-      type: "string",
-    },
-
-    documentType: {
-      type: "string",
-    },
-
-    issueDate: {
-      type: "string",
-    },
-
+function documentSchema(withSelectedType: boolean) {
+  const properties: Record<string, unknown> = {
+    documentDetected: { type: "boolean" },
+    readable: { type: "boolean" },
+    firstName: { type: "string" },
+    lastName: { type: "string" },
+    fullName: { type: "string" },
+    dateOfBirth: { type: "string" },
+    dateOfExpiry: { type: "string" },
+    documentNumber: { type: "string" },
+    nationality: { type: "string" },
+    address: { type: "string" },
+    countryCode: { type: "string" },
+    documentType: { type: "string" },
+    issueDate: { type: "string" },
     vehicleClasses: {
       type: "array",
-
       items: {
         type: "object",
-
         additionalProperties: false,
-
         properties: {
-          category: {
-            type: "string",
-          },
-
-          validFrom: {
-            type: "string",
-          },
-
-          validUntil: {
-            type: "string",
-          },
+          category: { type: "string" },
+          validFrom: { type: "string" },
+          validUntil: { type: "string" },
         },
-
-        required: [
-          "category",
-          "validFrom",
-          "validUntil",
-        ],
+        required: ["category", "validFrom", "validUntil"],
       },
     },
   };
 
-  const required =
-    Object.keys(properties);
+  const required = Object.keys(properties);
 
   if (withSelectedType) {
     properties.selectedType = {
       type: "string",
-
-      enum: [
-        "id",
-        "passport",
-      ],
+      enum: ["id", "passport"],
     };
-
-    required.push(
-      "selectedType"
-    );
+    required.push("selectedType");
   }
 
   return {
     type: "object",
-
     additionalProperties: false,
-
     properties,
-
     required,
   };
 }
 
 const DOCUMENT_SCHEMA = {
   type: "object",
-
   additionalProperties: false,
-
   properties: {
     quality: {
       type: "object",
-
       additionalProperties: false,
-
       properties: {
         overall: {
           type: "string",
-
-          enum: [
-            "good",
-            "retake",
-            "uncertain",
-          ],
+          enum: ["good", "retake", "uncertain"],
         },
-
         retakeSides: {
           type: "array",
-
           items: {
             type: "string",
-
-            enum: [
-              "dlFront",
-              "dlBack",
-              "idFront",
-              "idBack",
-            ],
+            enum: ["dlFront", "dlBack", "idFront", "idBack"],
           },
         },
-
         issues: {
           type: "array",
-
-          items: {
-            type: "string",
-          },
+          items: { type: "string" },
         },
       },
-
-      required: [
-        "overall",
-        "retakeSides",
-        "issues",
-      ],
+      required: ["overall", "retakeSides", "issues"],
     },
-
-    licence: documentSchema(
-      false
-    ),
-
-    identity: documentSchema(
-      true
-    ),
-
+    licence: documentSchema(false),
+    identity: documentSchema(true),
     nameMatch: {
       type: "string",
-
-      enum: [
-        "match",
-        "mismatch",
-        "uncertain",
-      ],
+      enum: ["match", "mismatch", "uncertain"],
     },
   },
-
-  required: [
-    "quality",
-    "licence",
-    "identity",
-    "nameMatch",
-  ],
+  required: ["quality", "licence", "identity", "nameMatch"],
 } as const;
 
-function cleanText(
-  value: unknown
-) {
-  return String(
-    value ?? ""
-  ).trim();
+function cleanText(value: unknown) {
+  return String(value ?? "").trim();
 }
 
-function isFile(
-  value: FormDataEntryValue | null
-): value is File {
+function isFile(value: FormDataEntryValue | null): value is File {
   return value instanceof File;
 }
 
-function getOutputText(
-  data: any
-) {
-  if (
-    typeof data?.output_text ===
-    "string"
-  ) {
+function getOutputText(data: any) {
+  if (typeof data?.output_text === "string") {
     return data.output_text;
   }
 
   const parts: string[] = [];
 
-  for (
-    const item of
-    data?.output || []
-  ) {
-    if (
-      item?.type !==
-      "message"
-    ) {
+  for (const item of data?.output || []) {
+    if (item?.type !== "message") {
       continue;
     }
 
-    for (
-      const content of
-      item?.content || []
-    ) {
+    for (const content of item?.content || []) {
       if (
-        content?.type ===
-          "output_text" &&
-        typeof content.text ===
-          "string"
+        content?.type === "output_text" &&
+        typeof content.text === "string"
       ) {
-        parts.push(
-          content.text
-        );
+        parts.push(content.text);
       }
     }
   }
@@ -350,35 +195,20 @@ function getOutputText(
   return parts.join("");
 }
 
-function getRefusalText(
-  data: any
-) {
+function getRefusalText(data: any) {
   const refusals: string[] = [];
 
-  for (
-    const item of
-    data?.output || []
-  ) {
-    if (
-      item?.type !==
-      "message"
-    ) {
+  for (const item of data?.output || []) {
+    if (item?.type !== "message") {
       continue;
     }
 
-    for (
-      const content of
-      item?.content || []
-    ) {
+    for (const content of item?.content || []) {
       if (
-        content?.type ===
-          "refusal" &&
-        typeof content.refusal ===
-          "string"
+        content?.type === "refusal" &&
+        typeof content.refusal === "string"
       ) {
-        refusals.push(
-          content.refusal
-        );
+        refusals.push(content.refusal);
       }
     }
   }
@@ -386,37 +216,23 @@ function getRefusalText(
   return refusals.join(" ");
 }
 
-function parseIsoDate(
-  value: string
-) {
-  const match =
-    cleanText(value).match(
-      /^(\d{4})-(\d{2})-(\d{2})$/
-    );
+function parseIsoDate(value: string) {
+  const match = cleanText(value).match(/^(\d{4})-(\d{2})-(\d{2})$/);
 
   if (!match) {
     return null;
   }
 
-  const date = new Date(
-    `${match[1]}-${match[2]}-${match[3]}T00:00:00Z`
-  );
+  const date = new Date(`${match[1]}-${match[2]}-${match[3]}T00:00:00Z`);
 
-  if (
-    !Number.isFinite(
-      date.getTime()
-    )
-  ) {
+  if (!Number.isFinite(date.getTime())) {
     return null;
   }
 
   if (
-    date.getUTCFullYear() !==
-      Number(match[1]) ||
-    date.getUTCMonth() + 1 !==
-      Number(match[2]) ||
-    date.getUTCDate() !==
-      Number(match[3])
+    date.getUTCFullYear() !== Number(match[1]) ||
+    date.getUTCMonth() + 1 !== Number(match[2]) ||
+    date.getUTCDate() !== Number(match[3])
   ) {
     return null;
   }
@@ -427,129 +243,119 @@ function parseIsoDate(
 function todayUtc() {
   const now = new Date();
 
-  return Date.UTC(
-    now.getUTCFullYear(),
-    now.getUTCMonth(),
-    now.getUTCDate()
-  );
+  return Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
 }
 
-function isPast(
-  value: string
-) {
-  const date =
-    parseIsoDate(value);
-
-  if (!date) {
-    return false;
-  }
-
-  return (
-    date.getTime() <
-    todayUtc()
-  );
+function isPast(value: string) {
+  const date = parseIsoDate(value);
+  return date ? date.getTime() < todayUtc() : false;
 }
 
-function isFuture(
-  value: string
-) {
-  const date =
-    parseIsoDate(value);
-
-  if (!date) {
-    return false;
-  }
-
-  return (
-    date.getTime() >
-    todayUtc()
-  );
+function isFuture(value: string) {
+  const date = parseIsoDate(value);
+  return date ? date.getTime() > todayUtc() : false;
 }
 
-function heldForThreeYears(
-  value: string
-) {
-  const from =
-    parseIsoDate(value);
+function heldForYears(value: string, years: number) {
+  const from = parseIsoDate(value);
 
   if (!from) {
     return null;
   }
 
-  const threshold =
-    Date.UTC(
-      from.getUTCFullYear() + 3,
-      from.getUTCMonth(),
-      from.getUTCDate()
-    );
-
-  return (
-    todayUtc() >= threshold
+  const threshold = Date.UTC(
+    from.getUTCFullYear() + years,
+    from.getUTCMonth(),
+    from.getUTCDate(),
   );
+
+  return todayUtc() >= threshold;
 }
 
-function normalCategory(
-  value: string
-) {
+function normalCategory(value: string) {
   return cleanText(value)
     .toUpperCase()
-    .replace(
-      /[^A-Z0-9]/g,
-      ""
-    );
+    .replace(/[^A-Z0-9]/g, "");
 }
 
-function decide(
-  extraction: AiExtraction
-) {
-  const licenceRetakeSides =
-    extraction.quality
-      .retakeSides
-      .filter(
-        (side): side is StepKey =>
-          side === "dlFront" ||
-          side === "dlBack"
-      );
+/*
+ * The session route builds booking IDs as:
+ * bk_<fleetGroup>_<timestamp>_<random>
+ *
+ * This keeps the Kymco rule limited to Kymco/SkyTown sessions and avoids
+ * changing the eligibility rules for Piaggio, Symphony or other scooters.
+ */
+function isKymcoSkyTownBooking(bookingId: string) {
+  const normalized = cleanText(bookingId)
+    .toLowerCase()
+    .replace(/[^a-z0-9]/g, "");
+
+  return normalized.includes("kymco") || normalized.includes("skytown");
+}
+
+function isCurrentlyValid(item: VehicleClass & { normalized: string }) {
+  return !isPast(item.validUntil) && !isFuture(item.validFrom);
+}
+
+function acceptedMotorcycleDecision(extraction: AiExtraction): Decision {
+  const manualReasons: string[] = [];
+
+  if (extraction.quality.overall === "uncertain") {
+    manualReasons.push(
+      ...(extraction.quality.issues.length > 0
+        ? extraction.quality.issues
+        : ["Driving licence reading needs manual confirmation"]),
+    );
+  }
+
+  if (isFuture(extraction.licence.issueDate)) {
+    manualReasons.push(
+      "The detected driving licence issue date needs manual confirmation",
+    );
+  }
+
+  if (manualReasons.length > 0) {
+    return {
+      outcome: "manual_review",
+      messageKey: "manual_review",
+      message:
+        "Documents received. NEXA Rentals will confirm the driving licence manually before pickup.",
+      reasons: [...new Set(manualReasons)],
+      retakeSides: [],
+    };
+  }
+
+  return {
+    outcome: "accepted",
+    messageKey: "accepted",
+    message: "Driving licence accepted.",
+    reasons: [],
+    retakeSides: [],
+  };
+}
+
+function decide(extraction: AiExtraction, kymcoSkyTown: boolean): Decision {
+  const licenceRetakeSides = extraction.quality.retakeSides.filter(
+    (side): side is StepKey => side === "dlFront" || side === "dlBack",
+  );
 
   const licenceCannotBeRead =
-    !extraction.licence
-      .documentDetected ||
-    !extraction.licence
-      .readable;
-
+    !extraction.licence.documentDetected || !extraction.licence.readable;
   const licencePhotoNeedsRetake =
-    extraction.quality
-      .overall ===
-      "retake" &&
-    licenceRetakeSides.length >
-      0;
-
+    extraction.quality.overall === "retake" &&
+    licenceRetakeSides.length > 0;
   const missingLicenceIdentity =
-    !cleanText(
-      extraction.licence.fullName
-    ) &&
+    !cleanText(extraction.licence.fullName) &&
     !(
-      cleanText(
-        extraction.licence.firstName
-      ) &&
-      cleanText(
-        extraction.licence.lastName
-      )
+      cleanText(extraction.licence.firstName) &&
+      cleanText(extraction.licence.lastName)
     );
-
-  const missingLicenceNumber =
-    !cleanText(
-      extraction.licence
-        .documentNumber
-    );
-
-  const wrongDocumentType =
-    !/driv|licen[cs]e|permiso/i.test(
-      cleanText(
-        extraction.licence
-          .documentType
-      )
-    );
+  const missingLicenceNumber = !cleanText(
+    extraction.licence.documentNumber,
+  );
+  const wrongDocumentType = !/driv|licen[cs]e|permiso/i.test(
+    cleanText(extraction.licence.documentType),
+  );
 
   if (
     licenceCannotBeRead ||
@@ -558,662 +364,338 @@ function decide(
     missingLicenceNumber ||
     wrongDocumentType
   ) {
-    let fallbackMessage =
-      "The driving licence could not be read clearly.";
+    let fallbackMessage = "The driving licence could not be read clearly.";
 
     if (wrongDocumentType) {
       fallbackMessage =
         "The photographs do not appear to show a driving licence.";
-    } else if (
-      missingLicenceIdentity ||
-      missingLicenceNumber
-    ) {
+    } else if (missingLicenceIdentity || missingLicenceNumber) {
       fallbackMessage =
         "The licence holder details or licence number could not be read clearly.";
     }
 
     const reasons =
-      extraction.quality
-        .issues.length > 0
-        ? extraction.quality
-            .issues
-        : [
-            fallbackMessage,
-          ];
+      extraction.quality.issues.length > 0
+        ? extraction.quality.issues
+        : [fallbackMessage];
 
     return {
-      outcome:
-        "retake" as Outcome,
-
-      message:
-        reasons[0] ||
-        fallbackMessage,
-
+      outcome: "retake",
+      messageKey: "retake",
+      message: reasons[0] || fallbackMessage,
       reasons,
-
       retakeSides:
-        licenceRetakeSides.length >
-        0
+        licenceRetakeSides.length > 0
           ? licenceRetakeSides
-          : [
-              "dlFront",
-              "dlBack",
-            ] as StepKey[],
+          : ["dlFront", "dlBack"],
     };
   }
 
-  if (
-    isPast(
-      extraction.licence
-        .dateOfExpiry
-    )
-  ) {
+  if (isPast(extraction.licence.dateOfExpiry)) {
     return {
-      outcome:
-        "rejected" as Outcome,
-
-      message:
-        "The driving licence appears to be expired.",
-
-      reasons: [
-        "Driving licence expired",
-      ],
-
-      retakeSides:
-        [] as StepKey[],
+      outcome: "rejected",
+      messageKey: "licence_expired",
+      message: "The driving licence appears to be expired.",
+      reasons: ["Driving licence expired"],
+      retakeSides: [],
     };
   }
 
-  const classes =
-    extraction.licence
-      .vehicleClasses
-      .map((item) => ({
-        ...item,
+  const classes = extraction.licence.vehicleClasses
+    .map((item) => ({
+      ...item,
+      normalized: normalCategory(item.category),
+    }))
+    .filter((item) => Boolean(item.normalized));
 
-        normalized:
-          normalCategory(
-            item.category
-          ),
-      }))
-      .filter(
-        (item) =>
-          Boolean(
-            item.normalized
-          )
-      );
-
-  /*
-   * IMPORTANT:
-   * No detected categories now causes a retake.
-   * It must not continue as manual review.
-   */
-  if (
-    classes.length === 0
-  ) {
+  /* No detected categories must cause a retake, never a manual review. */
+  if (classes.length === 0) {
     return {
-      outcome:
-        "retake" as Outcome,
-
+      outcome: "retake",
+      messageKey: "retake",
       message:
         "The driving-licence category table could not be read. Please retake the back of the licence in sharp focus.",
-
-      reasons: [
-        "Driving-licence categories were not detected",
-      ],
-
-      retakeSides: [
-        "dlBack",
-      ] as StepKey[],
+      reasons: ["Driving-licence categories were not detected"],
+      retakeSides: ["dlBack"],
     };
   }
 
-  const motorcycleCategories =
-    classes.filter(
+  const motorcycleCategories = classes.filter((item) =>
+    ["A", "A1", "A2"].includes(item.normalized),
+  );
+
+  if (kymcoSkyTown) {
+    /* A and A2 are accepted for the Kymco without an extra holding period. */
+    const validHigherMotorcycle = motorcycleCategories.find(
       (item) =>
-        [
-          "A",
-          "A1",
-          "A2",
-        ].includes(
-          item.normalized
-        )
+        ["A", "A2"].includes(item.normalized) && isCurrentlyValid(item),
     );
 
-  const validMotorcycle =
-    motorcycleCategories.find(
-      (item) =>
-        !isPast(
-          item.validUntil
-        ) &&
-        !isFuture(
-          item.validFrom
-        )
+    if (validHigherMotorcycle) {
+      return acceptedMotorcycleDecision(extraction);
+    }
+
+    /* A1 is accepted only after it has been held for at least one year. */
+    const validA1 = motorcycleCategories.find(
+      (item) => item.normalized === "A1" && isCurrentlyValid(item),
     );
+
+    if (validA1) {
+      const a1HeldForOneYear = heldForYears(validA1.validFrom, 1);
+
+      if (a1HeldForOneYear === false) {
+        return {
+          outcome: "rejected",
+          messageKey: "kymco_a1_less_than_one_year",
+          message:
+            "The Kymco SkyTown 125 requires category A1 to have been held for at least 1 year. Category A2 or A is also accepted.",
+          reasons: ["Category A1 held for less than 1 year for Kymco SkyTown"],
+          retakeSides: [],
+        };
+      }
+
+      if (a1HeldForOneYear === null) {
+        return {
+          outcome: "manual_review",
+          messageKey: "manual_review",
+          message:
+            "Documents received. NEXA Rentals will confirm the category A1 start date manually before pickup.",
+          reasons: ["Category A1 valid-from date could not be read confidently"],
+          retakeSides: [],
+        };
+      }
+
+      return acceptedMotorcycleDecision(extraction);
+    }
+
+    if (motorcycleCategories.length > 0) {
+      return {
+        outcome: "rejected",
+        messageKey: "category_not_yet_valid",
+        message:
+          "The detected motorcycle licence category is expired or not yet valid for the Kymco SkyTown 125.",
+        reasons: ["Motorcycle category is expired or not yet valid"],
+        retakeSides: [],
+      };
+    }
+
+    /* Category B and AM are never sufficient for the Kymco SkyTown 125. */
+    return {
+      outcome: "rejected",
+      messageKey: "kymco_motorcycle_category_required",
+      message:
+        "The Kymco SkyTown 125 requires a valid motorcycle licence: A1 held for at least 1 year, A2, or A. Category B is not accepted for this scooter.",
+      reasons: ["Kymco SkyTown requires A1 held for 1 year, A2, or A"],
+      retakeSides: [],
+    };
+  }
+
+  const validMotorcycle = motorcycleCategories.find(isCurrentlyValid);
 
   if (validMotorcycle) {
-    const manualReasons:
-      string[] = [];
-
-    if (
-      extraction.quality
-        .overall ===
-      "uncertain"
-    ) {
-      manualReasons.push(
-        ...(
-          extraction.quality
-            .issues.length >
-          0
-            ? extraction
-                .quality
-                .issues
-            : [
-                "Driving licence reading needs manual confirmation",
-              ]
-        )
-      );
-    }
-
-    if (
-      isFuture(
-        extraction.licence
-          .issueDate
-      )
-    ) {
-      manualReasons.push(
-        "The detected driving licence issue date needs manual confirmation"
-      );
-    }
-
-    if (
-      manualReasons.length >
-      0
-    ) {
-      return {
-        outcome:
-          "manual_review" as Outcome,
-
-        message:
-          "Documents received. NEXA Rentals will confirm the driving licence manually before pickup.",
-
-        reasons: [
-          ...new Set(
-            manualReasons
-          ),
-        ],
-
-        retakeSides:
-          [] as StepKey[],
-      };
-    }
-
-    return {
-      outcome:
-        "accepted" as Outcome,
-
-      message:
-        "Driving licence accepted.",
-
-      reasons:
-        [] as string[],
-
-      retakeSides:
-        [] as StepKey[],
-    };
+    return acceptedMotorcycleDecision(extraction);
   }
 
-  const bCategories =
-    classes.filter(
-      (item) =>
-        item.normalized ===
-        "B"
-    );
-
-  const validBClass =
-    bCategories.find(
-      (item) =>
-        !isPast(
-          item.validUntil
-        ) &&
-        !isFuture(
-          item.validFrom
-        )
-    );
+  const bCategories = classes.filter((item) => item.normalized === "B");
+  const validBClass = bCategories.find(isCurrentlyValid);
 
   if (validBClass) {
-    const bHeld =
-      heldForThreeYears(
-        validBClass.validFrom
-      );
+    const bHeld = heldForYears(validBClass.validFrom, 3);
 
-    if (
-      bHeld === false
-    ) {
+    if (bHeld === false) {
       return {
-        outcome:
-          "rejected" as Outcome,
-
+        outcome: "rejected",
+        messageKey: "b_less_than_three_years",
         message:
           "A category B driving licence must have been held for at least 3 years to ride a 125cc scooter in Spain.",
-
-        reasons: [
-          "Category B held for less than 3 years",
-        ],
-
-        retakeSides:
-          [] as StepKey[],
+        reasons: ["Category B held for less than 3 years"],
+        retakeSides: [],
       };
     }
 
-    if (
-      bHeld === null
-    ) {
+    if (bHeld === null) {
       return {
-        outcome:
-          "manual_review" as Outcome,
-
+        outcome: "manual_review",
+        messageKey: "manual_review",
         message:
           "Documents received. NEXA Rentals will confirm the category B start date manually before pickup.",
-
-        reasons: [
-          "Category B valid-from date could not be read confidently",
-        ],
-
-        retakeSides:
-          [] as StepKey[],
+        reasons: ["Category B valid-from date could not be read confidently"],
+        retakeSides: [],
       };
     }
 
-    if (
-      extraction.quality
-        .overall ===
-      "uncertain"
-    ) {
+    if (extraction.quality.overall === "uncertain") {
       return {
-        outcome:
-          "manual_review" as Outcome,
-
+        outcome: "manual_review",
+        messageKey: "manual_review",
         message:
           "Documents received. NEXA Rentals will confirm the driving licence manually before pickup.",
-
         reasons:
-          extraction.quality
-            .issues.length > 0
-            ? [
-                ...new Set(
-                  extraction
-                    .quality
-                    .issues
-                ),
-              ]
-            : [
-                "Driving licence reading needs manual confirmation",
-              ],
-
-        retakeSides:
-          [] as StepKey[],
+          extraction.quality.issues.length > 0
+            ? [...new Set(extraction.quality.issues)]
+            : ["Driving licence reading needs manual confirmation"],
+        retakeSides: [],
       };
     }
 
     return {
-      outcome:
-        "accepted" as Outcome,
-
-      message:
-        "Driving licence accepted.",
-
-      reasons:
-        [] as string[],
-
-      retakeSides:
-        [] as StepKey[],
+      outcome: "accepted",
+      messageKey: "accepted",
+      message: "Driving licence accepted.",
+      reasons: [],
+      retakeSides: [],
     };
   }
 
-  const hasAm =
-    classes.some(
-      (item) =>
-        item.normalized ===
-          "AM" &&
-        !isPast(
-          item.validUntil
-        )
-    );
-
+  const hasAm = classes.some(
+    (item) => item.normalized === "AM" && !isPast(item.validUntil),
+  );
   const hasPotentiallyCompatible =
-    motorcycleCategories.length >
-      0 ||
-    bCategories.length > 0;
+    motorcycleCategories.length > 0 || bCategories.length > 0;
 
-  if (
-    hasAm &&
-    !hasPotentiallyCompatible
-  ) {
+  if (hasAm && !hasPotentiallyCompatible) {
     return {
-      outcome:
-        "rejected" as Outcome,
-
+      outcome: "rejected",
+      messageKey: "no_compatible_category",
       message:
         "Category AM is only valid for mopeds up to 50cc. NEXA Rentals only provides 125cc scooters.",
-
-      reasons: [
-        "AM licence is not valid for a 125cc scooter",
-      ],
-
-      retakeSides:
-        [] as StepKey[],
+      reasons: ["AM licence is not valid for a 125cc scooter"],
+      retakeSides: [],
     };
   }
 
-  if (
-    hasPotentiallyCompatible
-  ) {
+  if (hasPotentiallyCompatible) {
     return {
-      outcome:
-        "rejected" as Outcome,
-
+      outcome: "rejected",
+      messageKey: "category_not_yet_valid",
       message:
         "The detected driving licence category is not currently valid for a 125cc scooter.",
-
-      reasons: [
-        "Compatible category is expired or not yet valid",
-      ],
-
-      retakeSides:
-        [] as StepKey[],
+      reasons: ["Compatible category is expired or not yet valid"],
+      retakeSides: [],
     };
   }
 
   return {
-    outcome:
-      "rejected" as Outcome,
-
+    outcome: "rejected",
+    messageKey: "no_compatible_category",
     message:
       "A valid A, A1, A2, or category B licence held for at least 3 years is required for a 125cc scooter.",
-
-    reasons: [
-      "No compatible driving licence category detected",
-    ],
-
-    retakeSides:
-      [] as StepKey[],
+    reasons: ["No compatible driving licence category detected"],
+    retakeSides: [],
   };
 }
 
-async function toImageInput(
-  file: File,
-  label: string
-) {
-  const mimeType =
-    cleanText(file.type)
-      .toLowerCase();
+async function toImageInput(file: File, label: string) {
+  const mimeType = cleanText(file.type).toLowerCase();
 
-  if (
-    ![
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/gif",
-    ].includes(
-      mimeType
-    )
-  ) {
-    throw new ApiError(
-      `${label} must be a JPEG, PNG, WEBP, or GIF image.`,
-      400
-    );
+  if (!["image/jpeg", "image/png", "image/webp", "image/gif"].includes(mimeType)) {
+    throw new ApiError(`${label} must be a JPEG, PNG, WEBP, or GIF image.`, 400);
   }
 
-  if (
-    file.size <= 0 ||
-    file.size >
-      MAX_FILE_BYTES
-  ) {
-    throw new ApiError(
-      `${label} must be smaller than 8 MB.`,
-      400
-    );
+  if (file.size <= 0 || file.size > MAX_FILE_BYTES) {
+    throw new ApiError(`${label} must be smaller than 8 MB.`, 400);
   }
 
-  const base64 =
-    Buffer.from(
-      await file.arrayBuffer()
-    ).toString(
-      "base64"
-    );
+  const base64 = Buffer.from(await file.arrayBuffer()).toString("base64");
 
   return {
     label,
-
     item: {
-      type:
-        "input_image" as const,
-
-      image_url:
-        `data:${mimeType};base64,${base64}`,
-
-      detail:
-        "high" as const,
+      type: "input_image" as const,
+      image_url: `data:${mimeType};base64,${base64}`,
+      detail: "high" as const,
     },
   };
 }
 
-export async function POST(
-  req: Request
-) {
+export async function POST(req: Request) {
   try {
-    const apiKey =
-      process.env
-        .OPENAI_API_KEY;
+    const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      throw new ApiError(
-        "OPENAI_API_KEY is missing in Vercel.",
-        500
-      );
+      throw new ApiError("OPENAI_API_KEY is missing in Vercel.", 500);
     }
 
-    const form =
-      await req.formData();
-
-    const sessionToken =
-      cleanText(
-        form.get(
-          "sessionToken"
-        )
-      );
-
-    const identityType =
-      cleanText(
-        form.get(
-          "identityType"
-        )
-      ) as IdentityType;
+    const form = await req.formData();
+    const sessionToken = cleanText(form.get("sessionToken"));
+    const identityType = cleanText(form.get("identityType")) as IdentityType;
 
     if (!sessionToken) {
-      throw new ApiError(
-        "Missing sessionToken.",
-        400
-      );
+      throw new ApiError("Missing sessionToken.", 400);
     }
 
-    if (
-      identityType !==
-        "id" &&
-      identityType !==
-        "passport"
-    ) {
-      throw new ApiError(
-        "Invalid identityType.",
-        400
-      );
+    if (identityType !== "id" && identityType !== "passport") {
+      throw new ApiError("Invalid identityType.", 400);
     }
 
-    const {
-      data: session,
-      error: sessionError,
-    } =
-      await supabaseAdmin
-        .from(TABLE)
-        .select(
-          "session_token,status,expires_at"
-        )
-        .eq(
-          "session_token",
-          sessionToken
-        )
-        .maybeSingle();
+    const { data: session, error: sessionError } = await supabaseAdmin
+      .from(TABLE)
+      .select("session_token,booking_id,status,expires_at")
+      .eq("session_token", sessionToken)
+      .maybeSingle();
 
     if (sessionError) {
-      throw new Error(
-        `Could not validate session: ${sessionError.message}`
-      );
+      throw new Error(`Could not validate session: ${sessionError.message}`);
     }
 
     if (!session) {
-      throw new ApiError(
-        "Verification session not found.",
-        404
-      );
+      throw new ApiError("Verification session not found.", 404);
     }
 
-    const expiresAt =
-      new Date(
-        session.expires_at
-      ).getTime();
+    const expiresAt = new Date(session.expires_at).getTime();
 
-    if (
-      !Number.isFinite(
-        expiresAt
-      )
-    ) {
-      throw new Error(
-        "Verification session has an invalid expiry date."
-      );
+    if (!Number.isFinite(expiresAt)) {
+      throw new Error("Verification session has an invalid expiry date.");
     }
 
-    if (
-      expiresAt <=
-      Date.now()
-    ) {
-      throw new ApiError(
-        "Verification session expired.",
-        410
-      );
+    if (expiresAt <= Date.now()) {
+      throw new ApiError("Verification session expired.", 410);
     }
 
-    if (
-      session.status !==
-      "scanning"
-    ) {
-      throw new ApiError(
-        "Verification session is not active.",
-        409
-      );
+    if (session.status !== "scanning") {
+      throw new ApiError("Verification session is not active.", 409);
     }
 
-    const required:
-      Array<
-        [
-          StepKey,
-          string,
-        ]
-      > = [
-      [
-        "dlFront",
-        "DRIVING LICENCE FRONT",
-      ],
+    const kymcoSkyTown = isKymcoSkyTownBooking(session.booking_id);
 
-      [
-        "dlBack",
-        "DRIVING LICENCE BACK",
-      ],
-
+    const required: Array<[StepKey, string]> = [
+      ["dlFront", "DRIVING LICENCE FRONT"],
+      ["dlBack", "DRIVING LICENCE BACK"],
       [
         "idFront",
-        identityType ===
-        "passport"
+        identityType === "passport"
           ? "PASSPORT PHOTO PAGE"
           : "IDENTITY CARD FRONT",
       ],
     ];
 
-    if (
-      identityType ===
-      "id"
-    ) {
-      required.push([
-        "idBack",
-        "IDENTITY CARD BACK",
-      ]);
+    if (identityType === "id") {
+      required.push(["idBack", "IDENTITY CARD BACK"]);
     }
 
-    const files:
-      Array<{
-        key: StepKey;
-        label: string;
-        file: File;
-      }> = [];
+    const files: Array<{ key: StepKey; label: string; file: File }> = [];
 
-    for (
-      const [
-        key,
-        label,
-      ] of required
-    ) {
-      const value =
-        form.get(key);
+    for (const [key, label] of required) {
+      const value = form.get(key);
 
-      if (
-        !isFile(value)
-      ) {
-        throw new ApiError(
-          `${label} is missing.`,
-          400
-        );
+      if (!isFile(value)) {
+        throw new ApiError(`${label} is missing.`, 400);
       }
 
-      files.push({
-        key,
-        label,
-        file: value,
-      });
+      files.push({ key, label, file: value });
     }
 
-    const totalBytes =
-      files.reduce(
-        (
-          sum,
-          item
-        ) =>
-          sum +
-          item.file.size,
-        0
-      );
+    const totalBytes = files.reduce((sum, item) => sum + item.file.size, 0);
 
-    if (
-      totalBytes >
-      MAX_TOTAL_BYTES
-    ) {
-      throw new ApiError(
-        "The document images are too large.",
-        400
-      );
+    if (totalBytes > MAX_TOTAL_BYTES) {
+      throw new ApiError("The document images are too large.", 400);
     }
 
-    const images =
-      await Promise.all(
-        files.map(
-          (item) =>
-            toImageInput(
-              item.file,
-              item.label
-            )
-        )
-      );
+    const images = await Promise.all(
+      files.map((item) => toImageInput(item.file, item.label)),
+    );
 
-    const prompt =
-      `You read rental documents for NEXA Rentals in Spain.
+    const prompt = `You read rental documents for NEXA Rentals in Spain.
 
 The customer selected this identity-document option: ${identityType}.
 
@@ -1377,262 +859,126 @@ Set identity.selectedType to "${identityType}".
 
 For compatibility, always return nameMatch as "uncertain".`;
 
-    const content:
-      any[] = [
-      {
-        type:
-          "input_text",
+    const content: any[] = [{ type: "input_text", text: prompt }];
 
-        text:
-          prompt,
-      },
-    ];
-
-    for (
-      const image of
-      images
-    ) {
-      content.push({
-        type:
-          "input_text",
-
-        text:
-          image.label,
-      });
-
-      content.push(
-        image.item
-      );
+    for (const image of images) {
+      content.push({ type: "input_text", text: image.label });
+      content.push(image.item);
     }
 
-    const controller =
-      new AbortController();
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 60_000);
 
-    const timeout =
-      setTimeout(
-        () =>
-          controller.abort(),
-        60_000
-      );
-
-    let openaiResponse:
-      Response;
+    let openaiResponse: Response;
 
     try {
-      openaiResponse =
-        await fetch(
-          "https://api.openai.com/v1/responses",
-          {
-            method:
-              "POST",
-
-            headers: {
-              Authorization:
-                `Bearer ${apiKey}`,
-
-              "Content-Type":
-                "application/json",
+      openaiResponse = await fetch("https://api.openai.com/v1/responses", {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          model: MODEL,
+          store: false,
+          input: [{ role: "user", content }],
+          text: {
+            format: {
+              type: "json_schema",
+              name: "nexa_document_screening",
+              strict: true,
+              schema: DOCUMENT_SCHEMA,
             },
-
-            body:
-              JSON.stringify({
-                model:
-                  MODEL,
-
-                store:
-                  false,
-
-                input: [
-                  {
-                    role:
-                      "user",
-
-                    content,
-                  },
-                ],
-
-                text: {
-                  format: {
-                    type:
-                      "json_schema",
-
-                    name:
-                      "nexa_document_screening",
-
-                    strict:
-                      true,
-
-                    schema:
-                      DOCUMENT_SCHEMA,
-                  },
-                },
-
-                max_output_tokens:
-                  2200,
-              }),
-
-            signal:
-              controller.signal,
-          }
-        );
-    } catch (
-      caught: any
-    ) {
-      if (
-        caught?.name ===
-        "AbortError"
-      ) {
-        throw new ApiError(
-          "Document analysis timed out. Please try again.",
-          504
-        );
+          },
+          max_output_tokens: 2200,
+        }),
+        signal: controller.signal,
+      });
+    } catch (caught: any) {
+      if (caught?.name === "AbortError") {
+        throw new ApiError("Document analysis timed out. Please try again.", 504);
       }
 
       throw caught;
     } finally {
-      clearTimeout(
-        timeout
-      );
+      clearTimeout(timeout);
     }
 
-    const responseText =
-      await openaiResponse.text();
-
+    const responseText = await openaiResponse.text();
     let raw: any = {};
 
     if (responseText) {
       try {
-        raw =
-          JSON.parse(
-            responseText
-          );
+        raw = JSON.parse(responseText);
       } catch {
         throw new ApiError(
           "The document analysis service returned an invalid response.",
-          502
+          502,
         );
       }
     }
 
-    if (
-      !openaiResponse.ok
-    ) {
-      console.error(
-        "OPENAI DOCUMENT ANALYSIS ERROR:",
-        raw
-      );
-
+    if (!openaiResponse.ok) {
+      console.error("OPENAI DOCUMENT ANALYSIS ERROR:", raw);
       throw new ApiError(
         "The document analysis service is temporarily unavailable.",
-        502
+        502,
       );
     }
 
-    const refusal =
-      getRefusalText(raw);
+    const refusal = getRefusalText(raw);
 
     if (refusal) {
-      console.error(
-        "OPENAI DOCUMENT ANALYSIS REFUSAL:",
-        refusal
-      );
-
+      console.error("OPENAI DOCUMENT ANALYSIS REFUSAL:", refusal);
       throw new ApiError(
         "The document photographs could not be analyzed automatically.",
-        422
+        422,
       );
     }
 
-    if (
-      raw?.status ===
-      "incomplete"
-    ) {
+    if (raw?.status === "incomplete") {
       console.error(
         "OPENAI DOCUMENT ANALYSIS INCOMPLETE:",
-        raw?.incomplete_details
+        raw?.incomplete_details,
       );
-
-      throw new ApiError(
-        "Document analysis was incomplete. Please try again.",
-        502
-      );
+      throw new ApiError("Document analysis was incomplete. Please try again.", 502);
     }
 
-    const outputText =
-      getOutputText(raw);
+    const outputText = getOutputText(raw);
 
     if (!outputText) {
-      throw new ApiError(
-        "OpenAI returned no document result.",
-        502
-      );
+      throw new ApiError("OpenAI returned no document result.", 502);
     }
 
-    let extraction:
-      AiExtraction;
+    let extraction: AiExtraction;
 
     try {
-      extraction =
-        JSON.parse(
-          outputText
-        ) as AiExtraction;
+      extraction = JSON.parse(outputText) as AiExtraction;
     } catch {
-      console.error(
-        "OPENAI DOCUMENT JSON PARSE ERROR:",
-        outputText
-      );
-
-      throw new ApiError(
-        "The document result could not be read.",
-        502
-      );
+      console.error("OPENAI DOCUMENT JSON PARSE ERROR:", outputText);
+      throw new ApiError("The document result could not be read.", 502);
     }
 
-    const decision =
-      decide(
-        extraction
-      );
+    const decision = decide(extraction, kymcoSkyTown);
 
     return NextResponse.json({
-      success:
-        true,
-
+      success: true,
       ...decision,
-
-      licenceData:
-        extraction.licence,
-
-      identityData:
-        extraction.identity,
-
-      analysis:
-        extraction,
+      licenceData: extraction.licence,
+      identityData: extraction.identity,
+      analysis: extraction,
     });
-  } catch (
-    error: any
-  ) {
-    console.error(
-      "DOCUMENT ANALYSIS ERROR:",
-      error
-    );
+  } catch (error: any) {
+    console.error("DOCUMENT ANALYSIS ERROR:", error);
 
-    const status =
-      error instanceof ApiError
-        ? error.status
-        : 500;
+    const status = error instanceof ApiError ? error.status : 500;
 
     return NextResponse.json(
       {
-        success:
-          false,
-
-        error:
-          error?.message ||
-          "Could not analyze documents.",
+        success: false,
+        error: error?.message || "Could not analyze documents.",
       },
-      {
-        status,
-      }
+      { status },
     );
   }
 }
