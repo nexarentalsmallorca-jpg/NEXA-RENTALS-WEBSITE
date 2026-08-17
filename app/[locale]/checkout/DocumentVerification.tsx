@@ -3,6 +3,7 @@
 import {
   useCallback,
   useEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
@@ -144,14 +145,6 @@ type SessionStatus =
   | "expired"
   | "cancelled";
 
-type InterfaceStatus =
-  | "drivers"
-  | "preparing"
-  | "ready"
-  | "checking"
-  | "recovery"
-  | "error";
-
 type SessionData = {
   success: boolean;
 
@@ -177,6 +170,8 @@ type SessionData = {
   driverProfile?:
     | DriverProfile
     | null;
+
+  driverCount?: number;
 
   firstName?: string;
   lastName?: string;
@@ -206,38 +201,36 @@ type SessionData = {
   errorMessage?: string;
 };
 
+type DriverSession = SessionData & {
+  driverIndex: number;
+  sessionToken: string;
+  bookingId: string;
+  status: SessionStatus;
+  verifyPath: string;
+  qrUrl: string;
+};
+
 type StoredState = {
-  profiles: DriverProfile[];
+  sessions: DriverSession[];
   results: VerifiedDriver[];
 
   bookingId: string;
   rootSessionToken: string;
 
-  currentDriverIndex: number;
-
-  passengerIndexes?: number[];
-
-  session?:
-    | SessionData
-    | null;
+  passengerIndexes: number[];
 };
 
 const EMPTY_DOCUMENT: ExtractedDocumentData = {
   firstName: "",
   lastName: "",
   fullName: "",
-
   dateOfBirth: "",
   dateOfExpiry: "",
-
   documentNumber: "",
-
   nationality: "",
   address: "",
   countryCode: "",
-
   documentType: "",
-
   vehicleClasses: [],
 };
 
@@ -245,7 +238,8 @@ function clean(
   value: unknown
 ) {
   return String(
-    value ?? ""
+    value ??
+    ""
   ).trim();
 }
 
@@ -281,7 +275,8 @@ function localIsoDate(
 
   const month =
     String(
-      value.getMonth() + 1
+      value.getMonth() +
+      1
     ).padStart(
       2,
       "0"
@@ -295,100 +290,13 @@ function localIsoDate(
       "0"
     );
 
-  return `${year}-${month}-${day}`;
-}
-
-function validEmail(
-  value: string
-) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-    value.trim()
+  return [
+    year,
+    month,
+    day,
+  ].join(
+    "-"
   );
-}
-
-function validProfile(
-  profile: DriverProfile
-) {
-  return (
-    profile.firstName
-      .trim()
-      .length >= 2 &&
-    profile.lastName
-      .trim()
-      .length >= 2 &&
-    profile.phone
-      .trim()
-      .length >= 6 &&
-    validEmail(
-      profile.email
-    ) &&
-    profile.address
-      .trim()
-      .length >= 8
-  );
-}
-
-function emptyProfiles(
-  quantity: number
-): DriverProfile[] {
-  return Array.from(
-    {
-      length:
-        quantity,
-    },
-    (
-      _,
-      index
-    ) => ({
-      driverIndex:
-        index + 1,
-
-      firstName:
-        "",
-
-      lastName:
-        "",
-
-      phone:
-        "",
-
-      email:
-        "",
-
-      address:
-        "",
-    })
-  );
-}
-
-function makeScannerUrl(
-  data: SessionData,
-  includeReturnUrl: boolean
-) {
-  if (
-    typeof window ===
-      "undefined" ||
-    !data.verifyPath
-  ) {
-    return "";
-  }
-
-  const url =
-    new URL(
-      data.verifyPath,
-      window.location.origin
-    );
-
-  if (
-    includeReturnUrl
-  ) {
-    url.searchParams.set(
-      "return",
-      window.location.href
-    );
-  }
-
-  return url.toString();
 }
 
 function completeDocument(
@@ -399,7 +307,6 @@ function completeDocument(
 ): ExtractedDocumentData {
   return {
     ...EMPTY_DOCUMENT,
-
     ...(
       value ||
       {}
@@ -416,7 +323,344 @@ function completeDocument(
   };
 }
 
+function emptyProfile(
+  driverIndex: number
+): DriverProfile {
+  return {
+    driverIndex,
+    firstName: "",
+    lastName: "",
+    phone: "",
+    email: "",
+    address: "",
+  };
+}
+
+function makeScannerUrl(
+  verifyPath: string,
+  includeReturnUrl: boolean
+) {
+  if (
+    typeof window ===
+      "undefined" ||
+    !verifyPath
+  ) {
+    return "";
+  }
+
+  const url =
+    new URL(
+      verifyPath,
+      window.location.origin
+    );
+
+  if (
+    includeReturnUrl
+  ) {
+    url.searchParams.set(
+      "return",
+      window.location.href
+    );
+  }
+
+  return url.toString();
+}
+
+function driverIndexFromData(
+  data: SessionData,
+  fallback = 1
+) {
+  return Math.min(
+    15,
+    Math.max(
+      1,
+      Number(
+        data.driverProfile
+          ?.driverIndex
+      ) ||
+        fallback
+    )
+  );
+}
+
+function isFinishedStatus(
+  status:
+    | SessionStatus
+    | undefined
+) {
+  return (
+    status ===
+      "completed" ||
+    status ===
+      "failed"
+  );
+}
+
+function upsertSession(
+  current: DriverSession[],
+  next: DriverSession
+) {
+  return [
+    ...current.filter(
+      (item) =>
+        item.driverIndex !==
+        next.driverIndex
+    ),
+    next,
+  ].sort(
+    (
+      a,
+      b
+    ) =>
+      a.driverIndex -
+      b.driverIndex
+  );
+}
+
+function upsertResult(
+  current: VerifiedDriver[],
+  next: VerifiedDriver
+) {
+  return [
+    ...current.filter(
+      (item) =>
+        item.profile
+          .driverIndex !==
+        next.profile
+          .driverIndex
+    ),
+    next,
+  ].sort(
+    (
+      a,
+      b
+    ) =>
+      a.profile
+        .driverIndex -
+      b.profile
+        .driverIndex
+  );
+}
+
+function resultFromSession(
+  data: SessionData,
+  fallbackDriverIndex: number
+): VerifiedDriver {
+  const driverIndex =
+    driverIndexFromData(
+      data,
+      fallbackDriverIndex
+    );
+
+  const licenceData =
+    completeDocument(
+      data.licenceData
+    );
+
+  const identityData =
+    data.identityData
+      ? completeDocument(
+          data.identityData
+        )
+      : null;
+
+  const storedProfile =
+    data.driverProfile ||
+    emptyProfile(
+      driverIndex
+    );
+
+  const profile: DriverProfile = {
+    ...emptyProfile(
+      driverIndex
+    ),
+    ...storedProfile,
+
+    driverIndex,
+
+    firstName:
+      clean(
+        data.firstName
+      ) ||
+      clean(
+        licenceData
+          .firstName
+      ) ||
+      clean(
+        identityData
+          ?.firstName
+      ) ||
+      clean(
+        storedProfile
+          .firstName
+      ),
+
+    lastName:
+      clean(
+        data.lastName
+      ) ||
+      clean(
+        licenceData
+          .lastName
+      ) ||
+      clean(
+        identityData
+          ?.lastName
+      ) ||
+      clean(
+        storedProfile
+          .lastName
+      ),
+
+    address:
+      clean(
+        data.homeAddress
+      ) ||
+      clean(
+        identityData
+          ?.address
+      ) ||
+      clean(
+        licenceData
+          .address
+      ) ||
+      clean(
+        storedProfile
+          .address
+      ),
+  };
+
+  const rejected =
+    data.status ===
+      "failed" ||
+    data.analysisOutcome ===
+      "rejected";
+
+  const manualReview =
+    !rejected &&
+    data.analysisOutcome ===
+      "manual_review";
+
+  return {
+    profile,
+
+    status:
+      rejected
+        ? "rejected"
+        : manualReview
+          ? "manual_review"
+          : "approved",
+
+    message:
+      clean(
+        data.errorMessage ||
+        data.error
+      ),
+
+    messageKey:
+      clean(
+        data.messageKey
+      ),
+
+    reasons:
+      Array.isArray(
+        data.reasons
+      )
+        ? data.reasons.map(
+            clean
+          )
+        : [],
+
+    identityType:
+      data.identityType ===
+        "passport"
+        ? "passport"
+        : "id",
+
+    sessionToken:
+      clean(
+        data.sessionToken
+      ),
+
+    bookingId:
+      clean(
+        data.bookingId
+      ),
+
+    licenceData,
+    identityData,
+
+    dlFrontPath:
+      clean(
+        data.dlFrontPath
+      ),
+
+    dlBackPath:
+      clean(
+        data.dlBackPath
+      ),
+
+    idFrontPath:
+      clean(
+        data.idFrontPath
+      ),
+
+    idBackPath:
+      clean(
+        data.idBackPath
+      ),
+
+    dlFrontName:
+      clean(
+        data.dlFrontName
+      ),
+
+    dlBackName:
+      clean(
+        data.dlBackName
+      ),
+
+    idFrontName:
+      clean(
+        data.idFrontName
+      ),
+
+    idBackName:
+      clean(
+        data.idBackName
+      ),
+
+    continueAsPassenger:
+      false,
+  };
+}
+
+function resultName(
+  result: VerifiedDriver
+) {
+  return (
+    [
+      result.profile
+        .firstName,
+      result.profile
+        .lastName,
+    ]
+      .filter(
+        Boolean
+      )
+      .join(
+        " "
+      )
+      .trim() ||
+    "Driver " +
+      result.profile
+        .driverIndex
+  );
+}
+
 export default function DocumentVerification({
+  autoStart = true,
+
   from,
   to,
 
@@ -447,7 +691,7 @@ export default function DocumentVerification({
         1,
         Math.floor(
           quantity ||
-            1
+          1
         )
       )
     );
@@ -493,34 +737,23 @@ export default function DocumentVerification({
     );
 
   const storageKey =
-    `nexa-driver-verification:` +
-    `${fleetGroup}:` +
-    `${rentalStartDate}:` +
-    `${rentalEndDate}:` +
-    `${requestedQuantity}`;
-
-  const handledTokensRef =
-    useRef(
-      new Set<string>()
-    );
-
-  const creatingRef =
-    useRef(
-      false
+    [
+      "nexa-driver-verification-v3",
+      fleetGroup,
+      rentalStartDate,
+      rentalEndDate,
+      requestedQuantity,
+    ].join(
+      ":"
     );
 
   const [
-    profiles,
-    setProfiles,
+    sessions,
+    setSessions,
   ] =
     useState<
-      DriverProfile[]
-    >(
-      () =>
-        emptyProfiles(
-          requestedQuantity
-        )
-    );
+      DriverSession[]
+    >([]);
 
   const [
     results,
@@ -529,40 +762,6 @@ export default function DocumentVerification({
     useState<
       VerifiedDriver[]
     >([]);
-
-  const [
-    session,
-    setSession,
-  ] =
-    useState<
-      SessionData | null
-    >(null);
-
-  const [
-    status,
-    setStatus,
-  ] =
-    useState<
-      InterfaceStatus
-    >(
-      "drivers"
-    );
-
-  const [
-    error,
-    setError,
-  ] =
-    useState(
-      ""
-    );
-
-  const [
-    qrUrl,
-    setQrUrl,
-  ] =
-    useState(
-      ""
-    );
 
   const [
     bookingId,
@@ -581,14 +780,6 @@ export default function DocumentVerification({
     );
 
   const [
-    currentDriverIndex,
-    setCurrentDriverIndex,
-  ] =
-    useState(
-      1
-    );
-
-  const [
     passengerIndexes,
     setPassengerIndexes,
   ] =
@@ -604,20 +795,81 @@ export default function DocumentVerification({
       false
     );
 
-  const currentProfile =
-    profiles[
-      currentDriverIndex -
-        1
-    ];
-
-  const approvedResults =
-    results.filter(
-      (item) =>
-        item.status ===
-          "approved" ||
-        item.status ===
-          "manual_review"
+  const [
+    preparing,
+    setPreparing,
+  ] =
+    useState(
+      false
     );
+
+  const [
+    error,
+    setError,
+  ] =
+    useState(
+      ""
+    );
+
+  const sessionsRef =
+    useRef<
+      DriverSession[]
+    >([]);
+
+  const resultsRef =
+    useRef<
+      VerifiedDriver[]
+    >([]);
+
+  const rootTokenRef =
+    useRef(
+      ""
+    );
+
+  const creatingRef =
+    useRef(
+      false
+    );
+
+  const completionSentRef =
+    useRef(
+      false
+    );
+
+  const handledReturnTokenRef =
+    useRef(
+      ""
+    );
+
+  useEffect(
+    () => {
+      sessionsRef.current =
+        sessions;
+    },
+    [
+      sessions,
+    ]
+  );
+
+  useEffect(
+    () => {
+      resultsRef.current =
+        results;
+    },
+    [
+      results,
+    ]
+  );
+
+  useEffect(
+    () => {
+      rootTokenRef.current =
+        rootSessionToken;
+    },
+    [
+      rootSessionToken,
+    ]
+  );
 
   useEffect(
     () => {
@@ -628,108 +880,77 @@ export default function DocumentVerification({
               storageKey
             );
 
-        if (raw) {
+        if (
+          raw
+        ) {
           const saved =
             JSON.parse(
               raw
             ) as StoredState;
 
-          if (
+          const savedSessions =
             Array.isArray(
-              saved.profiles
-            ) &&
-            saved.profiles
-              .length ===
-              requestedQuantity
-          ) {
-            setProfiles(
-              saved.profiles
-            );
+              saved.sessions
+            )
+              ? saved.sessions
+                  .filter(
+                    (item) =>
+                      Boolean(
+                        item
+                          ?.sessionToken
+                      )
+                  )
+              : [];
 
-            setResults(
-              Array.isArray(
-                saved.results
-              )
-                ? saved.results
-                : []
-            );
-
-            setBookingId(
-              clean(
-                saved.bookingId
-              )
-            );
-
-            setRootSessionToken(
-              clean(
-                saved.rootSessionToken
-              )
-            );
-
-            setPassengerIndexes(
-              Array.isArray(
-                saved.passengerIndexes
-              )
-                ? saved.passengerIndexes
-                : []
-            );
-
-            setCurrentDriverIndex(
-              Math.min(
-                requestedQuantity,
-                Math.max(
-                  1,
-                  Number(
-                    saved.currentDriverIndex
-                  ) ||
-                    1
-                )
-              )
-            );
-
-            if (
-              saved.session
-                ?.sessionToken &&
-              saved.session
-                .verifyPath
-            ) {
-              setSession(
-                saved.session
-              );
-
-              setQrUrl(
-                makeScannerUrl(
-                  saved.session,
-                  false
-                )
-              );
-
-              setStatus(
-                "ready"
-              );
-            } else if (
+          const savedResults =
+            Array.isArray(
               saved.results
-                ?.length ===
-              requestedQuantity
-            ) {
-              setStatus(
-                saved.results.some(
-                  (item) =>
-                    item.status ===
-                    "rejected"
-                )
-                  ? "recovery"
-                  : "checking"
-              );
-            } else if (
-              saved.results
-                ?.length
-            ) {
-              setStatus(
-                "checking"
-              );
-            }
-          }
+            )
+              ? saved.results
+              : [];
+
+          sessionsRef.current =
+            savedSessions;
+
+          resultsRef.current =
+            savedResults;
+
+          rootTokenRef.current =
+            clean(
+              saved
+                .rootSessionToken
+            );
+
+          setSessions(
+            savedSessions
+          );
+
+          setResults(
+            savedResults
+          );
+
+          setBookingId(
+            clean(
+              saved.bookingId
+            )
+          );
+
+          setRootSessionToken(
+            clean(
+              saved
+                .rootSessionToken
+            )
+          );
+
+          setPassengerIndexes(
+            Array.isArray(
+              saved
+                .passengerIndexes
+            )
+              ? saved
+                  .passengerIndexes
+              : []
+          );
         }
       } catch {
         window.sessionStorage
@@ -743,7 +964,6 @@ export default function DocumentVerification({
       }
     },
     [
-      requestedQuantity,
       storageKey,
     ]
   );
@@ -758,13 +978,11 @@ export default function DocumentVerification({
 
       const stored:
         StoredState = {
-        profiles,
+        sessions,
         results,
         bookingId,
         rootSessionToken,
-        currentDriverIndex,
         passengerIndexes,
-        session,
       };
 
       window.sessionStorage
@@ -778,13 +996,11 @@ export default function DocumentVerification({
     [
       restored,
       storageKey,
-      profiles,
+      sessions,
       results,
       bookingId,
       rootSessionToken,
-      currentDriverIndex,
       passengerIndexes,
-      session,
     ]
   );
 
@@ -795,9 +1011,10 @@ export default function DocumentVerification({
       ) => {
         const response =
           await fetch(
-            `/api/document-verification/session?session=${encodeURIComponent(
-              token
-            )}`,
+            "/api/document-verification/session?session=" +
+              encodeURIComponent(
+                token
+              ),
             {
               cache:
                 "no-store",
@@ -824,172 +1041,631 @@ export default function DocumentVerification({
       []
     );
 
-  const createSessionForDriver =
+  const mergeSessionData =
+    useCallback(
+      (
+        driverIndex: number,
+        data: SessionData
+      ) => {
+        const previous =
+          sessionsRef.current
+            .find(
+              (item) =>
+                item.driverIndex ===
+                driverIndex
+            );
+
+        const verifyPath =
+          clean(
+            data.verifyPath
+          ) ||
+          previous
+            ?.verifyPath ||
+          "";
+
+        const sessionToken =
+          clean(
+            data.sessionToken
+          ) ||
+          previous
+            ?.sessionToken ||
+          "";
+
+        const next:
+          DriverSession = {
+          ...previous,
+          ...data,
+
+          success:
+            true,
+
+          driverIndex,
+
+          sessionToken,
+
+          bookingId:
+            clean(
+              data.bookingId
+            ) ||
+            previous
+              ?.bookingId ||
+            bookingId,
+
+          status:
+            data.status ||
+            previous
+              ?.status ||
+            "pending",
+
+          verifyPath,
+
+          qrUrl:
+            verifyPath
+              ? makeScannerUrl(
+                  verifyPath,
+                  false
+                )
+              : previous
+                  ?.qrUrl ||
+                "",
+        };
+
+        const nextSessions =
+          upsertSession(
+            sessionsRef.current,
+            next
+          );
+
+        sessionsRef.current =
+          nextSessions;
+
+        setSessions(
+          nextSessions
+        );
+
+        if (
+          next.bookingId
+        ) {
+          setBookingId(
+            next.bookingId
+          );
+        }
+
+        if (
+          isFinishedStatus(
+            next.status
+          )
+        ) {
+          const nextResult =
+            resultFromSession(
+              next,
+              driverIndex
+            );
+
+          const nextResults =
+            upsertResult(
+              resultsRef.current,
+              nextResult
+            );
+
+          resultsRef.current =
+            nextResults;
+
+          setResults(
+            nextResults
+          );
+        }
+      },
+      [
+        bookingId,
+      ]
+    );
+
+  const createOneSession =
     useCallback(
       async (
         driverIndex: number,
-        parentToken?: string
+        parentToken: string
       ) => {
+        if (
+          !rentalStartDate ||
+          !rentalEndDate
+        ) {
+          throw new Error(
+            "Please select valid pickup and return dates before verifying documents."
+          );
+        }
+
+        const response =
+          await fetch(
+            "/api/document-verification/session",
+            {
+              method:
+                "POST",
+
+              headers: {
+                "Content-Type":
+                  "application/json",
+              },
+
+              body:
+                JSON.stringify({
+                  locale,
+                  fleetGroup,
+                  vehicleName,
+                  rentalStartDate,
+                  rentalEndDate,
+                  pickupTime,
+                  dropoffTime,
+
+                  driverIndex,
+
+                  driverCount:
+                    requestedQuantity,
+
+                  driverProfile:
+                    emptyProfile(
+                      driverIndex
+                    ),
+
+                  parentSessionToken:
+                    parentToken,
+                }),
+            }
+          );
+
+        const data =
+          (
+            await response.json()
+          ) as SessionData;
+
+        if (
+          !response.ok ||
+          !data.success ||
+          !data.sessionToken ||
+          !data.bookingId ||
+          !data.verifyPath
+        ) {
+          throw new Error(
+            data.error ||
+            "Could not create the secure scanner session."
+          );
+        }
+
+        const created:
+          DriverSession = {
+          ...data,
+
+          success:
+            true,
+
+          driverIndex,
+
+          sessionToken:
+            data.sessionToken,
+
+          bookingId:
+            data.bookingId,
+
+          status:
+            data.status ||
+            "pending",
+
+          verifyPath:
+            data.verifyPath,
+
+          qrUrl:
+            makeScannerUrl(
+              data.verifyPath,
+              false
+            ),
+        };
+
+        return created;
+      },
+      [
+        locale,
+        fleetGroup,
+        vehicleName,
+        rentalStartDate,
+        rentalEndDate,
+        pickupTime,
+        dropoffTime,
+        requestedQuantity,
+      ]
+    );
+
+  const createMissingSessions =
+    useCallback(
+      async () => {
         if (
           creatingRef.current
         ) {
-          return null;
+          return;
         }
 
         creatingRef.current =
           true;
 
-        setStatus(
-          "preparing"
+        setPreparing(
+          true
         );
 
         setError(
           ""
         );
 
-        setQrUrl(
-          ""
-        );
-
         try {
-          if (
-            !rentalStartDate ||
-            !rentalEndDate
+          let parentToken =
+            rootTokenRef.current;
+
+          for (
+            let driverIndex =
+              1;
+            driverIndex <=
+              requestedQuantity;
+            driverIndex +=
+              1
           ) {
-            throw new Error(
-              "Please select valid pickup and return dates before verifying documents."
-            );
-          }
+            const existing =
+              sessionsRef.current
+                .find(
+                  (item) =>
+                    item.driverIndex ===
+                    driverIndex
+                );
 
-          const profile =
-            profiles[
-              driverIndex -
-                1
-            ];
-
-          if (
-            !profile ||
-            !validProfile(
-              profile
-            )
-          ) {
-            throw new Error(
-              `Please complete all required details for Driver ${driverIndex}.`
-            );
-          }
-
-          const response =
-            await fetch(
-              "/api/document-verification/session",
-              {
-                method:
-                  "POST",
-
-                headers: {
-                  "Content-Type":
-                    "application/json",
-                },
-
-                body:
-                  JSON.stringify({
-                    locale,
-                    fleetGroup,
-                    vehicleName,
-                    rentalStartDate,
-                    rentalEndDate,
-                    pickupTime,
-                    dropoffTime,
-                    driverProfile:
-                      profile,
-                    driverCount:
-                      requestedQuantity,
-                    parentSessionToken:
-                      parentToken ||
-                      rootSessionToken ||
-                      "",
-                  }),
+            if (
+              existing
+            ) {
+              if (
+                !parentToken
+              ) {
+                parentToken =
+                  existing
+                    .sessionToken;
               }
+
+              continue;
+            }
+
+            const created =
+              await createOneSession(
+                driverIndex,
+                parentToken
+              );
+
+            if (
+              !parentToken
+            ) {
+              parentToken =
+                created
+                  .sessionToken;
+
+              rootTokenRef.current =
+                parentToken;
+
+              setRootSessionToken(
+                parentToken
+              );
+            }
+
+            setBookingId(
+              created
+                .bookingId
             );
 
-          const data =
-            (
-              await response.json()
-            ) as SessionData;
+            const nextSessions =
+              upsertSession(
+                sessionsRef.current,
+                created
+              );
 
-          if (
-            !response.ok ||
-            !data.success ||
-            !data.sessionToken ||
-            !data.bookingId ||
-            !data.verifyPath
-          ) {
-            throw new Error(
-              data.error ||
-              "Could not create the secure scanner session."
+            sessionsRef.current =
+              nextSessions;
+
+            setSessions(
+              nextSessions
             );
           }
-
-          const scannerUrl =
-            makeScannerUrl(
-              data,
-              false
-            );
-
-          if (
-            !scannerUrl
-          ) {
-            throw new Error(
-              "Could not generate the secure QR code."
-            );
-          }
-
-          if (
-            !rootSessionToken
-          ) {
-            setRootSessionToken(
-              data.sessionToken
-            );
-          }
-
-          setBookingId(
-            data.bookingId
+        } catch (
+          caught: any
+        ) {
+          setError(
+            caught?.message ||
+            "Could not prepare all secure scanner sessions."
           );
-
-          setCurrentDriverIndex(
-            driverIndex
-          );
-
-          setSession(
-            data
-          );
-
-          setQrUrl(
-            scannerUrl
-          );
-
-          setStatus(
-            "ready"
-          );
-
-          return data;
         } finally {
           creatingRef.current =
             false;
+
+          setPreparing(
+            false
+          );
         }
       },
       [
-        rentalStartDate,
-        rentalEndDate,
-        profiles,
-        locale,
-        fleetGroup,
-        vehicleName,
-        pickupTime,
-        dropoffTime,
         requestedQuantity,
-        rootSessionToken,
+        createOneSession,
       ]
     );
+
+  useEffect(
+    () => {
+      if (
+        !restored ||
+        !autoStart
+      ) {
+        return;
+      }
+
+      /*
+       * When returning from the mobile scanner, read that
+       * session first so we preserve its original group.
+       */
+      if (
+        returnedToken &&
+        handledReturnTokenRef
+          .current !==
+          returnedToken
+      ) {
+        return;
+      }
+
+      if (
+        sessionsRef.current
+          .length >=
+        requestedQuantity
+      ) {
+        return;
+      }
+
+      void createMissingSessions();
+    },
+    [
+      restored,
+      autoStart,
+      returnedToken,
+      sessions.length,
+      requestedQuantity,
+      createMissingSessions,
+    ]
+  );
+
+  useEffect(
+    () => {
+      if (
+        !restored ||
+        !returnedToken ||
+        handledReturnTokenRef
+          .current ===
+          returnedToken
+      ) {
+        return;
+      }
+
+      handledReturnTokenRef.current =
+        returnedToken;
+
+      void readSession(
+        returnedToken
+      )
+        .then(
+          (
+            data
+          ) => {
+            const driverIndex =
+              driverIndexFromData(
+                data,
+                1
+              );
+
+            if (
+              !rootTokenRef.current
+            ) {
+              rootTokenRef.current =
+                returnedToken;
+
+              setRootSessionToken(
+                returnedToken
+              );
+            }
+
+            mergeSessionData(
+              driverIndex,
+              data
+            );
+          }
+        )
+        .catch(
+          (
+            caught: any
+          ) => {
+            setError(
+              caught?.message ||
+              "Could not read the returned verification result."
+            );
+          }
+        )
+        .finally(
+          () => {
+            const url =
+              new URL(
+                window.location.href
+              );
+
+            url.searchParams
+              .delete(
+                "verification_session"
+              );
+
+            url.searchParams
+              .delete(
+                "verification_result"
+              );
+
+            window.history
+              .replaceState(
+                {},
+                "",
+                url.toString()
+              );
+          }
+        );
+    },
+    [
+      restored,
+      returnedToken,
+      readSession,
+      mergeSessionData,
+    ]
+  );
+
+  useEffect(
+    () => {
+      if (
+        !restored
+      ) {
+        return;
+      }
+
+      let stopped =
+        false;
+
+      let timer:
+        | number
+        | undefined;
+
+      async function poll() {
+        const activeSessions =
+          sessionsRef.current
+            .filter(
+              (item) =>
+                item.status ===
+                  "pending" ||
+                item.status ===
+                  "scanning"
+            );
+
+        if (
+          activeSessions
+            .length >
+          0
+        ) {
+          const updates =
+            await Promise.all(
+              activeSessions.map(
+                async (
+                  item
+                ) => {
+                  try {
+                    const data =
+                      await readSession(
+                        item.sessionToken
+                      );
+
+                    return {
+                      driverIndex:
+                        item.driverIndex,
+
+                      data,
+                    };
+                  } catch {
+                    return null;
+                  }
+                }
+              )
+            );
+
+          if (
+            stopped
+          ) {
+            return;
+          }
+
+          for (
+            const update of
+            updates
+          ) {
+            if (
+              update
+            ) {
+              mergeSessionData(
+                update.driverIndex,
+                update.data
+              );
+            }
+          }
+        }
+
+        if (
+          !stopped
+        ) {
+          timer =
+            window.setTimeout(
+              poll,
+              1300
+            );
+        }
+      }
+
+      timer =
+        window.setTimeout(
+          poll,
+          650
+        );
+
+      return () => {
+        stopped =
+          true;
+
+        if (
+          timer
+        ) {
+          window.clearTimeout(
+            timer
+          );
+        }
+      };
+    },
+    [
+      restored,
+      readSession,
+      mergeSessionData,
+    ]
+  );
+
+  const approvedResults =
+    useMemo(
+      () =>
+        results.filter(
+          (item) =>
+            item.status ===
+              "approved" ||
+            item.status ===
+              "manual_review"
+        ),
+      [
+        results,
+      ]
+    );
+
+  const rejectedResults =
+    useMemo(
+      () =>
+        results.filter(
+          (item) =>
+            item.status ===
+              "rejected"
+        ),
+      [
+        results,
+      ]
+    );
+
+  const allFinished =
+    results.length ===
+    requestedQuantity;
 
   const sendComplete =
     useCallback(
@@ -999,6 +1675,13 @@ export default function DocumentVerification({
         finalPassengerIndexes:
           number[]
       ) => {
+        if (
+          completionSentRef
+            .current
+        ) {
+          return;
+        }
+
         const approved =
           finalResults.filter(
             (item) =>
@@ -1013,10 +1696,6 @@ export default function DocumentVerification({
         ) {
           setError(
             "None of the drivers passed verification. The booking cannot continue."
-          );
-
-          setStatus(
-            "recovery"
           );
 
           return;
@@ -1055,6 +1734,9 @@ export default function DocumentVerification({
                 ),
             })
           );
+
+        completionSentRef.current =
+          true;
 
         window.sessionStorage
           .removeItem(
@@ -1096,7 +1778,8 @@ export default function DocumentVerification({
             primary.sessionToken,
 
           bookingId:
-            primary.bookingId,
+            primary.bookingId ||
+            bookingId,
 
           dlFrontPath:
             primary.dlFrontPath,
@@ -1138,6 +1821,7 @@ export default function DocumentVerification({
         });
       },
       [
+        bookingId,
         onComplete,
         requestedQuantity,
         storageKey,
@@ -1147,1408 +1831,779 @@ export default function DocumentVerification({
   useEffect(
     () => {
       if (
-        !restored ||
-        returnedToken ||
-        session ||
-        results.length ===
-          0
+        !allFinished ||
+        rejectedResults
+          .length >
+          0 ||
+        completionSentRef
+          .current
       ) {
         return;
       }
 
-      if (
-        results.length ===
-        requestedQuantity
-      ) {
-        if (
-          results.some(
-            (item) =>
-              item.status ===
-              "rejected"
-          )
-        ) {
-          setStatus(
-            "recovery"
-          );
-        } else {
-          sendComplete(
-            results,
-            passengerIndexes
-          );
-        }
-
-        return;
-      }
-
-      const pending =
-        profiles.find(
-          (profile) =>
-            !results.some(
-              (result) =>
-                result.profile
-                  .driverIndex ===
-                profile.driverIndex
-            )
+      const timer =
+        window.setTimeout(
+          () => {
+            sendComplete(
+              results,
+              []
+            );
+          },
+          850
         );
 
-      if (
-        pending
-      ) {
-        void createSessionForDriver(
-          pending.driverIndex,
-          rootSessionToken
+      return () => {
+        window.clearTimeout(
+          timer
         );
-      }
+      };
     },
     [
-      restored,
-      returnedToken,
-      session,
+      allFinished,
+      rejectedResults.length,
       results,
-      requestedQuantity,
-      passengerIndexes,
-      profiles,
-      rootSessionToken,
-      createSessionForDriver,
       sendComplete,
     ]
   );
 
-  const processFinishedSession =
+  const rescanDriver =
     useCallback(
       async (
-        data: SessionData
+        driverIndex: number
       ) => {
-        const token =
-          clean(
-            data.sessionToken
-          );
-
-        if (
-          !token ||
-          handledTokensRef.current
-            .has(
-              token
-            )
-        ) {
-          return;
-        }
-
-        if (
-          data.status !==
-            "completed" &&
-          data.status !==
-            "failed"
-        ) {
-          return;
-        }
-
-        handledTokensRef.current
-          .add(
-            token
-          );
-
-        const profile =
-          data.driverProfile ||
-          profiles.find(
-            (item) =>
-              item.driverIndex ===
-              currentDriverIndex
-          ) ||
-          profiles[0];
-
-        const rejected =
-          data.status ===
-            "failed" ||
-          data.analysisOutcome ===
-            "rejected";
-
-        const result:
-          VerifiedDriver = {
-          profile,
-
-          status:
-            rejected
-              ? "rejected"
-              : data.analysisOutcome ===
-                "manual_review"
-                ? "manual_review"
-                : "approved",
-
-          message:
-            clean(
-              data.errorMessage ||
-              data.error
-            ),
-
-          messageKey:
-            clean(
-              data.messageKey
-            ),
-
-          reasons:
-            Array.isArray(
-              data.reasons
-            )
-              ? data.reasons.map(
-                  clean
-                )
-              : [],
-
-          identityType:
-            data.identityType ===
-            "passport"
-              ? "passport"
-              : "id",
-
-          sessionToken:
-            token,
-
-          bookingId:
-            clean(
-              data.bookingId ||
-              bookingId
-            ),
-
-          licenceData:
-            completeDocument(
-              data.licenceData
-            ),
-
-          identityData:
-            data.identityData
-              ? completeDocument(
-                  data.identityData
-                )
-              : null,
-
-          dlFrontPath:
-            clean(
-              data.dlFrontPath
-            ),
-
-          dlBackPath:
-            clean(
-              data.dlBackPath
-            ),
-
-          idFrontPath:
-            clean(
-              data.idFrontPath
-            ),
-
-          idBackPath:
-            clean(
-              data.idBackPath
-            ),
-
-          dlFrontName:
-            clean(
-              data.dlFrontName
-            ),
-
-          dlBackName:
-            clean(
-              data.dlBackName
-            ),
-
-          idFrontName:
-            clean(
-              data.idFrontName
-            ),
-
-          idBackName:
-            clean(
-              data.idBackName
-            ),
-
-          continueAsPassenger:
-            false,
-        };
-
-        const nextResults = [
-          ...results.filter(
-            (item) =>
-              item.profile
-                .driverIndex !==
-              profile.driverIndex
-          ),
-
-          result,
-        ].sort(
-          (
-            a,
-            b
-          ) =>
-            a.profile
-              .driverIndex -
-            b.profile
-              .driverIndex
+        setError(
+          ""
         );
+
+        completionSentRef.current =
+          false;
+
+        const nextResults =
+          resultsRef.current
+            .filter(
+              (item) =>
+                item.profile
+                  .driverIndex !==
+                driverIndex
+            );
+
+        resultsRef.current =
+          nextResults;
 
         setResults(
           nextResults
         );
 
-        setSession(
-          null
+        setPassengerIndexes(
+          (current) =>
+            current.filter(
+              (item) =>
+                item !==
+                driverIndex
+            )
         );
 
-        setQrUrl(
-          ""
+        setPreparing(
+          true
         );
 
-        const pendingProfile =
-          profiles.find(
-            (item) =>
-              !nextResults.some(
-                (
-                  resultItem
-                ) =>
-                  resultItem
-                    .profile
-                    .driverIndex ===
-                  item.driverIndex
+        try {
+          const parentToken =
+            rootTokenRef.current ||
+            sessionsRef.current
+              .find(
+                (item) =>
+                  item.driverIndex !==
+                  driverIndex
               )
-          );
+              ?.sessionToken ||
+            "";
 
-        if (
-          pendingProfile
+          const created =
+            await createOneSession(
+              driverIndex,
+              parentToken
+            );
+
+          if (
+            !rootTokenRef.current
+          ) {
+            rootTokenRef.current =
+              created
+                .sessionToken;
+
+            setRootSessionToken(
+              created
+                .sessionToken
+            );
+          }
+
+          const nextSessions =
+            upsertSession(
+              sessionsRef.current,
+              created
+            );
+
+          sessionsRef.current =
+            nextSessions;
+
+          setSessions(
+            nextSessions
+          );
+        } catch (
+          caught: any
         ) {
-          await createSessionForDriver(
-            pendingProfile
-              .driverIndex,
-            rootSessionToken ||
-              token
+          setError(
+            caught?.message ||
+            "Could not create a new scanner link."
           );
-
-          return;
-        }
-
-        if (
-          nextResults.some(
-            (item) =>
-              item.status ===
-              "rejected"
-          )
-        ) {
-          setStatus(
-            "recovery"
-          );
-        } else {
-          sendComplete(
-            nextResults,
-            []
+        } finally {
+          setPreparing(
+            false
           );
         }
       },
       [
-        profiles,
-        currentDriverIndex,
-        bookingId,
-        results,
-        createSessionForDriver,
-        rootSessionToken,
-        sendComplete,
+        createOneSession,
       ]
     );
 
-  useEffect(
-    () => {
-      if (
-        !restored ||
-        !returnedToken
-      ) {
-        return;
-      }
-
-      let cancelled =
-        false;
-
-      setStatus(
-        "checking"
-      );
-
-      void readSession(
-        returnedToken
-      )
-        .then(
-          async (
-            data
-          ) => {
-            if (
-              cancelled
-            ) {
-              return;
-            }
-
-            await processFinishedSession(
-              data
-            );
-
-            const url =
-              new URL(
-                window.location.href
-              );
-
-            url.searchParams
-              .delete(
-                "verification_session"
-              );
-
-            url.searchParams
-              .delete(
-                "verification_result"
-              );
-
-            window.history
-              .replaceState(
-                {},
-                "",
-                url.toString()
-              );
-          }
-        )
-        .catch(
-          (
-            caught: any
-          ) => {
-            if (
-              !cancelled
-            ) {
-              setError(
-                caught?.message ||
-                "Could not read verification result."
-              );
-
-              setStatus(
-                "error"
-              );
-            }
-          }
-        );
-
-      return () => {
-        cancelled =
-          true;
-      };
-    },
-    [
-      restored,
-      returnedToken,
-      readSession,
-      processFinishedSession,
-    ]
-  );
-
-  useEffect(
-    () => {
-      const token =
-        session
-          ?.sessionToken;
-
-      if (
-        !token ||
-        status !==
-          "ready"
-      ) {
-        return;
-      }
-
-      let stopped =
-        false;
-
-      let timer:
-        | number
-        | undefined;
-
-      async function poll() {
+  const openScannerForDriver =
+    useCallback(
+      async (
+        driverIndex: number
+      ) => {
         try {
-          const data =
-            await readSession(
-              token as string
-            );
+          setError(
+            ""
+          );
+
+          let selected =
+            sessionsRef.current
+              .find(
+                (item) =>
+                  item.driverIndex ===
+                  driverIndex
+              );
 
           if (
-            stopped
+            !selected
           ) {
-            return;
+            await createMissingSessions();
+
+            selected =
+              sessionsRef.current
+                .find(
+                  (item) =>
+                    item.driverIndex ===
+                    driverIndex
+                );
           }
 
           if (
-            data.status ===
-              "completed" ||
-            data.status ===
-              "failed"
+            !selected
+              ?.verifyPath
           ) {
-            setStatus(
-              "checking"
+            throw new Error(
+              "Scanner link is missing."
             );
-
-            await processFinishedSession(
-              data
-            );
-
-            return;
           }
+
+          const mobileUrl =
+            makeScannerUrl(
+              selected
+                .verifyPath,
+              true
+            );
 
           if (
-            data.status ===
-              "expired" ||
-            data.status ===
-              "cancelled"
+            !mobileUrl
           ) {
-            setError(
-              "The secure scanner link expired. Create a new link and try again."
+            throw new Error(
+              "Could not open the secure scanner."
             );
-
-            setStatus(
-              "error"
-            );
-
-            return;
           }
-        } catch {
-          /*
-           * Temporary polling interruption.
-           * Retry automatically.
-           */
-        }
 
-        if (
-          !stopped
+          window.location.assign(
+            mobileUrl
+          );
+        } catch (
+          caught: any
         ) {
-          timer =
-            window.setTimeout(
-              poll,
-              1300
-            );
-        }
-      }
-
-      timer =
-        window.setTimeout(
-          poll,
-          700
-        );
-
-      return () => {
-        stopped =
-          true;
-
-        if (
-          timer
-        ) {
-          window.clearTimeout(
-            timer
+          setError(
+            caught?.message ||
+            "Could not open the scanner."
           );
         }
-      };
-    },
-    [
-      session
-        ?.sessionToken,
-      status,
-      readSession,
-      processFinishedSession,
-    ]
-  );
-
-  function updateProfile(
-    driverIndex: number,
-    key:
-      keyof DriverProfile,
-    value: string
-  ) {
-    setProfiles(
-      (current) =>
-        current.map(
-          (profile) =>
-            profile.driverIndex ===
-            driverIndex
-              ? {
-                  ...profile,
-
-                  [key]:
-                    value,
-                }
-              : profile
-        )
+      },
+      [
+        createMissingSessions,
+      ]
     );
-  }
 
-  async function beginVerification() {
-    const invalid =
-      profiles.find(
-        (profile) =>
-          !validProfile(
-            profile
-          )
-      );
-
-    if (
-      invalid
-    ) {
-      setError(
-        `Please complete all required details for Driver ${invalid.driverIndex}.`
-      );
-
-      return;
-    }
-
-    try {
-      await createSessionForDriver(
-        1
-      );
-    } catch (
-      caught: any
-    ) {
-      setError(
-        caught?.message ||
-        "Could not prepare document verification."
-      );
-
-      setStatus(
-        "error"
-      );
-    }
-  }
-
-  async function prepareAgain() {
-    try {
-      await createSessionForDriver(
-        currentDriverIndex,
-        rootSessionToken
-      );
-    } catch (
-      caught: any
-    ) {
-      setError(
-        caught?.message ||
-        "Could not create a new scanner link."
-      );
-
-      setStatus(
-        "error"
-      );
-    }
-  }
-
-  async function rescanDriver(
-    driverIndex: number
-  ) {
-    setResults(
-      (current) =>
-        current.filter(
-          (item) =>
-            item.profile
-              .driverIndex !==
+  const nextMobileDriverIndex =
+    Array.from(
+      {
+        length:
+          requestedQuantity,
+      },
+      (
+        _,
+        index
+      ) =>
+        index + 1
+    ).find(
+      (driverIndex) =>
+        !results.some(
+          (result) =>
+            result.profile
+              .driverIndex ===
             driverIndex
         )
     );
 
-    setPassengerIndexes(
-      (current) =>
-        current.filter(
-          (item) =>
-            item !==
-            driverIndex
-        )
-    );
+  const readyCount =
+    sessions.length;
 
-    handledTokensRef.current
-      .clear();
+  return (
+    <section
+      id="nexa-document-verification"
+      className="border border-black/10 bg-white p-5 md:p-7"
+    >
+      <div className="flex items-start justify-between gap-5">
+        <div>
+          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-black/40">
+            Secure document verification
+          </p>
 
-    try {
-      await createSessionForDriver(
-        driverIndex,
-        rootSessionToken
-      );
-    } catch (
-      caught: any
-    ) {
-      setError(
-        caught?.message ||
-        "Could not create a new scanner link."
-      );
+          <h2 className="mt-2 text-[28px] font-black tracking-[-0.045em] text-black">
+            {requestedQuantity ===
+            1
+              ? "Scan your documents"
+              : "Validate every driver"}
+          </h2>
 
-      setStatus(
-        "error"
-      );
-    }
-  }
-
-  async function openScanner() {
-    try {
-      setError(
-        ""
-      );
-
-      let data =
-        session;
-
-      if (
-        !data?.sessionToken ||
-        !data.verifyPath
-      ) {
-        data =
-          await createSessionForDriver(
-            currentDriverIndex,
-            rootSessionToken
-          );
-      }
-
-      if (
-        !data?.verifyPath ||
-        !data.sessionToken
-      ) {
-        throw new Error(
-          "Scanner link is missing."
-        );
-      }
-
-      const mobileScannerUrl =
-        makeScannerUrl(
-          data,
-          true
-        );
-
-      if (
-        !mobileScannerUrl
-      ) {
-        throw new Error(
-          "Could not open the secure scanner."
-        );
-      }
-
-      window.location.assign(
-        mobileScannerUrl
-      );
-    } catch (
-      caught: any
-    ) {
-      setError(
-        caught?.message ||
-        "Could not open the scanner."
-      );
-
-      setStatus(
-        "error"
-      );
-    }
-  }
-
-  if (
-    status ===
-    "drivers"
-  ) {
-    return (
-      <section
-        id="nexa-document-verification"
-        className="border border-black/10 bg-white p-5 md:p-7"
-      >
-        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-black/40">
-          Driver details ·{" "}
-          {requestedQuantity}{" "}
-          scooter
-          {requestedQuantity ===
-          1
-            ? ""
-            : "s"}
-        </p>
-
-        <h2 className="mt-2 text-[28px] font-black tracking-[-0.045em] text-black">
-          Add{" "}
-          {requestedQuantity ===
-          1
-            ? "the driver"
-            : `all ${requestedQuantity} drivers`}
-        </h2>
-
-        <p className="mt-3 text-[13px] font-medium leading-6 text-black/58">
-          Each scooter needs one
-          approved driver. Every
-          driver will verify their
-          own licence and ID or
-          passport.
-        </p>
-
-        <div className="mt-6 space-y-5">
-          {profiles.map(
-            (
-              profile
-            ) => (
-              <div
-                key={
-                  profile.driverIndex
-                }
-                className="border border-black/10 bg-[#fafaf8] p-4 md:p-5"
-              >
-                <div className="flex items-center justify-between">
-                  <h3 className="text-[16px] font-black text-black">
-                    Driver{" "}
-                    {
-                      profile.driverIndex
-                    }
-                  </h3>
-
-                  <span className="text-[9px] font-black uppercase tracking-[0.14em] text-black/35">
-                    Scooter{" "}
-                    {
-                      profile.driverIndex
-                    }
-                  </span>
-                </div>
-
-                <div className="mt-4 grid gap-3 sm:grid-cols-2">
-                  <DriverInput
-                    label="First name"
-                    value={
-                      profile.firstName
-                    }
-                    onChange={(
-                      value
-                    ) =>
-                      updateProfile(
-                        profile.driverIndex,
-                        "firstName",
-                        value
-                      )
-                    }
-                    autoComplete="given-name"
-                  />
-
-                  <DriverInput
-                    label="Surname"
-                    value={
-                      profile.lastName
-                    }
-                    onChange={(
-                      value
-                    ) =>
-                      updateProfile(
-                        profile.driverIndex,
-                        "lastName",
-                        value
-                      )
-                    }
-                    autoComplete="family-name"
-                  />
-
-                  <DriverInput
-                    label="Phone / WhatsApp"
-                    value={
-                      profile.phone
-                    }
-                    onChange={(
-                      value
-                    ) =>
-                      updateProfile(
-                        profile.driverIndex,
-                        "phone",
-                        value
-                      )
-                    }
-                    autoComplete="tel"
-                  />
-
-                  <DriverInput
-                    label="Email"
-                    value={
-                      profile.email
-                    }
-                    onChange={(
-                      value
-                    ) =>
-                      updateProfile(
-                        profile.driverIndex,
-                        "email",
-                        value
-                      )
-                    }
-                    autoComplete="email"
-                  />
-
-                  <label className="sm:col-span-2">
-                    <span className="text-[10px] font-black uppercase tracking-[0.12em] text-black/45">
-                      Home address *
-                    </span>
-
-                    <textarea
-                      value={
-                        profile.address
-                      }
-                      onChange={(
-                        event
-                      ) =>
-                        updateProfile(
-                          profile.driverIndex,
-                          "address",
-                          event
-                            .target
-                            .value
-                        )
-                      }
-                      autoComplete="street-address"
-                      className="mt-1 min-h-[72px] w-full border border-black/15 bg-white px-3 py-2 text-sm font-semibold outline-none focus:border-black"
-                      placeholder="Street, city, postcode, country"
-                    />
-                  </label>
-                </div>
-              </div>
-            )
-          )}
+          <p className="mt-3 max-w-2xl text-[13px] font-medium leading-6 text-black/58">
+            {requestedQuantity ===
+            1
+              ? "Scan the driving licence and ID or passport. Your name will be filled into checkout automatically."
+              : "Every selected driver completes a separate secure scan. One failed driver will not stop the remaining drivers from continuing."}
+          </p>
         </div>
 
-        {error ? (
-          <p className="mt-4 border border-red-200 bg-red-50 px-4 py-3 text-sm font-bold text-red-700">
-            {error}
+        <div className="shrink-0 border border-black/10 bg-[#fafaf8] px-3 py-2 text-center">
+          <p className="text-[9px] font-black uppercase tracking-[0.14em] text-black/35">
+            Progress
           </p>
-        ) : null}
 
-        <button
-          type="button"
-          onClick={() =>
-            void beginVerification()
-          }
-          className="mt-6 min-h-[58px] w-full bg-black px-5 text-[12px] font-black uppercase tracking-[0.14em] text-white"
-        >
-          Start Driver 1
-          verification
-        </button>
+          <p className="mt-1 text-sm font-black text-black">
+            {results.length}/
+            {requestedQuantity}
+          </p>
+        </div>
+      </div>
 
-        {onCancel ? (
-          <button
-            type="button"
-            onClick={
-              onCancel
-            }
-            className="mt-3 w-full py-2 text-[11px] font-black text-black/45"
-          >
-            Cancel and go back
-          </button>
-        ) : null}
-      </section>
-    );
-  }
+      {preparing &&
+      readyCount ===
+        0 ? (
+        <div className="mt-7 flex min-h-[260px] flex-col items-center justify-center border border-black/10 bg-[#fafaf8] px-6 text-center">
+          <div className="h-9 w-9 animate-spin rounded-full border-2 border-black/15 border-t-black" />
 
-  if (
-    status ===
-    "recovery"
-  ) {
-    return (
-      <section
-        id="nexa-document-verification"
-        className="border border-black/10 bg-white p-5 md:p-7"
-      >
-        <p className="text-[10px] font-black uppercase tracking-[0.22em] text-amber-700">
-          Group verification
-          result
-        </p>
+          <p className="mt-5 text-sm font-black text-black">
+            Preparing secure scanner
+            {requestedQuantity ===
+            1
+              ? ""
+              : " links"}
+            ...
+          </p>
 
-        <h2 className="mt-2 text-[28px] font-black tracking-[-0.045em] text-black">
-          {
-            approvedResults.length
-          }{" "}
-          of{" "}
-          {
-            requestedQuantity
-          }{" "}
-          drivers approved
-        </h2>
+          <p className="mt-2 text-xs font-semibold text-black/45">
+            Please keep this page open.
+          </p>
+        </div>
+      ) : null}
 
-        <p className="mt-3 text-[13px] font-medium leading-6 text-black/58">
-          Your complete booking does
-          not need to be cancelled.
-          You can rescan an
-          unsuccessful driver or
-          continue with{" "}
-          {
-            approvedResults.length
-          }{" "}
-          scooter
-          {approvedResults.length ===
+      <div
+        className={[
+          "mt-7 grid gap-4",
+
+          requestedQuantity >
           1
-            ? ""
-            : "s"}
-          .
-        </p>
+            ? "xl:grid-cols-2"
+            : "grid-cols-1",
+        ].join(
+          " "
+        )}
+      >
+        {Array.from(
+          {
+            length:
+              requestedQuantity,
+          },
+          (
+            _,
+            index
+          ) => {
+            const driverIndex =
+              index + 1;
 
-        <div className="mt-6 space-y-3">
-          {results.map(
-            (
-              result
-            ) => (
-              <div
+            const driverSession =
+              sessions.find(
+                (item) =>
+                  item.driverIndex ===
+                  driverIndex
+              );
+
+            const result =
+              results.find(
+                (item) =>
+                  item.profile
+                    .driverIndex ===
+                  driverIndex
+              );
+
+            const approved =
+              result?.status ===
+                "approved" ||
+              result?.status ===
+                "manual_review";
+
+            const rejected =
+              result?.status ===
+              "rejected";
+
+            const expired =
+              driverSession
+                ?.status ===
+                "expired" ||
+              driverSession
+                ?.status ===
+                "cancelled";
+
+            const mobileDisabled =
+              !result &&
+              nextMobileDriverIndex !==
+                driverIndex;
+
+            return (
+              <article
                 key={
-                  result.profile
-                    .driverIndex
+                  driverIndex
                 }
                 className={[
-                  "border p-4",
+                  "relative border p-4 md:p-5",
 
-                  result.status ===
-                  "rejected"
-                    ? "border-red-200 bg-red-50"
-                    : "border-emerald-200 bg-emerald-50",
+                  approved
+                    ? "border-emerald-300 bg-emerald-50/60"
+                    : rejected
+                      ? "border-red-300 bg-red-50/70"
+                      : "border-black/10 bg-[#fafaf8]",
                 ].join(
                   " "
                 )}
               >
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <h3 className="text-sm font-black text-black">
+                    <p className="text-[9px] font-black uppercase tracking-[0.16em] text-black/35">
+                      Scooter{" "}
                       {
-                        result.profile
-                          .firstName
-                      }{" "}
-                      {
-                        result.profile
-                          .lastName
+                        driverIndex
                       }
-                    </h3>
-
-                    <p
-                      className={[
-                        "mt-1 text-xs font-bold",
-
-                        result.status ===
-                        "rejected"
-                          ? "text-red-700"
-                          : "text-emerald-700",
-                      ].join(
-                        " "
-                      )}
-                    >
-                      {result.status ===
-                      "rejected"
-                        ? result.message ||
-                          "This driver is not eligible for the selected scooter."
-                        : result.status ===
-                          "manual_review"
-                          ? "Approved for booking · manual confirmation before pickup"
-                          : "Approved driver"}
                     </p>
+
+                    <h3 className="mt-1 text-lg font-black text-black">
+                      {result
+                        ? resultName(
+                            result
+                          )
+                        : "Driver " +
+                          driverIndex}
+                    </h3>
                   </div>
 
-                  <span
+                  <div
                     className={[
-                      "text-[10px] font-black uppercase",
+                      "flex h-11 w-11 items-center justify-center rounded-full border text-xl font-black",
 
-                      result.status ===
-                      "rejected"
-                        ? "text-red-700"
-                        : "text-emerald-700",
+                      approved
+                        ? "border-emerald-500 bg-emerald-500 text-white"
+                        : rejected
+                          ? "border-red-500 bg-red-500 text-white"
+                          : driverSession
+                              ?.status ===
+                              "scanning"
+                            ? "border-orange-400 bg-orange-50 text-orange-600"
+                            : "border-black/15 bg-white text-black/30",
                     ].join(
                       " "
                     )}
+                    aria-label={
+                      approved
+                        ? "Approved"
+                        : rejected
+                          ? "Rejected"
+                          : "Waiting"
+                    }
                   >
-                    {result.status ===
-                    "rejected"
-                      ? "Not eligible"
-                      : "Approved"}
-                  </span>
+                    {approved
+                      ? "✓"
+                      : rejected
+                        ? "×"
+                        : driverSession
+                            ?.status ===
+                            "scanning"
+                          ? "•••"
+                          : driverIndex}
+                  </div>
                 </div>
 
-                {result.status ===
-                "rejected" ? (
-                  <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                    <label className="flex items-start gap-2 text-xs font-semibold text-black/65">
-                      <input
-                        type="checkbox"
-                        checked={passengerIndexes.includes(
-                          result
-                            .profile
-                            .driverIndex
-                        )}
-                        onChange={(
-                          event
-                        ) =>
-                          setPassengerIndexes(
-                            (
-                              current
-                            ) =>
-                              event
-                                .target
-                                .checked
-                                ? [
-                                    ...new Set(
-                                      [
-                                        ...current,
+                {approved ? (
+                  <div className="mt-5 border border-emerald-200 bg-white/80 px-4 py-3">
+                    <p className="text-sm font-black text-emerald-700">
+                      Driver approved
+                    </p>
 
-                                        result
-                                          .profile
-                                          .driverIndex,
-                                      ]
-                                    ),
-                                  ]
-                                : current.filter(
-                                    (
-                                      item
-                                    ) =>
-                                      item !==
-                                      result
-                                        .profile
-                                        .driverIndex
-                                  )
+                    <p className="mt-1 text-xs font-semibold leading-5 text-black/50">
+                      {result
+                        ?.status ===
+                        "manual_review"
+                        ? "Documents accepted. A manual confirmation may be completed before pickup."
+                        : "Documents successfully scanned and validated."}
+                    </p>
+                  </div>
+                ) : rejected ? (
+                  <div className="mt-5 border border-red-200 bg-white/80 px-4 py-3">
+                    <p className="text-sm font-black text-red-700">
+                      Driver not approved
+                    </p>
+
+                    <p className="mt-1 text-xs font-semibold leading-5 text-black/50">
+                      {result
+                        ?.message ||
+                        "The submitted licence is not valid for the selected scooter."}
+                    </p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="mt-5 hidden items-center gap-5 md:flex">
+                      <div className="flex h-[168px] w-[168px] shrink-0 items-center justify-center border border-black/10 bg-white p-3">
+                        {driverSession
+                          ?.qrUrl ? (
+                          <QRCodeSVG
+                            value={
+                              driverSession
+                                .qrUrl
+                            }
+                            size={
+                              140
+                            }
+                            level="M"
+                            includeMargin={
+                              false
+                            }
+                          />
+                        ) : (
+                          <div className="h-8 w-8 animate-spin rounded-full border-2 border-black/15 border-t-black" />
+                        )}
+                      </div>
+
+                      <div>
+                        <p className="text-sm font-black text-black">
+                          {driverSession
+                            ?.status ===
+                            "scanning"
+                            ? "Scanning in progress"
+                            : expired
+                              ? "Scanner link expired"
+                              : "Scan this QR code"}
+                        </p>
+
+                        <p className="mt-2 text-xs font-semibold leading-5 text-black/48">
+                          Open the camera on the driver&apos;s phone and scan this private QR code.
+                        </p>
+
+                        {expired ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              void rescanDriver(
+                                driverIndex
+                              )
+                            }
+                            className="mt-4 border border-black/15 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-black"
+                          >
+                            Create new QR
+                          </button>
+                        ) : null}
+                      </div>
+                    </div>
+
+                    <div className="mt-5 md:hidden">
+                      <button
+                        type="button"
+                        disabled={
+                          mobileDisabled ||
+                          !driverSession ||
+                          expired
+                        }
+                        onClick={() =>
+                          void openScannerForDriver(
+                            driverIndex
                           )
                         }
-                        className="mt-0.5"
-                      />
+                        className="min-h-[58px] w-full bg-black px-5 text-[12px] font-black uppercase tracking-[0.12em] text-white disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-black/35"
+                      >
+                        {driverSession
+                          ?.status ===
+                          "scanning"
+                          ? "Continue Driver " +
+                            driverIndex +
+                            " scan"
+                          : "Validate Driver " +
+                            driverIndex}
+                      </button>
 
-                      Add{" "}
-                      {
-                        result.profile
-                          .firstName
-                      }{" "}
-                      as a passenger
-                      instead
-                    </label>
+                      {mobileDisabled ? (
+                        <p className="mt-2 text-center text-[10px] font-bold text-black/40">
+                          Complete Driver{" "}
+                          {
+                            nextMobileDriverIndex
+                          }{" "}
+                          first
+                        </p>
+                      ) : null}
+
+                      {expired ? (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            void rescanDriver(
+                              driverIndex
+                            )
+                          }
+                          className="mt-3 min-h-[48px] w-full border border-black/15 bg-white px-4 text-[10px] font-black uppercase tracking-[0.12em] text-black"
+                        >
+                          Create new scanner
+                        </button>
+                      ) : null}
+                    </div>
+                  </>
+                )}
+
+                {rejected &&
+                allFinished ? (
+                  <div className="mt-4 flex flex-col gap-3 border-t border-red-200 pt-4 sm:flex-row sm:items-center sm:justify-between">
+                    {approvedResults.length >
+                    0 ? (
+                      <label className="flex items-start gap-2 text-xs font-semibold text-black/65">
+                        <input
+                          type="checkbox"
+                          checked={passengerIndexes.includes(
+                            driverIndex
+                          )}
+                          onChange={(
+                            event
+                          ) =>
+                            setPassengerIndexes(
+                              (
+                                current
+                              ) =>
+                                event
+                                  .target
+                                  .checked
+                                  ? [
+                                      ...new Set(
+                                        [
+                                          ...current,
+                                          driverIndex,
+                                        ]
+                                      ),
+                                    ]
+                                  : current.filter(
+                                      (
+                                        item
+                                      ) =>
+                                        item !==
+                                        driverIndex
+                                    )
+                            )
+                          }
+                          className="mt-0.5"
+                        />
+
+                        Continue as a passenger on an approved scooter
+                      </label>
+                    ) : (
+                      <span className="text-xs font-semibold text-red-700">
+                        At least one approved driver is required.
+                      </span>
+                    )}
 
                     <button
                       type="button"
                       onClick={() =>
                         void rescanDriver(
-                          result
-                            .profile
-                            .driverIndex
+                          driverIndex
                         )
                       }
-                      className="border border-black/15 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-black"
+                      className="shrink-0 border border-black/15 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-black"
                     >
                       Scan again
                     </button>
                   </div>
                 ) : null}
-              </div>
-            )
-          )}
+              </article>
+            );
+          }
+        )}
+      </div>
+
+      {error ? (
+        <div className="mt-5 border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-sm font-bold text-red-700">
+            {error}
+          </p>
+
+          {sessions.length <
+          requestedQuantity ? (
+            <button
+              type="button"
+              onClick={() =>
+                void createMissingSessions()
+              }
+              className="mt-3 border border-red-300 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-red-700"
+            >
+              Try preparing again
+            </button>
+          ) : null}
         </div>
+      ) : null}
 
-        <p className="mt-4 text-[11px] font-semibold leading-5 text-black/48">
-          A passenger may travel only
-          when the scooter is
-          approved for two occupants,
-          the rental conditions allow
-          it, and Spanish passenger
-          rules are followed: rear
-          passenger seat, footrests
-          and an approved helmet. The
-          normal minimum passenger
-          age is 12.
-        </p>
-
-        {approvedResults.length >
+      {allFinished &&
+      rejectedResults.length >
         0 ? (
-          <button
-            type="button"
-            onClick={() =>
-              sendComplete(
-                results,
-                passengerIndexes
-              )
-            }
-            className="mt-6 min-h-[58px] w-full bg-black px-5 text-[12px] font-black uppercase tracking-[0.12em] text-white"
-          >
-            Continue with{" "}
-            {
-              approvedResults.length
-            }{" "}
+        <div className="mt-6 border border-black/10 bg-white p-5">
+          <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-600">
+            Verification complete
+          </p>
+
+          <h3 className="mt-2 text-2xl font-black tracking-[-0.035em] text-black">
+            {approvedResults.length}{" "}
+            of{" "}
+            {requestedQuantity}{" "}
+            drivers approved
+          </h3>
+
+          <p className="mt-3 text-sm font-semibold leading-6 text-black/55">
+            The complete booking does not need to be cancelled. Continue with{" "}
+            {approvedResults.length}{" "}
             scooter
             {approvedResults.length ===
             1
               ? ""
               : "s"}
-          </button>
-        ) : null}
+            , rescan a rejected driver, or cancel the booking.
+          </p>
 
-        {onCancel ? (
-          <button
-            type="button"
-            onClick={
-              onCancel
-            }
-            className="mt-3 min-h-[48px] w-full border border-red-200 bg-red-50 px-5 text-[11px] font-black uppercase tracking-[0.12em] text-red-700"
-          >
-            Cancel complete booking
-          </button>
-        ) : null}
-      </section>
-    );
-  }
-
-  const busy =
-    status ===
-      "preparing" ||
-    status ===
-      "checking";
-
-  const qrReady =
-    status ===
-      "ready" &&
-    Boolean(
-      qrUrl
-    );
-
-  return (
-    <section
-      id="nexa-document-verification"
-      className="overflow-hidden border border-black/10 bg-white"
-    >
-      <div className="p-5 md:p-7">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-            <div className="text-[10px] font-black uppercase tracking-[0.22em] text-black/40">
-              Driver{" "}
-              {
-                currentDriverIndex
-              }{" "}
-              of{" "}
-              {
-                requestedQuantity
-              }
-            </div>
-
-            <h2 className="mt-2 text-[28px] font-black leading-none tracking-[-0.045em] text-black md:text-[32px]">
-              Verify{" "}
-              {currentProfile
-                ?.firstName ||
-                `Driver ${currentDriverIndex}`}
-            </h2>
-
-            <p className="mt-3 max-w-2xl text-[13px] font-medium leading-6 text-black/58">
-              Scan this driver’s
-              licence and passport or
-              ID. The next driver
-              starts automatically.
-            </p>
-          </div>
-
-          <div className="hidden rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1.5 text-[9px] font-black uppercase tracking-[0.12em] text-emerald-700 sm:block">
-            Secure session
-          </div>
-        </div>
-
-        {error ? (
-          <div className="mt-5 border border-red-200 bg-red-50 px-4 py-3">
-            <p className="text-[12px] font-bold leading-5 text-red-700">
-              {error}
-            </p>
-
+          {approvedResults.length >
+          0 ? (
             <button
               type="button"
               onClick={() =>
-                void prepareAgain()
+                sendComplete(
+                  results,
+                  passengerIndexes
+                )
               }
-              className="mt-2 text-[10px] font-black uppercase tracking-[0.14em] text-red-800 underline underline-offset-4"
+              className="mt-5 min-h-[58px] w-full bg-black px-5 text-[12px] font-black uppercase tracking-[0.12em] text-white"
             >
-              Create a new secure
-              link
+              Continue with{" "}
+              {approvedResults.length}{" "}
+              scooter
+              {approvedResults.length ===
+              1
+                ? ""
+                : "s"}
             </button>
-          </div>
-        ) : null}
+          ) : null}
 
-        <div className="mt-7 hidden md:grid md:grid-cols-[300px_minmax(0,1fr)] md:items-center md:gap-10">
-          <div className="mx-auto w-full max-w-[286px]">
-            <div className="nexa-gradient-frame rounded-[27px] p-[2px] shadow-[0_24px_60px_rgba(41,31,89,0.18)]">
-              <div className="relative flex aspect-square items-center justify-center overflow-hidden rounded-[25px] bg-white p-[20px]">
-                {qrReady ? (
-                  <div className="w-full overflow-hidden rounded-[16px] bg-white p-2">
-                    <QRCodeSVG
-                      value={
-                        qrUrl
-                      }
-                      size={
-                        230
-                      }
-                      level="M"
-                      marginSize={
-                        0
-                      }
-                      bgColor="#ffffff"
-                      fgColor="#050505"
-                      title={`Scan documents for Driver ${currentDriverIndex}`}
-                      className="h-auto w-full"
-                    />
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center text-center">
-                    <div className="nexa-loader h-11 w-11 rounded-full border-[3px] border-black/10 border-t-black" />
+          {onCancel ? (
+            <button
+              type="button"
+              onClick={
+                onCancel
+              }
+              className="mt-3 min-h-[48px] w-full border border-red-200 bg-red-50 px-5 text-[11px] font-black uppercase tracking-[0.12em] text-red-700"
+            >
+              Cancel complete booking
+            </button>
+          ) : null}
+        </div>
+      ) : null}
 
-                    <p className="mt-4 text-[11px] font-black uppercase tracking-[0.14em] text-black/45">
-                      {status ===
-                      "checking"
-                        ? "Checking documents"
-                        : "Creating secure QR"}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
+      {allFinished &&
+      rejectedResults.length ===
+        0 ? (
+        <div className="mt-6 flex items-center gap-3 border border-emerald-200 bg-emerald-50 px-4 py-4">
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-lg font-black text-white">
+            ✓
+          </span>
 
-          <div className="space-y-4">
-            <Instruction
-              number="1"
-              title={`Scan for ${
-                currentProfile
-                  ?.firstName ||
-                `Driver ${currentDriverIndex}`
-              }`}
-              description="Open a phone camera and scan the private QR code."
-            />
+          <div>
+            <p className="text-sm font-black text-emerald-800">
+              All drivers approved
+            </p>
 
-            <Instruction
-              number="2"
-              title="Verify this driver"
-              description="Scan the driving licence front and back, then the ID card or passport."
-            />
-
-            <Instruction
-              number="3"
-              title="Keep checkout open"
-              description="The next driver will appear automatically when this scan finishes."
-            />
+            <p className="mt-0.5 text-xs font-semibold text-emerald-700/70">
+              Opening the checkout form...
+            </p>
           </div>
         </div>
+      ) : null}
 
-        <div className="mt-6 md:hidden">
-          <button
-            type="button"
-            disabled={
-              busy
-            }
-            onClick={() =>
-              void openScanner()
-            }
-            className="min-h-[62px] w-full bg-black px-5 text-[12px] font-black uppercase tracking-[0.13em] text-white disabled:cursor-wait disabled:text-white/60"
-          >
-            {busy
-              ? "Preparing scanner"
-              : `Verify Driver ${currentDriverIndex}`}
-          </button>
-        </div>
+      {!allFinished &&
+      onCancel ? (
+        <button
+          type="button"
+          onClick={
+            onCancel
+          }
+          className="mt-5 w-full py-2 text-[11px] font-black text-black/45"
+        >
+          Cancel and go back
+        </button>
+      ) : null}
 
-        {onCancel ? (
-          <button
-            type="button"
-            onClick={
-              onCancel
-            }
-            className="mt-5 w-full py-2 text-[11px] font-black text-black/45"
-          >
-            Cancel complete booking
-          </button>
-        ) : null}
+      <div className="mt-6 grid gap-3 border-t border-black/10 pt-5 sm:grid-cols-3">
+        <VerificationStep
+          number="01"
+          title="Open scanner"
+          description={
+            requestedQuantity ===
+            1
+              ? "Scan the secure QR or open the scanner on this phone."
+              : "Each driver uses their own QR or mobile validation button."
+          }
+        />
+
+        <VerificationStep
+          number="02"
+          title="Scan documents"
+          description="Capture the driving licence and ID card or passport."
+        />
+
+        <VerificationStep
+          number="03"
+          title="Continue checkout"
+          description="Approved drivers are counted automatically before payment."
+        />
       </div>
-
-      <style jsx global>{`
-        @keyframes nexa-gradient-flow {
-          0% {
-            background-position: 0% 50%;
-          }
-
-          50% {
-            background-position: 100% 50%;
-          }
-
-          100% {
-            background-position: 0% 50%;
-          }
-        }
-
-        @keyframes nexa-loader-spin {
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        .nexa-gradient-frame {
-          background: linear-gradient(
-            115deg,
-            #24c8ff,
-            #536dfe,
-            #8b5cf6,
-            #d946ef,
-            #ff7a18,
-            #24c8ff
-          );
-
-          background-size: 320% 320%;
-
-          animation:
-            nexa-gradient-flow
-            4.2s
-            ease
-            infinite;
-        }
-
-        .nexa-loader {
-          animation:
-            nexa-loader-spin
-            0.8s
-            linear
-            infinite;
-        }
-
-        @media (
-          prefers-reduced-motion:
-            reduce
-        ) {
-          .nexa-gradient-frame,
-          .nexa-loader {
-            animation:
-              none;
-          }
-        }
-      `}</style>
     </section>
   );
 }
 
-function DriverInput({
-  label,
-  value,
-  onChange,
-  autoComplete,
-}: {
-  label: string;
-  value: string;
-
-  onChange: (
-    value: string
-  ) => void;
-
-  autoComplete: string;
-}) {
-  return (
-    <label>
-      <span className="text-[10px] font-black uppercase tracking-[0.12em] text-black/45">
-        {label} *
-      </span>
-
-      <input
-        value={
-          value
-        }
-        onChange={(
-          event
-        ) =>
-          onChange(
-            event.target
-              .value
-          )
-        }
-        autoComplete={
-          autoComplete
-        }
-        className="mt-1 min-h-[46px] w-full border border-black/15 bg-white px-3 text-sm font-semibold outline-none focus:border-black"
-      />
-    </label>
-  );
-}
-
-function Instruction({
+function VerificationStep({
   number,
   title,
   description,
@@ -2558,20 +2613,18 @@ function Instruction({
   description: string;
 }) {
   return (
-    <div className="flex gap-4">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-black text-[12px] font-black text-white">
+    <div className="border border-black/10 bg-[#fafaf8] p-4">
+      <span className="text-[9px] font-black uppercase tracking-[0.16em] text-orange-500">
         {number}
-      </div>
+      </span>
 
-      <div>
-        <h3 className="text-[15px] font-black text-black">
-          {title}
-        </h3>
+      <p className="mt-2 text-sm font-black text-black">
+        {title}
+      </p>
 
-        <p className="mt-1 text-[11px] font-semibold leading-5 text-black/48">
-          {description}
-        </p>
-      </div>
+      <p className="mt-1 text-[11px] font-semibold leading-5 text-black/45">
+        {description}
+      </p>
     </div>
   );
 }

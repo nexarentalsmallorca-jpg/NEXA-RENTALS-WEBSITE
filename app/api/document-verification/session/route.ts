@@ -1,12 +1,18 @@
 import { randomUUID } from "node:crypto";
+
 import { NextResponse } from "next/server";
+
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
-const TABLE = "document_verification_sessions";
-const BASE_SESSION_MINUTES = 20;
+const TABLE =
+  "document_verification_sessions";
+
+const BASE_SESSION_MINUTES =
+  20;
+
 const MAX_GROUP_AGE_MS =
   2 * 60 * 60 * 1000;
 
@@ -105,16 +111,35 @@ function cleanText(
   value: unknown
 ) {
   return String(
-    value ?? ""
+    value ??
+    ""
   ).trim();
+}
+
+function isRecord(
+  value: unknown
+): value is Record<
+  string,
+  unknown
+> {
+  return (
+    typeof value ===
+      "object" &&
+    value !==
+      null &&
+    !Array.isArray(
+      value
+    )
+  );
 }
 
 function cleanLocale(
   value: unknown
 ) {
   const locale =
-    cleanText(value)
-      .toLowerCase();
+    cleanText(
+      value
+    ).toLowerCase();
 
   const allowed = [
     "en",
@@ -143,7 +168,9 @@ function cleanFleetGroup(
   value: unknown
 ) {
   return (
-    cleanText(value)
+    cleanText(
+      value
+    )
       .toLowerCase()
       .replace(
         /[^a-z0-9_-]/g,
@@ -157,28 +184,55 @@ function cleanFleetGroup(
   );
 }
 
+function normalizeDriverCount(
+  value: unknown
+) {
+  return Math.min(
+    15,
+    Math.max(
+      1,
+      Math.floor(
+        Number(
+          value
+        ) ||
+        1
+      )
+    )
+  );
+}
+
+/*
+ * Driver details are intentionally optional here.
+ *
+ * The scanner extracts the driver's name from the licence.
+ * Phone, email and full customer address are collected later
+ * in the normal checkout form.
+ */
 function cleanDriverProfile(
   value: any,
-  driverCount: number
+  driverCount: number,
+  fallbackDriverIndex = 1
 ): DriverProfile {
+  const requestedDriverIndex =
+    Number(
+      value?.driverIndex ??
+      fallbackDriverIndex
+    );
+
   const driverIndex =
     Math.min(
       driverCount,
       Math.max(
         1,
         Number.isInteger(
-          Number(
-            value?.driverIndex
-          )
+          requestedDriverIndex
         )
-          ? Number(
-              value.driverIndex
-            )
-          : 1
+          ? requestedDriverIndex
+          : fallbackDriverIndex
       )
     );
 
-  const profile = {
+  return {
     driverIndex,
 
     firstName:
@@ -221,26 +275,6 @@ function cleanDriverProfile(
         500
       ),
   };
-
-  if (
-    profile.firstName.length <
-      2 ||
-    profile.lastName.length <
-      2 ||
-    profile.phone.length <
-      6 ||
-    !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
-      profile.email
-    ) ||
-    profile.address.length <
-      8
-  ) {
-    throw new Error(
-      `Driver ${driverIndex} details are incomplete.`
-    );
-  }
-
-  return profile;
 }
 
 function isExpired(
@@ -281,13 +315,196 @@ function isTerminalStatus(
 function sessionMetadata(
   row: VerificationSessionRow
 ) {
-  return (
-    row.licence_data &&
-    typeof row.licence_data ===
-      "object"
+  return isRecord(
+    row.licence_data
   )
     ? row.licence_data
     : {};
+}
+
+function getDriverProfileFromSession(
+  row: VerificationSessionRow
+) {
+  const licenceData =
+    sessionMetadata(
+      row
+    );
+
+  const driverCount =
+    normalizeDriverCount(
+      licenceData
+        .driverCount
+    );
+
+  const storedProfile =
+    isRecord(
+      licenceData
+        .driverProfile
+    )
+      ? licenceData
+          .driverProfile
+      : {};
+
+  return cleanDriverProfile(
+    {
+      ...storedProfile,
+
+      firstName:
+        row.first_name ||
+        cleanText(
+          storedProfile
+            .firstName
+        ),
+
+      lastName:
+        row.last_name ||
+        cleanText(
+          storedProfile
+            .lastName
+        ),
+
+      address:
+        row.home_address ||
+        cleanText(
+          storedProfile
+            .address
+        ),
+    },
+    driverCount
+  );
+}
+
+function mergeDriverProfile(
+  existingLicence:
+    Record<string, unknown>,
+  body:
+    CompleteSessionBody
+) {
+  const incomingLicence =
+    isRecord(
+      body.licenceData
+    )
+      ? body.licenceData
+      : {};
+
+  const existingProfile =
+    isRecord(
+      existingLicence
+        .driverProfile
+    )
+      ? existingLicence
+          .driverProfile
+      : {};
+
+  const incomingProfile =
+    isRecord(
+      incomingLicence
+        .driverProfile
+    )
+      ? incomingLicence
+          .driverProfile
+      : {};
+
+  const driverCount =
+    normalizeDriverCount(
+      existingLicence
+        .driverCount
+    );
+
+  const driverIndex =
+    Number(
+      incomingProfile
+        .driverIndex ??
+      existingProfile
+        .driverIndex ??
+      1
+    );
+
+  return cleanDriverProfile(
+    {
+      ...existingProfile,
+      ...incomingProfile,
+
+      driverIndex,
+
+      firstName:
+        cleanText(
+          body.firstName
+        ) ||
+        cleanText(
+          incomingLicence
+            .firstName
+        ) ||
+        cleanText(
+          incomingProfile
+            .firstName
+        ) ||
+        cleanText(
+          existingProfile
+            .firstName
+        ),
+
+      lastName:
+        cleanText(
+          body.lastName
+        ) ||
+        cleanText(
+          incomingLicence
+            .lastName
+        ) ||
+        cleanText(
+          incomingProfile
+            .lastName
+        ) ||
+        cleanText(
+          existingProfile
+            .lastName
+        ),
+
+      address:
+        cleanText(
+          body.homeAddress
+        ) ||
+        cleanText(
+          incomingLicence
+            .address
+        ) ||
+        cleanText(
+          incomingProfile
+            .address
+        ) ||
+        cleanText(
+          existingProfile
+            .address
+        ),
+
+      phone:
+        cleanText(
+          incomingProfile
+            .phone
+        ) ||
+        cleanText(
+          existingProfile
+            .phone
+        ),
+
+      email:
+        cleanText(
+          incomingProfile
+            .email
+        ) ||
+        cleanText(
+          existingProfile
+            .email
+        ),
+    },
+    driverCount,
+    Number.isInteger(
+      driverIndex
+    )
+      ? driverIndex
+      : 1
+  );
 }
 
 function publicSessionData(
@@ -299,9 +516,24 @@ function publicSessionData(
     );
 
   const driverProfile =
-    licenceData
-      .driverProfile ||
-    null;
+    getDriverProfileFromSession(
+      row
+    );
+
+  const documentUpload =
+    isRecord(
+      licenceData
+        .documentUpload
+    )
+      ? licenceData
+          .documentUpload
+      : {};
+
+  const publicLicenceData = {
+    ...licenceData,
+
+    driverProfile,
+  };
 
   return {
     sessionToken:
@@ -322,28 +554,27 @@ function publicSessionData(
     firstName:
       row.first_name ||
       driverProfile
-        ?.firstName ||
+        .firstName ||
       "",
 
     lastName:
       row.last_name ||
       driverProfile
-        ?.lastName ||
+        .lastName ||
       "",
 
     homeAddress:
       row.home_address ||
       driverProfile
-        ?.address ||
+        .address ||
       "",
 
     driverProfile,
 
     driverCount:
-      Number(
+      normalizeDriverCount(
         licenceData
-          .driverCount ||
-          1
+          .driverCount
       ),
 
     vehicleName:
@@ -378,7 +609,8 @@ function publicSessionData(
             .verificationReasons
         : [],
 
-    licenceData,
+    licenceData:
+      publicLicenceData,
 
     identityData:
       row.identity_data ||
@@ -386,35 +618,59 @@ function publicSessionData(
 
     dlFrontPath:
       row.dl_front_path ||
-      "",
+      cleanText(
+        documentUpload
+          .dlFrontPath
+      ),
 
     dlBackPath:
       row.dl_back_path ||
-      "",
+      cleanText(
+        documentUpload
+          .dlBackPath
+      ),
 
     idFrontPath:
       row.id_front_path ||
-      "",
+      cleanText(
+        documentUpload
+          .idFrontPath
+      ),
 
     idBackPath:
       row.id_back_path ||
-      "",
+      cleanText(
+        documentUpload
+          .idBackPath
+      ),
 
     dlFrontName:
       row.dl_front_name ||
-      "",
+      cleanText(
+        documentUpload
+          .dlFrontName
+      ),
 
     dlBackName:
       row.dl_back_name ||
-      "",
+      cleanText(
+        documentUpload
+          .dlBackName
+      ),
 
     idFrontName:
       row.id_front_name ||
-      "",
+      cleanText(
+        documentUpload
+          .idFrontName
+      ),
 
     idBackName:
       row.id_back_name ||
-      "",
+      cleanText(
+        documentUpload
+          .idBackName
+      ),
 
     errorMessage:
       row.error_message ||
@@ -456,7 +712,9 @@ async function findSession(
       )
       .maybeSingle();
 
-  if (error) {
+  if (
+    error
+  ) {
     throw new Error(
       `Could not read verification session: ${error.message}`
     );
@@ -466,7 +724,8 @@ async function findSession(
     data as
       | VerificationSessionRow
       | null
-  ) ?? null;
+  ) ??
+  null;
 }
 
 async function markExpired(
@@ -514,7 +773,9 @@ async function markExpired(
       )
       .single();
 
-  if (error) {
+  if (
+    error
+  ) {
     throw new Error(
       `Could not expire verification session: ${error.message}`
     );
@@ -548,28 +809,34 @@ export async function POST(
       );
 
     const driverCount =
-      Math.min(
-        15,
-        Math.max(
-          1,
-          Math.floor(
-            Number(
-              body?.driverCount
-            ) ||
-              1
-          )
-        )
+      normalizeDriverCount(
+        body?.driverCount
+      );
+
+    const requestedDriverIndex =
+      Number(
+        body
+          ?.driverProfile
+          ?.driverIndex ??
+        body?.driverIndex ??
+        1
       );
 
     const driverProfile =
       cleanDriverProfile(
         body?.driverProfile,
-        driverCount
+        driverCount,
+        Number.isInteger(
+          requestedDriverIndex
+        )
+          ? requestedDriverIndex
+          : 1
       );
 
     const parentSessionToken =
       cleanText(
-        body?.parentSessionToken
+        body
+          ?.parentSessionToken
       );
 
     let bookingId =
@@ -583,7 +850,9 @@ export async function POST(
           parentSessionToken
         );
 
-      if (!parent) {
+      if (
+        !parent
+      ) {
         return NextResponse.json(
           {
             success:
@@ -685,14 +954,25 @@ export async function POST(
           item: any
         ) => {
           const metadata =
-            item.licence_data ||
-            {};
+            isRecord(
+              item.licence_data
+            )
+              ? item.licence_data
+              : {};
+
+          const existingProfile =
+            isRecord(
+              metadata
+                .driverProfile
+            )
+              ? metadata
+                  .driverProfile
+              : {};
 
           return (
             Number(
-              metadata
-                ?.driverProfile
-                ?.driverIndex
+              existingProfile
+                .driverIndex
             ) ===
               driverProfile
                 .driverIndex &&
@@ -737,16 +1017,17 @@ export async function POST(
         120,
         Math.max(
           BASE_SESSION_MINUTES,
-          driverCount * 10
+          driverCount *
+            10
         )
       );
 
     const expiresAt =
       new Date(
         now.getTime() +
-          sessionMinutes *
-            60 *
-            1000
+        sessionMinutes *
+          60 *
+          1000
       );
 
     const licenceData = {
@@ -766,7 +1047,8 @@ export async function POST(
 
       rentalStartDate:
         cleanText(
-          body?.rentalStartDate
+          body
+            ?.rentalStartDate
         ).slice(
           0,
           20
@@ -774,7 +1056,8 @@ export async function POST(
 
       rentalEndDate:
         cleanText(
-          body?.rentalEndDate
+          body
+            ?.rentalEndDate
         ).slice(
           0,
           20
@@ -796,6 +1079,10 @@ export async function POST(
           20
         ),
 
+      /*
+       * Names and contact details will be populated later
+       * from the scanner and normal checkout form.
+       */
       verificationOutcome:
         "pending",
     };
@@ -822,15 +1109,18 @@ export async function POST(
 
           first_name:
             driverProfile
-              .firstName,
+              .firstName ||
+            null,
 
           last_name:
             driverProfile
-              .lastName,
+              .lastName ||
+            null,
 
           home_address:
             driverProfile
-              .address,
+              .address ||
+            null,
 
           licence_data:
             licenceData,
@@ -850,7 +1140,9 @@ export async function POST(
         )
         .single();
 
-    if (error) {
+    if (
+      error
+    ) {
       throw new Error(
         `Could not create verification session: ${error.message}`
       );
@@ -912,7 +1204,9 @@ export async function GET(
         )
       );
 
-    if (!sessionToken) {
+    if (
+      !sessionToken
+    ) {
       return NextResponse.json(
         {
           success:
@@ -933,7 +1227,9 @@ export async function GET(
         sessionToken
       );
 
-    if (!row) {
+    if (
+      !row
+    ) {
       return NextResponse.json(
         {
           success:
@@ -1028,7 +1324,9 @@ export async function PATCH(
         sessionToken
       );
 
-    if (!existing) {
+    if (
+      !existing
+    ) {
       return NextResponse.json(
         {
           success:
@@ -1151,7 +1449,9 @@ export async function PATCH(
           )
           .single();
 
-      if (error) {
+      if (
+        error
+      ) {
         throw new Error(
           `Could not start verification session: ${error.message}`
         );
@@ -1241,17 +1541,49 @@ export async function PATCH(
         );
       }
 
+      const incomingLicence =
+        isRecord(
+          body.licenceData
+        )
+          ? body.licenceData
+          : {};
+
+      const driverProfile =
+        mergeDriverProfile(
+          existingLicence,
+          body
+        );
+
       const mergedLicence = {
         ...existingLicence,
+        ...incomingLicence,
 
-        ...(
-          body.licenceData &&
-          typeof body.licenceData ===
-            "object"
-            ? body.licenceData
-            : {}
-        ),
+        driverProfile,
       };
+
+      const firstName =
+        driverProfile
+          .firstName ||
+        cleanText(
+          body.firstName
+        ) ||
+        existing.first_name;
+
+      const lastName =
+        driverProfile
+          .lastName ||
+        cleanText(
+          body.lastName
+        ) ||
+        existing.last_name;
+
+      const homeAddress =
+        driverProfile
+          .address ||
+        cleanText(
+          body.homeAddress
+        ) ||
+        existing.home_address;
 
       const {
         data,
@@ -1269,22 +1601,16 @@ export async function PATCH(
               identityType,
 
             first_name:
-              cleanText(
-                body.firstName
-              ) ||
-              existing.first_name,
+              firstName ||
+              null,
 
             last_name:
-              cleanText(
-                body.lastName
-              ) ||
-              existing.last_name,
+              lastName ||
+              null,
 
             home_address:
-              cleanText(
-                body.homeAddress
-              ) ||
-              existing.home_address,
+              homeAddress ||
+              null,
 
             licence_data:
               mergedLicence,
@@ -1353,7 +1679,9 @@ export async function PATCH(
           )
           .single();
 
-      if (error) {
+      if (
+        error
+      ) {
         throw new Error(
           `Could not complete verification session: ${error.message}`
         );
@@ -1380,16 +1708,24 @@ export async function PATCH(
         ) ||
         "Document verification failed.";
 
+      const incomingLicence =
+        isRecord(
+          body.licenceData
+        )
+          ? body.licenceData
+          : {};
+
+      const driverProfile =
+        mergeDriverProfile(
+          existingLicence,
+          body
+        );
+
       const mergedLicence = {
         ...existingLicence,
+        ...incomingLicence,
 
-        ...(
-          body.licenceData &&
-          typeof body.licenceData ===
-            "object"
-            ? body.licenceData
-            : {}
-        ),
+        driverProfile,
 
         verificationOutcome:
           "rejected",
@@ -1410,6 +1746,21 @@ export async function PATCH(
             identity_type:
               body.identityType ||
               existing.identity_type,
+
+            first_name:
+              driverProfile
+                .firstName ||
+              existing.first_name,
+
+            last_name:
+              driverProfile
+                .lastName ||
+              existing.last_name,
+
+            home_address:
+              driverProfile
+                .address ||
+              existing.home_address,
 
             licence_data:
               mergedLicence,
@@ -1484,7 +1835,9 @@ export async function PATCH(
           )
           .single();
 
-      if (error) {
+      if (
+        error
+      ) {
         throw new Error(
           `Could not fail verification session: ${error.message}`
         );
@@ -1532,7 +1885,9 @@ export async function PATCH(
           )
           .single();
 
-      if (error) {
+      if (
+        error
+      ) {
         throw new Error(
           `Could not cancel verification session: ${error.message}`
         );
