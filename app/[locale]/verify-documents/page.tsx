@@ -1597,6 +1597,17 @@ const QUALITY_CHECK_INTERVAL_MS = 160;
 const MANUAL_CAPTURE_DELAY_MS = 4200;
 const VIDEO_READY_TIMEOUT_MS = 9000;
 
+/*
+ * Vercel rejects function request bodies above its platform payload limit
+ * before our API route can return JSON. Keep every document comfortably
+ * below that limit while retaining enough detail for document analysis.
+ */
+const DOCUMENT_MAX_LONG_EDGE = 1600;
+const DOCUMENT_MIN_LONG_EDGE = 1200;
+const DOCUMENT_MAX_FILE_BYTES = 900 * 1024;
+const DOCUMENT_INITIAL_JPEG_QUALITY = 0.82;
+const DOCUMENT_MIN_JPEG_QUALITY = 0.54;
+
 function getScannerLocale(value: string): ScannerLocale {
   const locale = value.toLowerCase() as ScannerLocale;
   return SUPPORTED_LOCALES.has(locale) ? locale : "en";
@@ -1990,12 +2001,66 @@ async function waitForVideoReady(
   });
 }
 
+async function encodeDocumentCanvas(
+  initialCanvas: HTMLCanvasElement,
+  fileName: string,
+  invalidPhoto: string,
+) {
+  let canvas = initialCanvas;
+  let quality = DOCUMENT_INITIAL_JPEG_QUALITY;
+
+  for (let attempt = 0; attempt < 16; attempt += 1) {
+    const blob = await new Promise<Blob | null>((resolve) =>
+      canvas.toBlob(resolve, "image/jpeg", quality),
+    );
+
+    if (!blob) {
+      throw new Error(invalidPhoto);
+    }
+
+    if (blob.size <= DOCUMENT_MAX_FILE_BYTES) {
+      return new File([blob], fileName, {
+        type: "image/jpeg",
+      });
+    }
+
+    if (quality > DOCUMENT_MIN_JPEG_QUALITY) {
+      quality = Math.max(DOCUMENT_MIN_JPEG_QUALITY, quality - 0.07);
+      continue;
+    }
+
+    const longestEdge = Math.max(canvas.width, canvas.height);
+
+    if (longestEdge <= DOCUMENT_MIN_LONG_EDGE) {
+      break;
+    }
+
+    const scale = Math.max(DOCUMENT_MIN_LONG_EDGE / longestEdge, 0.84);
+    const resized = document.createElement("canvas");
+
+    resized.width = Math.max(1, Math.round(canvas.width * scale));
+    resized.height = Math.max(1, Math.round(canvas.height * scale));
+
+    const resizedContext = resized.getContext("2d");
+
+    if (!resizedContext) {
+      throw new Error(invalidPhoto);
+    }
+
+    resizedContext.imageSmoothingEnabled = true;
+    resizedContext.imageSmoothingQuality = "high";
+    resizedContext.drawImage(canvas, 0, 0, resized.width, resized.height);
+
+    canvas = resized;
+    quality = 0.72;
+  }
+
+  throw new Error(invalidPhoto);
+}
+
 async function normalizePhoto(file: File, invalidPhoto: string) {
-  if (
-    file.size <= 6 * 1024 * 1024 &&
-    ["image/jpeg", "image/png", "image/webp"].includes(file.type)
-  ) {
-    return file;
+  if (!file.size || !file.type.startsWith("image/")) {
+    throw new Error(invalidPhoto);
   }
 
   const objectUrl = URL.createObjectURL(file);
@@ -2012,7 +2077,7 @@ async function normalizePhoto(file: File, invalidPhoto: string) {
 
     const longest = Math.max(image.naturalWidth, image.naturalHeight);
 
-    const scale = Math.min(1, 1800 / longest);
+    const scale = Math.min(1, DOCUMENT_MAX_LONG_EDGE / longest);
 
     const canvas = document.createElement("canvas");
 
@@ -2026,21 +2091,35 @@ async function normalizePhoto(file: File, invalidPhoto: string) {
       throw new Error(invalidPhoto);
     }
 
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", 0.88),
+    return encodeDocumentCanvas(
+      canvas,
+      `${Date.now()}-document.jpg`,
+      invalidPhoto,
     );
-
-    if (!blob) {
-      throw new Error(invalidPhoto);
-    }
-
-    return new File([blob], `${Date.now()}-document.jpg`, {
-      type: "image/jpeg",
-    });
   } finally {
     URL.revokeObjectURL(objectUrl);
+  }
+}
+
+async function readApiJson<T>(response: Response, fallbackMessage: string) {
+  const rawBody = await response.text();
+
+  if (!rawBody) {
+    throw new Error(fallbackMessage);
+  }
+
+  try {
+    return JSON.parse(rawBody) as T;
+  } catch {
+    /*
+     * Platform errors such as "Request Entity Too Large" are plain text.
+     * Never expose a JSON parser error to the customer.
+     */
+    throw new Error(fallbackMessage);
   }
 }
 
@@ -2169,7 +2248,10 @@ export default function VerifyDocumentsPage() {
         }),
       });
 
-      const data = await response.json();
+      const data = await readApiJson<{ success?: boolean }>(
+        response,
+        copy.updateError,
+      );
 
       if (!response.ok || !data.success) {
         throw new Error(copy.updateError);
@@ -2221,7 +2303,10 @@ export default function VerifyDocumentsPage() {
           },
         );
 
-        const data = (await response.json()) as SessionData;
+        const data = await readApiJson<SessionData>(
+          response,
+          copy.sessionError,
+        );
 
         if (!mountedRef.current) {
           return;
@@ -2257,7 +2342,10 @@ export default function VerifyDocumentsPage() {
           }),
         });
 
-        const startData = await started.json();
+        const startData = await readApiJson<{ success?: boolean }>(
+          started,
+          copy.sessionError,
+        );
 
         if (!mountedRef.current) {
           return;
@@ -2436,7 +2524,10 @@ export default function VerifyDocumentsPage() {
 
     const canvas = document.createElement("canvas");
 
-    const outputWidth = Math.min(2200, Math.max(1, Math.round(sw)));
+    const outputWidth = Math.min(
+      DOCUMENT_MAX_LONG_EDGE,
+      Math.max(1, Math.round(sw)),
+    );
 
     canvas.width = outputWidth;
 
@@ -2454,17 +2545,11 @@ export default function VerifyDocumentsPage() {
 
     ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
-    const blob = await new Promise<Blob | null>((resolve) =>
-      canvas.toBlob(resolve, "image/jpeg", 0.9),
+    return encodeDocumentCanvas(
+      canvas,
+      `${step}-${Date.now()}.jpg`,
+      copy.captureError,
     );
-
-    if (!blob) {
-      throw new Error(copy.captureError);
-    }
-
-    return new File([blob], `${step}-${Date.now()}.jpg`, {
-      type: "image/jpeg",
-    });
   }
 
   async function analyzeDocuments(
@@ -2514,7 +2599,7 @@ export default function VerifyDocumentsPage() {
         signal: controller.signal,
       });
 
-      const data = (await response.json()) as Analysis;
+      const data = await readApiJson<Analysis>(response, copy.analysisError);
 
       if (!response.ok || !data.success) {
         throw new Error(copy.analysisError);
@@ -2600,7 +2685,17 @@ export default function VerifyDocumentsPage() {
       body: upload,
     });
 
-    const uploaded = await uploadResponse.json();
+    const uploaded = await readApiJson<{
+      success?: boolean;
+      dlFrontPath?: string;
+      dlBackPath?: string;
+      idFrontPath?: string;
+      idBackPath?: string;
+      dlFrontName?: string;
+      dlBackName?: string;
+      idFrontName?: string;
+      idBackName?: string;
+    }>(uploadResponse, copy.saveError);
 
     if (!uploadResponse.ok || !uploaded.success) {
       throw new Error(copy.saveError);
