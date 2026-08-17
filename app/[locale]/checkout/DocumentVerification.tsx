@@ -338,7 +338,10 @@ function emptyProfile(
 
 function makeScannerUrl(
   verifyPath: string,
-  includeReturnUrl: boolean
+  includeReturnUrl: boolean,
+  flow:
+    | "desktop"
+    | "mobile" = "desktop"
 ) {
   if (
     typeof window ===
@@ -353,6 +356,11 @@ function makeScannerUrl(
       verifyPath,
       window.location.origin
     );
+
+  url.searchParams.set(
+    "verification_flow",
+    flow
+  );
 
   if (
     includeReturnUrl
@@ -1103,7 +1111,8 @@ export default function DocumentVerification({
             verifyPath
               ? makeScannerUrl(
                   verifyPath,
-                  false
+                  false,
+                  "desktop"
                 )
               : previous
                   ?.qrUrl ||
@@ -1257,7 +1266,8 @@ export default function DocumentVerification({
           qrUrl:
             makeScannerUrl(
               data.verifyPath,
-              false
+              false,
+              "desktop"
             ),
         };
 
@@ -2013,7 +2023,8 @@ export default function DocumentVerification({
             makeScannerUrl(
               selected
                 .verifyPath,
-              true
+              true,
+              "mobile"
             );
 
           if (
@@ -2070,6 +2081,77 @@ export default function DocumentVerification({
       id="nexa-document-verification"
       className="border border-black/10 bg-white p-5 md:p-7"
     >
+      <style jsx global>{`
+        @keyframes nexaVerificationHeartbeat {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 12px 34px rgba(249, 115, 22, 0.18);
+          }
+          12% {
+            transform: scale(1.018);
+            box-shadow: 0 16px 42px rgba(249, 115, 22, 0.3);
+          }
+          24% {
+            transform: scale(1);
+          }
+          36% {
+            transform: scale(1.012);
+            box-shadow: 0 14px 38px rgba(236, 72, 153, 0.22);
+          }
+          52% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes nexaVerificationShine {
+          0% {
+            transform: translateX(-135%) skewX(-18deg);
+          }
+          48%, 100% {
+            transform: translateX(235%) skewX(-18deg);
+          }
+        }
+
+        .nexa-verification-heartbeat {
+          animation: nexaVerificationHeartbeat 2.15s ease-in-out infinite;
+        }
+
+        .nexa-verification-action {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
+          transition: transform 150ms ease, filter 150ms ease,
+            box-shadow 150ms ease;
+        }
+
+        .nexa-verification-action::after {
+          position: absolute;
+          inset: -40% auto -40% -28%;
+          width: 24%;
+          content: "";
+          z-index: -1;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.42),
+            transparent
+          );
+          animation: nexaVerificationShine 3.1s ease-in-out infinite;
+        }
+
+        .nexa-verification-action:active {
+          transform: scale(0.965);
+          filter: brightness(0.96);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nexa-verification-heartbeat,
+          .nexa-verification-action::after {
+            animation: none !important;
+          }
+        }
+      `}</style>
+
       <div className="flex items-start justify-between gap-5">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-black/40">
@@ -2352,7 +2434,18 @@ export default function DocumentVerification({
                             driverIndex
                           )
                         }
-                        className="min-h-[58px] w-full bg-black px-5 text-[12px] font-black uppercase tracking-[0.12em] text-white disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-black/35"
+                        className={[
+                          "min-h-[62px] w-full rounded-[14px] px-5 text-[12px] font-black uppercase tracking-[0.12em] text-white",
+                          "nexa-verification-action",
+
+                          !mobileDisabled &&
+                          driverSession &&
+                          !expired
+                            ? "nexa-verification-heartbeat bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600 shadow-[0_14px_34px_rgba(249,115,22,0.22)]"
+                            : "cursor-not-allowed bg-black/10 text-black/30 shadow-none",
+                        ].join(
+                          " "
+                        )}
                       >
                         {driverSession
                           ?.status ===
@@ -2516,7 +2609,7 @@ export default function DocumentVerification({
                   passengerIndexes
                 )
               }
-              className="mt-5 min-h-[58px] w-full bg-black px-5 text-[12px] font-black uppercase tracking-[0.12em] text-white"
+              className="nexa-verification-action nexa-verification-heartbeat mt-5 min-h-[62px] w-full rounded-[14px] bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 px-5 text-[12px] font-black uppercase tracking-[0.12em] text-white shadow-[0_16px_38px_rgba(16,185,129,0.25)]"
             >
               Continue with{" "}
               {approvedResults.length}{" "}
@@ -2534,7 +2627,7 @@ export default function DocumentVerification({
               onClick={
                 onCancel
               }
-              className="mt-3 min-h-[48px] w-full border border-red-200 bg-red-50 px-5 text-[11px] font-black uppercase tracking-[0.12em] text-red-700"
+              className="mt-3 min-h-[52px] w-full rounded-[12px] border border-red-300 bg-gradient-to-r from-red-50 to-rose-100 px-5 text-[11px] font-black uppercase tracking-[0.12em] text-red-700 transition active:scale-[0.97]"
             >
               Cancel complete booking
             </button>

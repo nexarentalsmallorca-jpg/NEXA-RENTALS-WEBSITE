@@ -62,6 +62,10 @@ type DecisionKey =
 type SessionData = {
   success: boolean;
   bookingId?: string;
+  driverCount?: number;
+  driverProfile?: {
+    driverIndex?: number;
+  } | null;
   status?:
     | "pending"
     | "scanning"
@@ -2159,6 +2163,14 @@ export default function VerifyDocumentsPage() {
 
   const [returnUrl, setReturnUrl] = useState("");
 
+  const [verificationFlow, setVerificationFlow] = useState<
+    "desktop" | "mobile"
+  >("desktop");
+
+  const [driverIndex, setDriverIndex] = useState(1);
+
+  const [driverCount, setDriverCount] = useState(1);
+
   const [identityType, setIdentityType] = useState<IdentityType | null>(null);
 
   const [files, setFiles] = useState<Partial<Record<StepKey, File>>>({});
@@ -2285,8 +2297,14 @@ export default function VerifyDocumentsPage() {
 
     const back = safeReturnUrl(clean(params.get("return")));
 
+    const flow =
+      clean(params.get("verification_flow")) === "mobile"
+        ? "mobile"
+        : "desktop";
+
     setSessionToken(token);
     setReturnUrl(back);
+    setVerificationFlow(flow);
 
     async function initialize() {
       try {
@@ -2315,6 +2333,22 @@ export default function VerifyDocumentsPage() {
         if (!response.ok || !data.success) {
           throw new Error(copy.sessionError);
         }
+
+        const sessionDriverCount = Math.min(
+          15,
+          Math.max(1, Math.floor(Number(data.driverCount) || 1)),
+        );
+
+        const sessionDriverIndex = Math.min(
+          sessionDriverCount,
+          Math.max(
+            1,
+            Math.floor(Number(data.driverProfile?.driverIndex) || 1),
+          ),
+        );
+
+        setDriverCount(sessionDriverCount);
+        setDriverIndex(sessionDriverIndex);
 
         if (data.status === "completed") {
           setStage("complete");
@@ -3280,6 +3314,35 @@ export default function VerifyDocumentsPage() {
     setStage("camera");
   }
 
+  const hasNextDriver = driverIndex < driverCount;
+
+  const nextDriverIndex = Math.min(driverCount, driverIndex + 1);
+
+  function leaveScannerForGroup(result: "accepted" | "manual_review" | "rejected") {
+    if (verificationFlow === "mobile" && returnUrl) {
+      const url = new URL(returnUrl);
+
+      url.searchParams.set("verification_session", sessionToken);
+      url.searchParams.set("verification_result", result);
+
+      window.location.assign(url.toString());
+      return;
+    }
+
+    /*
+     * A desktop QR is normally opened from the phone's camera app.
+     * Going back reopens that camera immediately so the next QR can be scanned.
+     */
+    if (window.history.length > 1) {
+      window.history.back();
+      return;
+    }
+
+    if (returnUrl) {
+      window.location.assign(returnUrl);
+    }
+  }
+
   async function leaveAfterRejection() {
     try {
       await patchSession({
@@ -3294,11 +3357,7 @@ export default function VerifyDocumentsPage() {
        */
     }
 
-    if (returnUrl) {
-      window.location.assign(returnUrl);
-    } else {
-      window.history.back();
-    }
+    leaveScannerForGroup("rejected");
   }
 
   /*
@@ -3306,7 +3365,12 @@ export default function VerifyDocumentsPage() {
    * after a successful scan.
    */
   useEffect(() => {
-    if (stage !== "complete" || !returnUrl || !sessionToken) {
+    if (
+      stage !== "complete" ||
+      !returnUrl ||
+      !sessionToken ||
+      driverCount > 1
+    ) {
       return;
     }
 
@@ -3321,7 +3385,13 @@ export default function VerifyDocumentsPage() {
     }, 1700);
 
     return () => window.clearTimeout(timer);
-  }, [stage, returnUrl, sessionToken, finalOutcome]);
+  }, [stage, returnUrl, sessionToken, finalOutcome, driverCount]);
+
+  const nextDriverButtonLabel = hasNextDriver
+    ? verificationFlow === "mobile"
+      ? `Continue to Driver ${nextDriverIndex}`
+      : `Scan Driver ${nextDriverIndex} QR`
+    : "Finish";
   const stepCopy = copy.steps[step];
 
   const frameClass =
@@ -3340,6 +3410,73 @@ export default function VerifyDocumentsPage() {
       id="nexa-document-scanner-root"
       className={`${scannerFont.variable} ${scannerFont.className} fixed inset-0 z-[2147483647] min-h-[100svh] overflow-y-auto bg-black text-white`}
     >
+      <style jsx global>{`
+        @keyframes nexaScannerHeartbeat {
+          0%, 100% {
+            transform: scale(1);
+            box-shadow: 0 16px 44px rgba(249, 115, 22, 0.2);
+          }
+          12% {
+            transform: scale(1.022);
+            box-shadow: 0 20px 54px rgba(249, 115, 22, 0.34);
+          }
+          25% {
+            transform: scale(1);
+          }
+          38% {
+            transform: scale(1.014);
+            box-shadow: 0 18px 48px rgba(236, 72, 153, 0.25);
+          }
+          54% {
+            transform: scale(1);
+          }
+        }
+
+        @keyframes nexaScannerShine {
+          0% {
+            transform: translateX(-150%) skewX(-18deg);
+          }
+          48%, 100% {
+            transform: translateX(260%) skewX(-18deg);
+          }
+        }
+
+        .nexa-scanner-next-action {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
+          animation: nexaScannerHeartbeat 2.1s ease-in-out infinite;
+          transition: transform 150ms ease, filter 150ms ease;
+        }
+
+        .nexa-scanner-next-action::after {
+          position: absolute;
+          inset: -45% auto -45% -30%;
+          width: 25%;
+          content: "";
+          z-index: -1;
+          background: linear-gradient(
+            90deg,
+            transparent,
+            rgba(255, 255, 255, 0.48),
+            transparent
+          );
+          animation: nexaScannerShine 3s ease-in-out infinite;
+        }
+
+        .nexa-scanner-next-action:active {
+          transform: scale(0.96);
+          filter: brightness(0.96);
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .nexa-scanner-next-action,
+          .nexa-scanner-next-action::after {
+            animation: none !important;
+          }
+        }
+      `}</style>
+
       <input
         ref={fileInputRef}
         type="file"
@@ -3622,6 +3759,20 @@ export default function VerifyDocumentsPage() {
             <div className="mt-7 flex w-full max-w-md flex-col gap-3">
               <button
                 type="button"
+                onClick={() => void leaveAfterRejection()}
+                className={[
+                  "nexa-scanner-next-action min-h-[62px] rounded-[15px] px-5",
+                  "text-[12px] font-black uppercase tracking-[0.14em] text-white",
+                  hasNextDriver
+                    ? "bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600"
+                    : "bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500",
+                ].join(" ")}
+              >
+                {nextDriverButtonLabel}
+              </button>
+
+              <button
+                type="button"
                 onClick={() => {
                   setFiles({});
                   setIdentityType(null);
@@ -3629,17 +3780,9 @@ export default function VerifyDocumentsPage() {
                   setStep("dlFront");
                   setStage("camera");
                 }}
-                className="min-h-[56px] rounded-[12px] bg-white px-5 text-[12px] font-black uppercase tracking-[0.14em] text-black"
+                className="min-h-[54px] rounded-[12px] bg-white px-5 text-[12px] font-black uppercase tracking-[0.14em] text-black transition active:scale-[0.97]"
               >
                 {copy.scanAgain}
-              </button>
-
-              <button
-                type="button"
-                onClick={() => void leaveAfterRejection()}
-                className="min-h-[48px] rounded-[12px] border border-white/15 text-[11px] font-black text-white/60"
-              >
-                {copy.returnCheckout}
               </button>
             </div>
           )}
@@ -3664,9 +3807,25 @@ export default function VerifyDocumentsPage() {
               : copy.acceptedComplete}
           </p>
 
-          <div className="mt-7 text-[10px] font-black uppercase tracking-[0.2em] text-white/35">
-            {returnUrl ? copy.returningCheckout : copy.returnBooking}
-          </div>
+          {driverCount > 1 || !returnUrl ? (
+            <button
+              type="button"
+              onClick={() => leaveScannerForGroup(finalOutcome)}
+              className={[
+                "nexa-scanner-next-action mt-8 min-h-[62px] w-full max-w-md rounded-[15px] px-5",
+                "text-[12px] font-black uppercase tracking-[0.14em] text-white",
+                hasNextDriver
+                  ? "bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600"
+                  : "bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500",
+              ].join(" ")}
+            >
+              {nextDriverButtonLabel}
+            </button>
+          ) : (
+            <div className="mt-7 text-[10px] font-black uppercase tracking-[0.2em] text-white/35">
+              {copy.returningCheckout}
+            </div>
+          )}
         </Centered>
       ) : null}
 

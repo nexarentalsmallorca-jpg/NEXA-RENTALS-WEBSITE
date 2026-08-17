@@ -19,6 +19,7 @@ import CheckoutShell from "./CheckoutShell";
 
 import DocumentVerification, {
   type DocumentVerificationPayload,
+  type DriverProfile,
 } from "./DocumentVerification";
 
 const manrope = Manrope({
@@ -57,6 +58,13 @@ type UploadedDocumentPaths = {
   dlBackName: string;
   idFrontName: string;
   idBackName: string;
+};
+
+type CheckoutDriverDetails = DriverProfile & {
+  sessionToken: string;
+  status:
+    | "approved"
+    | "manual_review";
 };
 
 type AvailabilityResult = {
@@ -447,6 +455,18 @@ function phoneOk(
 
   return (
     digits.length >= 7
+  );
+}
+
+function driverDetailsComplete(
+  driver: CheckoutDriverDetails
+) {
+  return (
+    driver.firstName.trim().length >= 2 &&
+    driver.lastName.trim().length >= 2 &&
+    phoneOk(driver.phone) &&
+    emailOk(driver.email) &&
+    driver.address.trim().length >= 8
   );
 }
 
@@ -928,6 +948,14 @@ export default function CheckoutClient() {
       []
     );
 
+  const [
+    approvedDriverDetails,
+    setApprovedDriverDetails,
+  ] =
+    useState<CheckoutDriverDetails[]>(
+      []
+    );
+
   const finalQuantity =
     requiresDocumentVerification
       ? documentsCaptured
@@ -1206,6 +1234,13 @@ export default function CheckoutClient() {
   ] =
     useState(false);
 
+  const additionalDriversComplete =
+    approvedDriverDetails
+      .slice(1)
+      .every(
+        driverDetailsComplete
+      );
+
   const canPay =
     firstName
       .trim()
@@ -1218,6 +1253,7 @@ export default function CheckoutClient() {
     homeAddress
       .trim()
       .length >= 8 &&
+    additionalDriversComplete &&
     contractReadyOk &&
     agreeTerms &&
     documentsCaptured;
@@ -1615,7 +1651,72 @@ export default function CheckoutClient() {
             "approved" ||
           driver.status ===
             "manual_review"
-      );
+      )
+        .sort(
+          (a, b) =>
+            a.profile.driverIndex -
+            b.profile.driverIndex
+        );
+
+    const nextDriverDetails:
+      CheckoutDriverDetails[] =
+        approvedDrivers.map(
+          (driver) => ({
+            driverIndex:
+              driver.profile
+                .driverIndex,
+
+            sessionToken:
+              driver.sessionToken,
+
+            status:
+              driver.status ===
+              "manual_review"
+                ? "manual_review"
+                : "approved",
+
+            firstName:
+              driver.profile
+                .firstName ||
+              driver.licenceData
+                ?.firstName ||
+              driver.identityData
+                ?.firstName ||
+              "",
+
+            lastName:
+              driver.profile
+                .lastName ||
+              driver.licenceData
+                ?.lastName ||
+              driver.identityData
+                ?.lastName ||
+              "",
+
+            phone:
+              driver.profile
+                .phone ||
+              "",
+
+            email:
+              driver.profile
+                .email ||
+              "",
+
+            address:
+              driver.profile
+                .address ||
+              driver.identityData
+                ?.address ||
+              driver.licenceData
+                ?.address ||
+              "",
+          })
+        );
+
+    setApprovedDriverDetails(
+      nextDriverDetails
+    );
 
     const allApprovedDocumentsComplete =
       approvedDrivers.length ===
@@ -1847,6 +1948,167 @@ export default function CheckoutClient() {
     };
   }
 
+  function updateApprovedDriverDetail(
+    driverIndex: number,
+    field:
+      | "firstName"
+      | "lastName"
+      | "phone"
+      | "email"
+      | "address",
+    value: string
+  ) {
+    setApprovedDriverDetails(
+      (current) =>
+        current.map(
+          (driver) =>
+            driver.driverIndex ===
+            driverIndex
+              ? {
+                  ...driver,
+                  [field]:
+                    value,
+                }
+              : driver
+        )
+    );
+  }
+
+  async function saveApprovedDriverProfiles() {
+    if (
+      !requiresDocumentVerification ||
+      approvedDriverDetails.length ===
+        0
+    ) {
+      return;
+    }
+
+    const finalProfiles =
+      approvedDriverDetails.map(
+        (driver, index) =>
+          index ===
+          0
+            ? {
+                ...driver,
+
+                firstName:
+                  firstName.trim(),
+
+                lastName:
+                  surname.trim(),
+
+                phone:
+                  phone.trim(),
+
+                email:
+                  email.trim(),
+
+                address:
+                  homeAddress.trim(),
+              }
+            : {
+                ...driver,
+
+                firstName:
+                  driver.firstName.trim(),
+
+                lastName:
+                  driver.lastName.trim(),
+
+                phone:
+                  driver.phone.trim(),
+
+                email:
+                  driver.email.trim(),
+
+                address:
+                  driver.address.trim(),
+              }
+      );
+
+    if (
+      !finalProfiles.every(
+        driverDetailsComplete
+      )
+    ) {
+      throw new Error(
+        "Please complete the required details for every approved driver."
+      );
+    }
+
+    for (
+      const driver of
+      finalProfiles
+    ) {
+      const response =
+        await fetch(
+          "/api/document-verification/session",
+          {
+            method:
+              "PATCH",
+
+            headers: {
+              "Content-Type":
+                "application/json",
+            },
+
+            body:
+              JSON.stringify({
+                sessionToken:
+                  driver.sessionToken,
+
+                action:
+                  "profile",
+
+                driverProfile: {
+                  driverIndex:
+                    driver.driverIndex,
+
+                  firstName:
+                    driver.firstName,
+
+                  lastName:
+                    driver.lastName,
+
+                  phone:
+                    driver.phone,
+
+                  email:
+                    driver.email,
+
+                  address:
+                    driver.address,
+                },
+              }),
+          }
+        );
+
+      const data =
+        await response
+          .json()
+          .catch(
+            () => ({
+              success:
+                false,
+            })
+          );
+
+      if (
+        !response.ok ||
+        !data.success
+      ) {
+        throw new Error(
+          data?.error ||
+            `Driver ${driver.driverIndex} details could not be saved.`
+        );
+      }
+    }
+
+    setApprovedDriverDetails(
+      finalProfiles
+    );
+  }
+
   const payNowAction =
     async () => {
       if (!canPay) {
@@ -1888,6 +2150,12 @@ export default function CheckoutClient() {
         setPayLoading(
           true
         );
+
+        /*
+         * Save every approved driver's completed checkout
+         * profile into their own secure verification session.
+         */
+        await saveApprovedDriverProfiles();
 
         /*
          * Recheck live availability
@@ -2563,6 +2831,14 @@ export default function CheckoutClient() {
                   identityDocumentType
                 }
 
+                approvedDriverDetails={
+                  approvedDriverDetails
+                }
+
+                updateApprovedDriverDetail={
+                  updateApprovedDriverDetail
+                }
+
                 contractReadyOk={
                   contractReadyOk
                 }
@@ -2990,6 +3266,9 @@ function CheckoutDetailsSide({
 
   identityDocumentType,
 
+  approvedDriverDetails,
+  updateApprovedDriverDetail,
+
   contractReadyOk,
   setContractReadyOk,
 
@@ -3078,6 +3357,20 @@ function CheckoutDetailsSide({
     | "id"
     | "passport"
     | null;
+
+  approvedDriverDetails:
+    CheckoutDriverDetails[];
+
+  updateApprovedDriverDetail: (
+    driverIndex: number,
+    field:
+      | "firstName"
+      | "lastName"
+      | "phone"
+      | "email"
+      | "address",
+    value: string
+  ) => void;
 
   contractReadyOk:
     boolean;
@@ -3174,6 +3467,29 @@ function CheckoutDetailsSide({
           <div className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-black/35">
             Complete
           </div>
+        </div>
+      ) : null}
+
+      {approvedDriverDetails.length >
+      0 ? (
+        <div className="mt-5 flex items-center justify-between gap-4 border border-emerald-200 bg-emerald-50/60 px-4 py-3">
+          <div>
+            <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-emerald-700/60">
+              Primary booking contact
+            </p>
+
+            <p className="mt-1 text-sm font-extrabold text-emerald-900">
+              Driver{" "}
+              {
+                approvedDriverDetails[0]
+                  .driverIndex
+              }
+            </p>
+          </div>
+
+          <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-black text-white">
+            ✓
+          </span>
         </div>
       ) : null}
 
@@ -3343,6 +3659,184 @@ function CheckoutDetailsSide({
           />
         </Field>
       </div>
+
+      {approvedDriverDetails.length >
+      1 ? (
+        <div className="mt-6 space-y-4 border-t border-black/10 pt-6">
+          <div>
+            <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-black/35">
+              Additional approved drivers
+            </p>
+
+            <p className="mt-1 text-xs font-semibold leading-5 text-black/45">
+              Names were filled from the verified documents. Complete the remaining contact details for every driver.
+            </p>
+          </div>
+
+          {approvedDriverDetails
+            .slice(1)
+            .map(
+              (driver) => (
+                <section
+                  key={
+                    driver.sessionToken
+                  }
+                  className="border border-black/10 bg-[#fafaf8] p-4 sm:p-5"
+                >
+                  <div className="flex items-center justify-between gap-4">
+                    <div>
+                      <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-black/35">
+                        Approved driver
+                      </p>
+
+                      <h3 className="mt-1 text-lg font-extrabold text-black">
+                        Driver{" "}
+                        {
+                          driver.driverIndex
+                        }
+                      </h3>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          updateApprovedDriverDetail(
+                            driver.driverIndex,
+                            "phone",
+                            phone
+                          );
+
+                          updateApprovedDriverDetail(
+                            driver.driverIndex,
+                            "email",
+                            email
+                          );
+
+                          updateApprovedDriverDetail(
+                            driver.driverIndex,
+                            "address",
+                            homeAddress
+                          );
+                        }}
+                        className="min-h-[34px] border border-black/10 bg-white px-3 text-[9px] font-extrabold uppercase tracking-[0.1em] text-black/55 transition active:scale-[0.97]"
+                      >
+                        Use booking contact
+                      </button>
+
+                      <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-black text-white">
+                        ✓
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="mt-4 grid gap-x-4 gap-y-4 sm:grid-cols-2">
+                    <Field label="First name *">
+                      <TextInput
+                        value={
+                          driver.firstName
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateApprovedDriverDetail(
+                            driver.driverIndex,
+                            "firstName",
+                            event.target.value
+                          )
+                        }
+                        placeholder="First name"
+                        autoComplete="off"
+                      />
+                    </Field>
+
+                    <Field label="Surname *">
+                      <TextInput
+                        value={
+                          driver.lastName
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateApprovedDriverDetail(
+                            driver.driverIndex,
+                            "lastName",
+                            event.target.value
+                          )
+                        }
+                        placeholder="Surname"
+                        autoComplete="off"
+                      />
+                    </Field>
+
+                    <Field label="Phone / WhatsApp *">
+                      <TextInput
+                        value={
+                          driver.phone
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateApprovedDriverDetail(
+                            driver.driverIndex,
+                            "phone",
+                            event.target.value
+                          )
+                        }
+                        placeholder="+34 600 000 000"
+                        autoComplete="off"
+                        inputMode="tel"
+                      />
+                    </Field>
+
+                    <Field label="Email *">
+                      <TextInput
+                        value={
+                          driver.email
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateApprovedDriverDetail(
+                            driver.driverIndex,
+                            "email",
+                            event.target.value
+                          )
+                        }
+                        placeholder="driver@email.com"
+                        autoComplete="off"
+                        inputMode="email"
+                      />
+                    </Field>
+
+                    <Field
+                      label="Home address *"
+                      wide
+                    >
+                      <textarea
+                        value={
+                          driver.address
+                        }
+                        onChange={(
+                          event
+                        ) =>
+                          updateApprovedDriverDetail(
+                            driver.driverIndex,
+                            "address",
+                            event.target.value
+                          )
+                        }
+                        className="min-h-[74px] w-full resize-none border border-black/18 bg-white px-3 py-2 text-sm font-semibold text-black outline-none transition placeholder:text-black/35 focus:border-black"
+                        placeholder="Street, city, postcode, country"
+                        autoComplete="off"
+                      />
+                    </Field>
+                  </div>
+                </section>
+              )
+            )}
+        </div>
+      ) : null}
 
       <div className="mt-4 2xl:mt-5">
         <Field

@@ -43,6 +43,9 @@ type DriverDocuments = {
 type DriverVerification = {
   driverIndex: number;
   driverName: string;
+  phone: string;
+  email: string;
+  address: string;
 
   sessionStatus: string;
   outcome: DriverOutcome;
@@ -52,6 +55,50 @@ type DriverVerification = {
 
   documents: DriverDocuments;
 };
+
+function getSessionDriverContact(
+  row:
+    any
+) {
+  const licenceData =
+    isRecord(
+      row?.licence_data
+    )
+      ? row.licence_data
+      : {};
+
+  const driverProfile =
+    isRecord(
+      licenceData
+        .driverProfile
+    )
+      ? licenceData
+          .driverProfile
+      : {};
+
+  return {
+    phone:
+      recordText(
+        driverProfile,
+        "phone",
+        "telephone",
+        "whatsapp"
+      ),
+
+    email:
+      recordText(
+        driverProfile,
+        "email"
+      ),
+
+    address:
+      recordText(
+        driverProfile,
+        "address",
+        "homeAddress"
+      ),
+  };
+}
 
 type VerificationBundle = {
   drivers: DriverVerification[];
@@ -1118,6 +1165,11 @@ async function loadVerificationBundle(
               row
             );
 
+          const contact =
+            getSessionDriverContact(
+              row
+            );
+
           return {
             driverIndex,
 
@@ -1126,6 +1178,15 @@ async function loadVerificationBundle(
                 row,
                 driverIndex
               ),
+
+            phone:
+              contact.phone,
+
+            email:
+              contact.email,
+
+            address:
+              contact.address,
 
             sessionStatus:
               normalizeText(
@@ -2117,6 +2178,21 @@ function buildDriverEmailHtml(
 
             <p><b>Identity type:</b> ${safeText(
               documents.identityType ||
+              "-"
+            )}</p>
+
+            <p><b>Phone / WhatsApp:</b> ${safeText(
+              driver.phone ||
+              "-"
+            )}</p>
+
+            <p><b>Email:</b> ${safeText(
+              driver.email ||
+              "-"
+            )}</p>
+
+            <p><b>Home address:</b> ${safeText(
+              driver.address ||
               "-"
             )}</p>
 
