@@ -9,7 +9,6 @@ import React, {
   useState,
 } from "react";
 import { Manrope } from "next/font/google";
-import { useLocale } from "next-intl";
 import {
   useRouter,
   useSearchParams,
@@ -21,6 +20,14 @@ import DocumentVerification, {
   type DocumentVerificationPayload,
   type DriverProfile,
 } from "./DocumentVerification";
+import {
+  CHECKOUT_LANGUAGES,
+  formatCheckoutText,
+  getCheckoutCopy,
+  normalizeCheckoutLocale,
+  type CheckoutCopy,
+  type CheckoutLocale,
+} from "./checkoutI18n";
 
 const manrope = Manrope({
   subsets: ["latin"],
@@ -715,15 +722,84 @@ async function checkCheckoutAvailability({
     return null;
   }
 }
-export default function CheckoutClient() {
+export default function CheckoutClient({
+  initialLocale = "en",
+}: {
+  initialLocale?: string;
+}) {
   const searchParams =
     useSearchParams();
 
   const router =
     useRouter();
 
-  const locale =
-    useLocale();
+  const [
+    locale,
+    setLocale,
+  ] = useState<CheckoutLocale>(
+    normalizeCheckoutLocale(
+      initialLocale
+    )
+  );
+
+  const copy =
+    useMemo(
+      () =>
+        getCheckoutCopy(
+          locale
+        ),
+      [locale]
+    );
+
+  useEffect(() => {
+    document.documentElement.lang =
+      locale;
+  }, [locale]);
+
+  function changeLocale(
+    nextLocale: CheckoutLocale
+  ) {
+    if (
+      nextLocale === locale
+    ) {
+      return;
+    }
+
+    setLocale(
+      nextLocale
+    );
+
+    const url =
+      new URL(
+        window.location.href
+      );
+
+    const parts =
+      url.pathname
+        .split("/")
+        .filter(Boolean);
+
+    if (
+      parts.length > 0
+    ) {
+      parts[0] =
+        nextLocale;
+    } else {
+      parts.push(
+        nextLocale,
+        "checkout"
+      );
+    }
+
+    url.pathname =
+      `/${parts.join("/")}`;
+
+    window.history.replaceState(
+      window.history.state,
+      "",
+      url.toString()
+    );
+  }
 
   const firstNameRef =
     useRef<HTMLInputElement | null>(
@@ -1159,16 +1235,16 @@ export default function CheckoutClient() {
 
   const planLabel =
     isHalfDay
-      ? "Half Day"
-      : "Full Day";
+      ? copy.halfDay
+      : copy.fullDay;
 
   const durationLabel =
     isHalfDay
-      ? "Same day"
+      ? copy.sameDay
       : `${rentalDays} ${
           rentalDays > 1
-            ? "days"
-            : "day"
+            ? copy.days
+            : copy.day
         }`;
 
   const deposit =
@@ -1754,7 +1830,7 @@ export default function CheckoutClient() {
       !verificationComplete
     ) {
       setPayError(
-        "Your document scan completed, but one of the document references is missing. Please restart document verification."
+        copy.missingDocuments
       );
     }
 
@@ -1883,7 +1959,7 @@ export default function CheckoutClient() {
           : {};
     } catch {
       throw new Error(
-        "Document upload returned an invalid response."
+        copy.verificationRestart
       );
     }
 
@@ -1891,8 +1967,7 @@ export default function CheckoutClient() {
       !response.ok
     ) {
       throw new Error(
-        data?.error ||
-          "Document upload failed."
+        copy.verificationRestart
       );
     }
 
@@ -2032,7 +2107,7 @@ export default function CheckoutClient() {
       )
     ) {
       throw new Error(
-        "Please complete the required details for every approved driver."
+        copy.completeDriverDetails
       );
     }
 
@@ -2098,8 +2173,13 @@ export default function CheckoutClient() {
         !data.success
       ) {
         throw new Error(
-          data?.error ||
-            `Driver ${driver.driverIndex} details could not be saved.`
+          formatCheckoutText(
+            copy.driverDetailsSaveError,
+            {
+              driver:
+                driver.driverIndex,
+            }
+          )
         );
       }
     }
@@ -2194,8 +2274,7 @@ export default function CheckoutClient() {
             false
         ) {
           throw new Error(
-            liveAvailability.message ||
-              "Sorry, the selected scooter quantity is no longer available for this date and time."
+            copy.soldOut
           );
         }
 
@@ -2204,8 +2283,7 @@ export default function CheckoutClient() {
           false
         ) {
           throw new Error(
-            liveAvailability.message ||
-              "Live availability could not be confirmed. Please try again or contact us on WhatsApp."
+            copy.availabilityError
           );
         }
 
@@ -2219,15 +2297,14 @@ export default function CheckoutClient() {
           throw new Error(
             liveAvailability.availableCount >
               0
-              ? `Only ${
-                  liveAvailability.availableCount
-                } scooter${
-                  liveAvailability.availableCount ===
-                  1
-                    ? " is"
-                    : "s are"
-                } available for the selected date and time.`
-              : "Sorry, this scooter category is sold out for the selected date and time."
+              ? formatCheckoutText(
+                  copy.availabilityCount,
+                  {
+                    count:
+                      liveAvailability.availableCount,
+                  }
+                )
+              : copy.soldOut
           );
         }
 
@@ -2240,7 +2317,7 @@ export default function CheckoutClient() {
           !finalFleetGroup
         ) {
           throw new Error(
-            "The scooter category could not be confirmed. Please try again or contact us on WhatsApp."
+            copy.availabilityError
           );
         }
 
@@ -2261,7 +2338,7 @@ export default function CheckoutClient() {
           !bookingId
         ) {
           throw new Error(
-            "Document verification booking ID is missing. Please restart document verification."
+            copy.verificationRestart
           );
         }
 
@@ -2295,7 +2372,7 @@ export default function CheckoutClient() {
           )
         ) {
           throw new Error(
-            "Verified document files are incomplete. Please restart document verification."
+            copy.verificationRestart
           );
         }
 
@@ -2555,9 +2632,7 @@ export default function CheckoutClient() {
             )
           ) {
             throw new Error(
-              data?.message ||
-                data?.error ||
-                "The selected scooter quantity is no longer available. Please choose another date, time, or quantity."
+              copy.availabilityError
             );
           }
 
@@ -2569,14 +2644,12 @@ export default function CheckoutClient() {
             )
           ) {
             throw new Error(
-              "Your payment session expired. Please continue again so we can recheck live availability."
+              copy.paymentExpired
             );
           }
 
           throw new Error(
-            data?.message ||
-              data?.error ||
-              "Payment initialization failed. Please try again."
+            copy.paymentInitFailed
           );
         }
 
@@ -2609,7 +2682,7 @@ export default function CheckoutClient() {
       ) {
         setPayError(
           error?.message ||
-            "Something went wrong."
+            copy.genericError
         );
       } finally {
         setPayLoading(
@@ -2636,9 +2709,17 @@ export default function CheckoutClient() {
               </span>
 
               <span>
-                Vehicles
+                {copy.vehicles}
               </span>
             </button>
+
+            <CheckoutLanguageSelector
+              locale={locale}
+              copy={copy}
+              onChange={
+                changeLocale
+              }
+            />
           </div>
 
           <div className="grid flex-1 gap-8 lg:grid-cols-[0.92fr_1.08fr] xl:gap-10 2xl:grid-cols-[0.94fr_1.06fr] 2xl:gap-12">
@@ -2679,15 +2760,16 @@ export default function CheckoutClient() {
                 locale
               }
 
+              copy={copy}
+
               planLabel={
                 planLabel
               }
 
-              durationLabel={`${durationLabel} · ${finalQuantity} scooter${
-                finalQuantity ===
-                1
-                  ? ""
-                  : "s"
+              durationLabel={`${durationLabel} · ${finalQuantity} ${
+                finalQuantity === 1
+                  ? copy.scooter
+                  : copy.scooters
               }`}
 
               totalEur={
@@ -2703,6 +2785,10 @@ export default function CheckoutClient() {
             "verification" ? (
               <DocumentVerification
                 autoStart
+
+                locale={
+                  locale
+                }
 
                 from={
                   from
@@ -2879,17 +2965,20 @@ export default function CheckoutClient() {
                   payError
                 }
 
+                copy={
+                  copy
+                }
+
                 onContinue={
                   payNowAction
                 }
               />
             ) : (
               <PaymentSide
-                planLabel={`${planLabel} · ${finalQuantity} scooter${
-                  finalQuantity ===
-                  1
-                    ? ""
-                    : "s"
+                planLabel={`${planLabel} · ${finalQuantity} ${
+                  finalQuantity === 1
+                    ? copy.scooter
+                    : copy.scooters
                 }`}
 
                 payNowCents={
@@ -2919,6 +3008,14 @@ export default function CheckoutClient() {
                     "details"
                   )
                 }
+
+                locale={
+                  locale
+                }
+
+                copy={
+                  copy
+                }
               />
             )}
           </div>
@@ -2947,6 +3044,120 @@ export default function CheckoutClient() {
   );
 }
 
+function CheckoutLanguageSelector({
+  locale,
+  copy,
+  onChange,
+}: {
+  locale: CheckoutLocale;
+  copy: CheckoutCopy;
+  onChange: (
+    locale: CheckoutLocale
+  ) => void;
+}) {
+  const detailsRef =
+    useRef<HTMLDetailsElement | null>(
+      null
+    );
+
+  const currentLanguage =
+    CHECKOUT_LANGUAGES.find(
+      (language) =>
+        language.code ===
+        locale
+    ) ||
+    CHECKOUT_LANGUAGES[0];
+
+  return (
+    <details
+      ref={detailsRef}
+      className="group relative z-[120]"
+    >
+      <summary
+        aria-label={copy.language}
+        className="inline-flex min-h-[44px] min-w-[92px] cursor-pointer list-none items-center justify-center gap-2 border border-black/10 bg-white px-3 text-[11px] font-extrabold uppercase tracking-[0.14em] text-black shadow-[0_12px_34px_rgba(0,0,0,0.08)] transition hover:border-black/30 [&::-webkit-details-marker]:hidden sm:min-h-[46px] sm:px-4"
+      >
+        <img
+          src={currentLanguage.flagSrc}
+          alt={currentLanguage.label}
+          className="h-[18px] w-[18px] rounded-full object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.12)]"
+        />
+
+        <span>
+          {currentLanguage.short}
+        </span>
+
+        <span className="text-[9px] transition-transform duration-300 group-open:rotate-180">
+          ▾
+        </span>
+      </summary>
+
+      <div className="absolute right-0 top-[calc(100%+10px)] z-[130] w-[min(245px,calc(100vw-32px))] border border-black/10 bg-white/95 p-2 text-black shadow-[0_26px_90px_rgba(0,0,0,0.18)] backdrop-blur-2xl">
+        <div className="px-3 pb-2 pt-2 text-[10px] font-extrabold uppercase tracking-[0.2em] text-black/35">
+          {copy.selectLanguage}
+        </div>
+
+        <div className="max-h-[min(430px,70vh)] overflow-y-auto">
+          {CHECKOUT_LANGUAGES.map(
+            (language) => {
+              const active =
+                language.code ===
+                locale;
+
+              return (
+                <button
+                  key={language.code}
+                  type="button"
+                  onClick={() => {
+                    onChange(
+                      language.code
+                    );
+
+                    detailsRef.current?.removeAttribute(
+                      "open"
+                    );
+                  }}
+                  className={[
+                    "flex w-full items-center justify-between px-3 py-2.5 text-left transition active:scale-[0.98]",
+                    active
+                      ? "bg-black text-white"
+                      : "text-black/70 hover:bg-black/[0.055] hover:text-black",
+                  ].join(" ")}
+                >
+                  <span className="flex items-center gap-3">
+                    <img
+                      src={language.flagSrc}
+                      alt={language.label}
+                      className="h-[22px] w-[22px] rounded-full object-cover shadow-[0_0_0_1px_rgba(0,0,0,0.12)]"
+                    />
+
+                    <span className="text-sm font-semibold normal-case tracking-normal">
+                      {language.label}
+                    </span>
+                  </span>
+
+                  <span
+                    className={[
+                      "text-[9px] font-extrabold uppercase tracking-[0.14em]",
+                      active
+                        ? "text-white"
+                        : "text-black/35",
+                    ].join(" ")}
+                  >
+                    {active
+                      ? copy.active
+                      : language.short}
+                  </span>
+                </button>
+              );
+            }
+          )}
+        </div>
+      </div>
+    </details>
+  );
+}
+
 function BookingSummary({
   vehicle,
   publicVehicleName,
@@ -2957,6 +3168,7 @@ function BookingSummary({
   pickupTime,
   dropoffTime,
   locale,
+  copy,
   planLabel,
   durationLabel,
   totalEur,
@@ -2978,6 +3190,8 @@ function BookingSummary({
 
   locale: string;
 
+  copy: CheckoutCopy;
+
   planLabel: string;
   durationLabel: string;
 
@@ -2989,7 +3203,7 @@ function BookingSummary({
     <aside className="flex h-full flex-col">
       <div>
         <div className="text-[10px] font-bold uppercase tracking-[0.24em] text-black/28">
-          Selected vehicle
+          {copy.selectedVehicle}
         </div>
 
         <h1
@@ -3005,7 +3219,9 @@ function BookingSummary({
         </h1>
 
         <p className="mt-1 text-sm font-medium text-black/42 2xl:text-[15px]">
-          {vehicle.type} ·{" "}
+          {vehicle.type === "Scooter"
+            ? copy.scooter
+            : copy.eBike} ·{" "}
           {vehicle.spec1}
         </p>
       </div>
@@ -3026,7 +3242,7 @@ function BookingSummary({
 
         <div className="md:border-l md:border-black/10 md:pl-5 2xl:pl-6">
           <div className="text-[10px] font-bold uppercase tracking-[0.22em] text-black/30">
-            Includes
+            {copy.includes}
           </div>
 
           <div className="mt-3 grid grid-cols-2 gap-x-4 gap-y-3 md:block md:space-y-4 2xl:mt-4 2xl:space-y-5">
@@ -3038,7 +3254,15 @@ function BookingSummary({
                   }
 
                   label={
-                    item.label
+                    item.label === "2 Helmets"
+                      ? copy.twoHelmets
+                      : item.label === "Top Case"
+                        ? copy.topCase
+                        : item.label === "Phone Mount"
+                          ? copy.phoneMount
+                          : item.label === "Lock"
+                            ? copy.lock
+                            : copy.insurance
                   }
 
                   image={
@@ -3053,7 +3277,7 @@ function BookingSummary({
 
       <div className="mt-4 2xl:mt-5">
         <PlainLine
-          label="Pickup"
+          label={copy.pickup}
 
           value={`${fmtDate(
             from,
@@ -3065,7 +3289,7 @@ function BookingSummary({
         />
 
         <PlainLine
-          label="Return"
+          label={copy.return}
 
           value={`${fmtDate(
             to,
@@ -3077,13 +3301,13 @@ function BookingSummary({
         />
 
         <PlainLine
-          label="Plan"
+          label={copy.plan}
 
           value={`${planLabel} · ${durationLabel}`}
         />
 
         <PlainLine
-          label="Pickup location"
+          label={copy.pickupLocation}
 
           value={
             pickupLocation
@@ -3097,7 +3321,7 @@ function BookingSummary({
 
       <div className="mt-4 border-t border-black/10 pt-2 2xl:mt-5">
         <PlainLine
-          label="Rental total"
+          label={copy.rentalTotal}
 
           value={`€${eur(
             totalEur
@@ -3108,11 +3332,13 @@ function BookingSummary({
       </div>
 
       <p className="mt-3 text-xs font-medium leading-5 text-black/45 2xl:text-[13px] 2xl:leading-6">
-        A refundable security
-        deposit of €
-        {eur(deposit)} per
-        scooter is handled at
-        pickup by cash or card.
+        {formatCheckoutText(
+          copy.securityDeposit,
+          {
+            amount:
+              eur(deposit),
+          }
+        )}
       </p>
     </aside>
   );
@@ -3286,6 +3512,8 @@ function CheckoutDetailsSide({
 
   payError,
 
+  copy,
+
   onContinue,
 }: {
   firstName: string;
@@ -3402,6 +3630,9 @@ function CheckoutDetailsSide({
   payError:
     string | null;
 
+  copy:
+    CheckoutCopy;
+
   onContinue:
     () => void;
 }) {
@@ -3413,7 +3644,7 @@ function CheckoutDetailsSide({
       <div className="flex items-end justify-between gap-4">
         <div>
           <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-black/30">
-            Step 2 of 3
+            {copy.step2}
           </div>
 
           <h2
@@ -3424,18 +3655,16 @@ function CheckoutDetailsSide({
                   .fontFamily,
             }}
           >
-            Your details
+            {copy.yourDetails}
           </h2>
 
           <p className="mt-1 text-sm font-medium text-black/40 2xl:text-[15px]">
-            Complete the
-            remaining required
-            fields.
+            {copy.completeRemaining}
           </p>
         </div>
 
         <div className="text-xs font-bold uppercase tracking-[0.18em] text-black/38">
-          * Required
+          * {copy.required}
         </div>
       </div>
 
@@ -3449,23 +3678,22 @@ function CheckoutDetailsSide({
 
             <div>
               <div className="text-sm font-extrabold text-black">
-                Documents
-                received
+                {copy.documentsReceived}
               </div>
 
               <div className="mt-0.5 text-xs font-medium text-black/42">
-                Driving licence
+                {copy.drivingLicence}
                 +{" "}
                 {identityDocumentType ===
                 "passport"
-                  ? "passport"
-                  : "ID card"}
+                  ? copy.passport
+                  : copy.idCard}
               </div>
             </div>
           </div>
 
           <div className="text-[9px] font-extrabold uppercase tracking-[0.16em] text-black/35">
-            Complete
+            {copy.complete}
           </div>
         </div>
       ) : null}
@@ -3475,11 +3703,11 @@ function CheckoutDetailsSide({
         <div className="mt-5 flex items-center justify-between gap-4 border border-emerald-200 bg-emerald-50/60 px-4 py-3">
           <div>
             <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-emerald-700/60">
-              Primary booking contact
+              {copy.primaryContact}
             </p>
 
             <p className="mt-1 text-sm font-extrabold text-emerald-900">
-              Driver{" "}
+              {copy.driver}{" "}
               {
                 approvedDriverDetails[0]
                   .driverIndex
@@ -3494,7 +3722,7 @@ function CheckoutDetailsSide({
       ) : null}
 
       <div className="mt-5 grid gap-x-5 gap-y-4 sm:grid-cols-2 2xl:mt-6 2xl:gap-x-6 2xl:gap-y-5">
-        <Field label="First name *">
+        <Field label={copy.firstName}>
           <TextInput
             ref={
               firstNameRef
@@ -3521,13 +3749,13 @@ function CheckoutDetailsSide({
               )
             }
 
-            placeholder="John"
+            placeholder={copy.firstName.replace(" *", "")}
 
             autoComplete="given-name"
           />
         </Field>
 
-        <Field label="Surname *">
+        <Field label={copy.surname}>
           <TextInput
             ref={
               surnameRef
@@ -3554,13 +3782,13 @@ function CheckoutDetailsSide({
               )
             }
 
-            placeholder="Smith"
+            placeholder={copy.surname.replace(" *", "")}
 
             autoComplete="family-name"
           />
         </Field>
 
-        <Field label="Phone / WhatsApp *">
+        <Field label={copy.phone}>
           <TextInput
             ref={
               phoneRef
@@ -3595,7 +3823,7 @@ function CheckoutDetailsSide({
           />
         </Field>
 
-        <Field label="Email *">
+        <Field label={copy.email}>
           <TextInput
             ref={
               emailRef
@@ -3631,7 +3859,7 @@ function CheckoutDetailsSide({
         </Field>
 
         <Field
-          label="Home address *"
+          label={copy.homeAddress}
           wide
         >
           <textarea
@@ -3653,7 +3881,7 @@ function CheckoutDetailsSide({
 
             className="min-h-[74px] w-full resize-none border border-black/18 bg-[#fafaf8] px-3 py-2 text-sm font-semibold text-black outline-none transition placeholder:text-black/35 focus:border-black 2xl:min-h-[82px] 2xl:px-4 2xl:py-3 2xl:text-[15px]"
 
-            placeholder="Street, city, postcode, country"
+            placeholder={copy.addressPlaceholder}
 
             autoComplete="street-address"
           />
@@ -3665,11 +3893,11 @@ function CheckoutDetailsSide({
         <div className="mt-6 space-y-4 border-t border-black/10 pt-6">
           <div>
             <p className="text-[10px] font-extrabold uppercase tracking-[0.2em] text-black/35">
-              Additional approved drivers
+              {copy.additionalDrivers}
             </p>
 
             <p className="mt-1 text-xs font-semibold leading-5 text-black/45">
-              Names were filled from the verified documents. Complete the remaining contact details for every driver.
+              {copy.additionalDriversHelp}
             </p>
           </div>
 
@@ -3686,11 +3914,11 @@ function CheckoutDetailsSide({
                   <div className="flex items-center justify-between gap-4">
                     <div>
                       <p className="text-[9px] font-extrabold uppercase tracking-[0.18em] text-black/35">
-                        Approved driver
+                        {copy.approvedDriver}
                       </p>
 
                       <h3 className="mt-1 text-lg font-extrabold text-black">
-                        Driver{" "}
+                        {copy.driver}{" "}
                         {
                           driver.driverIndex
                         }
@@ -3721,7 +3949,7 @@ function CheckoutDetailsSide({
                         }}
                         className="min-h-[34px] border border-black/10 bg-white px-3 text-[9px] font-extrabold uppercase tracking-[0.1em] text-black/55 transition active:scale-[0.97]"
                       >
-                        Use booking contact
+                        {copy.useBookingContact}
                       </button>
 
                       <span className="flex h-8 w-8 items-center justify-center rounded-full bg-emerald-500 text-sm font-black text-white">
@@ -3731,7 +3959,7 @@ function CheckoutDetailsSide({
                   </div>
 
                   <div className="mt-4 grid gap-x-4 gap-y-4 sm:grid-cols-2">
-                    <Field label="First name *">
+                    <Field label={copy.firstName}>
                       <TextInput
                         value={
                           driver.firstName
@@ -3745,12 +3973,12 @@ function CheckoutDetailsSide({
                             event.target.value
                           )
                         }
-                        placeholder="First name"
+                        placeholder={copy.firstName.replace(" *", "")}
                         autoComplete="off"
                       />
                     </Field>
 
-                    <Field label="Surname *">
+                    <Field label={copy.surname}>
                       <TextInput
                         value={
                           driver.lastName
@@ -3764,12 +3992,12 @@ function CheckoutDetailsSide({
                             event.target.value
                           )
                         }
-                        placeholder="Surname"
+                        placeholder={copy.surname.replace(" *", "")}
                         autoComplete="off"
                       />
                     </Field>
 
-                    <Field label="Phone / WhatsApp *">
+                    <Field label={copy.phone}>
                       <TextInput
                         value={
                           driver.phone
@@ -3789,7 +4017,7 @@ function CheckoutDetailsSide({
                       />
                     </Field>
 
-                    <Field label="Email *">
+                    <Field label={copy.email}>
                       <TextInput
                         value={
                           driver.email
@@ -3810,7 +4038,7 @@ function CheckoutDetailsSide({
                     </Field>
 
                     <Field
-                      label="Home address *"
+                      label={copy.homeAddress}
                       wide
                     >
                       <textarea
@@ -3827,7 +4055,7 @@ function CheckoutDetailsSide({
                           )
                         }
                         className="min-h-[74px] w-full resize-none border border-black/18 bg-white px-3 py-2 text-sm font-semibold text-black outline-none transition placeholder:text-black/35 focus:border-black"
-                        placeholder="Street, city, postcode, country"
+                        placeholder={copy.addressPlaceholder}
                         autoComplete="off"
                       />
                     </Field>
@@ -3840,7 +4068,7 @@ function CheckoutDetailsSide({
 
       <div className="mt-4 2xl:mt-5">
         <Field
-          label="Notes"
+          label={copy.notes}
           wide
         >
           <textarea
@@ -3862,7 +4090,7 @@ function CheckoutDetailsSide({
 
             className="min-h-[60px] w-full resize-none border border-black/18 bg-[#fafaf8] px-3 py-2 text-sm font-semibold text-black outline-none transition placeholder:text-black/35 focus:border-black 2xl:min-h-[68px] 2xl:px-4 2xl:py-3 2xl:text-[15px]"
 
-            placeholder="Pickup request, helmet size, etc."
+            placeholder={copy.notesPlaceholder}
           />
         </Field>
       </div>
@@ -3877,7 +4105,7 @@ function CheckoutDetailsSide({
             setContractReadyOk
           }
 
-          text="I confirm that the driving licence belongs to the person making this booking."
+          text={copy.licenceConfirmation}
         />
 
         <CheckLine
@@ -3889,7 +4117,7 @@ function CheckoutDetailsSide({
             setAgreeTerms
           }
 
-          text="I accept the rental terms."
+          text={copy.acceptTerms}
         />
 
         <CheckLine
@@ -3901,7 +4129,7 @@ function CheckoutDetailsSide({
             setMarketingOptIn
           }
 
-          text="Send me offers by email."
+          text={copy.emailOffers}
 
           optional
         />
@@ -3934,17 +4162,21 @@ function CheckoutDetailsSide({
         ].join(" ")}
       >
         {payLoading
-          ? "Preparing payment..."
-          : `Pay online · €${eurFromCents(
-              payNowCents
-            )}`}
+          ? copy.preparingPayment
+          : formatCheckoutText(
+              copy.payOnline,
+              {
+                amount:
+                  eurFromCents(
+                    payNowCents
+                  ),
+              }
+            )}
       </button>
 
       {!canPay ? (
         <p className="mt-2 text-center text-xs font-medium text-black/35 2xl:text-[13px]">
-          Complete the
-          required fields to
-          continue.
+          {copy.completeRequired}
         </p>
       ) : null}
     </section>
@@ -3960,6 +4192,8 @@ function PaymentSide({
   customerEmail,
   customerPhone,
   onEdit,
+  locale,
+  copy,
 }: {
   planLabel:
     string;
@@ -3984,6 +4218,12 @@ function PaymentSide({
 
   onEdit:
     () => void;
+
+  locale:
+    CheckoutLocale;
+
+  copy:
+    CheckoutCopy;
 }) {
   return (
     <section
@@ -3993,7 +4233,7 @@ function PaymentSide({
       <div className="flex items-start justify-between gap-4">
         <div>
           <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-black/30">
-            Step 3 of 3
+            {copy.step3}
           </div>
 
           <h2
@@ -4004,11 +4244,11 @@ function PaymentSide({
                   .fontFamily,
             }}
           >
-            Payment
+            {copy.payment}
           </h2>
 
           <p className="mt-1 text-sm font-medium text-black/40 2xl:text-[15px]">
-            Secure payment.
+            {copy.securePayment}
           </p>
         </div>
 
@@ -4026,7 +4266,7 @@ function PaymentSide({
               ←
             </span>
 
-            Back
+            {copy.back}
           </button>
 
           <button
@@ -4038,14 +4278,14 @@ function PaymentSide({
 
             className="border border-black/10 bg-white px-3 py-2 text-sm font-bold text-black/55 transition duration-200 hover:-translate-y-0.5 hover:border-black/25 hover:text-black active:translate-y-0 active:scale-[0.97]"
           >
-            Edit
+            {copy.edit}
           </button>
         </div>
       </div>
 
       <div className="mt-6 border-y border-black/10 py-3 2xl:mt-7 2xl:py-4">
         <PlainPaymentLine
-          label="Plan"
+          label={copy.plan}
 
           value={
             planLabel
@@ -4053,7 +4293,7 @@ function PaymentSide({
         />
 
         <PlainPaymentLine
-          label="Rental total"
+          label={copy.rentalTotal}
 
           value={`€${eurFromCents(
             payNowCents
@@ -4064,11 +4304,13 @@ function PaymentSide({
       </div>
 
       <p className="mt-3 text-xs font-medium leading-5 text-black/45 2xl:text-[13px] 2xl:leading-6">
-        A refundable security
-        deposit of €
-        {eur(deposit)} per
-        scooter is handled at
-        pickup by cash or card.
+        {formatCheckoutText(
+          copy.securityDeposit,
+          {
+            amount:
+              eur(deposit),
+          }
+        )}
       </p>
 
       <div
@@ -4092,11 +4334,14 @@ function PaymentSide({
             customerPhone={
               customerPhone
             }
+
+            locale={
+              locale
+            }
           />
         ) : (
           <div className="py-8 text-sm font-medium text-black/45">
-            Preparing secure
-            checkout...
+            {copy.preparingCheckout}
           </div>
         )}
       </div>

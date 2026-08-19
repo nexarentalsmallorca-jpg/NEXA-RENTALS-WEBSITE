@@ -7,29 +7,20 @@ import {
   useStripe,
 } from "@stripe/react-stripe-js";
 import type { StripePaymentElementOptions } from "@stripe/stripe-js";
+import {
+  getCheckoutCopy,
+  type CheckoutCopy,
+  type CheckoutLocale,
+} from "./checkoutI18n";
 
 const MAPS_LINK =
   "https://maps.app.goo.gl/L7bRwgirZLcjQqT37";
-
-const MONTHS = [
-  "January",
-  "February",
-  "March",
-  "April",
-  "May",
-  "June",
-  "July",
-  "August",
-  "September",
-  "October",
-  "November",
-  "December",
-];
 
 type CheckoutFormProps = {
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
+  locale?: CheckoutLocale;
 };
 
 type BookingDetails = {
@@ -97,7 +88,32 @@ function formatCents(value?: number | null) {
   return `€${(value / 100).toFixed(2)}`;
 }
 
-function extractDate(value?: string) {
+function formatExtractedDate(
+  year: number,
+  month: number,
+  day: number,
+  locale: CheckoutLocale
+) {
+  return new Intl.DateTimeFormat(
+    locale,
+    {
+      day: "numeric",
+      month: "long",
+      year: "numeric",
+    }
+  ).format(
+    new Date(
+      year,
+      month - 1,
+      day
+    )
+  );
+}
+
+function extractDate(
+  value: string | undefined,
+  locale: CheckoutLocale
+) {
   if (!value) return "";
 
   const isoMatch = value.match(
@@ -116,7 +132,12 @@ function extractDate(value?: string) {
       day >= 1 &&
       day <= 31
     ) {
-      return `${day} ${MONTHS[month - 1]} ${year}`;
+      return formatExtractedDate(
+        Number(year),
+        month,
+        day,
+        locale
+      );
     }
   }
 
@@ -135,7 +156,12 @@ function extractDate(value?: string) {
       day >= 1 &&
       day <= 31
     ) {
-      return `${day} ${MONTHS[month - 1]} ${year}`;
+      return formatExtractedDate(
+        Number(year),
+        month,
+        day,
+        locale
+      );
     }
   }
 
@@ -175,7 +201,8 @@ function joinDateTime(
 }
 
 function getBookingDetailsFromUrl(
-  fallbackCustomerName: string
+  fallbackCustomerName: string,
+  locale: CheckoutLocale
 ): BookingDetails {
   const searchParams = new URLSearchParams(
     window.location.search
@@ -190,7 +217,8 @@ function getBookingDetailsFromUrl(
       "start_date",
       "fromDate",
       "from",
-    ])
+    ]),
+    locale
   );
 
   const pickupTime = extractTime(
@@ -215,7 +243,8 @@ function getBookingDetailsFromUrl(
       "end_date",
       "toDate",
       "to",
-    ])
+    ]),
+    locale
   );
 
   const dropoffTime = extractTime(
@@ -307,9 +336,11 @@ export default function CheckoutForm({
   customerName = "",
   customerEmail = "",
   customerPhone = "",
+  locale = "en",
 }: CheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
+  const copy = getCheckoutCopy(locale);
 
   const [loading, setLoading] =
     useState(false);
@@ -445,7 +476,8 @@ export default function CheckoutForm({
     async function openSuccessPopup() {
       const details =
         getBookingDetailsFromUrl(
-          customerName
+          customerName,
+          locale
         );
 
       let stripeAmount = "";
@@ -485,7 +517,7 @@ export default function CheckoutForm({
     return () => {
       cancelled = true;
     };
-  }, [customerName, stripe]);
+  }, [customerName, locale, stripe]);
 
   useEffect(() => {
     if (!successOpen) return;
@@ -528,7 +560,7 @@ export default function CheckoutForm({
 
     if (!stripe || !elements) {
       setMsg(
-        "Secure payment is still loading. Please wait a moment."
+        copy.securePaymentLoading
       );
 
       return;
@@ -536,7 +568,7 @@ export default function CheckoutForm({
 
     if (!paymentElementReady) {
       setMsg(
-        "Payment form is still loading. Please wait a moment."
+        copy.paymentFormLoading
       );
 
       return;
@@ -550,7 +582,7 @@ export default function CheckoutForm({
     if (submitError) {
       setMsg(
         submitError.message ||
-          "Please check your payment details."
+          copy.checkPaymentDetails
       );
 
       setLoading(false);
@@ -588,7 +620,7 @@ export default function CheckoutForm({
     if (error) {
       setMsg(
         error.message ||
-          "Payment failed. Please try again."
+          copy.paymentFailed
       );
 
       setLoading(false);
@@ -597,7 +629,8 @@ export default function CheckoutForm({
 
     const details =
       getBookingDetailsFromUrl(
-        customerName
+        customerName,
+        locale
       );
 
     setBookingDetails({
@@ -630,17 +663,15 @@ export default function CheckoutForm({
       >
         <div className="mb-5 border-b border-black/10 pb-4">
           <div className="text-[10px] font-black uppercase tracking-[0.22em] text-black/42">
-            Secure payment
+            {copy.securePayment}
           </div>
 
           <h2 className="mt-2 text-[28px] font-black leading-none tracking-[-0.045em] text-black">
-            Payment details
+            {copy.paymentDetails}
           </h2>
 
           <p className="mt-2 max-w-xl text-[13px] font-medium leading-6 text-black/58">
-            Enter your secure payment
-            details below to complete your
-            booking.
+            {copy.paymentDetailsHelp}
           </p>
         </div>
 
@@ -648,24 +679,22 @@ export default function CheckoutForm({
           <div className="mb-3 flex items-center justify-between gap-4 border-b border-black/10 pb-3">
             <div>
               <div className="text-[10px] font-black uppercase tracking-[0.18em] text-black/42">
-                Card / payment method
+                {copy.paymentMethod}
               </div>
 
               <div className="mt-1 text-[13px] font-black text-black">
-                Enter your secure payment
-                details below
+                {copy.enterPaymentDetails}
               </div>
             </div>
 
             <div className="hidden rounded-full border border-black/10 bg-white px-3 py-1.5 text-[10px] font-black uppercase tracking-[0.14em] text-black/50 sm:block">
-              Stripe secure
+              {copy.stripeSecure}
             </div>
           </div>
 
           {!paymentElementReady ? (
             <div className="nexa-payment-loading mb-3 rounded-none border border-black/10 bg-white px-4 py-3 text-[12px] font-bold text-black/50">
-              Loading secure payment
-              form...
+              {copy.loadingPaymentForm}
             </div>
           ) : null}
 
@@ -698,7 +727,7 @@ export default function CheckoutForm({
               />
             ) : (
               <div className="py-6 text-[13px] font-bold text-black/45">
-                Preparing secure payment...
+                {copy.preparingCheckout}
               </div>
             )}
           </div>
@@ -730,24 +759,25 @@ export default function CheckoutForm({
               ].join(" ")}
             >
               {loading
-                ? "Processing payment..."
+                ? copy.processingPayment
                 : paymentElementReady
-                  ? "Pay now"
-                  : "Loading payment..."}
+                  ? copy.payNowButton
+                  : copy.loadingPayment}
             </button>
           </div>
         </div>
 
         <div className="mt-4 grid gap-2 sm:grid-cols-3">
-          <TrustPill text="Encrypted payment" />
-          <TrustPill text="Fast confirmation" />
-          <TrustPill text="No hidden fees" />
+          <TrustPill text={copy.encryptedPayment} />
+          <TrustPill text={copy.fastConfirmation} />
+          <TrustPill text={copy.noHiddenFees} />
         </div>
       </form>
 
       {successOpen ? (
         <BookingConfirmedModal
           bookingDetails={bookingDetails}
+          copy={copy}
         />
       ) : null}
 
@@ -928,8 +958,10 @@ export default function CheckoutForm({
 
 function BookingConfirmedModal({
   bookingDetails,
+  copy,
 }: {
   bookingDetails: BookingDetails | null;
+  copy: CheckoutCopy;
 }) {
   const hasBookingDetails = Boolean(
     bookingDetails?.vehicleName ||
@@ -946,8 +978,8 @@ function BookingConfirmedModal({
         <div className="relative w-full max-w-[740px] rounded-[12px] border border-black/10 bg-white px-5 py-5 shadow-[0_28px_110px_rgba(0,0,0,0.24)] sm:px-7 sm:py-6">
           <button
             type="button"
-            onClick={goHome}
-            aria-label="Close confirmation and return home"
+            onClick={() => goHome()}
+            aria-label={copy.closeConfirmation}
             className="absolute right-4 top-4 flex h-8 w-8 items-center justify-center rounded-full border border-black/10 bg-white text-lg font-black leading-none text-black/50 transition hover:bg-black hover:text-white"
           >
             ×
@@ -959,16 +991,15 @@ function BookingConfirmedModal({
             </div>
 
             <p className="mt-1 text-[9px] font-black uppercase tracking-[0.28em] text-black/40">
-              Payment received
+              {copy.paymentReceived}
             </p>
 
             <h2 className="mt-2 font-sans text-3xl font-black leading-none tracking-[-0.055em] text-black sm:text-4xl">
-              Booking confirmed
+              {copy.bookingConfirmed}
             </h2>
 
             <p className="mx-auto mt-2 max-w-lg text-[12px] font-semibold leading-5 text-black/55 sm:text-[13px]">
-              Your payment was received and
-              your booking is now confirmed.
+              {copy.bookingConfirmedHelp}
             </p>
           </div>
 
@@ -977,53 +1008,53 @@ function BookingConfirmedModal({
           <div className="grid gap-6 lg:grid-cols-[1.08fr_0.92fr]">
             <div>
               <p className="text-[9px] font-black uppercase tracking-[0.24em] text-black/38">
-                Booking details
+                {copy.bookingDetails}
               </p>
 
               <h3 className="mt-1 font-sans text-lg font-black tracking-[-0.035em] text-black">
-                Your ride is reserved
+                {copy.rideReserved}
               </h3>
 
               <div className="mt-3">
                 {hasBookingDetails ? (
                   <>
                     <ModalDetailRow
-                      label="Vehicle"
+                      label={copy.vehicle}
                       value={
                         bookingDetails?.vehicleName
                       }
                     />
 
                     <ModalDetailRow
-                      label="Customer"
+                      label={copy.customer}
                       value={
                         bookingDetails?.customerName
                       }
                     />
 
                     <ModalDetailRow
-                      label="Pickup"
+                      label={copy.pickup}
                       value={
                         bookingDetails?.pickup
                       }
                     />
 
                     <ModalDetailRow
-                      label="Return"
+                      label={copy.return}
                       value={
                         bookingDetails?.dropoff
                       }
                     />
 
                     <ModalDetailRow
-                      label="Plan"
+                      label={copy.plan}
                       value={
                         bookingDetails?.plan
                       }
                     />
 
                     <ModalDetailRow
-                      label="Paid"
+                      label={copy.paid}
                       value={
                         bookingDetails?.amountPaid
                       }
@@ -1031,17 +1062,14 @@ function BookingConfirmedModal({
                   </>
                 ) : (
                   <p className="rounded-[10px] border border-black/10 bg-[#fafafa] px-4 py-3 text-[12px] font-semibold leading-5 text-black/60">
-                    Your booking is confirmed.
-                    The full booking details are
-                    saved with your confirmation
-                    email.
+                    {copy.confirmationEmail}
                   </p>
                 )}
               </div>
 
               <div className="mt-4">
                 <p className="text-[9px] font-black uppercase tracking-[0.24em] text-black/38">
-                  Pickup location
+                  {copy.pickupLocation}
                 </p>
 
                 <div className="mt-2 flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -1051,15 +1079,15 @@ function BookingConfirmedModal({
                     rel="noopener noreferrer"
                     className="inline-flex items-center justify-center rounded-[9px] bg-black px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white transition hover:bg-[#222]"
                   >
-                    Our Location
+                    {copy.ourLocation}
                   </a>
 
                   <button
                     type="button"
-                    onClick={goHome}
+                    onClick={() => goHome()}
                     className="inline-flex items-center justify-center rounded-[9px] border border-black/10 bg-white px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-black transition hover:bg-[#f4f4f1]"
                   >
-                    Close
+                    {copy.close}
                   </button>
                 </div>
               </div>
@@ -1067,38 +1095,35 @@ function BookingConfirmedModal({
 
             <div>
               <p className="text-[9px] font-black uppercase tracking-[0.24em] text-black/38">
-                Bring these at pickup
+                {copy.bringAtPickup}
               </p>
 
               <h3 className="mt-1 font-sans text-lg font-black tracking-[-0.035em] text-black">
-                Pickup notes
+                {copy.pickupNotes}
               </h3>
 
               <div className="mt-3 space-y-3.5">
                 <PickupNote
                   number="1"
-                  title="Passport / ID"
-                  text="Bring your original passport or national ID."
+                  title={copy.passportId}
+                  text={copy.originalPassportId}
                 />
 
                 <PickupNote
                   number="2"
-                  title="Valid driving licence"
-                  text="A, A1, A2 or B licence held for 3+ years."
+                  title={copy.validLicence}
+                  text={copy.validLicenceHelp}
                 />
 
                 <PickupNote
                   number="3"
-                  title="€150 refundable deposit per scooter"
-                  text="Handled at pickup by cash or card."
+                  title={copy.depositTitle}
+                  text={copy.depositHandled}
                 />
               </div>
 
               <p className="mt-4 rounded-[10px] border border-black/10 bg-[#fafafa] px-4 py-3 text-[11px] font-semibold leading-5 text-black/58">
-                Please arrive at your pickup
-                time so we can prepare your
-                scooter and make the handover
-                fast.
+                {copy.arriveOnTime}
               </p>
             </div>
           </div>

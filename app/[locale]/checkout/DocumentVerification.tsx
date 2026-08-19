@@ -7,9 +7,14 @@ import {
   useRef,
   useState,
 } from "react";
-import { useLocale } from "next-intl";
 import { useSearchParams } from "next/navigation";
 import { QRCodeSVG } from "qrcode.react";
+import {
+  CHECKOUT_LANGUAGES,
+  formatCheckoutText,
+  getCheckoutCopy,
+  type CheckoutLocale,
+} from "./checkoutI18n";
 
 export type IdentityDocumentType =
   | "id"
@@ -118,6 +123,8 @@ export type DocumentVerificationPayload = {
 
 type Props = {
   autoStart?: boolean;
+
+  locale?: CheckoutLocale;
 
   from?: Date | null;
   to?: Date | null;
@@ -339,6 +346,7 @@ function emptyProfile(
 function makeScannerUrl(
   verifyPath: string,
   includeReturnUrl: boolean,
+  locale: CheckoutLocale,
   flow:
     | "desktop"
     | "mobile" = "desktop"
@@ -356,6 +364,30 @@ function makeScannerUrl(
       verifyPath,
       window.location.origin
     );
+
+  const pathParts =
+    url.pathname
+      .split("/")
+      .filter(Boolean);
+
+  const hasLocalePrefix =
+    pathParts.length > 0 &&
+    CHECKOUT_LANGUAGES.some(
+      (language) =>
+        language.code ===
+        pathParts[0]
+    );
+
+  if (hasLocalePrefix) {
+    pathParts[0] = locale;
+  } else {
+    pathParts.unshift(
+      locale
+    );
+  }
+
+  url.pathname =
+    `/${pathParts.join("/")}`;
 
   url.searchParams.set(
     "verification_flow",
@@ -644,7 +676,8 @@ function resultFromSession(
 }
 
 function resultName(
-  result: VerifiedDriver
+  result: VerifiedDriver,
+  driverLabel: string
 ) {
   return (
     [
@@ -660,7 +693,7 @@ function resultName(
         " "
       )
       .trim() ||
-    "Driver " +
+    driverLabel + " " +
       result.profile
         .driverIndex
   );
@@ -668,6 +701,8 @@ function resultName(
 
 export default function DocumentVerification({
   autoStart = true,
+
+  locale = "en",
 
   from,
   to,
@@ -686,8 +721,14 @@ export default function DocumentVerification({
   onComplete,
   onCancel,
 }: Props) {
-  const locale =
-    useLocale();
+  const copy =
+    useMemo(
+      () =>
+        getCheckoutCopy(
+          locale
+        ),
+      [locale]
+    );
 
   const searchParams =
     useSearchParams();
@@ -1040,13 +1081,15 @@ export default function DocumentVerification({
         ) {
           throw new Error(
             data.error ||
-            "Could not read verification session."
+            copy.sessionReadError
           );
         }
 
         return data;
       },
-      []
+      [
+        copy.sessionReadError,
+      ]
     );
 
   const mergeSessionData =
@@ -1112,6 +1155,7 @@ export default function DocumentVerification({
               ? makeScannerUrl(
                   verifyPath,
                   false,
+                  locale,
                   "desktop"
                 )
               : previous
@@ -1167,6 +1211,7 @@ export default function DocumentVerification({
       },
       [
         bookingId,
+        locale,
       ]
     );
 
@@ -1181,7 +1226,7 @@ export default function DocumentVerification({
           !rentalEndDate
         ) {
           throw new Error(
-            "Please select valid pickup and return dates before verifying documents."
+            copy.invalidDates
           );
         }
 
@@ -1237,7 +1282,7 @@ export default function DocumentVerification({
         ) {
           throw new Error(
             data.error ||
-            "Could not create the secure scanner session."
+            copy.scannerPrepareError
           );
         }
 
@@ -1267,6 +1312,7 @@ export default function DocumentVerification({
             makeScannerUrl(
               data.verifyPath,
               false,
+              locale,
               "desktop"
             ),
         };
@@ -1282,6 +1328,8 @@ export default function DocumentVerification({
         pickupTime,
         dropoffTime,
         requestedQuantity,
+        copy.invalidDates,
+        copy.scannerPrepareError,
       ]
     );
 
@@ -1383,7 +1431,7 @@ export default function DocumentVerification({
         ) {
           setError(
             caught?.message ||
-            "Could not prepare all secure scanner sessions."
+            copy.scannerPrepareError
           );
         } finally {
           creatingRef.current =
@@ -1493,7 +1541,7 @@ export default function DocumentVerification({
           ) => {
             setError(
               caught?.message ||
-              "Could not read the returned verification result."
+              copy.returnedResultError
             );
           }
         )
@@ -1705,7 +1753,7 @@ export default function DocumentVerification({
           !approved.length
         ) {
           setError(
-            "None of the drivers passed verification. The booking cannot continue."
+            copy.noneApproved
           );
 
           return;
@@ -1835,6 +1883,7 @@ export default function DocumentVerification({
         onComplete,
         requestedQuantity,
         storageKey,
+        copy.noneApproved,
       ]
     );
 
@@ -1965,7 +2014,7 @@ export default function DocumentVerification({
         ) {
           setError(
             caught?.message ||
-            "Could not create a new scanner link."
+            copy.scannerPrepareError
           );
         } finally {
           setPreparing(
@@ -1975,6 +2024,7 @@ export default function DocumentVerification({
       },
       [
         createOneSession,
+        copy.scannerPrepareError,
       ]
     );
 
@@ -2015,7 +2065,7 @@ export default function DocumentVerification({
               ?.verifyPath
           ) {
             throw new Error(
-              "Scanner link is missing."
+              copy.scannerOpenError
             );
           }
 
@@ -2024,6 +2074,7 @@ export default function DocumentVerification({
               selected
                 .verifyPath,
               true,
+              locale,
               "mobile"
             );
 
@@ -2031,7 +2082,7 @@ export default function DocumentVerification({
             !mobileUrl
           ) {
             throw new Error(
-              "Could not open the secure scanner."
+              copy.scannerOpenError
             );
           }
 
@@ -2043,12 +2094,14 @@ export default function DocumentVerification({
         ) {
           setError(
             caught?.message ||
-            "Could not open the scanner."
+            copy.scannerOpenError
           );
         }
       },
       [
         createMissingSessions,
+        locale,
+        copy.scannerOpenError,
       ]
     );
 
@@ -2155,27 +2208,27 @@ export default function DocumentVerification({
       <div className="flex items-start justify-between gap-5">
         <div>
           <p className="text-[10px] font-black uppercase tracking-[0.22em] text-black/40">
-            Secure document verification
+            {copy.secureVerification}
           </p>
 
           <h2 className="mt-2 text-[28px] font-black tracking-[-0.045em] text-black">
             {requestedQuantity ===
             1
-              ? "Scan your documents"
-              : "Validate every driver"}
+              ? copy.scanDocuments
+              : copy.validateDrivers}
           </h2>
 
           <p className="mt-3 max-w-2xl text-[13px] font-medium leading-6 text-black/58">
             {requestedQuantity ===
             1
-              ? "Scan the driving licence and ID or passport. Your name will be filled into checkout automatically."
-              : "Every selected driver completes a separate secure scan. One failed driver will not stop the remaining drivers from continuing."}
+              ? copy.scanHelp
+              : copy.multiScanHelp}
           </p>
         </div>
 
         <div className="shrink-0 border border-black/10 bg-[#fafaf8] px-3 py-2 text-center">
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-black/35">
-            Progress
+            {copy.progress}
           </p>
 
           <p className="mt-1 text-sm font-black text-black">
@@ -2192,16 +2245,13 @@ export default function DocumentVerification({
           <div className="h-9 w-9 animate-spin rounded-full border-2 border-black/15 border-t-black" />
 
           <p className="mt-5 text-sm font-black text-black">
-            Preparing secure scanner
-            {requestedQuantity ===
-            1
-              ? ""
-              : " links"}
-            ...
+            {requestedQuantity === 1
+              ? copy.preparingScanner
+              : copy.preparingScanners}
           </p>
 
           <p className="mt-2 text-xs font-semibold text-black/45">
-            Please keep this page open.
+            {copy.keepOpen}
           </p>
         </div>
       ) : null}
@@ -2288,7 +2338,7 @@ export default function DocumentVerification({
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <p className="text-[9px] font-black uppercase tracking-[0.16em] text-black/35">
-                      Scooter{" "}
+                      {copy.scooter}{" "}
                       {
                         driverIndex
                       }
@@ -2296,10 +2346,11 @@ export default function DocumentVerification({
 
                     <h3 className="mt-1 text-lg font-black text-black">
                       {result
-                        ? resultName(
-                            result
+                          ? resultName(
+                            result,
+                            copy.driver
                           )
-                        : "Driver " +
+                        : copy.driver + " " +
                           driverIndex}
                     </h3>
                   </div>
@@ -2322,10 +2373,10 @@ export default function DocumentVerification({
                     )}
                     aria-label={
                       approved
-                        ? "Approved"
+                        ? copy.approved
                         : rejected
-                          ? "Rejected"
-                          : "Waiting"
+                          ? copy.rejected
+                          : copy.waiting
                     }
                   >
                     {approved
@@ -2343,27 +2394,27 @@ export default function DocumentVerification({
                 {approved ? (
                   <div className="mt-5 border border-emerald-200 bg-white/80 px-4 py-3">
                     <p className="text-sm font-black text-emerald-700">
-                      Driver approved
+                      {copy.driverApproved}
                     </p>
 
                     <p className="mt-1 text-xs font-semibold leading-5 text-black/50">
                       {result
                         ?.status ===
                         "manual_review"
-                        ? "Documents accepted. A manual confirmation may be completed before pickup."
-                        : "Documents successfully scanned and validated."}
+                        ? copy.manualHelp
+                        : copy.approvedHelp}
                     </p>
                   </div>
                 ) : rejected ? (
                   <div className="mt-5 border border-red-200 bg-white/80 px-4 py-3">
                     <p className="text-sm font-black text-red-700">
-                      Driver not approved
+                      {copy.driverRejected}
                     </p>
 
                     <p className="mt-1 text-xs font-semibold leading-5 text-black/50">
                       {result
                         ?.message ||
-                        "The submitted licence is not valid for the selected scooter."}
+                        copy.rejectedHelp}
                     </p>
                   </div>
                 ) : (
@@ -2371,11 +2422,15 @@ export default function DocumentVerification({
                     <div className="mt-5 hidden items-center gap-5 md:flex">
                       <div className="flex h-[168px] w-[168px] shrink-0 items-center justify-center border border-black/10 bg-white p-3">
                         {driverSession
-                          ?.qrUrl ? (
+                          ?.verifyPath ? (
                           <QRCodeSVG
                             value={
-                              driverSession
-                                .qrUrl
+                              makeScannerUrl(
+                                driverSession.verifyPath,
+                                false,
+                                locale,
+                                "desktop"
+                              )
                             }
                             size={
                               140
@@ -2395,14 +2450,14 @@ export default function DocumentVerification({
                           {driverSession
                             ?.status ===
                             "scanning"
-                            ? "Scanning in progress"
+                            ? copy.scanning
                             : expired
-                              ? "Scanner link expired"
-                              : "Scan this QR code"}
+                              ? copy.scannerExpired
+                              : copy.scanQr}
                         </p>
 
                         <p className="mt-2 text-xs font-semibold leading-5 text-black/48">
-                          Open the camera on the driver&apos;s phone and scan this private QR code.
+                          {copy.scanQrHelp}
                         </p>
 
                         {expired ? (
@@ -2415,7 +2470,7 @@ export default function DocumentVerification({
                             }
                             className="mt-4 border border-black/15 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-black"
                           >
-                            Create new QR
+                            {copy.createQr}
                           </button>
                         ) : null}
                       </div>
@@ -2450,20 +2505,32 @@ export default function DocumentVerification({
                         {driverSession
                           ?.status ===
                           "scanning"
-                          ? "Continue Driver " +
-                            driverIndex +
-                            " scan"
-                          : "Validate Driver " +
-                            driverIndex}
+                          ? formatCheckoutText(
+                              copy.continueDriverScan,
+                              {
+                                driver:
+                                  driverIndex,
+                              }
+                            )
+                          : formatCheckoutText(
+                              copy.validateDriver,
+                              {
+                                driver:
+                                  driverIndex,
+                              }
+                            )}
                       </button>
 
                       {mobileDisabled ? (
                         <p className="mt-2 text-center text-[10px] font-bold text-black/40">
-                          Complete Driver{" "}
-                          {
-                            nextMobileDriverIndex
-                          }{" "}
-                          first
+                          {formatCheckoutText(
+                            copy.completeDriverFirst,
+                            {
+                              driver:
+                                nextMobileDriverIndex ||
+                                driverIndex,
+                            }
+                          )}
                         </p>
                       ) : null}
 
@@ -2477,7 +2544,7 @@ export default function DocumentVerification({
                           }
                           className="mt-3 min-h-[48px] w-full border border-black/15 bg-white px-4 text-[10px] font-black uppercase tracking-[0.12em] text-black"
                         >
-                          Create new scanner
+                          {copy.createScanner}
                         </button>
                       ) : null}
                     </div>
@@ -2525,11 +2592,11 @@ export default function DocumentVerification({
                           className="mt-0.5"
                         />
 
-                        Continue as a passenger on an approved scooter
+                        {copy.passengerOption}
                       </label>
                     ) : (
                       <span className="text-xs font-semibold text-red-700">
-                        At least one approved driver is required.
+                        {copy.approvedRequired}
                       </span>
                     )}
 
@@ -2542,7 +2609,7 @@ export default function DocumentVerification({
                       }
                       className="shrink-0 border border-black/15 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-black"
                     >
-                      Scan again
+                      {copy.scanAgain}
                     </button>
                   </div>
                 ) : null}
@@ -2567,7 +2634,7 @@ export default function DocumentVerification({
               }
               className="mt-3 border border-red-300 bg-white px-4 py-2 text-[10px] font-black uppercase tracking-[0.12em] text-red-700"
             >
-              Try preparing again
+              {copy.tryAgain}
             </button>
           ) : null}
         </div>
@@ -2578,25 +2645,29 @@ export default function DocumentVerification({
         0 ? (
         <div className="mt-6 border border-black/10 bg-white p-5">
           <p className="text-[10px] font-black uppercase tracking-[0.18em] text-orange-600">
-            Verification complete
+            {copy.verificationComplete}
           </p>
 
           <h3 className="mt-2 text-2xl font-black tracking-[-0.035em] text-black">
-            {approvedResults.length}{" "}
-            of{" "}
-            {requestedQuantity}{" "}
-            drivers approved
+            {formatCheckoutText(
+              copy.driversApproved,
+              {
+                approved:
+                  approvedResults.length,
+                requested:
+                  requestedQuantity,
+              }
+            )}
           </h3>
 
           <p className="mt-3 text-sm font-semibold leading-6 text-black/55">
-            The complete booking does not need to be cancelled. Continue with{" "}
-            {approvedResults.length}{" "}
-            scooter
-            {approvedResults.length ===
-            1
-              ? ""
-              : "s"}
-            , rescan a rejected driver, or cancel the booking.
+            {formatCheckoutText(
+              copy.partialHelp,
+              {
+                approved:
+                  approvedResults.length,
+              }
+            )}
           </p>
 
           {approvedResults.length >
@@ -2611,13 +2682,13 @@ export default function DocumentVerification({
               }
               className="nexa-verification-action nexa-verification-heartbeat mt-5 min-h-[62px] w-full rounded-[14px] bg-gradient-to-r from-emerald-500 via-green-500 to-teal-500 px-5 text-[12px] font-black uppercase tracking-[0.12em] text-white shadow-[0_16px_38px_rgba(16,185,129,0.25)]"
             >
-              Continue with{" "}
-              {approvedResults.length}{" "}
-              scooter
-              {approvedResults.length ===
-              1
-                ? ""
-                : "s"}
+              {formatCheckoutText(
+                copy.continueWith,
+                {
+                  approved:
+                    approvedResults.length,
+                }
+              )}
             </button>
           ) : null}
 
@@ -2629,7 +2700,7 @@ export default function DocumentVerification({
               }
               className="mt-3 min-h-[52px] w-full rounded-[12px] border border-red-300 bg-gradient-to-r from-red-50 to-rose-100 px-5 text-[11px] font-black uppercase tracking-[0.12em] text-red-700 transition active:scale-[0.97]"
             >
-              Cancel complete booking
+              {copy.cancelBooking}
             </button>
           ) : null}
         </div>
@@ -2645,11 +2716,11 @@ export default function DocumentVerification({
 
           <div>
             <p className="text-sm font-black text-emerald-800">
-              All drivers approved
+              {copy.allApproved}
             </p>
 
             <p className="mt-0.5 text-xs font-semibold text-emerald-700/70">
-              Opening the checkout form...
+              {copy.openingDetails}
             </p>
           </div>
         </div>
@@ -2664,32 +2735,32 @@ export default function DocumentVerification({
           }
           className="mt-5 w-full py-2 text-[11px] font-black text-black/45"
         >
-          Cancel and go back
+          {copy.cancelAndBack}
         </button>
       ) : null}
 
       <div className="mt-6 grid gap-3 border-t border-black/10 pt-5 sm:grid-cols-3">
         <VerificationStep
           number="01"
-          title="Open scanner"
+          title={copy.openScanner}
           description={
             requestedQuantity ===
             1
-              ? "Scan the secure QR or open the scanner on this phone."
-              : "Each driver uses their own QR or mobile validation button."
+              ? copy.scanQrHelp
+              : copy.openScannerHelp
           }
         />
 
         <VerificationStep
           number="02"
-          title="Scan documents"
-          description="Capture the driving licence and ID card or passport."
+          title={copy.scanDocumentsStep}
+          description={copy.scanDocumentsStepHelp}
         />
 
         <VerificationStep
           number="03"
-          title="Continue checkout"
-          description="Approved drivers are counted automatically before payment."
+          title={copy.continueCheckout}
+          description={copy.continueCheckoutHelp}
         />
       </div>
     </section>

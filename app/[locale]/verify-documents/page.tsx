@@ -1473,6 +1473,9 @@ type ScannerUiCopy = {
   retakePhoto: string;
   takePhoto: string;
   uploadPhoto: string;
+  continueToDriver: string;
+  scanDriverQr: string;
+  finish: string;
 };
 
 const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
@@ -1484,6 +1487,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Retake",
     takePhoto: "Take photo",
     uploadPhoto: "Upload photo",
+    continueToDriver: "Continue to Driver {driver}",
+    scanDriverQr: "Scan Driver {driver} QR",
+    finish: "Finish",
   },
   es: {
     back: "Atrás",
@@ -1493,6 +1499,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Repetir",
     takePhoto: "Hacer foto",
     uploadPhoto: "Subir foto",
+    continueToDriver: "Continuar con el conductor {driver}",
+    scanDriverQr: "Escanear el QR del conductor {driver}",
+    finish: "Finalizar",
   },
   de: {
     back: "Zurück",
@@ -1502,6 +1511,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Neu aufnehmen",
     takePhoto: "Foto aufnehmen",
     uploadPhoto: "Foto hochladen",
+    continueToDriver: "Weiter zu Fahrer {driver}",
+    scanDriverQr: "QR von Fahrer {driver} scannen",
+    finish: "Fertig",
   },
   fr: {
     back: "Retour",
@@ -1511,6 +1523,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Reprendre",
     takePhoto: "Prendre la photo",
     uploadPhoto: "Importer une photo",
+    continueToDriver: "Continuer avec le conducteur {driver}",
+    scanDriverQr: "Scanner le QR du conducteur {driver}",
+    finish: "Terminer",
   },
   it: {
     back: "Indietro",
@@ -1520,6 +1535,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Rifai",
     takePhoto: "Scatta foto",
     uploadPhoto: "Carica foto",
+    continueToDriver: "Continua con il conducente {driver}",
+    scanDriverQr: "Scansiona il QR del conducente {driver}",
+    finish: "Termina",
   },
   pt: {
     back: "Voltar",
@@ -1529,6 +1547,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Repetir",
     takePhoto: "Tirar foto",
     uploadPhoto: "Carregar foto",
+    continueToDriver: "Continuar para o condutor {driver}",
+    scanDriverQr: "Digitalizar QR do condutor {driver}",
+    finish: "Concluir",
   },
   sv: {
     back: "Tillbaka",
@@ -1538,6 +1559,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Ta om",
     takePhoto: "Ta foto",
     uploadPhoto: "Ladda upp foto",
+    continueToDriver: "Fortsätt till förare {driver}",
+    scanDriverQr: "Skanna QR för förare {driver}",
+    finish: "Slutför",
   },
   da: {
     back: "Tilbage",
@@ -1547,6 +1571,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Tag igen",
     takePhoto: "Tag foto",
     uploadPhoto: "Upload foto",
+    continueToDriver: "Fortsæt til fører {driver}",
+    scanDriverQr: "Scan QR for fører {driver}",
+    finish: "Afslut",
   },
   no: {
     back: "Tilbake",
@@ -1556,6 +1583,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Ta på nytt",
     takePhoto: "Ta bilde",
     uploadPhoto: "Last opp bilde",
+    continueToDriver: "Fortsett til fører {driver}",
+    scanDriverQr: "Skann QR for fører {driver}",
+    finish: "Fullfør",
   },
   nl: {
     back: "Terug",
@@ -1565,6 +1595,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Opnieuw",
     takePhoto: "Foto maken",
     uploadPhoto: "Foto uploaden",
+    continueToDriver: "Doorgaan naar bestuurder {driver}",
+    scanDriverQr: "Scan QR van bestuurder {driver}",
+    finish: "Voltooien",
   },
   pl: {
     back: "Wstecz",
@@ -1574,6 +1607,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Powtórz",
     takePhoto: "Zrób zdjęcie",
     uploadPhoto: "Prześlij zdjęcie",
+    continueToDriver: "Przejdź do kierowcy {driver}",
+    scanDriverQr: "Zeskanuj QR kierowcy {driver}",
+    finish: "Zakończ",
   },
   cs: {
     back: "Zpět",
@@ -1583,6 +1619,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Vyfotit znovu",
     takePhoto: "Vyfotit",
     uploadPhoto: "Nahrát fotografii",
+    continueToDriver: "Pokračovat k řidiči {driver}",
+    scanDriverQr: "Naskenovat QR řidiče {driver}",
+    finish: "Dokončit",
   },
   uk: {
     back: "Назад",
@@ -1592,6 +1631,9 @@ const UI_COPY: Record<ScannerLocale, ScannerUiCopy> = {
     retakePhoto: "Перезняти",
     takePhoto: "Зробити фото",
     uploadPhoto: "Завантажити фото",
+    continueToDriver: "Перейти до водія {driver}",
+    scanDriverQr: "Сканувати QR водія {driver}",
+    finish: "Завершити",
   },
 };
 
@@ -3389,9 +3431,15 @@ export default function VerifyDocumentsPage() {
 
   const nextDriverButtonLabel = hasNextDriver
     ? verificationFlow === "mobile"
-      ? `Continue to Driver ${nextDriverIndex}`
-      : `Scan Driver ${nextDriverIndex} QR`
-    : "Finish";
+      ? ui.continueToDriver.replace(
+          "{driver}",
+          String(nextDriverIndex),
+        )
+      : ui.scanDriverQr.replace(
+          "{driver}",
+          String(nextDriverIndex),
+        )
+    : ui.finish;
   const stepCopy = copy.steps[step];
 
   const frameClass =

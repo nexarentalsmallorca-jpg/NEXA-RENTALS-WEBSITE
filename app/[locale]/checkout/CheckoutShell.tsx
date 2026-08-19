@@ -5,19 +5,26 @@ import { Elements } from "@stripe/react-stripe-js";
 import type { StripeElementsOptions } from "@stripe/stripe-js";
 import { stripePromise } from "@/lib/stripeClient";
 import CheckoutForm from "./CheckoutForm";
+import {
+  getCheckoutCopy,
+  type CheckoutLocale,
+} from "./checkoutI18n";
 
 export default function CheckoutShell({
   clientSecret,
   customerName = "",
   customerEmail = "",
   customerPhone = "",
+  locale = "en",
 }: {
   clientSecret: string;
   customerName?: string;
   customerEmail?: string;
   customerPhone?: string;
+  locale?: CheckoutLocale;
 }) {
   const [mounted, setMounted] = useState(false);
+  const copy = getCheckoutCopy(locale);
 
   useEffect(() => {
     setMounted(true);
@@ -26,6 +33,9 @@ export default function CheckoutShell({
   const options = useMemo<StripeElementsOptions>(() => {
     return {
       clientSecret,
+      locale: (locale === "uk" ? "auto" : locale) as NonNullable<
+        StripeElementsOptions["locale"]
+      >,
       appearance: {
         theme: "flat",
         variables: {
@@ -117,23 +127,13 @@ export default function CheckoutShell({
         },
       },
     };
-  }, [clientSecret]);
+  }, [clientSecret, locale]);
 
-  if (!mounted) {
+  if (!mounted || !clientSecret) {
     return (
       <div className="nexa-stripe-shell">
         <div className="rounded-none border border-black/10 bg-white px-4 py-4 text-[13px] font-bold text-black/45">
-          Preparing secure checkout...
-        </div>
-      </div>
-    );
-  }
-
-  if (!clientSecret) {
-    return (
-      <div className="nexa-stripe-shell">
-        <div className="rounded-none border border-black/10 bg-white px-4 py-4 text-[13px] font-bold text-black/45">
-          Preparing secure checkout...
+          {copy.preparingCheckout}
         </div>
       </div>
     );
@@ -141,11 +141,12 @@ export default function CheckoutShell({
 
   return (
     <div className="nexa-stripe-shell">
-      <Elements key={clientSecret} stripe={stripePromise} options={options}>
+      <Elements stripe={stripePromise} options={options}>
         <CheckoutForm
           customerName={customerName}
           customerEmail={customerEmail}
           customerPhone={customerPhone}
+          locale={locale}
         />
       </Elements>
 

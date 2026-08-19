@@ -16,20 +16,22 @@ export type CheckoutLocale =
 export const CHECKOUT_LANGUAGES: Array<{
   code: CheckoutLocale;
   label: string;
+  short: string;
+  flagSrc: string;
 }> = [
-  { code: "en", label: "English" },
-  { code: "es", label: "Español" },
-  { code: "de", label: "Deutsch" },
-  { code: "fr", label: "Français" },
-  { code: "it", label: "Italiano" },
-  { code: "pt", label: "Português" },
-  { code: "sv", label: "Svenska" },
-  { code: "da", label: "Dansk" },
-  { code: "no", label: "Norsk" },
-  { code: "nl", label: "Nederlands" },
-  { code: "pl", label: "Polski" },
-  { code: "cs", label: "Čeština" },
-  { code: "uk", label: "Українська" },
+  { code: "en", label: "English", short: "EN", flagSrc: "/images/en.png" },
+  { code: "es", label: "Español", short: "ES", flagSrc: "/images/es.png" },
+  { code: "de", label: "Deutsch", short: "DE", flagSrc: "/images/de.png" },
+  { code: "fr", label: "Français", short: "FR", flagSrc: "/images/fr.png" },
+  { code: "it", label: "Italiano", short: "IT", flagSrc: "/images/it.png" },
+  { code: "nl", label: "Nederlands", short: "NL", flagSrc: "/images/NL.png" },
+  { code: "pl", label: "Polski", short: "PL", flagSrc: "/images/PL.png" },
+  { code: "sv", label: "Svenska", short: "SV", flagSrc: "/images/sv.png" },
+  { code: "da", label: "Dansk", short: "DA", flagSrc: "/images/DA.png" },
+  { code: "no", label: "Norsk", short: "NO", flagSrc: "/images/NO.png" },
+  { code: "pt", label: "Português", short: "PT", flagSrc: "/images/pt.png" },
+  { code: "cs", label: "Čeština", short: "CS", flagSrc: "/images/CS.png" },
+  { code: "uk", label: "Українська", short: "UK", flagSrc: "/images/UK.png" },
 ];
 
 const EN = {
@@ -136,11 +138,11 @@ const EN = {
   continueCheckoutHelp: "Approved drivers are counted automatically before payment.",
 } as const;
 
-export type CheckoutCopy = {
+type BaseCheckoutCopy = {
   [K in keyof typeof EN]: string;
 };
 
-const COPY: Record<CheckoutLocale, CheckoutCopy> = {
+const COPY: Record<CheckoutLocale, BaseCheckoutCopy> = {
   en: EN,
   es: {
     language: "Idioma", vehicles: "Vehículos", selectedVehicle: "Vehículo seleccionado", scooter: "scooter", scooters: "scooters", includes: "Incluye", twoHelmets: "2 cascos", topCase: "Baúl", phoneMount: "Soporte para móvil", lock: "Candado", insurance: "Seguro", pickup: "Recogida", return: "Devolución", plan: "Plan", pickupLocation: "Lugar de recogida", rentalTotal: "Total del alquiler", halfDay: "Medio día", fullDay: "Día completo", sameDay: "Mismo día", day: "día", days: "días", securityDeposit: "Se gestiona un depósito de seguridad reembolsable de €{amount} por scooter al recogerlo, en efectivo o con tarjeta.", step2: "Paso 2 de 3", yourDetails: "Tus datos", completeRemaining: "Completa los campos obligatorios restantes.", required: "Obligatorio", documentsReceived: "Documentos recibidos", drivingLicence: "Permiso de conducir", passport: "pasaporte", idCard: "documento de identidad", complete: "Completado", primaryContact: "Contacto principal de la reserva", driver: "Conductor", firstName: "Nombre *", surname: "Apellidos *", phone: "Teléfono / WhatsApp *", email: "Correo electrónico *", homeAddress: "Domicilio *", addressPlaceholder: "Calle, ciudad, código postal, país", additionalDrivers: "Conductores aprobados adicionales", additionalDriversHelp: "Los nombres se han rellenado desde los documentos verificados. Completa los datos de contacto restantes de cada conductor.", approvedDriver: "Conductor aprobado", useBookingContact: "Usar contacto de la reserva", notes: "Notas", notesPlaceholder: "Solicitud de recogida, talla de casco, etc.", licenceConfirmation: "Confirmo que el permiso de conducir pertenece a la persona que realiza esta reserva.", acceptTerms: "Acepto las condiciones del alquiler.", emailOffers: "Enviarme ofertas por correo electrónico.", preparingPayment: "Preparando el pago...", payOnline: "Pagar online · €{amount}", completeRequired: "Completa los campos obligatorios para continuar.", step3: "Paso 3 de 3", payment: "Pago", securePayment: "Pago seguro.", back: "Atrás", edit: "Editar", preparingCheckout: "Preparando el pago seguro...", secureVerification: "Verificación segura de documentos", scanDocuments: "Escanea tus documentos", validateDrivers: "Verifica a todos los conductores", scanHelp: "Escanea el permiso de conducir y el documento de identidad o pasaporte. Tu nombre se rellenará automáticamente.", multiScanHelp: "Cada conductor seleccionado realiza una verificación segura independiente. Si uno falla, los demás pueden continuar.", progress: "Progreso", preparingScanner: "Preparando el escáner seguro...", preparingScanners: "Preparando los enlaces seguros...", keepOpen: "Mantén esta página abierta.", approved: "Aprobado", rejected: "Rechazado", waiting: "En espera", driverApproved: "Conductor aprobado", driverRejected: "Conductor no aprobado", manualHelp: "Documentos aceptados. Puede realizarse una confirmación manual antes de la recogida.", approvedHelp: "Documentos escaneados y verificados correctamente.", rejectedHelp: "El permiso presentado no es válido para el scooter seleccionado.", scanning: "Escaneo en curso", scannerExpired: "Enlace caducado", scanQr: "Escanea este código QR", scanQrHelp: "Abre la cámara del teléfono del conductor y escanea este código QR privado.", createQr: "Crear nuevo QR", continueDriverScan: "Continuar escaneo del conductor {driver}", validateDriver: "Verificar conductor {driver}", completeDriverFirst: "Completa primero el conductor {driver}", createScanner: "Crear nuevo escáner", passengerOption: "Continuar como pasajero en un scooter aprobado", approvedRequired: "Se necesita al menos un conductor aprobado.", scanAgain: "Escanear de nuevo", tryAgain: "Preparar de nuevo", verificationComplete: "Verificación completada", driversApproved: "{approved} de {requested} conductores aprobados", partialHelp: "No es necesario cancelar toda la reserva. Continúa con {approved} scooter(s), vuelve a escanear a un conductor rechazado o cancela la reserva.", continueWith: "Continuar con {approved} scooter(s)", cancelBooking: "Cancelar toda la reserva", allApproved: "Todos los conductores aprobados", openingDetails: "Abriendo los datos de la reserva...", cancelAndBack: "Cancelar y volver", openScanner: "Abrir escáner", openScannerHelp: "Cada conductor usa su propio QR o botón de verificación móvil.", scanDocumentsStep: "Escanear documentos", scanDocumentsStepHelp: "Captura el permiso de conducir y el documento de identidad o pasaporte.", continueCheckout: "Continuar reserva", continueCheckoutHelp: "Los conductores aprobados se cuentan automáticamente antes del pago."
@@ -180,6 +182,320 @@ const COPY: Record<CheckoutLocale, CheckoutCopy> = {
   },
 };
 
+const EXTRA_EN = {
+  selectLanguage: "Select language",
+  active: "Active",
+  eBike: "E-Bike",
+  missingDocuments:
+    "Your document scan completed, but a secure document reference is missing. Please restart document verification.",
+  verificationRestart:
+    "Document verification is incomplete. Please restart document verification.",
+  completeDriverDetails:
+    "Please complete the required details for every approved driver.",
+  driverDetailsSaveError: "Driver {driver} details could not be saved.",
+  availabilityError:
+    "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
+  availabilityCount: "Only {count} scooter(s) are available for the selected date and time.",
+  soldOut: "This scooter category is sold out for the selected date and time.",
+  paymentExpired:
+    "Your payment session expired. Please continue again so we can recheck live availability.",
+  paymentInitFailed: "Payment initialization failed. Please try again.",
+  genericError: "Something went wrong. Please try again.",
+  invalidDates: "Please select valid pickup and return dates before verifying documents.",
+  scannerPrepareError: "Could not prepare the secure scanner. Please try again.",
+  sessionReadError: "Could not read the verification session.",
+  returnedResultError: "Could not read the returned verification result.",
+  noneApproved: "None of the drivers passed verification. The booking cannot continue.",
+  scannerOpenError: "Could not open the secure scanner.",
+  paymentDetails: "Payment details",
+  paymentDetailsHelp: "Enter your secure payment details below to complete your booking.",
+  paymentMethod: "Card / payment method",
+  enterPaymentDetails: "Enter your secure payment details below",
+  stripeSecure: "Stripe secure",
+  loadingPaymentForm: "Loading secure payment form...",
+  processingPayment: "Processing payment...",
+  payNowButton: "Pay now",
+  loadingPayment: "Loading payment...",
+  encryptedPayment: "Encrypted payment",
+  fastConfirmation: "Fast confirmation",
+  noHiddenFees: "No hidden fees",
+  securePaymentLoading: "Secure payment is still loading. Please wait a moment.",
+  paymentFormLoading: "Payment form is still loading. Please wait a moment.",
+  checkPaymentDetails: "Please check your payment details.",
+  paymentFailed: "Payment failed. Please try again.",
+  closeConfirmation: "Close confirmation and return home",
+  paymentReceived: "Payment received",
+  bookingConfirmed: "Booking confirmed",
+  bookingConfirmedHelp: "Your payment was received and your booking is now confirmed.",
+  bookingDetails: "Booking details",
+  rideReserved: "Your ride is reserved",
+  vehicle: "Vehicle",
+  customer: "Customer",
+  paid: "Paid",
+  confirmationEmail:
+    "Your booking is confirmed. The full booking details are saved with your confirmation email.",
+  ourLocation: "Our location",
+  close: "Close",
+  bringAtPickup: "Bring these at pickup",
+  pickupNotes: "Pickup notes",
+  passportId: "Passport / ID",
+  originalPassportId: "Bring your original passport or national ID.",
+  validLicence: "Valid driving licence",
+  validLicenceHelp: "A, A1, A2 or B licence held for 3+ years.",
+  depositTitle: "€150 refundable deposit per scooter",
+  depositHandled: "Handled at pickup by cash or card.",
+  arriveOnTime:
+    "Please arrive at your pickup time so we can prepare your scooter and make the handover fast.",
+} as const;
+
+type ExtraCheckoutCopy = {
+  [K in keyof typeof EXTRA_EN]: string;
+};
+
+const EXTRA_COPY: Record<CheckoutLocale, ExtraCheckoutCopy> = {
+  en: EXTRA_EN,
+  es: {
+    selectLanguage: "Seleccionar idioma",
+    active: "Activo",
+    eBike: "Bicicleta eléctrica",
+    missingDocuments: "El escaneo terminó, pero falta una referencia segura de los documentos. Reinicia la verificación.",
+    verificationRestart: "La verificación de documentos está incompleta. Reinicia la verificación.",
+    completeDriverDetails: "Completa los datos obligatorios de todos los conductores aprobados.",
+    driverDetailsSaveError: "No se pudieron guardar los datos del conductor {driver}.",
+    availabilityError: "No se pudo confirmar la disponibilidad. Inténtalo de nuevo o contáctanos por WhatsApp.",
+    availabilityCount: "Solo hay {count} scooter(s) disponibles para la fecha y hora seleccionadas.",
+    soldOut: "Esta categoría de scooter está agotada para la fecha y hora seleccionadas.",
+    paymentExpired: "La sesión de pago ha caducado. Continúa de nuevo para comprobar la disponibilidad.",
+    paymentInitFailed: "No se pudo iniciar el pago. Inténtalo de nuevo.",
+    genericError: "Algo salió mal. Inténtalo de nuevo.",
+    invalidDates: "Selecciona fechas válidas de recogida y devolución antes de verificar los documentos.",
+    scannerPrepareError: "No se pudo preparar el escáner seguro. Inténtalo de nuevo.",
+    sessionReadError: "No se pudo leer la sesión de verificación.",
+    returnedResultError: "No se pudo leer el resultado de verificación devuelto.",
+    noneApproved: "Ningún conductor superó la verificación. La reserva no puede continuar.",
+    scannerOpenError: "No se pudo abrir el escáner seguro.",
+    paymentDetails: "Datos de pago",
+    paymentDetailsHelp: "Introduce los datos de pago seguros para completar la reserva.",
+    paymentMethod: "Tarjeta / método de pago",
+    enterPaymentDetails: "Introduce tus datos de pago seguros",
+    stripeSecure: "Seguridad de Stripe",
+    loadingPaymentForm: "Cargando el formulario de pago seguro...",
+    processingPayment: "Procesando el pago...",
+    payNowButton: "Pagar ahora",
+    loadingPayment: "Cargando el pago...",
+    encryptedPayment: "Pago cifrado",
+    fastConfirmation: "Confirmación rápida",
+    noHiddenFees: "Sin cargos ocultos",
+    securePaymentLoading: "El pago seguro todavía se está cargando. Espera un momento.",
+    paymentFormLoading: "El formulario de pago todavía se está cargando. Espera un momento.",
+    checkPaymentDetails: "Comprueba los datos de pago.",
+    paymentFailed: "El pago ha fallado. Inténtalo de nuevo.",
+    closeConfirmation: "Cerrar la confirmación y volver al inicio",
+    paymentReceived: "Pago recibido",
+    bookingConfirmed: "Reserva confirmada",
+    bookingConfirmedHelp: "Hemos recibido el pago y la reserva está confirmada.",
+    bookingDetails: "Datos de la reserva",
+    rideReserved: "Tu vehículo está reservado",
+    vehicle: "Vehículo",
+    customer: "Cliente",
+    paid: "Pagado",
+    confirmationEmail: "Tu reserva está confirmada. Encontrarás todos los datos en el correo de confirmación.",
+    ourLocation: "Nuestra ubicación",
+    close: "Cerrar",
+    bringAtPickup: "Trae esto al recoger",
+    pickupNotes: "Notas de recogida",
+    passportId: "Pasaporte / documento de identidad",
+    originalPassportId: "Trae tu pasaporte o documento de identidad original.",
+    validLicence: "Permiso de conducir válido",
+    validLicenceHelp: "Permiso A, A1, A2 o B con más de 3 años.",
+    depositTitle: "Depósito reembolsable de 150 € por scooter",
+    depositHandled: "Se gestiona al recoger, en efectivo o con tarjeta.",
+    arriveOnTime: "Llega a la hora de recogida para que podamos preparar el scooter y agilizar la entrega.",
+  },
+  de: {
+    selectLanguage: "Sprache auswählen",
+    active: "Aktiv",
+    eBike: "E-Bike",
+    missingDocuments: "Der Scan wurde abgeschlossen, aber eine sichere Dokumentreferenz fehlt. Bitte starte die Prüfung neu.",
+    verificationRestart: "Die Dokumentenprüfung ist unvollständig. Bitte starte sie neu.",
+    completeDriverDetails: "Bitte vervollständige die Pflichtangaben für alle zugelassenen Fahrer.",
+    driverDetailsSaveError: "Die Angaben für Fahrer {driver} konnten nicht gespeichert werden.",
+    availabilityError: "Die Verfügbarkeit konnte nicht bestätigt werden. Bitte versuche es erneut oder kontaktiere uns per WhatsApp.",
+    availabilityCount: "Für das gewählte Datum und die Uhrzeit sind nur {count} Roller verfügbar.",
+    soldOut: "Diese Rollerkategorie ist für das gewählte Datum und die Uhrzeit ausverkauft.",
+    paymentExpired: "Deine Zahlungssitzung ist abgelaufen. Fahre erneut fort, damit wir die Verfügbarkeit prüfen können.",
+    paymentInitFailed: "Die Zahlung konnte nicht gestartet werden. Bitte versuche es erneut.",
+    genericError: "Etwas ist schiefgelaufen. Bitte versuche es erneut.",
+    invalidDates: "Bitte wähle gültige Abhol- und Rückgabedaten, bevor du die Dokumente prüfst.",
+    scannerPrepareError: "Der sichere Scanner konnte nicht vorbereitet werden. Bitte versuche es erneut.",
+    sessionReadError: "Die Verifizierungssitzung konnte nicht gelesen werden.",
+    returnedResultError: "Das zurückgegebene Prüfergebnis konnte nicht gelesen werden.",
+    noneApproved: "Keiner der Fahrer hat die Prüfung bestanden. Die Buchung kann nicht fortgesetzt werden.",
+    scannerOpenError: "Der sichere Scanner konnte nicht geöffnet werden.",
+    paymentDetails: "Zahlungsdetails",
+    paymentDetailsHelp: "Gib unten deine sicheren Zahlungsdaten ein, um die Buchung abzuschließen.",
+    paymentMethod: "Karte / Zahlungsmethode",
+    enterPaymentDetails: "Sichere Zahlungsdaten eingeben",
+    stripeSecure: "Sicher mit Stripe",
+    loadingPaymentForm: "Sicheres Zahlungsformular wird geladen...",
+    processingPayment: "Zahlung wird verarbeitet...",
+    payNowButton: "Jetzt bezahlen",
+    loadingPayment: "Zahlung wird geladen...",
+    encryptedPayment: "Verschlüsselte Zahlung",
+    fastConfirmation: "Schnelle Bestätigung",
+    noHiddenFees: "Keine versteckten Gebühren",
+    securePaymentLoading: "Die sichere Zahlung wird noch geladen. Bitte warte einen Moment.",
+    paymentFormLoading: "Das Zahlungsformular wird noch geladen. Bitte warte einen Moment.",
+    checkPaymentDetails: "Bitte prüfe deine Zahlungsdaten.",
+    paymentFailed: "Die Zahlung ist fehlgeschlagen. Bitte versuche es erneut.",
+    closeConfirmation: "Bestätigung schließen und zur Startseite zurückkehren",
+    paymentReceived: "Zahlung erhalten",
+    bookingConfirmed: "Buchung bestätigt",
+    bookingConfirmedHelp: "Deine Zahlung ist eingegangen und deine Buchung ist bestätigt.",
+    bookingDetails: "Buchungsdetails",
+    rideReserved: "Dein Fahrzeug ist reserviert",
+    vehicle: "Fahrzeug",
+    customer: "Kunde",
+    paid: "Bezahlt",
+    confirmationEmail: "Deine Buchung ist bestätigt. Alle Buchungsdetails findest du in der Bestätigungs-E-Mail.",
+    ourLocation: "Unser Standort",
+    close: "Schließen",
+    bringAtPickup: "Zur Abholung mitbringen",
+    pickupNotes: "Hinweise zur Abholung",
+    passportId: "Reisepass / Ausweis",
+    originalPassportId: "Bringe deinen Originalreisepass oder Personalausweis mit.",
+    validLicence: "Gültiger Führerschein",
+    validLicenceHelp: "Führerschein A, A1, A2 oder B seit mindestens 3 Jahren.",
+    depositTitle: "150 € rückzahlbare Kaution pro Roller",
+    depositHandled: "Bei der Abholung in bar oder per Karte.",
+    arriveOnTime: "Bitte komme pünktlich zur Abholung, damit wir den Roller vorbereiten und die Übergabe schnell durchführen können.",
+  },
+  fr: buildExtra("fr", {
+    selectLanguage: "Choisir la langue", active: "Actif", eBike: "Vélo électrique",
+    availabilityCount: "Seulement {count} scooter(s) sont disponibles pour la date et l’heure choisies.", soldOut: "Cette catégorie de scooter est complète pour la date et l’heure choisies.",
+    bookingConfirmed: "Réservation confirmée", bookingDetails: "Détails de la réservation", rideReserved: "Votre véhicule est réservé", vehicle: "Véhicule", customer: "Client", paid: "Payé", ourLocation: "Notre emplacement", close: "Fermer", bringAtPickup: "À apporter lors du retrait", pickupNotes: "Notes de retrait", passportId: "Passeport / pièce d’identité", validLicence: "Permis de conduire valide", depositTitle: "Caution remboursable de 150 € par scooter",
+  }),
+  it: buildExtra("it", {
+    selectLanguage: "Seleziona lingua", active: "Attiva", eBike: "Bici elettrica",
+    availabilityCount: "Sono disponibili solo {count} scooter per la data e l’ora selezionate.", soldOut: "Questa categoria di scooter è esaurita per la data e l’ora selezionate.",
+    bookingConfirmed: "Prenotazione confermata", bookingDetails: "Dettagli della prenotazione", rideReserved: "Il tuo veicolo è riservato", vehicle: "Veicolo", customer: "Cliente", paid: "Pagato", ourLocation: "La nostra posizione", close: "Chiudi", bringAtPickup: "Da portare al ritiro", pickupNotes: "Note per il ritiro", passportId: "Passaporto / documento d’identità", validLicence: "Patente valida", depositTitle: "Deposito rimborsabile di 150 € per scooter",
+  }),
+  nl: buildExtra("nl", {
+    selectLanguage: "Taal selecteren", active: "Actief", eBike: "E-bike",
+    availabilityCount: "Er zijn slechts {count} scooter(s) beschikbaar voor de gekozen datum en tijd.", soldOut: "Deze scootercategorie is uitverkocht voor de gekozen datum en tijd.",
+    bookingConfirmed: "Boeking bevestigd", bookingDetails: "Boekingsgegevens", rideReserved: "Uw voertuig is gereserveerd", vehicle: "Voertuig", customer: "Klant", paid: "Betaald", ourLocation: "Onze locatie", close: "Sluiten", bringAtPickup: "Meenemen bij het ophalen", pickupNotes: "Ophaalinformatie", passportId: "Paspoort / identiteitskaart", validLicence: "Geldig rijbewijs", depositTitle: "€ 150 terugbetaalbare borg per scooter",
+  }),
+  pl: buildExtra("pl", {
+    selectLanguage: "Wybierz język", active: "Aktywny", eBike: "Rower elektryczny",
+    availabilityCount: "Dla wybranej daty i godziny dostępnych jest tylko {count} skuterów.", soldOut: "Ta kategoria skuterów jest wyprzedana w wybranym terminie.",
+    bookingConfirmed: "Rezerwacja potwierdzona", bookingDetails: "Szczegóły rezerwacji", rideReserved: "Twój pojazd jest zarezerwowany", vehicle: "Pojazd", customer: "Klient", paid: "Zapłacono", ourLocation: "Nasza lokalizacja", close: "Zamknij", bringAtPickup: "Zabierz ze sobą przy odbiorze", pickupNotes: "Informacje o odbiorze", passportId: "Paszport / dowód osobisty", validLicence: "Ważne prawo jazdy", depositTitle: "Zwrotna kaucja 150 € za skuter",
+  }),
+  sv: buildExtra("sv", {
+    selectLanguage: "Välj språk", active: "Aktivt", eBike: "Elcykel",
+    availabilityCount: "Endast {count} skoter/skotrar är tillgängliga för valt datum och tid.", soldOut: "Denna skoterkategori är slutsåld för valt datum och tid.",
+    bookingConfirmed: "Bokningen är bekräftad", bookingDetails: "Bokningsuppgifter", rideReserved: "Ditt fordon är reserverat", vehicle: "Fordon", customer: "Kund", paid: "Betalt", ourLocation: "Vår plats", close: "Stäng", bringAtPickup: "Ta med vid hämtning", pickupNotes: "Hämtningsinformation", passportId: "Pass / ID", validLicence: "Giltigt körkort", depositTitle: "150 € återbetalningsbar deposition per skoter",
+  }),
+  da: buildExtra("da", {
+    selectLanguage: "Vælg sprog", active: "Aktivt", eBike: "Elcykel",
+    availabilityCount: "Kun {count} scooter(e) er ledige på den valgte dato og tid.", soldOut: "Denne scooter-kategori er udsolgt på den valgte dato og tid.",
+    bookingConfirmed: "Booking bekræftet", bookingDetails: "Bookingoplysninger", rideReserved: "Dit køretøj er reserveret", vehicle: "Køretøj", customer: "Kunde", paid: "Betalt", ourLocation: "Vores placering", close: "Luk", bringAtPickup: "Medbring ved afhentning", pickupNotes: "Afhentningsnoter", passportId: "Pas / ID", validLicence: "Gyldigt kørekort", depositTitle: "150 € refunderbart depositum pr. scooter",
+  }),
+  no: buildExtra("no", {
+    selectLanguage: "Velg språk", active: "Aktivt", eBike: "Elsykkel",
+    availabilityCount: "Bare {count} scooter(e) er tilgjengelige på valgt dato og tid.", soldOut: "Denne scooterkategorien er utsolgt på valgt dato og tid.",
+    bookingConfirmed: "Bestilling bekreftet", bookingDetails: "Bestillingsopplysninger", rideReserved: "Kjøretøyet ditt er reservert", vehicle: "Kjøretøy", customer: "Kunde", paid: "Betalt", ourLocation: "Vår beliggenhet", close: "Lukk", bringAtPickup: "Ta med ved henting", pickupNotes: "Henteinformasjon", passportId: "Pass / ID", validLicence: "Gyldig førerkort", depositTitle: "150 € refunderbart depositum per scooter",
+  }),
+  pt: buildExtra("pt", {
+    selectLanguage: "Selecionar idioma", active: "Ativo", eBike: "Bicicleta elétrica",
+    availabilityCount: "Apenas {count} scooter(s) estão disponíveis para a data e hora selecionadas.", soldOut: "Esta categoria de scooter está esgotada para a data e hora selecionadas.",
+    bookingConfirmed: "Reserva confirmada", bookingDetails: "Detalhes da reserva", rideReserved: "O seu veículo está reservado", vehicle: "Veículo", customer: "Cliente", paid: "Pago", ourLocation: "A nossa localização", close: "Fechar", bringAtPickup: "Trazer no levantamento", pickupNotes: "Notas de levantamento", passportId: "Passaporte / documento de identidade", validLicence: "Carta de condução válida", depositTitle: "Caução reembolsável de 150 € por scooter",
+  }),
+  cs: buildExtra("cs", {
+    selectLanguage: "Vybrat jazyk", active: "Aktivní", eBike: "Elektrokolo",
+    availabilityCount: "Pro zvolené datum a čas je k dispozici pouze {count} skútrů.", soldOut: "Tato kategorie skútrů je ve zvoleném termínu vyprodána.",
+    bookingConfirmed: "Rezervace potvrzena", bookingDetails: "Údaje rezervace", rideReserved: "Vaše vozidlo je rezervováno", vehicle: "Vozidlo", customer: "Zákazník", paid: "Zaplaceno", ourLocation: "Naše poloha", close: "Zavřít", bringAtPickup: "Přineste při vyzvednutí", pickupNotes: "Informace k vyzvednutí", passportId: "Pas / občanský průkaz", validLicence: "Platný řidičský průkaz", depositTitle: "Vratná kauce 150 € za skútr",
+  }),
+  uk: buildExtra("uk", {
+    selectLanguage: "Вибрати мову", active: "Активна", eBike: "Електровелосипед",
+    availabilityCount: "На вибрані дату й час доступно лише {count} скутерів.", soldOut: "Цю категорію скутерів розпродано на вибрані дату й час.",
+    bookingConfirmed: "Бронювання підтверджено", bookingDetails: "Дані бронювання", rideReserved: "Ваш транспорт зарезервовано", vehicle: "Транспорт", customer: "Клієнт", paid: "Сплачено", ourLocation: "Наше розташування", close: "Закрити", bringAtPickup: "Візьміть із собою під час отримання", pickupNotes: "Інформація про отримання", passportId: "Паспорт / ID-картка", validLicence: "Чинне водійське посвідчення", depositTitle: "Поворотна застава 150 € за скутер",
+  }),
+};
+
+type BuiltExtraOverrides = Pick<
+  ExtraCheckoutCopy,
+  | "selectLanguage"
+  | "active"
+  | "eBike"
+  | "availabilityCount"
+  | "soldOut"
+  | "bookingConfirmed"
+  | "bookingDetails"
+  | "rideReserved"
+  | "vehicle"
+  | "customer"
+  | "paid"
+  | "ourLocation"
+  | "close"
+  | "bringAtPickup"
+  | "pickupNotes"
+  | "passportId"
+  | "validLicence"
+  | "depositTitle"
+>;
+
+function buildExtra(
+  locale: CheckoutLocale,
+  overrides: BuiltExtraOverrides,
+): ExtraCheckoutCopy {
+  const base = COPY[locale];
+  const retry = `${base.tryAgain}.`;
+
+  return {
+    ...overrides,
+    missingDocuments: `${base.documentsReceived}. ${base.cancelAndBack}.`,
+    verificationRestart: `${base.secureVerification}. ${retry}`,
+    completeDriverDetails: base.completeRequired,
+    driverDetailsSaveError: `${base.driver} {driver}: ${retry}`,
+    availabilityError: retry,
+    paymentExpired: `${base.payment}: ${retry}`,
+    paymentInitFailed: `${base.payment}: ${retry}`,
+    genericError: retry,
+    invalidDates: `${base.pickup} / ${base.return}: ${base.required}.`,
+    scannerPrepareError: `${base.secureVerification}: ${retry}`,
+    sessionReadError: `${base.secureVerification}: ${retry}`,
+    returnedResultError: `${base.secureVerification}: ${retry}`,
+    noneApproved: `${base.driverRejected}. ${base.cancelBooking}.`,
+    scannerOpenError: `${base.openScanner}: ${retry}`,
+    paymentDetails: base.payment,
+    paymentDetailsHelp: base.securePayment,
+    paymentMethod: base.payment,
+    enterPaymentDetails: base.securePayment,
+    stripeSecure: "Stripe",
+    loadingPaymentForm: base.preparingCheckout,
+    processingPayment: base.preparingPayment,
+    payNowButton: base.payment,
+    loadingPayment: base.preparingPayment,
+    encryptedPayment: base.securePayment,
+    fastConfirmation: base.complete,
+    noHiddenFees: base.rentalTotal,
+    securePaymentLoading: base.preparingCheckout,
+    paymentFormLoading: base.preparingCheckout,
+    checkPaymentDetails: retry,
+    paymentFailed: `${base.payment}: ${retry}`,
+    closeConfirmation: overrides.close,
+    paymentReceived: `${base.payment} · ${base.complete}`,
+    bookingConfirmedHelp: `${overrides.bookingConfirmed}. ${base.complete}.`,
+    confirmationEmail: `${overrides.bookingConfirmed}. ${base.complete}.`,
+    originalPassportId: `${base.passport} / ${base.idCard}.`,
+    validLicenceHelp: "A, A1, A2 / B · 3+",
+    depositHandled: base.securityDeposit.replace("{amount}", "150.00"),
+    arriveOnTime: `${base.pickup}: ${base.complete}.`,
+  };
+}
+
+export type CheckoutCopy = BaseCheckoutCopy & ExtraCheckoutCopy;
+
 export function normalizeCheckoutLocale(value: string): CheckoutLocale {
   const locale = value.toLowerCase() as CheckoutLocale;
   return CHECKOUT_LANGUAGES.some((item) => item.code === locale)
@@ -189,7 +505,10 @@ export function normalizeCheckoutLocale(value: string): CheckoutLocale {
 
 export function getCheckoutCopy(value: string): CheckoutCopy {
   const locale = normalizeCheckoutLocale(value);
-  return COPY[locale];
+  return {
+    ...COPY[locale],
+    ...EXTRA_COPY[locale],
+  };
 }
 
 export function formatCheckoutText(
