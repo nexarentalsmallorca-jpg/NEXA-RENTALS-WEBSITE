@@ -150,6 +150,28 @@ function cleanText(value: unknown) {
   return String(value ?? "").trim();
 }
 
+function normalizeContractNumber(value: unknown) {
+  return cleanText(value).toUpperCase();
+}
+
+function isContractNumberUniqueViolation(error: any) {
+  if (!error) return false;
+
+  const code = cleanText(error?.code);
+  const message = cleanText(error?.message).toLowerCase();
+  const details = cleanText(error?.details).toLowerCase();
+  const hint = cleanText(error?.hint).toLowerCase();
+
+  return (
+    code === "23505" &&
+    (message.includes("contract_number") ||
+      details.includes("contract_number") ||
+      hint.includes("contract_number") ||
+      message.includes("bookings_contract_number_unique") ||
+      details.includes("bookings_contract_number_unique"))
+  );
+}
+
 function normalizeVehicleCode(value?: unknown) {
   return cleanText(value).toUpperCase().replace(/\s+/g, "");
 }
@@ -178,9 +200,11 @@ function addMinutes(date: Date, minutes: number) {
 function buildDateTime(date?: string | null, time?: string | null) {
   const cleanDate = cleanText(date);
   const cleanTime = cleanText(time) || "00:00";
+
   if (!cleanDate) return null;
 
   const value = new Date(`${cleanDate}T${cleanTime}:00`);
+
   return Number.isNaN(value.getTime()) ? null : value;
 }
 
@@ -195,11 +219,13 @@ function isOverlapping(
 
 function isInactiveBooking(status?: string | null) {
   const clean = safeNormalizeText(status);
+
   return Boolean(clean && NON_BLOCKING_STATUSES.includes(clean));
 }
 
 function isPastBooking(booking: BookingRow) {
   const range = getBookingRange(booking);
+
   return Boolean(range && new Date() > range.bufferedEnd);
 }
 
@@ -214,6 +240,7 @@ function getFleetByGroup(group: NexaFleetGroup) {
   if (group === "kymco_sky_town_125") return getKymcoFleet();
   if (group === "sym_symphony_125") return getSymFleet();
   if (group === "e_bike") return getEBikeFleet();
+
   return getScooterFleet();
 }
 
@@ -222,6 +249,7 @@ function getFleetGroupDisplayName(group: NexaFleetGroup) {
   if (group === "kymco_sky_town_125") return "KYMCO Sky Town 125";
   if (group === "sym_symphony_125") return "SYM Symphony 125";
   if (group === "e_bike") return "E-Bike";
+
   return "Scooter";
 }
 
@@ -252,6 +280,7 @@ function resolveVehicleFleetGroup(
 
   if (brand === "sym") return "sym_symphony_125";
   if (brand === "piaggio") return "piaggio_liberty_125";
+
   return "scooter";
 }
 
@@ -271,21 +300,31 @@ function resolveFleetGroupKeyFromWebsiteVehicle({
   if (cleanFleetGroup === "piaggio_liberty_125") {
     return "piaggio_liberty_125";
   }
+
   if (cleanFleetGroup === "kymco_sky_town_125") {
     return "kymco_sky_town_125";
   }
+
   if (cleanFleetGroup === "sym_symphony_125") {
     return "sym_symphony_125";
   }
-  if (cleanFleetGroup === "e_bike") return "e_bike";
+
+  if (cleanFleetGroup === "e_bike") {
+    return "e_bike";
+  }
 
   const exactCode =
     extractVehicleCodeFromText(String(vehicleId || "")) ||
     extractVehicleCodeFromText(String(vehicleName || ""));
+
   const exactVehicle = findVehicleByCodigo(exactCode);
-  if (exactVehicle) return resolveVehicleFleetGroup(exactVehicle);
+
+  if (exactVehicle) {
+    return resolveVehicleFleetGroup(exactVehicle);
+  }
 
   const kymcoText = `${cleanId} ${cleanName}`;
+
   if (
     cleanId === "s4" ||
     cleanId === "n9" ||
@@ -345,7 +384,10 @@ function getBookingVehicleCode(booking: BookingRow) {
 function resolveBookingFleetGroup(booking: BookingRow): NexaFleetGroup {
   const exactCode = getBookingVehicleCode(booking);
   const exactVehicle = findVehicleByCodigo(exactCode);
-  if (exactVehicle) return resolveVehicleFleetGroup(exactVehicle);
+
+  if (exactVehicle) {
+    return resolveVehicleFleetGroup(exactVehicle);
+  }
 
   return resolveFleetGroupKeyFromWebsiteVehicle({
     vehicleId: booking.vehicle_id || booking.vehicle_code || exactCode,
@@ -365,19 +407,23 @@ function getBookingRange(booking: BookingRow) {
     cleanText(booking.pickup_date) ||
     cleanText(booking.from) ||
     cleanText(booking.contractData?.fechaEntrega);
+
   const pickupTime =
     cleanText(booking.pickup_time) ||
     cleanText(booking.contractData?.horaEntrega);
+
   const dropoffDate =
     cleanText(booking.dropoff_date) ||
     cleanText(booking.to) ||
     cleanText(booking.contractData?.fechaDevolucion);
+
   const dropoffTime =
     cleanText(booking.dropoff_time) ||
     cleanText(booking.contractData?.horaDevolucion);
 
   const start = buildDateTime(pickupDate, pickupTime);
   const end = buildDateTime(dropoffDate, dropoffTime);
+
   if (!start || !end) return null;
 
   return {
@@ -389,7 +435,11 @@ function getBookingRange(booking: BookingRow) {
 
 function normalizePaymentMethod(value: unknown) {
   const raw = safeNormalizeText(value);
-  if (raw.includes("cash") || raw.includes("efectivo")) return "cash";
+
+  if (raw.includes("cash") || raw.includes("efectivo")) {
+    return "cash";
+  }
+
   if (
     raw.includes("card") ||
     raw.includes("tarjeta") ||
@@ -397,6 +447,7 @@ function normalizePaymentMethod(value: unknown) {
   ) {
     return "card";
   }
+
   if (
     raw.includes("unpaid") ||
     raw.includes("pending") ||
@@ -404,11 +455,13 @@ function normalizePaymentMethod(value: unknown) {
   ) {
     return "unpaid";
   }
+
   return "card";
 }
 
 function normalizeBookingAction(value: unknown): BookingAction {
   const clean = safeNormalizeText(value);
+
   if (
     clean === "rent_now" ||
     clean === "rented_out" ||
@@ -422,11 +475,13 @@ function normalizeBookingAction(value: unknown): BookingAction {
   ) {
     return "rent_now";
   }
+
   return "reserve_now";
 }
 
 function normalizeBookingStatus(value: unknown, action: BookingAction) {
   const clean = safeNormalizeText(value);
+
   if (
     clean.includes("cancel") ||
     clean.includes("failed") ||
@@ -434,6 +489,7 @@ function normalizeBookingStatus(value: unknown, action: BookingAction) {
   ) {
     return "cancelled";
   }
+
   if (
     clean.includes("returned") ||
     clean.includes("completed") ||
@@ -442,25 +498,35 @@ function normalizeBookingStatus(value: unknown, action: BookingAction) {
   ) {
     return "returned";
   }
+
   return action === "rent_now" ? "rented_out" : "reserved";
 }
 
 function getBodyValue(body: any, keys: string[]) {
   for (const key of keys) {
     const value = body?.[key];
-    if (value !== undefined && value !== null && value !== "") return value;
+
+    if (value !== undefined && value !== null && value !== "") {
+      return value;
+    }
   }
+
   return "";
 }
 
 function getNestedBodyValue(body: any, keys: string[]) {
   for (const key of keys) {
     let current = body;
-    for (const part of key.split(".")) current = current?.[part];
+
+    for (const part of key.split(".")) {
+      current = current?.[part];
+    }
+
     if (current !== undefined && current !== null && current !== "") {
       return current;
     }
   }
+
   return "";
 }
 
@@ -468,6 +534,7 @@ function resolvePublicBookingInput(body: any): BookingInput {
   const booking = body?.booking || {};
   const contractData = booking?.contractData || {};
   const vehicle = booking?.vehicle || {};
+
   const fallbackId = `booking_${Date.now()}_${Math.random()
     .toString(36)
     .slice(2, 8)}`;
@@ -480,7 +547,9 @@ function resolvePublicBookingInput(body: any): BookingInput {
       "booking.contractData.bookingAction",
     ]) ||
     contractData?.bookingAction;
+
   const bookingAction = normalizeBookingAction(rawBookingAction);
+
   const rawStatus =
     getBodyValue(body, ["status"]) ||
     getNestedBodyValue(body, ["booking.status"]) ||
@@ -506,8 +575,12 @@ function resolvePublicBookingInput(body: any): BookingInput {
 
   const vehicleId = cleanText(
     getBodyValue(body, ["vehicleId", "vehicle_id"]) ||
-      getNestedBodyValue(body, ["booking.vehicleId", "booking.vehicle_id"]),
+      getNestedBodyValue(body, [
+        "booking.vehicleId",
+        "booking.vehicle_id",
+      ]),
   );
+
   const vehicleName = cleanText(
     getBodyValue(body, [
       "vehicleName",
@@ -545,8 +618,12 @@ function resolvePublicBookingInput(body: any): BookingInput {
       ]) ||
       extractVehicleCodeFromText(vehicleName),
   );
+
   const assignedVehicleCode = normalizeVehicleCode(
-    getBodyValue(body, ["assignedVehicleCode", "assigned_vehicle_code"]) ||
+    getBodyValue(body, [
+      "assignedVehicleCode",
+      "assigned_vehicle_code",
+    ]) ||
       getNestedBodyValue(body, [
         "booking.assignedVehicleCode",
         "booking.assigned_vehicle_code",
@@ -559,37 +636,68 @@ function resolvePublicBookingInput(body: any): BookingInput {
     vehicleName,
     fleetGroup:
       getBodyValue(body, ["fleetGroup", "fleet_group"]) ||
-      getNestedBodyValue(body, ["booking.fleetGroup", "booking.fleet_group"]),
+      getNestedBodyValue(body, [
+        "booking.fleetGroup",
+        "booking.fleet_group",
+      ]),
   });
 
   const pickupDate = cleanText(
-    getBodyValue(body, ["pickupDate", "pickup_date", "from"]) ||
-      getNestedBodyValue(body, ["booking.pickupDate", "booking.pickup_date"]) ||
+    getBodyValue(body, [
+      "pickupDate",
+      "pickup_date",
+      "from",
+    ]) ||
+      getNestedBodyValue(body, [
+        "booking.pickupDate",
+        "booking.pickup_date",
+      ]) ||
       contractData?.fechaEntrega,
   );
+
   const pickupTime = cleanText(
-    getBodyValue(body, ["pickupTime", "pickup_time"]) ||
-      getNestedBodyValue(body, ["booking.pickupTime", "booking.pickup_time"]) ||
+    getBodyValue(body, [
+      "pickupTime",
+      "pickup_time",
+    ]) ||
+      getNestedBodyValue(body, [
+        "booking.pickupTime",
+        "booking.pickup_time",
+      ]) ||
       contractData?.horaEntrega,
   );
+
   const dropoffDate = cleanText(
-    getBodyValue(body, ["dropoffDate", "dropoff_date", "to"]) ||
+    getBodyValue(body, [
+      "dropoffDate",
+      "dropoff_date",
+      "to",
+    ]) ||
       getNestedBodyValue(body, [
         "booking.dropoffDate",
         "booking.dropoff_date",
       ]) ||
       contractData?.fechaDevolucion,
   );
+
   const dropoffTime = cleanText(
-    getBodyValue(body, ["dropoffTime", "dropoff_time"]) ||
+    getBodyValue(body, [
+      "dropoffTime",
+      "dropoff_time",
+    ]) ||
       getNestedBodyValue(body, [
         "booking.dropoffTime",
         "booking.dropoff_time",
       ]) ||
       contractData?.horaDevolucion,
   );
+
   const customerName = cleanText(
-    getBodyValue(body, ["customerName", "customer_name", "name"]) ||
+    getBodyValue(body, [
+      "customerName",
+      "customer_name",
+      "name",
+    ]) ||
       getNestedBodyValue(body, [
         "booking.customerName",
         "booking.customer_name",
@@ -597,8 +705,13 @@ function resolvePublicBookingInput(body: any): BookingInput {
       ]) ||
       contractData?.nombreCliente,
   );
+
   const customerEmail = cleanText(
-    getBodyValue(body, ["customerEmail", "customer_email", "email"]) ||
+    getBodyValue(body, [
+      "customerEmail",
+      "customer_email",
+      "email",
+    ]) ||
       getNestedBodyValue(body, [
         "booking.customerEmail",
         "booking.customer_email",
@@ -606,8 +719,13 @@ function resolvePublicBookingInput(body: any): BookingInput {
       ]) ||
       contractData?.email,
   );
+
   const phone = cleanText(
-    getBodyValue(body, ["phone", "telefono", "customerPhone"]) ||
+    getBodyValue(body, [
+      "phone",
+      "telefono",
+      "customerPhone",
+    ]) ||
       getNestedBodyValue(body, [
         "booking.phone",
         "booking.telefono",
@@ -615,8 +733,14 @@ function resolvePublicBookingInput(body: any): BookingInput {
       ]) ||
       contractData?.telefono,
   );
+
   const amountRaw =
-    getBodyValue(body, ["amount", "total", "totalPrice", "price"]) ||
+    getBodyValue(body, [
+      "amount",
+      "total",
+      "totalPrice",
+      "price",
+    ]) ||
     getNestedBodyValue(body, [
       "booking.amount",
       "booking.total",
@@ -624,12 +748,18 @@ function resolvePublicBookingInput(body: any): BookingInput {
       "booking.price",
     ]) ||
     contractData?.total;
+
   const amount =
     typeof amountRaw === "number" && amountRaw > 999
       ? Math.round(amountRaw)
       : cleanMoneyToCents(amountRaw);
+
   const paymentMethod = normalizePaymentMethod(
-    getBodyValue(body, ["paymentMethod", "payment_method", "metodoPago"]) ||
+    getBodyValue(body, [
+      "paymentMethod",
+      "payment_method",
+      "metodoPago",
+    ]) ||
       getNestedBodyValue(body, [
         "booking.paymentMethod",
         "booking.payment_method",
@@ -639,13 +769,18 @@ function resolvePublicBookingInput(body: any): BookingInput {
       contractData?.metodoPago ||
       "card",
   );
+
   const source = cleanText(
     getBodyValue(body, ["source"]) ||
       getNestedBodyValue(body, ["booking.source"]) ||
       "Manual",
   );
-  const contractNumber = cleanText(
-    getBodyValue(body, ["contractNumber", "contract_number"]) ||
+
+  const contractNumber = normalizeContractNumber(
+    getBodyValue(body, [
+      "contractNumber",
+      "contract_number",
+    ]) ||
       getNestedBodyValue(body, [
         "booking.contractNumber",
         "booking.contract_number",
@@ -673,9 +808,12 @@ function resolvePublicBookingInput(body: any): BookingInput {
     assignedVehicleCode,
     fleetGroup,
     amount,
-    currency: cleanText(getBodyValue(body, ["currency"]) || "eur"),
+    currency: cleanText(
+      getBodyValue(body, ["currency"]) || "eur",
+    ),
     paymentMethod,
-    paymentStatus: paymentMethod === "unpaid" ? "unpaid" : "paid",
+    paymentStatus:
+      paymentMethod === "unpaid" ? "unpaid" : "paid",
     contractNumber,
   };
 }
@@ -709,57 +847,85 @@ async function checkAvailability({
     selectedEnd,
     BUFFER_MINUTES_AFTER_BOOKING,
   );
+
   const fleet = getFleetByGroup(requestedGroup);
-  if (!fleet.length) return emptyAvailability("fleet_not_found");
+
+  if (!fleet.length) {
+    return emptyAvailability("fleet_not_found");
+  }
 
   const fleetCodes = fleet.map((vehicle) =>
     normalizeVehicleCode(vehicle.codigo),
   );
+
   const { data, error } = await supabaseAdmin
     .from("bookings")
     .select("*")
     .order("created_at", { ascending: false })
     .limit(2000);
-  if (error) throw new Error(error.message);
 
-  const bookings = Array.isArray(data) ? (data as BookingRow[]) : [];
+  if (error) {
+    throw new Error(error.message);
+  }
+
+  const bookings = Array.isArray(data)
+    ? (data as BookingRow[])
+    : [];
+
   const blockingBookings = bookings.filter((booking) => {
     if (isInactiveBooking(booking.status)) return false;
     if (isInactiveBooking(booking.booking_status)) return false;
     if (isPastBooking(booking)) return false;
-    if (resolveBookingFleetGroup(booking) !== requestedGroup) return false;
+
+    if (resolveBookingFleetGroup(booking) !== requestedGroup) {
+      return false;
+    }
 
     const code = getBookingVehicleCode(booking);
+
     if (!fleetCodes.includes(code)) return false;
+
     const range = getBookingRange(booking);
+
     return Boolean(
       range &&
-      isOverlapping(
-        selectedStart,
-        selectedBufferedEnd,
-        range.start,
-        range.bufferedEnd,
-      ),
+        isOverlapping(
+          selectedStart,
+          selectedBufferedEnd,
+          range.start,
+          range.bufferedEnd,
+        ),
     );
   });
 
   const bookedVehicleCodes = Array.from(
-    new Set(blockingBookings.map(getBookingVehicleCode).filter(Boolean)),
+    new Set(
+      blockingBookings
+        .map(getBookingVehicleCode)
+        .filter(Boolean),
+    ),
   );
-  const requestedCode = normalizeVehicleCode(requestedVehicleCode);
+
+  const requestedCode =
+    normalizeVehicleCode(requestedVehicleCode);
+
   const requestedConflict = Boolean(
     requestedCode &&
-    fleetCodes.includes(requestedCode) &&
-    bookedVehicleCodes.includes(requestedCode),
+      fleetCodes.includes(requestedCode) &&
+      bookedVehicleCodes.includes(requestedCode),
   );
 
   let availableVehicles = fleet.filter(
     (vehicle) =>
-      !bookedVehicleCodes.includes(normalizeVehicleCode(vehicle.codigo)),
+      !bookedVehicleCodes.includes(
+        normalizeVehicleCode(vehicle.codigo),
+      ),
   );
+
   if (requestedCode && fleetCodes.includes(requestedCode)) {
     availableVehicles = availableVehicles.filter(
-      (vehicle) => normalizeVehicleCode(vehicle.codigo) === requestedCode,
+      (vehicle) =>
+        normalizeVehicleCode(vehicle.codigo) === requestedCode,
     );
   }
 
@@ -780,20 +946,77 @@ async function checkAvailability({
   };
 }
 
+async function findContractNumberConflict(
+  contractNumber: string,
+  stripePaymentIntentId: string,
+) {
+  const normalized =
+    normalizeContractNumber(contractNumber);
+
+  if (!normalized) {
+    return null;
+  }
+
+  const { data, error } = await supabaseAdmin
+    .from("bookings")
+    .select(
+      "id, stripe_payment_intent_id, contract_number",
+    )
+    .eq("contract_number", normalized)
+    .limit(1);
+
+  if (error) {
+    throw new Error(
+      `Could not verify contract number uniqueness: ${error.message}`,
+    );
+  }
+
+  const existing =
+    Array.isArray(data) && data.length > 0
+      ? data[0]
+      : null;
+
+  if (!existing) {
+    return null;
+  }
+
+  /*
+   * If the same booking is being saved again, allow it.
+   * This preserves the existing upsert/retry behaviour.
+   */
+  if (
+    stripePaymentIntentId &&
+    cleanText(existing.stripe_payment_intent_id) ===
+      cleanText(stripePaymentIntentId)
+  ) {
+    return null;
+  }
+
+  return existing;
+}
+
 function buildContractPdfFromRow(row: any) {
   const storagePath = cleanText(row.contract_pdf_path);
-  const driveLink = cleanText(row.google_drive_file_link);
-  if (!storagePath && !driveLink) return undefined;
+  const driveLink = cleanText(
+    row.google_drive_file_link,
+  );
+
+  if (!storagePath && !driveLink) {
+    return undefined;
+  }
 
   return {
-    fileName: cleanText(row.contract_pdf_name) || undefined,
+    fileName:
+      cleanText(row.contract_pdf_name) || undefined,
     storagePath: storagePath || undefined,
     drive: driveLink
       ? {
           uploaded: true,
           webViewLink: driveLink,
           webContentLink: driveLink,
-          fileName: cleanText(row.contract_pdf_name) || undefined,
+          fileName:
+            cleanText(row.contract_pdf_name) ||
+            undefined,
         }
       : undefined,
   };
@@ -801,41 +1024,79 @@ function buildContractPdfFromRow(row: any) {
 
 function normalizeBookingForDashboard(row: any) {
   const vehicleName = cleanText(row.vehicle_name);
-  const assignedVehicleCode = getBookingVehicleCode(row);
-  const vehicle = findVehicleByCodigo(assignedVehicleCode);
-  const fleetGroup = resolveFleetGroupKeyFromWebsiteVehicle({
-    vehicleId:
-      row.vehicle_id ||
-      row.vehicle_code ||
-      row.assigned_vehicle_code ||
-      assignedVehicleCode,
-    vehicleName: [vehicleName, vehicle?.marca, vehicle?.modelo]
-      .filter(Boolean)
-      .join(" "),
-    fleetGroup: row.fleet_group,
-  });
-  const amountCents = Number(row.amount || row.total_amount || 0);
-  const customerName = cleanText(row.customer_name) || "Customer";
+
+  const assignedVehicleCode =
+    getBookingVehicleCode(row);
+
+  const vehicle =
+    findVehicleByCodigo(assignedVehicleCode);
+
+  const fleetGroup =
+    resolveFleetGroupKeyFromWebsiteVehicle({
+      vehicleId:
+        row.vehicle_id ||
+        row.vehicle_code ||
+        row.assigned_vehicle_code ||
+        assignedVehicleCode,
+      vehicleName: [
+        vehicleName,
+        vehicle?.marca,
+        vehicle?.modelo,
+      ]
+        .filter(Boolean)
+        .join(" "),
+      fleetGroup: row.fleet_group,
+    });
+
+  const amountCents = Number(
+    row.amount || row.total_amount || 0,
+  );
+
+  const customerName =
+    cleanText(row.customer_name) || "Customer";
+
   const createdAt =
     cleanText(row.created_at) ||
     cleanText(row.createdAt) ||
     new Date().toISOString();
-  const paymentMethod = normalizePaymentMethod(row.payment_method);
+
+  const paymentMethod =
+    normalizePaymentMethod(row.payment_method);
+
   const bookingAction = normalizeBookingAction(
-    row.booking_action || row.bookingAction || row.status,
+    row.booking_action ||
+      row.bookingAction ||
+      row.status,
   );
-  const status = normalizeBookingStatus(row.status, bookingAction);
+
+  const status =
+    normalizeBookingStatus(
+      row.status,
+      bookingAction,
+    );
+
   const contractNumber =
-    cleanText(row.contract_number) ||
+    normalizeContractNumber(row.contract_number) ||
     cleanText(row.stripe_payment_intent_id) ||
     cleanText(row.id);
-  const rawSource = cleanText(row.source || row.booking_source);
-  const paymentIntentId = cleanText(row.stripe_payment_intent_id);
+
+  const rawSource = cleanText(
+    row.source || row.booking_source,
+  );
+
+  const paymentIntentId = cleanText(
+    row.stripe_payment_intent_id,
+  );
+
   const looksManual =
     safeNormalizeText(rawSource).includes("manual") ||
     /^NX-/i.test(paymentIntentId) ||
     /^NX-/i.test(contractNumber);
-  const source = looksManual ? "Manual" : rawSource || "website";
+
+  const source = looksManual
+    ? "Manual"
+    : rawSource || "website";
+
   const resolvedVehicleName =
     vehicleName ||
     (vehicle
@@ -863,16 +1124,23 @@ function normalizeBookingForDashboard(row: any) {
     vehicle_name: resolvedVehicleName,
     vehicle_code: assignedVehicleCode,
     assigned_vehicle_code: assignedVehicleCode,
-    assigned_vehicle_codes: assignedVehicleCode ? [assignedVehicleCode] : [],
+    assigned_vehicle_codes: assignedVehicleCode
+      ? [assignedVehicleCode]
+      : [],
     scooter_code: assignedVehicleCode,
     fleet_group: fleetGroup,
-    quantity: Math.max(1, Number(row.quantity || 1)),
+    quantity: Math.max(
+      1,
+      Number(row.quantity || 1),
+    ),
     amount: amountCents,
     amount_eur: amountCents / 100,
     currency: cleanText(row.currency || "eur"),
     payment_method: paymentMethod,
     payment_status: cleanText(
-      row.payment_status || row.reservation_payment_status || "paid",
+      row.payment_status ||
+        row.reservation_payment_status ||
+        "paid",
     ),
     contract_number: contractNumber,
     vehicle: {
@@ -884,7 +1152,8 @@ function normalizeBookingForDashboard(row: any) {
           ? "KYMCO"
           : fleetGroup === "sym_symphony_125"
             ? "SYM"
-            : fleetGroup === "piaggio_liberty_125"
+            : fleetGroup ===
+                "piaggio_liberty_125"
               ? "Piaggio"
               : ""),
       modelo:
@@ -893,7 +1162,8 @@ function normalizeBookingForDashboard(row: any) {
           ? "Sky Town 125"
           : fleetGroup === "sym_symphony_125"
             ? "Symphony 125"
-            : fleetGroup === "piaggio_liberty_125"
+            : fleetGroup ===
+                "piaggio_liberty_125"
               ? "Liberty 125"
               : "Scooter"),
     },
@@ -906,7 +1176,9 @@ function normalizeBookingForDashboard(row: any) {
       nombreCliente: customerName,
       telefono: cleanText(row.phone),
       email: cleanText(row.customer_email),
-      total: amountCents ? `${(amountCents / 100).toFixed(2)}€` : "",
+      total: amountCents
+        ? `${(amountCents / 100).toFixed(2)}€`
+        : "",
       pagado: paymentMethod,
       metodoPago: paymentMethod,
       paymentMethod,
@@ -918,7 +1190,9 @@ function normalizeBookingForDashboard(row: any) {
   };
 }
 
-function fallbackPayloadWithoutOptionalColumns(payload: any) {
+function fallbackPayloadWithoutOptionalColumns(
+  payload: any,
+) {
   const {
     booking_action,
     assigned_vehicle_codes,
@@ -929,10 +1203,13 @@ function fallbackPayloadWithoutOptionalColumns(payload: any) {
     updated_at,
     ...rest
   } = payload;
+
   return rest;
 }
 
-function fallbackPayloadWithoutModernColumns(payload: any) {
+function fallbackPayloadWithoutModernColumns(
+  payload: any,
+) {
   const {
     booking_action,
     booking_source,
@@ -953,12 +1230,16 @@ function fallbackPayloadWithoutModernColumns(payload: any) {
     updated_at,
     ...rest
   } = payload;
+
   return rest;
 }
 
-function fallbackPayloadForOldBookingsTable(payload: any) {
+function fallbackPayloadForOldBookingsTable(
+  payload: any,
+) {
   return {
-    stripe_payment_intent_id: payload.stripe_payment_intent_id,
+    stripe_payment_intent_id:
+      payload.stripe_payment_intent_id,
     status: payload.status,
     customer_name: payload.customer_name,
     customer_email: payload.customer_email,
@@ -977,7 +1258,9 @@ function fallbackPayloadForOldBookingsTable(payload: any) {
   };
 }
 
-async function saveBookingPayload(payload: any): Promise<SupabaseWriteResult> {
+async function saveBookingPayload(
+  payload: any,
+): Promise<SupabaseWriteResult> {
   const payloads = [
     payload,
     fallbackPayloadWithoutOptionalColumns(payload),
@@ -985,17 +1268,40 @@ async function saveBookingPayload(payload: any): Promise<SupabaseWriteResult> {
     fallbackPayloadForOldBookingsTable(payload),
   ];
 
-  let lastResult: any = { data: null, error: null };
+  let lastResult: any = {
+    data: null,
+    error: null,
+  };
+
   for (const candidate of payloads) {
     lastResult = await supabaseAdmin
       .from("bookings")
-      .upsert(candidate, { onConflict: "stripe_payment_intent_id" })
+      .upsert(candidate, {
+        onConflict: "stripe_payment_intent_id",
+      })
       .select();
 
-    if (!lastResult.error) return lastResult;
+    if (!lastResult.error) {
+      return lastResult;
+    }
+
+    /*
+     * A duplicate contract number is a genuine
+     * uniqueness conflict. Do not continue through
+     * compatibility fallback payloads.
+     */
+    if (
+      isContractNumberUniqueViolation(
+        lastResult.error,
+      )
+    ) {
+      return lastResult;
+    }
+
     console.warn(
       "BOOKINGS POST PAYLOAD FALLBACK:",
-      lastResult.error?.message || lastResult.error,
+      lastResult.error?.message ||
+        lastResult.error,
     );
   }
 
@@ -1004,35 +1310,64 @@ async function saveBookingPayload(payload: any): Promise<SupabaseWriteResult> {
 
 function resolvePatchAction(action: unknown) {
   const clean = safeNormalizeText(action);
-  if (["cancel", "cancelled", "canceled", "cancelada"].includes(clean)) {
+
+  if (
+    [
+      "cancel",
+      "cancelled",
+      "canceled",
+      "cancelada",
+    ].includes(clean)
+  ) {
     return {
       status: "cancelled",
-      booking_action: "reserve_now" as BookingAction,
+      booking_action:
+        "reserve_now" as BookingAction,
     };
   }
+
   if (
-    ["picked_up", "picked up", "rent_now", "rented_out", "rented"].includes(
-      clean,
-    )
+    [
+      "picked_up",
+      "picked up",
+      "rent_now",
+      "rented_out",
+      "rented",
+    ].includes(clean)
   ) {
     return {
       status: "rented_out",
-      booking_action: "rent_now" as BookingAction,
+      booking_action:
+        "rent_now" as BookingAction,
     };
   }
+
   if (
-    ["returned", "return", "finished", "completed", "finalizada"].includes(
-      clean,
-    )
+    [
+      "returned",
+      "return",
+      "finished",
+      "completed",
+      "finalizada",
+    ].includes(clean)
   ) {
-    return { status: "returned", booking_action: "rent_now" as BookingAction };
+    return {
+      status: "returned",
+      booking_action:
+        "rent_now" as BookingAction,
+    };
   }
-  if (["reserved", "reserve_now"].includes(clean)) {
+
+  if (
+    ["reserved", "reserve_now"].includes(clean)
+  ) {
     return {
       status: "reserved",
-      booking_action: "reserve_now" as BookingAction,
+      booking_action:
+        "reserve_now" as BookingAction,
     };
   }
+
   return null;
 }
 
@@ -1046,13 +1381,16 @@ function buildPatchFilters(body: any) {
         body?.key ||
         body?.bookingKey,
     ),
-    contractNumber: cleanText(
+
+    contractNumber: normalizeContractNumber(
       body?.contractNumber ||
         body?.contract_number ||
         body?.numeroContrato ||
-        body?.booking?.contractData?.numeroContrato ||
+        body?.booking?.contractData
+          ?.numeroContrato ||
         body?.booking?.contractNumber,
     ),
+
     bookingId: cleanText(
       body?.bookingId ||
         body?.booking_id ||
@@ -1067,21 +1405,35 @@ async function updateBookingByFilters({
   filters,
   payload,
 }: {
-  filters: ReturnType<typeof buildPatchFilters>;
+  filters: ReturnType<
+    typeof buildPatchFilters
+  >;
   payload: any;
 }): Promise<SupabaseWriteResult> {
   let firstError: any = null;
 
-  async function tryUpdate(column: string, value: string | number) {
+  async function tryUpdate(
+    column: string,
+    value: string | number,
+  ) {
     const result: any = await supabaseAdmin
       .from("bookings")
       .update(payload)
       .eq(column, value)
       .select();
-    if (!result.error && Array.isArray(result.data) && result.data.length) {
+
+    if (
+      !result.error &&
+      Array.isArray(result.data) &&
+      result.data.length
+    ) {
       return result;
     }
-    if (result.error && !firstError) firstError = result.error;
+
+    if (result.error && !firstError) {
+      firstError = result.error;
+    }
+
     return null;
   }
 
@@ -1090,29 +1442,67 @@ async function updateBookingByFilters({
       "stripe_payment_intent_id",
       filters.stripePaymentIntentId,
     );
-    if (result) return result;
+
+    if (result) {
+      return result;
+    }
   }
+
   if (filters.contractNumber) {
-    const result = await tryUpdate("contract_number", filters.contractNumber);
-    if (result) return result;
+    const result = await tryUpdate(
+      "contract_number",
+      filters.contractNumber,
+    );
+
+    if (result) {
+      return result;
+    }
   }
+
   if (filters.bookingId) {
     const numericId = Number(filters.bookingId);
-    const idValue = Number.isFinite(numericId) ? numericId : filters.bookingId;
-    const byId = await tryUpdate("id", idValue);
-    if (byId) return byId;
+
+    const idValue = Number.isFinite(numericId)
+      ? numericId
+      : filters.bookingId;
+
+    const byId = await tryUpdate(
+      "id",
+      idValue,
+    );
+
+    if (byId) {
+      return byId;
+    }
+
     const byPayment = await tryUpdate(
       "stripe_payment_intent_id",
       filters.bookingId,
     );
-    if (byPayment) return byPayment;
-    const byContract = await tryUpdate("contract_number", filters.bookingId);
-    if (byContract) return byContract;
+
+    if (byPayment) {
+      return byPayment;
+    }
+
+    const byContract = await tryUpdate(
+      "contract_number",
+      filters.bookingId,
+    );
+
+    if (byContract) {
+      return byContract;
+    }
   }
 
   return firstError
-    ? { data: null, error: firstError }
-    : { data: [], error: null };
+    ? {
+        data: null,
+        error: firstError,
+      }
+    : {
+        data: [],
+        error: null,
+      };
 }
 
 export async function GET() {
@@ -1120,11 +1510,17 @@ export async function GET() {
     const { data, error } = await supabaseAdmin
       .from("bookings")
       .select("*")
-      .order("created_at", { ascending: false })
+      .order("created_at", {
+        ascending: false,
+      })
       .limit(2000);
 
     if (error) {
-      console.error("BOOKINGS GET ERROR:", error);
+      console.error(
+        "BOOKINGS GET ERROR:",
+        error,
+      );
+
       return NextResponse.json({
         ok: false,
         bookings: [],
@@ -1134,187 +1530,459 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      bookings: (data || []).map(normalizeBookingForDashboard),
+      bookings: (data || []).map(
+        normalizeBookingForDashboard,
+      ),
     });
   } catch (error: any) {
-    console.error("BOOKINGS GET FAILED:", error);
+    console.error(
+      "BOOKINGS GET FAILED:",
+      error,
+    );
+
     return NextResponse.json({
       ok: false,
       bookings: [],
-      error: error?.message || "Failed to load bookings.",
+      error:
+        error?.message ||
+        "Failed to load bookings.",
     });
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest,
+) {
   try {
     const body = await request.json();
-    const input = resolvePublicBookingInput(body);
+    const input =
+      resolvePublicBookingInput(body);
 
-    if (!input.pickupDate || !input.pickupTime) {
-      return NextResponse.json(
-        { ok: false, error: "Missing pickup date/time." },
-        { status: 400 },
-      );
-    }
-    if (!input.dropoffDate || !input.dropoffTime) {
-      return NextResponse.json(
-        { ok: false, error: "Missing drop-off date/time." },
-        { status: 400 },
-      );
-    }
-
-    const selectedStart = buildDateTime(input.pickupDate, input.pickupTime);
-    const selectedEnd = buildDateTime(input.dropoffDate, input.dropoffTime);
-    if (!selectedStart || !selectedEnd) {
-      return NextResponse.json(
-        { ok: false, error: "Invalid date or time." },
-        { status: 400 },
-      );
-    }
-    if (selectedEnd <= selectedStart) {
+    if (!input.contractNumber) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Return date/time must be after pickup date/time.",
+          error: "Missing contract number.",
         },
         { status: 400 },
       );
     }
 
-    const requestedCode = normalizeVehicleCode(
-      input.assignedVehicleCode || input.vehicleCode,
-    );
-    const requestedVehicle = findVehicleByCodigo(requestedCode);
-    if (!requestedVehicle) {
+    /*
+     * First application-level uniqueness check.
+     *
+     * This catches normal duplicate attempts before
+     * the insert reaches the database.
+     */
+    const contractConflict =
+      await findContractNumberConflict(
+        input.contractNumber,
+        input.stripePaymentIntentId,
+      );
+
+    if (contractConflict) {
       return NextResponse.json(
-        { ok: false, error: "Select a valid fleet vehicle from N1 to N9." },
+        {
+          ok: false,
+          error:
+            "Contract number already exists.",
+          code: "CONTRACT_NUMBER_EXISTS",
+          contractNumber:
+            input.contractNumber,
+        },
+        { status: 409 },
+      );
+    }
+
+    if (
+      !input.pickupDate ||
+      !input.pickupTime
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Missing pickup date/time.",
+        },
         { status: 400 },
       );
     }
 
-    const actualFleetGroup = resolveVehicleFleetGroup(requestedVehicle);
-    let availability = emptyAvailability("availability_not_checked");
+    if (
+      !input.dropoffDate ||
+      !input.dropoffTime
+    ) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Missing drop-off date/time.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const selectedStart = buildDateTime(
+      input.pickupDate,
+      input.pickupTime,
+    );
+
+    const selectedEnd = buildDateTime(
+      input.dropoffDate,
+      input.dropoffTime,
+    );
+
+    if (!selectedStart || !selectedEnd) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Invalid date or time.",
+        },
+        { status: 400 },
+      );
+    }
+
+    if (selectedEnd <= selectedStart) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Return date/time must be after pickup date/time.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const requestedCode =
+      normalizeVehicleCode(
+        input.assignedVehicleCode ||
+          input.vehicleCode,
+      );
+
+    const requestedVehicle =
+      findVehicleByCodigo(requestedCode);
+
+    if (!requestedVehicle) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Select a valid fleet vehicle from N1 to N9.",
+        },
+        { status: 400 },
+      );
+    }
+
+    const actualFleetGroup =
+      resolveVehicleFleetGroup(
+        requestedVehicle,
+      );
+
+    let availability =
+      emptyAvailability(
+        "availability_not_checked",
+      );
+
     let availabilityCheckFailed = false;
 
     /*
-     * This is an admin-only booking endpoint. Availability is checked so the
-     * response can warn the dashboard, but a conflict never rejects an admin
-     * contract. Public checkout remains protected by its separate payment-hold
-     * RPC and public availability route.
+     * This is an admin-only booking endpoint.
+     * Availability is checked so the response can
+     * warn the dashboard, but a conflict never
+     * rejects an admin contract.
+     *
+     * Public checkout remains protected by its
+     * separate payment-hold RPC and public
+     * availability route.
      */
     try {
-      availability = await checkAvailability({
-        requestedGroup: actualFleetGroup,
-        requestedVehicleCode: requestedCode,
-        selectedStart,
-        selectedEnd,
-      });
+      availability =
+        await checkAvailability({
+          requestedGroup:
+            actualFleetGroup,
+          requestedVehicleCode:
+            requestedCode,
+          selectedStart,
+          selectedEnd,
+        });
     } catch (availabilityError) {
       availabilityCheckFailed = true;
-      console.warn("ADMIN BOOKING AVAILABILITY WARNING:", availabilityError);
+
+      console.warn(
+        "ADMIN BOOKING AVAILABILITY WARNING:",
+        availabilityError,
+      );
     }
 
     const adminOverride =
       availabilityCheckFailed ||
-      availability.reason === "exact_vehicle_conflict" ||
-      availability.reason === "fleet_group_full";
-    const assignedVehicle = requestedVehicle;
-    const assignedVehicleCode = normalizeVehicleCode(assignedVehicle.codigo);
-    const assignedVehicleDisplayName = vehicleDisplayName(assignedVehicle);
-    const publicVehicleName = getVehiclePublicName(assignedVehicle);
-    const nowIso = new Date().toISOString();
+      availability.reason ===
+        "exact_vehicle_conflict" ||
+      availability.reason ===
+        "fleet_group_full";
+
+    const assignedVehicle =
+      requestedVehicle;
+
+    const assignedVehicleCode =
+      normalizeVehicleCode(
+        assignedVehicle.codigo,
+      );
+
+    const assignedVehicleDisplayName =
+      vehicleDisplayName(
+        assignedVehicle,
+      );
+
+    const publicVehicleName =
+      getVehiclePublicName(
+        assignedVehicle,
+      );
+
+    const nowIso =
+      new Date().toISOString();
 
     const payload = {
-      stripe_payment_intent_id: input.stripePaymentIntentId,
+      stripe_payment_intent_id:
+        input.stripePaymentIntentId,
+
       status: input.status,
+
       booking_status: "confirmed",
-      booking_action: input.bookingAction,
-      booking_source: "manual_contract",
-      customer_name: input.customerName,
-      customer_email: input.customerEmail || null,
-      phone: input.phone,
-      pickup_date: input.pickupDate,
-      pickup_time: input.pickupTime,
-      dropoff_date: input.dropoffDate,
-      dropoff_time: input.dropoffTime,
-      vehicle_id: input.vehicleId,
-      vehicle_name: assignedVehicleDisplayName || input.vehicleName,
-      public_vehicle_name: publicVehicleName,
-      vehicle_code: assignedVehicleCode,
-      assigned_vehicle_code: assignedVehicleCode,
-      assigned_vehicle_codes: [assignedVehicleCode],
-      scooter_code: assignedVehicleCode,
-      fleet_group: actualFleetGroup,
+
+      booking_action:
+        input.bookingAction,
+
+      booking_source:
+        "manual_contract",
+
+      customer_name:
+        input.customerName,
+
+      customer_email:
+        input.customerEmail || null,
+
+      phone:
+        input.phone,
+
+      pickup_date:
+        input.pickupDate,
+
+      pickup_time:
+        input.pickupTime,
+
+      dropoff_date:
+        input.dropoffDate,
+
+      dropoff_time:
+        input.dropoffTime,
+
+      vehicle_id:
+        input.vehicleId,
+
+      vehicle_name:
+        assignedVehicleDisplayName ||
+        input.vehicleName,
+
+      public_vehicle_name:
+        publicVehicleName,
+
+      vehicle_code:
+        assignedVehicleCode,
+
+      assigned_vehicle_code:
+        assignedVehicleCode,
+
+      assigned_vehicle_codes: [
+        assignedVehicleCode,
+      ],
+
+      scooter_code:
+        assignedVehicleCode,
+
+      fleet_group:
+        actualFleetGroup,
+
       quantity: 1,
-      amount: input.amount,
-      total_amount: input.amount,
-      amount_paid: input.amount,
-      currency: input.currency,
-      payment_method: input.paymentMethod,
-      payment_status: input.paymentStatus,
-      reservation_payment_status: input.paymentStatus,
-      contract_number: input.contractNumber,
-      updated_at: nowIso,
+
+      amount:
+        input.amount,
+
+      total_amount:
+        input.amount,
+
+      amount_paid:
+        input.amount,
+
+      currency:
+        input.currency,
+
+      payment_method:
+        input.paymentMethod,
+
+      payment_status:
+        input.paymentStatus,
+
+      reservation_payment_status:
+        input.paymentStatus,
+
+      contract_number:
+        input.contractNumber,
+
+      updated_at:
+        nowIso,
     };
 
-    const { data, error } = await saveBookingPayload(payload);
+    const { data, error } =
+      await saveBookingPayload(
+        payload,
+      );
+
     if (error) {
-      console.error("BOOKINGS POST ERROR:", error);
+      console.error(
+        "BOOKINGS POST ERROR:",
+        error,
+      );
+
+      /*
+       * This is the database-level safety net.
+       *
+       * If Supabase has the unique contract-number
+       * index and two requests somehow arrive at the
+       * same time with the same contract number,
+       * PostgreSQL rejects the duplicate here.
+       */
+      if (
+        isContractNumberUniqueViolation(
+          error,
+        )
+      ) {
+        return NextResponse.json(
+          {
+            ok: false,
+            error:
+              "Contract number already exists.",
+            code:
+              "CONTRACT_NUMBER_EXISTS",
+            contractNumber:
+              input.contractNumber,
+          },
+          { status: 409 },
+        );
+      }
+
       return NextResponse.json(
-        { ok: false, error: error?.message || "Failed to save booking." },
+        {
+          ok: false,
+          error:
+            error?.message ||
+            "Failed to save booking.",
+        },
         { status: 500 },
       );
     }
 
-    const savedBooking = data?.[0]
-      ? normalizeBookingForDashboard(data[0])
-      : null;
-    const bookedVehicleCodes = Array.from(
-      new Set([...availability.bookedVehicleCodes, assignedVehicleCode]),
-    );
+    const savedBooking =
+      data?.[0]
+        ? normalizeBookingForDashboard(
+            data[0],
+          )
+        : null;
+
+    const bookedVehicleCodes =
+      Array.from(
+        new Set([
+          ...availability.bookedVehicleCodes,
+          assignedVehicleCode,
+        ]),
+      );
 
     return NextResponse.json({
       ok: true,
-      available: availability.available,
+      available:
+        availability.available,
       adminOverride,
+
       warning: adminOverride
         ? availabilityCheckFailed
           ? "The availability check could not be completed, but the admin contract was saved."
           : `Vehicle ${assignedVehicleCode} already had an overlapping booking. The admin contract was saved intentionally.`
         : "",
-      booking: savedBooking,
+
+      booking:
+        savedBooking,
+
       assignedVehicleCode,
-      assignedVehicleName: publicVehicleName,
-      assignedVehicleShortName: vehicleShortName(assignedVehicle),
-      assignedVehicleDisplayName,
-      availability: {
-        fleetGroup: actualFleetGroup,
-        reason: availability.reason,
-        totalFleet: availability.totalFleet,
-        bookedCount: bookedVehicleCodes.length,
-        availableCount: Math.max(
-          0,
-          availability.totalFleet - bookedVehicleCodes.length,
+
+      assignedVehicleName:
+        publicVehicleName,
+
+      assignedVehicleShortName:
+        vehicleShortName(
+          assignedVehicle,
         ),
+
+      assignedVehicleDisplayName,
+
+      availability: {
+        fleetGroup:
+          actualFleetGroup,
+
+        reason:
+          availability.reason,
+
+        totalFleet:
+          availability.totalFleet,
+
+        bookedCount:
+          bookedVehicleCodes.length,
+
+        availableCount:
+          Math.max(
+            0,
+            availability.totalFleet -
+              bookedVehicleCodes.length,
+          ),
+
         bookedVehicleCodes,
-        bufferMinutes: BUFFER_MINUTES_AFTER_BOOKING,
+
+        bufferMinutes:
+          BUFFER_MINUTES_AFTER_BOOKING,
+
         adminOverride,
       },
     });
   } catch (error: any) {
-    console.error("BOOKINGS POST FAILED:", error);
+    console.error(
+      "BOOKINGS POST FAILED:",
+      error,
+    );
+
     return NextResponse.json(
-      { ok: false, error: error?.message || "Failed to save booking." },
+      {
+        ok: false,
+        error:
+          error?.message ||
+          "Failed to save booking.",
+      },
       { status: 500 },
     );
   }
 }
 
-export async function PATCH(request: NextRequest) {
+export async function PATCH(
+  request: NextRequest,
+) {
   try {
     const body = await request.json();
-    const actionResult = resolvePatchAction(body?.action || body?.status);
+
+    const actionResult =
+      resolvePatchAction(
+        body?.action ||
+          body?.status,
+      );
+
     if (!actionResult) {
       return NextResponse.json(
         {
@@ -1326,7 +1994,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const filters = buildPatchFilters(body);
+    const filters =
+      buildPatchFilters(body);
+
     if (
       !filters.stripePaymentIntentId &&
       !filters.contractNumber &&
@@ -1342,57 +2012,96 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    let result = await updateBookingByFilters({
-      filters,
-      payload: {
-        status: actionResult.status,
-        booking_status:
-          actionResult.status === "cancelled"
-            ? "cancelled"
-            : actionResult.status === "returned"
-              ? "returned"
-              : "confirmed",
-        booking_action: actionResult.booking_action,
-        updated_at: new Date().toISOString(),
-      },
-    });
+    let result =
+      await updateBookingByFilters({
+        filters,
+        payload: {
+          status:
+            actionResult.status,
+
+          booking_status:
+            actionResult.status ===
+            "cancelled"
+              ? "cancelled"
+              : actionResult.status ===
+                  "returned"
+                ? "returned"
+                : "confirmed",
+
+          booking_action:
+            actionResult.booking_action,
+
+          updated_at:
+            new Date().toISOString(),
+        },
+      });
 
     if (result.error) {
       console.warn(
         "BOOKINGS PATCH FULL PAYLOAD FAILED, TRYING STATUS ONLY:",
-        result.error?.message || result.error,
+        result.error?.message ||
+          result.error,
       );
-      result = await updateBookingByFilters({
-        filters,
-        payload: { status: actionResult.status },
-      });
+
+      result =
+        await updateBookingByFilters({
+          filters,
+          payload: {
+            status:
+              actionResult.status,
+          },
+        });
     }
 
     if (result.error) {
       return NextResponse.json(
         {
           ok: false,
-          error: result.error?.message || "Failed to update booking.",
+          error:
+            result.error?.message ||
+            "Failed to update booking.",
         },
         { status: 500 },
       );
     }
-    if (!Array.isArray(result.data) || result.data.length === 0) {
+
+    if (
+      !Array.isArray(result.data) ||
+      result.data.length === 0
+    ) {
       return NextResponse.json(
-        { ok: false, error: "Booking not found in Supabase.", filters },
+        {
+          ok: false,
+          error:
+            "Booking not found in Supabase.",
+          filters,
+        },
         { status: 404 },
       );
     }
 
     return NextResponse.json({
       ok: true,
-      booking: normalizeBookingForDashboard(result.data[0]),
-      updated: result.data.length,
+      booking:
+        normalizeBookingForDashboard(
+          result.data[0],
+        ),
+      updated:
+        result.data.length,
     });
   } catch (error: any) {
-    console.error("BOOKINGS PATCH FAILED:", error);
+    console.error(
+      "BOOKINGS PATCH FAILED:",
+      error,
+    );
+
     return NextResponse.json(
-      { ok: false, error: error?.message || "Failed to update booking." },
+      {
+        ok: false,
+        error:
+          error?.message ||
+          "Failed to update booking.",
+      },
       { status: 500 },
     );
   }

@@ -160,8 +160,8 @@ const styles = StyleSheet.create({
     textAlign: "center",
     fontSize: 26,
     fontFamily: "Helvetica-Bold",
-    color: "#000000",
-    opacity: 0.028,
+    color: "#b8b8b8",
+    opacity: 0.18,
     letterSpacing: 1.5,
     transform: "rotate(-30deg)",
   },
@@ -965,7 +965,7 @@ function InvoiceBreakdown({
 function Watermark() {
   return (
     <Text style={styles.watermarkText}>
-      OFFICIAL NEXA RENTALS CONTRACT
+      ORIGINAL CONTRACT NEXA RENTALS
     </Text>
   );
 }

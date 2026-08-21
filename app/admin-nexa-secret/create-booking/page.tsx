@@ -435,27 +435,33 @@ function getStoredBookings(): ManualBooking[] {
   return getManualBookingsFromLocalStorage<ManualBooking>();
 }
 
-function extractContractNumberValue(value?: string | number | null) {
-  const match = String(value || "").match(/NX-(\d+)/i);
-  return match ? Number(match[1]) : 0;
+function getBookingContractNumber(booking: ManualBooking) {
+  return String(
+    booking.contractData?.numeroContrato ||
+      booking.id ||
+      "",
+  )
+    .trim()
+    .toUpperCase();
 }
 
-function getBookingContractNumberValue(booking: ManualBooking) {
-  return Math.max(
-    extractContractNumberValue(booking.id),
-    extractContractNumberValue(booking.contractData?.numeroContrato),
+function generateRandomContractNumber(bookings: ManualBooking[]) {
+  const existingNumbers = new Set(
+    bookings
+      .map((booking) => getBookingContractNumber(booking))
+      .filter(Boolean),
   );
-}
 
-function getNextContractNumberFromBookings(bookings: ManualBooking[]) {
-  const highestNumber = bookings.reduce((highest, booking) => {
-    const number = getBookingContractNumberValue(booking);
-    return number > highest ? number : highest;
-  }, 74);
+  for (let attempt = 0; attempt < 100; attempt += 1) {
+    const randomNumber = Math.floor(Math.random() * 90000) + 10000;
+    const contractNumber = `NX-${randomNumber}`;
 
-  const nextNumber = Math.max(highestNumber + 1, 75);
+    if (!existingNumbers.has(contractNumber)) {
+      return contractNumber;
+    }
+  }
 
-  return `NX-${nextNumber}`;
+  throw new Error("Could not generate a unique contract number.");
 }
 
 function normalizeOnlineBooking(row: OnlineBookingRow): ManualBooking {
@@ -1008,9 +1014,9 @@ export default function CreateBookingPage() {
     : undefined;
 
   const nextContractNumber = useMemo(() => {
-    if (typeof window === "undefined") return "NX-75";
+    if (typeof window === "undefined") return "NX-00000";
 
-    return getNextContractNumberFromBookings(allBookings);
+    return generateRandomContractNumber(allBookings);
   }, [allBookings, success]);
 
   function updateField(field: keyof BookingForm, value: string) {
@@ -1027,7 +1033,8 @@ export default function CreateBookingPage() {
 
   function createContractNumber() {
     const currentBookings = getStoredBookings();
-    return getNextContractNumberFromBookings([
+
+    return generateRandomContractNumber([
       ...allBookings,
       ...currentBookings,
     ]);
