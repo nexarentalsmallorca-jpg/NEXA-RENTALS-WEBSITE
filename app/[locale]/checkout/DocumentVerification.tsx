@@ -890,6 +890,19 @@ export default function DocumentVerification({
       ""
     );
 
+  const mobileActionButtonsRef =
+    useRef<
+      Record<
+        number,
+        HTMLButtonElement | null
+      >
+    >({});
+
+  const hasAutoScrolledToActionRef =
+    useRef(
+      false
+    );
+
   useEffect(
     () => {
       sessionsRef.current =
@@ -2126,6 +2139,82 @@ export default function DocumentVerification({
         )
     );
 
+  useEffect(
+    () => {
+      if (
+        !restored ||
+        preparing ||
+        hasAutoScrolledToActionRef
+          .current ||
+        !nextMobileDriverIndex ||
+        !window.matchMedia(
+          "(max-width: 767px)"
+        ).matches
+      ) {
+        return;
+      }
+
+      const nextSession =
+        sessions.find(
+          (item) =>
+            item.driverIndex ===
+            nextMobileDriverIndex
+        );
+
+      if (
+        !nextSession ||
+        nextSession.status ===
+          "expired" ||
+        nextSession.status ===
+          "cancelled"
+      ) {
+        return;
+      }
+
+      const timer =
+        window.setTimeout(
+          () => {
+            const button =
+              mobileActionButtonsRef
+                .current[
+                  nextMobileDriverIndex
+                ];
+
+            if (
+              !button
+            ) {
+              return;
+            }
+
+            hasAutoScrolledToActionRef.current =
+              true;
+
+            button.scrollIntoView({
+              behavior:
+                "smooth",
+              block:
+                "center",
+              inline:
+                "nearest",
+            });
+          },
+          300
+        );
+
+      return () => {
+        window.clearTimeout(
+          timer
+        );
+      };
+    },
+    [
+      restored,
+      preparing,
+      sessions,
+      nextMobileDriverIndex,
+    ]
+  );
+
   const readyCount =
     sessions.length;
 
@@ -2160,8 +2249,8 @@ export default function DocumentVerification({
           0% {
             transform: translateX(-135%) skewX(-18deg);
           }
-          48%, 100% {
-            transform: translateX(235%) skewX(-18deg);
+          100% {
+            transform: translateX(560%) skewX(-18deg);
           }
         }
 
@@ -2189,7 +2278,7 @@ export default function DocumentVerification({
             rgba(255, 255, 255, 0.42),
             transparent
           );
-          animation: nexaVerificationShine 3.1s ease-in-out infinite;
+          animation: nexaVerificationShine 3.1s linear infinite;
         }
 
         .nexa-verification-action:active {
@@ -2478,6 +2567,13 @@ export default function DocumentVerification({
 
                     <div className="mt-5 md:hidden">
                       <button
+                        ref={(node) => {
+                          mobileActionButtonsRef
+                            .current[
+                              driverIndex
+                            ] =
+                            node;
+                        }}
                         type="button"
                         disabled={
                           mobileDisabled ||

@@ -4367,7 +4367,7 @@ function Choice({
       type="button"
       onClick={onClick}
       className="min-h-[180px] rounded-[16px] border border-white/15 bg-white/[0.06] p-5 text-left transition active:scale-[0.98]"
-    >
+    >  
       <div className="flex h-12 w-16 items-center justify-center rounded-[7px] bg-white text-[13px] font-black text-black">
         {icon}
       </div>
