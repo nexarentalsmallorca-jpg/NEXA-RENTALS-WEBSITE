@@ -51,7 +51,21 @@ type BookingRow = {
   } | null;
 };
 
+type WebAvailabilityBlockRow = {
+  id: string;
+  block_type: "fleet_group" | "vehicle";
+  fleet_group: string;
+  vehicle_code?: string | null;
+  quantity: number;
+  start_date: string;
+  start_time: string;
+  end_date: string;
+  end_time: string;
+  note?: string | null;
+};
+
 const BUFFER_MINUTES_AFTER_BOOKING = 60;
+const WEB_AVAILABILITY_TABLE = "web_availability_blocks";
 
 const BLOCKING_STATUSES = [
   "confirmed",
@@ -285,7 +299,7 @@ function resolveFleetGroupKeyFromWebsiteVehicle({
 function makeDateTime(date?: string | null, time?: string | null) {
   if (!date) return null;
 
-  const safeTime = time || "00:00";
+  const safeTime = String(time || "00:00").slice(0, 5);
   const value = new Date(`${date}T${safeTime}:00`);
 
   if (Number.isNaN(value.getTime())) return null;
@@ -295,6 +309,29 @@ function makeDateTime(date?: string | null, time?: string | null) {
 
 function addMinutes(date: Date, minutes: number) {
   return new Date(date.getTime() + minutes * 60 * 1000);
+}
+
+function rangesOverlapSelection({
+  blockedStart,
+  blockedEnd,
+  requestedStart,
+  requestedEnd,
+}: {
+  blockedStart: Date;
+  blockedEnd: Date;
+  requestedStart: Date;
+  requestedEnd: Date;
+}) {
+  const blockedBufferedEnd = addMinutes(
+    blockedEnd,
+    BUFFER_MINUTES_AFTER_BOOKING
+  );
+  const requestedBufferedEnd = addMinutes(
+    requestedEnd,
+    BUFFER_MINUTES_AFTER_BOOKING
+  );
+
+  return blockedStart < requestedBufferedEnd && blockedBufferedEnd > requestedStart;
 }
 
 function getBookingVehicleCode(booking: BookingRow) {
@@ -339,17 +376,12 @@ function bookingOverlapsSelection({
 
   if (!bookingStart || !bookingEnd) return false;
 
-  const bookingBlockedEnd = addMinutes(
-    bookingEnd,
-    BUFFER_MINUTES_AFTER_BOOKING
-  );
-
-  const requestedBlockedEnd = addMinutes(
+  return rangesOverlapSelection({
+    blockedStart: bookingStart,
+    blockedEnd: bookingEnd,
+    requestedStart,
     requestedEnd,
-    BUFFER_MINUTES_AFTER_BOOKING
-  );
-
-  return bookingStart < requestedBlockedEnd && bookingBlockedEnd > requestedStart;
+  });
 }
 
 function bookingBelongsToFleetGroup({
@@ -367,9 +399,7 @@ function bookingBelongsToFleetGroup({
     return true;
   }
 
-  const bookingFleetGroupFromColumn = safeNormalizeText(
-    booking.fleet_group
-  );
+  const bookingFleetGroupFromColumn = safeNormalizeText(booking.fleet_group);
 
   if (bookingFleetGroupFromColumn === fleetGroup) {
     return true;
@@ -394,6 +424,48 @@ function bookingBelongsToFleetGroup({
   });
 
   return resolvedKey === fleetGroup;
+}
+
+function blockOverlapsSelection({
+  block,
+  requestedStart,
+  requestedEnd,
+}: {
+  block: WebAvailabilityBlockRow;
+  requestedStart: Date;
+  requestedEnd: Date;
+}) {
+  const blockStart = makeDateTime(block.start_date, block.start_time);
+  const blockEnd = makeDateTime(block.end_date, block.end_time);
+
+  if (!blockStart || !blockEnd) return false;
+
+  return rangesOverlapSelection({
+    blockedStart: blockStart,
+    blockedEnd: blockEnd,
+    requestedStart,
+    requestedEnd,
+  });
+}
+
+function fleetGroupBlockApplies(
+  blockFleetGroup: string,
+  requestedFleetGroup: NexaFleetGroup
+) {
+  const cleanBlockGroup = safeNormalizeText(blockFleetGroup);
+
+  if (cleanBlockGroup === requestedFleetGroup) return true;
+
+  if (requestedFleetGroup === "scooter") {
+    return [
+      "piaggio_liberty_125",
+      "kymco_sky_town_125",
+      "sym_symphony_125",
+      "scooter",
+    ].includes(cleanBlockGroup);
+  }
+
+  return cleanBlockGroup === "scooter";
 }
 
 function getAvailabilityMessage({
@@ -540,6 +612,24 @@ async function loadBookings() {
   };
 }
 
+async function loadWebAvailabilityBlocks(from: string, to: string) {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const result = await supabaseAdmin
+    .from(WEB_AVAILABILITY_TABLE)
+    .select(
+      "id, block_type, fleet_group, vehicle_code, quantity, start_date, start_time, end_date, end_time, note"
+    )
+    .lte("start_date", to)
+    .gte("end_date", from)
+    .limit(1000);
+
+  return {
+    data: (result.data || []) as WebAvailabilityBlockRow[],
+    error: result.error,
+  };
+}
+
 function getUnknownFleetBlockingCount({
   blockingBookings,
   fleetGroup,
@@ -602,8 +692,7 @@ export async function GET(request: NextRequest) {
     const from = searchParams.get("from") || "";
     const to = searchParams.get("to") || "";
     const pickupTime = searchParams.get("pickupTime") || "10:00";
-    const dropoffTime =
-      searchParams.get("dropoffTime") || pickupTime;
+    const dropoffTime = searchParams.get("dropoffTime") || pickupTime;
 
     if (!from || !to) {
       return createBadRequest("Missing pickup or drop-off date.");
@@ -613,15 +702,11 @@ export async function GET(request: NextRequest) {
     const requestedEnd = makeDateTime(to, dropoffTime);
 
     if (!requestedStart || !requestedEnd) {
-      return createBadRequest(
-        "Invalid pickup or drop-off date/time."
-      );
+      return createBadRequest("Invalid pickup or drop-off date/time.");
     }
 
     if (requestedEnd <= requestedStart) {
-      return createBadRequest(
-        "Drop-off date/time must be after pickup date/time."
-      );
+      return createBadRequest("Drop-off date/time must be after pickup date/time.");
     }
 
     const fleetGroup = resolveFleetGroupKeyFromWebsiteVehicle({
@@ -642,12 +727,31 @@ export async function GET(request: NextRequest) {
       normalizeVehicleCode(vehicle.codigo)
     );
 
-    const { data, error, mode } = await loadBookings();
+    const [bookingResult, manualBlockResult] = await Promise.all([
+      loadBookings(),
+      loadWebAvailabilityBlocks(from, to),
+    ]);
+
+    const { data, error, mode } = bookingResult;
 
     if (error) {
+      console.error("❌ Availability check Supabase error:", error);
+
+      return NextResponse.json(
+        {
+          ok: false,
+          available: false,
+          message:
+            "Live availability could not be confirmed. Please try again or contact us on WhatsApp.",
+        },
+        { status: 500 }
+      );
+    }
+
+    if (manualBlockResult.error) {
       console.error(
-        "❌ Availability check Supabase error:",
-        error
+        "❌ Web availability blocks Supabase error:",
+        manualBlockResult.error
       );
 
       return NextResponse.json(
@@ -663,54 +767,89 @@ export async function GET(request: NextRequest) {
 
     const bookings = (data || []) as BookingRow[];
 
-    const overlappingBlockingBookings = bookings.filter(
-      (booking) => {
-        if (!bookingShouldBlock(booking.status)) {
-          return false;
-        }
-
-        if (
-          !bookingOverlapsSelection({
-            booking,
-            requestedStart,
-            requestedEnd,
-          })
-        ) {
-          return false;
-        }
-
-        return bookingBelongsToFleetGroup({
-          booking,
-          fleetGroup,
-          fleetCodes,
-        });
+    const overlappingBlockingBookings = bookings.filter((booking) => {
+      if (!bookingShouldBlock(booking.status)) {
+        return false;
       }
-    );
+
+      if (
+        !bookingOverlapsSelection({
+          booking,
+          requestedStart,
+          requestedEnd,
+        })
+      ) {
+        return false;
+      }
+
+      return bookingBelongsToFleetGroup({
+        booking,
+        fleetGroup,
+        fleetCodes,
+      });
+    });
+
+    const overlappingManualBlocks = manualBlockResult.data.filter((block) => {
+      if (
+        !blockOverlapsSelection({
+          block,
+          requestedStart,
+          requestedEnd,
+        })
+      ) {
+        return false;
+      }
+
+      if (block.block_type === "vehicle") {
+        return fleetCodes.includes(normalizeVehicleCode(block.vehicle_code));
+      }
+
+      return fleetGroupBlockApplies(block.fleet_group, fleetGroup);
+    });
 
     const bookedVehicleCodes = getBookedVehicleCodes({
       blockingBookings: overlappingBlockingBookings,
       fleetCodes,
     });
 
-    const unknownFleetBlockingCount =
-      getUnknownFleetBlockingCount({
-        blockingBookings: overlappingBlockingBookings,
-        fleetGroup,
-        fleetCodes,
-      });
+    const unknownFleetBlockingCount = getUnknownFleetBlockingCount({
+      blockingBookings: overlappingBlockingBookings,
+      fleetGroup,
+      fleetCodes,
+    });
+
+    const manuallyBlockedVehicleCodes = Array.from(
+      new Set(
+        overlappingManualBlocks
+          .filter((block) => block.block_type === "vehicle")
+          .map((block) => normalizeVehicleCode(block.vehicle_code))
+          .filter((code) => code && fleetCodes.includes(code))
+      )
+    );
+
+    const fleetQuantityBlockCount = overlappingManualBlocks
+      .filter((block) => block.block_type === "fleet_group")
+      .reduce((total, block) => {
+        const quantity = Math.max(0, Math.floor(Number(block.quantity || 0)));
+        return total + quantity;
+      }, 0);
+
+    const directlyUnavailableCodes = new Set([
+      ...bookedVehicleCodes,
+      ...manuallyBlockedVehicleCodes,
+    ]);
 
     const directlyAvailableVehicles = fleet.filter(
       (vehicle) =>
-        !bookedVehicleCodes.includes(
-          normalizeVehicleCode(vehicle.codigo)
-        )
+        !directlyUnavailableCodes.has(normalizeVehicleCode(vehicle.codigo))
     );
 
+    const anonymousCapacityReduction =
+      unknownFleetBlockingCount + fleetQuantityBlockCount;
+
     const availableVehicles =
-      unknownFleetBlockingCount > 0
-        ? directlyAvailableVehicles.slice(
-            unknownFleetBlockingCount
-          )
+      anonymousCapacityReduction > 0
+        ? directlyAvailableVehicles.slice(anonymousCapacityReduction)
         : directlyAvailableVehicles;
 
     const assignedVehicle = availableVehicles[0] || null;
@@ -721,9 +860,10 @@ export async function GET(request: NextRequest) {
       bookedVehicleCodes.length + unknownFleetBlockingCount
     );
 
-    const availableCount = Math.max(
+    const availableCount = availableVehicles.length;
+    const manuallyBlockedCount = Math.max(
       0,
-      fleet.length - bookedCount
+      fleet.length - bookedCount - availableCount
     );
 
     return NextResponse.json({
@@ -733,18 +873,18 @@ export async function GET(request: NextRequest) {
       fleetGroup,
       totalFleet: fleet.length,
       bookedCount,
+      manuallyBlockedCount,
       availableCount,
       unknownFleetBlockingCount,
+      fleetQuantityBlockCount,
       bookedVehicleCodes,
-      availableVehicleCodes: availableVehicles.map(
-        (vehicle) => vehicle.codigo
-      ),
+      manuallyBlockedVehicleCodes,
+      availableVehicleCodes: availableVehicles.map((vehicle) => vehicle.codigo),
       assignedVehicleCode: assignedVehicle?.codigo || null,
       assignedVehicleName: assignedVehicle
         ? getVehiclePublicName(assignedVehicle)
         : null,
-      assignedVehicleMatricula:
-        assignedVehicle?.matricula || null,
+      assignedVehicleMatricula: assignedVehicle?.matricula || null,
       assignedVehicleShortName: assignedVehicle
         ? vehicleShortName(assignedVehicle)
         : null,

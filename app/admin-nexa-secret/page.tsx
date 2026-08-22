@@ -15,6 +15,10 @@ import {
 } from "lucide-react";
 import AdminShell from "../components/dashboard/AdminShell";
 import { nexaFleet } from "../../lib/nexaFleet";
+import {
+  FleetWebAvailabilityButton,
+  VehicleWebAvailabilityButton,
+} from "./WebAvailabilityControls";
 
 type BookingAction = "rent_now" | "reserve_now";
 type BookingStatus = "rented" | "reserved" | "finished" | "cancelled" | "wanted";
@@ -923,7 +927,7 @@ export default function AdminDashboardPage() {
 
           <section>
             <div className="rounded-2xl border border-white/10 bg-[#0B0D12]/88 p-5 shadow-[0_20px_70px_rgba(0,0,0,0.28)]">
-              <div className="flex items-center justify-between gap-3">
+              <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
                 <div>
                   <p className="text-xs font-black uppercase tracking-[0.2em] text-orange-300">
                     Fleet board
@@ -931,43 +935,52 @@ export default function AdminDashboardPage() {
                   <h3 className="mt-1 text-2xl font-black text-white">Vehicles</h3>
                 </div>
 
-                <Link
-                  href="/admin-nexa-secret/vehicles"
-                  className="inline-flex items-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-black text-white/70 transition hover:bg-white/[0.09] hover:text-white"
-                >
-                  Open fleet
-                  <ArrowRight size={15} />
-                </Link>
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                  <FleetWebAvailabilityButton />
+
+                  <Link
+                    href="/admin-nexa-secret/vehicles"
+                    className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.05] px-3 py-2 text-xs font-black text-white/70 transition hover:bg-white/[0.09] hover:text-white"
+                  >
+                    Open fleet
+                    <ArrowRight size={15} />
+                  </Link>
+                </div>
               </div>
 
               <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {dashboard.fleetRows.map((vehicle) => (
-                  <Link
-                    href="/admin-nexa-secret/bookings"
+                  <article
                     key={vehicle.codigo}
                     className="group overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035] transition hover:-translate-y-0.5 hover:bg-white/[0.06]"
                   >
-                    <div className="relative h-28 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.11),transparent_50%)] p-3">
-                      <img
-                        src={vehicle.imageUrl}
-                        alt={vehicle.codigo}
-                        className="h-full w-full object-contain drop-shadow-[0_20px_28px_rgba(0,0,0,0.45)]"
-                      />
-                      <span className={`absolute right-3 top-3 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${vehicleStatusClasses(vehicle.status)}`}>
-                        {vehicle.label}
-                      </span>
-                    </div>
+                    <Link href="/admin-nexa-secret/bookings" className="block">
+                      <div className="relative h-28 bg-[radial-gradient(circle_at_50%_20%,rgba(255,255,255,0.11),transparent_50%)] p-3">
+                        <img
+                          src={vehicle.imageUrl}
+                          alt={vehicle.codigo}
+                          className="h-full w-full object-contain drop-shadow-[0_20px_28px_rgba(0,0,0,0.45)]"
+                        />
+                        <span className={`absolute right-3 top-3 rounded-full border px-2.5 py-1 text-[10px] font-black uppercase tracking-[0.08em] ${vehicleStatusClasses(vehicle.status)}`}>
+                          {vehicle.label}
+                        </span>
+                      </div>
 
-                    <div className="p-4">
-                      <p className="text-2xl font-black text-white">{vehicle.codigo}</p>
-                      <p className="mt-1 text-xs font-bold text-white/45">
-                        {vehicle.matricula} - {vehicle.marca} {vehicle.modelo}
-                      </p>
-                      <p className="mt-3 min-h-[38px] text-xs font-bold leading-5 text-white/55">
-                        {vehicle.detail}
-                      </p>
+                      <div className="px-4 pt-4">
+                        <p className="text-2xl font-black text-white">{vehicle.codigo}</p>
+                        <p className="mt-1 text-xs font-bold text-white/45">
+                          {vehicle.matricula} - {vehicle.marca} {vehicle.modelo}
+                        </p>
+                        <p className="mt-3 min-h-[38px] text-xs font-bold leading-5 text-white/55">
+                          {vehicle.detail}
+                        </p>
+                      </div>
+                    </Link>
+
+                    <div className="px-4 pb-4">
+                      <VehicleWebAvailabilityButton vehicleCode={vehicle.codigo} />
                     </div>
-                  </Link>
+                  </article>
                 ))}
               </div>
             </div>
