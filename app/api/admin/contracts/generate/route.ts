@@ -8,7 +8,6 @@ import {
 } from "@/lib/contractPdfStorage";
 import { normalizeBookingForContractPdf } from "@/lib/contractBookingNormalize";
 import {
-  getCustomerFolderNameFromFileName,
   uploadContractPdfToGoogleDrive,
 } from "@/lib/googleDrive";
 
@@ -18,35 +17,47 @@ export const maxDuration = 60;
 
 type BookingLike = {
   id?: string;
+  createdAt?: string;
+  created_at?: string;
   status?: string;
+
   vehicle?: {
     codigo?: string;
     matricula?: string;
     marca?: string;
     modelo?: string;
   };
+
   contractData?: {
     numeroContrato?: string;
+
     fechaEntrega?: string;
     horaEntrega?: string;
+
     fechaDevolucion?: string;
     horaDevolucion?: string;
+
     nombreCliente?: string;
     dniPasaporte?: string;
     telefono?: string;
     email?: string;
     direccion?: string;
+
     permisoConducir?: string;
     paisExpedicion?: string;
     fechaCaducidad?: string;
+
     dias?: string;
     precioPorDia?: string;
     total?: string;
     pagado?: string;
+
     metodoPago?: string;
     paymentMethod?: string;
+
     [key: string]: any;
   };
+
   [key: string]: any;
 };
 
@@ -54,19 +65,26 @@ type DriveUploadResult = {
   uploaded?: boolean;
   skipped?: boolean;
   failed?: boolean;
+
   reason?: string | null;
   error?: string;
+
   fileId?: string | null;
   fileName?: string | null;
+
   webViewLink?: string | null;
   webContentLink?: string | null;
+
   folderId?: string | null;
   folderName?: string | null;
   folderWebViewLink?: string | null;
+
   customerFolderName?: string | null;
   customerFolderId?: string | null;
   customerFolderWebViewLink?: string | null;
+
   parentFolderId?: string | null;
+
   [key: string]: any;
 };
 
@@ -91,6 +109,7 @@ function sanitizeDriveName(value: string) {
 
 function sanitizeFileName(value: string) {
   const clean = sanitizeDriveName(value);
+
   return clean || "NEXA_CONTRACT";
 }
 
@@ -103,15 +122,24 @@ function getContractNumber(booking: BookingLike) {
 }
 
 function getCustomerName(booking: BookingLike) {
-  return cleanText(booking?.contractData?.nombreCliente) || "Cliente";
+  return (
+    cleanText(booking?.contractData?.nombreCliente) ||
+    "Cliente"
+  );
 }
 
 function getVehicleCode(booking: BookingLike) {
-  return cleanText(booking?.vehicle?.codigo) || "Vehiculo";
+  return (
+    cleanText(booking?.vehicle?.codigo) ||
+    "Vehiculo"
+  );
 }
 
 function getVehiclePlate(booking: BookingLike) {
-  return cleanText(booking?.vehicle?.matricula) || "Matricula";
+  return (
+    cleanText(booking?.vehicle?.matricula) ||
+    "Matricula"
+  );
 }
 
 function getPickupDate(booking: BookingLike) {
@@ -121,47 +149,178 @@ function getPickupDate(booking: BookingLike) {
   );
 }
 
-function createCustomerFolderName(booking: BookingLike) {
-  const pickupDate = getPickupDate(booking);
-  const customerName = getCustomerName(booking);
-  const contractNumber = getContractNumber(booking);
-  const vehicleCode = getVehicleCode(booking);
-
-  return sanitizeDriveName(
-    `${customerName}_${pickupDate}_${contractNumber}_${vehicleCode}`
+/*
+ * Returns the ORIGINAL booking creation timestamp whenever possible.
+ *
+ * This is important because regenerating an existing contract should keep
+ * using the same chronological Google Drive folder name rather than creating
+ * a new folder based on the regeneration time.
+ */
+function getCreatedAt(booking: BookingLike) {
+  return (
+    cleanText(booking?.createdAt) ||
+    cleanText(booking?.created_at) ||
+    new Date().toISOString()
   );
 }
 
-function createContractFileName(booking: BookingLike) {
-  const contractNumber = getContractNumber(booking);
-  const customerName = getCustomerName(booking);
-  const vehicleCode = getVehicleCode(booking);
-  const plate = getVehiclePlate(booking);
-  const pickupDate = getPickupDate(booking);
+/*
+ * Converts:
+ *
+ * 2026-08-23T08:42:15.123Z
+ *
+ * into:
+ *
+ * 20260823_084215
+ *
+ * This format sorts perfectly by Google Drive folder name.
+ * When Drive is sorted Name -> Z to A, newest contracts appear first.
+ */
+function getSortableCreatedAt(booking: BookingLike) {
+  const rawCreatedAt = getCreatedAt(booking);
+  const date = new Date(rawCreatedAt);
 
-  const safeContractNumber = sanitizeFileName(contractNumber);
-  const safeName = sanitizeFileName(customerName);
-  const safeVehicleCode = sanitizeFileName(vehicleCode);
-  const safePlate = sanitizeFileName(plate);
+  if (Number.isNaN(date.getTime())) {
+    const fallback = new Date();
+
+    const year = fallback.getUTCFullYear();
+    const month = String(
+      fallback.getUTCMonth() + 1
+    ).padStart(2, "0");
+    const day = String(
+      fallback.getUTCDate()
+    ).padStart(2, "0");
+
+    const hours = String(
+      fallback.getUTCHours()
+    ).padStart(2, "0");
+    const minutes = String(
+      fallback.getUTCMinutes()
+    ).padStart(2, "0");
+    const seconds = String(
+      fallback.getUTCSeconds()
+    ).padStart(2, "0");
+
+    return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+  }
+
+  const year = date.getUTCFullYear();
+  const month = String(
+    date.getUTCMonth() + 1
+  ).padStart(2, "0");
+  const day = String(
+    date.getUTCDate()
+  ).padStart(2, "0");
+
+  const hours = String(
+    date.getUTCHours()
+  ).padStart(2, "0");
+  const minutes = String(
+    date.getUTCMinutes()
+  ).padStart(2, "0");
+  const seconds = String(
+    date.getUTCSeconds()
+  ).padStart(2, "0");
+
+  return `${year}${month}${day}_${hours}${minutes}${seconds}`;
+}
+
+/*
+ * Google Drive contract folder format:
+ *
+ * 20260823_084215_NX-92498_2026-08-23_John_Smith_N1
+ *
+ * This keeps the random contract number while allowing the folders to be
+ * sorted chronologically simply by sorting Google Drive Name -> Z to A.
+ */
+function createCustomerFolderName(
+  booking: BookingLike
+) {
+  const createdAt =
+    getSortableCreatedAt(booking);
+
+  const pickupDate =
+    getPickupDate(booking);
+
+  const customerName =
+    getCustomerName(booking);
+
+  const contractNumber =
+    getContractNumber(booking);
+
+  const vehicleCode =
+    getVehicleCode(booking);
+
+  return sanitizeDriveName(
+    `${createdAt}_${contractNumber}_${pickupDate}_${customerName}_${vehicleCode}`
+  );
+}
+
+function createContractFileName(
+  booking: BookingLike
+) {
+  const contractNumber =
+    getContractNumber(booking);
+
+  const customerName =
+    getCustomerName(booking);
+
+  const vehicleCode =
+    getVehicleCode(booking);
+
+  const plate =
+    getVehiclePlate(booking);
+
+  const pickupDate =
+    getPickupDate(booking);
+
+  const safeContractNumber =
+    sanitizeFileName(contractNumber);
+
+  const safeName =
+    sanitizeFileName(customerName);
+
+  const safeVehicleCode =
+    sanitizeFileName(vehicleCode);
+
+  const safePlate =
+    sanitizeFileName(plate);
 
   return `${safeContractNumber}_${pickupDate}_${safeName}_${safeVehicleCode}_${safePlate}_NEXA_RENTALS.pdf`;
 }
 
-function buildDateTime(date?: string, time?: string) {
-  if (!date || !time) return null;
+function buildDateTime(
+  date?: string,
+  time?: string
+) {
+  if (!date || !time) {
+    return null;
+  }
 
-  const value = new Date(`${date}T${time}`);
+  const value = new Date(
+    `${date}T${time}`
+  );
 
-  if (Number.isNaN(value.getTime())) return null;
+  if (Number.isNaN(value.getTime())) {
+    return null;
+  }
 
   return value;
 }
 
-function addMinutes(date: Date, minutes: number) {
-  return new Date(date.getTime() + minutes * 60 * 1000);
+function addMinutes(
+  date: Date,
+  minutes: number
+) {
+  return new Date(
+    date.getTime() +
+      minutes * 60 * 1000
+  );
 }
 
-function getBookingRange(booking: BookingLike) {
+function getBookingRange(
+  booking: BookingLike
+) {
   const start = buildDateTime(
     booking?.contractData?.fechaEntrega,
     booking?.contractData?.horaEntrega
@@ -172,11 +331,20 @@ function getBookingRange(booking: BookingLike) {
     booking?.contractData?.horaDevolucion
   );
 
-  if (!start || !end) return null;
+  if (!start || !end) {
+    return null;
+  }
 
-  const blockedEnd = addMinutes(end, BUFFER_MINUTES_AFTER_BOOKING);
+  const blockedEnd = addMinutes(
+    end,
+    BUFFER_MINUTES_AFTER_BOOKING
+  );
 
-  return { start, end, blockedEnd };
+  return {
+    start,
+    end,
+    blockedEnd,
+  };
 }
 
 function isOverlapping(
@@ -185,11 +353,18 @@ function isOverlapping(
   startB: Date,
   endB: Date
 ) {
-  return startA < endB && startB < endA;
+  return (
+    startA < endB &&
+    startB < endA
+  );
 }
 
-function isCancelledOrFinished(booking: BookingLike) {
-  const status = String(booking?.status || "").toLowerCase();
+function isCancelledOrFinished(
+  booking: BookingLike
+) {
+  const status = String(
+    booking?.status || ""
+  ).toLowerCase();
 
   return (
     status.includes("cancel") ||
@@ -206,54 +381,144 @@ function isCancelledOrFinished(booking: BookingLike) {
 }
 
 function formatDateEs(date: Date) {
-  return date.toLocaleDateString("es-ES", {
-    day: "2-digit",
-    month: "2-digit",
-    year: "numeric",
-  });
+  return date.toLocaleDateString(
+    "es-ES",
+    {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+    }
+  );
 }
 
 function formatTimeEs(date: Date) {
-  return date.toLocaleTimeString("es-ES", {
-    hour: "2-digit",
-    minute: "2-digit",
-    hour12: false,
-  });
+  return date.toLocaleTimeString(
+    "es-ES",
+    {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: false,
+    }
+  );
 }
 
-function validateBooking(booking: BookingLike) {
-  if (!booking) return "Missing booking data.";
-  if (!booking.vehicle) return "Missing vehicle data.";
-  if (!booking.contractData) return "Missing contract data.";
+function validateBooking(
+  booking: BookingLike
+) {
+  if (!booking) {
+    return "Missing booking data.";
+  }
 
-  if (!booking.contractData.numeroContrato) return "Missing contract number.";
-  if (!booking.contractData.nombreCliente) return "Missing customer name.";
-  if (!booking.vehicle.codigo) return "Missing vehicle code.";
-  if (!booking.vehicle.matricula) return "Missing vehicle plate.";
+  if (!booking.vehicle) {
+    return "Missing vehicle data.";
+  }
 
-  if (!booking.contractData.fechaEntrega) return "Missing pickup date.";
-  if (!booking.contractData.horaEntrega) return "Missing pickup time.";
-  if (!booking.contractData.fechaDevolucion) return "Missing return date.";
-  if (!booking.contractData.horaDevolucion) return "Missing return time.";
+  if (!booking.contractData) {
+    return "Missing contract data.";
+  }
 
-  if (!booking.contractData.dniPasaporte) return "Missing DNI/passport.";
-  if (!booking.contractData.telefono) return "Missing phone number.";
-  if (!booking.contractData.direccion) return "Missing address.";
-  if (!booking.contractData.permisoConducir) return "Missing driving license.";
-  if (!booking.contractData.paisExpedicion) return "Missing license country.";
+  if (
+    !booking.contractData.numeroContrato
+  ) {
+    return "Missing contract number.";
+  }
 
-  if (!booking.contractData.fechaCaducidad) {
+  if (
+    !booking.contractData.nombreCliente
+  ) {
+    return "Missing customer name.";
+  }
+
+  if (!booking.vehicle.codigo) {
+    return "Missing vehicle code.";
+  }
+
+  if (!booking.vehicle.matricula) {
+    return "Missing vehicle plate.";
+  }
+
+  if (
+    !booking.contractData.fechaEntrega
+  ) {
+    return "Missing pickup date.";
+  }
+
+  if (
+    !booking.contractData.horaEntrega
+  ) {
+    return "Missing pickup time.";
+  }
+
+  if (
+    !booking.contractData.fechaDevolucion
+  ) {
+    return "Missing return date.";
+  }
+
+  if (
+    !booking.contractData.horaDevolucion
+  ) {
+    return "Missing return time.";
+  }
+
+  if (
+    !booking.contractData.dniPasaporte
+  ) {
+    return "Missing DNI/passport.";
+  }
+
+  if (!booking.contractData.telefono) {
+    return "Missing phone number.";
+  }
+
+  if (
+    !booking.contractData.direccion
+  ) {
+    return "Missing address.";
+  }
+
+  if (
+    !booking.contractData.permisoConducir
+  ) {
+    return "Missing driving license.";
+  }
+
+  if (
+    !booking.contractData.paisExpedicion
+  ) {
+    return "Missing license country.";
+  }
+
+  if (
+    !booking.contractData.fechaCaducidad
+  ) {
     return "Missing license expiry date.";
   }
 
-  if (!booking.contractData.dias) return "Missing rental days.";
-  if (!booking.contractData.precioPorDia) return "Missing daily price.";
-  if (!booking.contractData.total) return "Missing total.";
-  if (!booking.contractData.pagado) return "Missing paid amount.";
+  if (!booking.contractData.dias) {
+    return "Missing rental days.";
+  }
 
-  const range = getBookingRange(booking);
+  if (
+    !booking.contractData.precioPorDia
+  ) {
+    return "Missing daily price.";
+  }
 
-  if (!range) return "Invalid pickup or return date/time.";
+  if (!booking.contractData.total) {
+    return "Missing total.";
+  }
+
+  if (!booking.contractData.pagado) {
+    return "Missing paid amount.";
+  }
+
+  const range =
+    getBookingRange(booking);
+
+  if (!range) {
+    return "Invalid pickup or return date/time.";
+  }
 
   if (range.end <= range.start) {
     return "Return date/time must be after pickup date/time.";
@@ -266,90 +531,159 @@ function checkVehicleOverlap(
   booking: BookingLike,
   existingBookings: BookingLike[]
 ) {
-  const newRange = getBookingRange(booking);
+  const newRange =
+    getBookingRange(booking);
 
-  if (!newRange) return null;
+  if (!newRange) {
+    return null;
+  }
 
-  const vehicleCode = booking?.vehicle?.codigo;
+  const vehicleCode =
+    booking?.vehicle?.codigo;
 
-  if (!vehicleCode) return null;
+  if (!vehicleCode) {
+    return null;
+  }
 
-  const currentBookingId = String(booking?.id || "");
-  const currentContractNumber = String(
-    booking?.contractData?.numeroContrato || ""
+  const currentBookingId = String(
+    booking?.id || ""
   );
 
-  const conflict = existingBookings.find((existingBooking) => {
-    if (!existingBooking) return false;
-    if (isCancelledOrFinished(existingBooking)) return false;
+  const currentContractNumber = String(
+    booking?.contractData
+      ?.numeroContrato || ""
+  );
 
-    const existingId = String(existingBooking?.id || "");
-    const existingContractNumber = String(
-      existingBooking?.contractData?.numeroContrato || ""
+  const conflict =
+    existingBookings.find(
+      (existingBooking) => {
+        if (!existingBooking) {
+          return false;
+        }
+
+        if (
+          isCancelledOrFinished(
+            existingBooking
+          )
+        ) {
+          return false;
+        }
+
+        const existingId = String(
+          existingBooking?.id || ""
+        );
+
+        const existingContractNumber =
+          String(
+            existingBooking
+              ?.contractData
+              ?.numeroContrato || ""
+          );
+
+        if (
+          currentBookingId &&
+          existingId &&
+          currentBookingId === existingId
+        ) {
+          return false;
+        }
+
+        if (
+          currentContractNumber &&
+          existingContractNumber &&
+          currentContractNumber ===
+            existingContractNumber
+        ) {
+          return false;
+        }
+
+        const existingVehicleCode =
+          existingBooking?.vehicle?.codigo;
+
+        if (
+          existingVehicleCode !==
+          vehicleCode
+        ) {
+          return false;
+        }
+
+        const existingRange =
+          getBookingRange(
+            existingBooking
+          );
+
+        if (!existingRange) {
+          return false;
+        }
+
+        return isOverlapping(
+          newRange.start,
+          newRange.blockedEnd,
+          existingRange.start,
+          existingRange.blockedEnd
+        );
+      }
     );
 
-    if (currentBookingId && existingId && currentBookingId === existingId) {
-      return false;
-    }
+  if (!conflict) {
+    return null;
+  }
 
-    if (
-      currentContractNumber &&
-      existingContractNumber &&
-      currentContractNumber === existingContractNumber
-    ) {
-      return false;
-    }
-
-    const existingVehicleCode = existingBooking?.vehicle?.codigo;
-
-    if (existingVehicleCode !== vehicleCode) return false;
-
-    const existingRange = getBookingRange(existingBooking);
-
-    if (!existingRange) return false;
-
-    return isOverlapping(
-      newRange.start,
-      newRange.blockedEnd,
-      existingRange.start,
-      existingRange.blockedEnd
-    );
-  });
-
-  if (!conflict) return null;
-
-  const conflictRange = getBookingRange(conflict);
+  const conflictRange =
+    getBookingRange(conflict);
 
   return {
     booking: conflict,
-    returnDate: conflictRange?.end || null,
-    blockedEnd: conflictRange?.blockedEnd || null,
+    returnDate:
+      conflictRange?.end || null,
+    blockedEnd:
+      conflictRange?.blockedEnd ||
+      null,
   };
 }
 
-function bufferToBase64(buffer: Buffer) {
+function bufferToBase64(
+  buffer: Buffer
+) {
   return buffer.toString("base64");
 }
 
-const DRIVE_UPLOAD_TIMEOUT_MS = 50_000;
+const DRIVE_UPLOAD_TIMEOUT_MS =
+  50_000;
 
 async function withTimeout<T>(
   promise: Promise<T>,
   timeoutMs: number,
   label: string
 ): Promise<T> {
-  let timer: ReturnType<typeof setTimeout> | undefined;
+  let timer:
+    | ReturnType<typeof setTimeout>
+    | undefined;
 
-  const timeoutPromise = new Promise<never>((_, reject) => {
-    timer = setTimeout(() => {
-      reject(new Error(`${label} timed out after ${timeoutMs / 1000}s`));
-    }, timeoutMs);
-  });
+  const timeoutPromise =
+    new Promise<never>(
+      (_, reject) => {
+        timer = setTimeout(() => {
+          reject(
+            new Error(
+              `${label} timed out after ${
+                timeoutMs / 1000
+              }s`
+            )
+          );
+        }, timeoutMs);
+      }
+    );
 
   try {
-    return await Promise.race([promise, timeoutPromise]);
+    return await Promise.race([
+      promise,
+      timeoutPromise,
+    ]);
   } finally {
-    if (timer) clearTimeout(timer);
+    if (timer) {
+      clearTimeout(timer);
+    }
   }
 }
 
@@ -362,83 +696,180 @@ async function safeUploadToGoogleDrive({
   fileName: string;
   pdfBuffer: Buffer;
 }): Promise<DriveUploadResult> {
-  const customerFolderName = getCustomerFolderNameFromFileName(fileName);
+  /*
+   * IMPORTANT:
+   *
+   * Previously this was generated directly from the PDF filename.
+   *
+   * It is now generated from the booking creation timestamp so Google Drive
+   * can sort folders chronologically while the NX contract number remains
+   * random.
+   */
+  const customerFolderName =
+    createCustomerFolderName(
+      booking
+    );
 
   try {
-    console.log("📤 Starting contract Google Drive upload from generate route:", {
-      fileName,
-      customerFolderName,
-      contractNumber: getContractNumber(booking),
-      customerName: getCustomerName(booking),
-      vehicleCode: getVehicleCode(booking),
-      vehiclePlate: getVehiclePlate(booking),
-      pdfSize: pdfBuffer.length,
-    });
+    console.log(
+      "📤 Starting contract Google Drive upload from generate route:",
+      {
+        fileName,
+        customerFolderName,
+        createdAt:
+          getCreatedAt(booking),
+        sortableCreatedAt:
+          getSortableCreatedAt(
+            booking
+          ),
+        contractNumber:
+          getContractNumber(booking),
+        customerName:
+          getCustomerName(booking),
+        vehicleCode:
+          getVehicleCode(booking),
+        vehiclePlate:
+          getVehiclePlate(booking),
+        pdfSize:
+          pdfBuffer.length,
+      }
+    );
 
-    const driveResult = await uploadContractPdfToGoogleDrive({
-      fileName,
-      pdfBuffer,
-      folderName: customerFolderName,
-      customerFolderName,
-      customerName: getCustomerName(booking),
-      contractDate: getPickupDate(booking),
-      contractNumber: getContractNumber(booking),
-      vehicleCode: getVehicleCode(booking),
-      vehiclePlate: getVehiclePlate(booking),
-    });
+    const driveResult =
+      await uploadContractPdfToGoogleDrive(
+        {
+          fileName,
+          pdfBuffer,
 
-    console.log("✅ Google Drive result from contract generate route:", {
-      uploaded: driveResult?.uploaded,
-      skipped: driveResult?.skipped,
-      failed: driveResult?.failed,
-      reason: driveResult?.reason,
-      fileLink: driveResult?.webViewLink,
-      folderLink: driveResult?.folderWebViewLink,
-    });
+          /*
+           * Both values intentionally receive the same chronological folder
+           * name. This preserves your existing googleDrive.ts behaviour
+           * without requiring any change to that file.
+           */
+          folderName:
+            customerFolderName,
+
+          customerFolderName,
+
+          customerName:
+            getCustomerName(booking),
+
+          contractDate:
+            getPickupDate(booking),
+
+          contractNumber:
+            getContractNumber(booking),
+
+          vehicleCode:
+            getVehicleCode(booking),
+
+          vehiclePlate:
+            getVehiclePlate(booking),
+        }
+      );
+
+    console.log(
+      "✅ Google Drive result from contract generate route:",
+      {
+        uploaded:
+          driveResult?.uploaded,
+        skipped:
+          driveResult?.skipped,
+        failed:
+          driveResult?.failed,
+        reason:
+          driveResult?.reason,
+        fileLink:
+          driveResult?.webViewLink,
+        folderLink:
+          driveResult
+            ?.folderWebViewLink,
+        folderName:
+          driveResult?.folderName,
+      }
+    );
 
     return {
       ...driveResult,
+
       customerFolderName,
-      folderName: driveResult?.folderName || customerFolderName,
+
+      folderName:
+        driveResult?.folderName ||
+        customerFolderName,
     };
   } catch (error: any) {
-    console.error("❌ Google Drive upload failed inside generate route:", {
-      message: error?.message,
-      stack: error?.stack,
-      responseData: error?.response?.data,
-    });
+    console.error(
+      "❌ Google Drive upload failed inside generate route:",
+      {
+        message:
+          error?.message,
+        stack:
+          error?.stack,
+        responseData:
+          error?.response?.data,
+      }
+    );
 
     return {
       uploaded: false,
       skipped: false,
       failed: true,
+
       customerFolderName,
-      folderName: customerFolderName,
-      error: error?.message || "Google Drive upload failed.",
-      reason: error?.message || "Google Drive upload failed.",
+
+      folderName:
+        customerFolderName,
+
+      error:
+        error?.message ||
+        "Google Drive upload failed.",
+
+      reason:
+        error?.message ||
+        "Google Drive upload failed.",
     };
   }
 }
 
-export async function POST(request: NextRequest) {
+export async function POST(
+  request: NextRequest
+) {
   try {
-    const body = await request.json();
+    const body =
+      await request.json();
 
-    const rawBooking = body.booking as BookingLike;
-    const existingBookings = Array.isArray(body.existingBookings)
-      ? (body.existingBookings as BookingLike[])
-      : [];
-    const skipOverlapCheck = Boolean(body.skipOverlapCheck || body.regenerate);
+    const rawBooking =
+      body.booking as BookingLike;
 
-    const booking = normalizeBookingForContractPdf(
-      rawBooking
-    ) as BookingLike;
+    const existingBookings =
+      Array.isArray(
+        body.existingBookings
+      )
+        ? (body.existingBookings as BookingLike[])
+        : [];
 
-    if (booking?.contractData && !booking.contractData.email) {
-      booking.contractData.email = "";
+    const skipOverlapCheck =
+      Boolean(
+        body.skipOverlapCheck ||
+          body.regenerate
+      );
+
+    const booking =
+      normalizeBookingForContractPdf(
+        rawBooking
+      ) as BookingLike;
+
+    if (
+      booking?.contractData &&
+      !booking.contractData.email
+    ) {
+      booking.contractData.email =
+        "";
     }
 
-    const validationError = validateBooking(booking);
+    const validationError =
+      validateBooking(booking);
 
     if (validationError) {
       return NextResponse.json(
@@ -446,154 +877,323 @@ export async function POST(request: NextRequest) {
           ok: false,
           error: validationError,
         },
-        { status: 400 }
+        {
+          status: 400,
+        }
       );
     }
 
-    const overlapConflict = skipOverlapCheck
-      ? null
-      : checkVehicleOverlap(booking, existingBookings);
+    const overlapConflict =
+      skipOverlapCheck
+        ? null
+        : checkVehicleOverlap(
+            booking,
+            existingBookings
+          );
 
     if (overlapConflict) {
-      const vehicleCode = booking?.vehicle?.codigo || "este vehículo";
+      const vehicleCode =
+        booking?.vehicle?.codigo ||
+        "este vehículo";
 
-      const conflictReturn = overlapConflict.blockedEnd
-        ? `${formatDateEs(overlapConflict.blockedEnd)} a las ${formatTimeEs(
-            overlapConflict.blockedEnd
-          )}`
-        : overlapConflict.returnDate
-        ? `${formatDateEs(overlapConflict.returnDate)} a las ${formatTimeEs(
-            overlapConflict.returnDate
-          )}`
-        : "la fecha de devolución de la otra reserva";
+      const conflictReturn =
+        overlapConflict.blockedEnd
+          ? `${formatDateEs(
+              overlapConflict.blockedEnd
+            )} a las ${formatTimeEs(
+              overlapConflict.blockedEnd
+            )}`
+          : overlapConflict.returnDate
+            ? `${formatDateEs(
+                overlapConflict.returnDate
+              )} a las ${formatTimeEs(
+                overlapConflict.returnDate
+              )}`
+            : "la fecha de devolución de la otra reserva";
 
       return NextResponse.json(
         {
           ok: false,
+
           error: `El vehículo ${vehicleCode} ya está reservado en esas fechas. Estará disponible después del ${conflictReturn}.`,
+
           conflict: {
-            bookingId: overlapConflict.booking?.id || null,
+            bookingId:
+              overlapConflict
+                .booking?.id ||
+              null,
+
             contractNumber:
-              overlapConflict.booking?.contractData?.numeroContrato || null,
-            returnDate: overlapConflict.returnDate?.toISOString() || null,
-            blockedEnd: overlapConflict.blockedEnd?.toISOString() || null,
+              overlapConflict
+                .booking
+                ?.contractData
+                ?.numeroContrato ||
+              null,
+
+            returnDate:
+              overlapConflict
+                .returnDate
+                ?.toISOString() ||
+              null,
+
+            blockedEnd:
+              overlapConflict
+                .blockedEnd
+                ?.toISOString() ||
+              null,
           },
         },
-        { status: 409 }
+        {
+          status: 409,
+        }
       );
     }
 
-    const fileName = createContractFileName(booking);
-    const customerFolderName = getCustomerFolderNameFromFileName(fileName);
+    const fileName =
+      createContractFileName(
+        booking
+      );
+
+    /*
+     * Same folder name used for the response and for Google Drive.
+     */
+    const customerFolderName =
+      createCustomerFolderName(
+        booking
+      );
+
     const bookingKey =
       cleanText(booking?.id) ||
       getContractNumber(booking) ||
       `booking_${Date.now()}`;
 
-    const pdfDocument = React.createElement(NexaContractPDF as any, {
-      booking: booking as any,
-    });
+    const pdfDocument =
+      React.createElement(
+        NexaContractPDF as any,
+        {
+          booking:
+            booking as any,
+        }
+      );
 
-    const pdfBuffer = await renderToBuffer(pdfDocument as any);
+    const pdfBuffer =
+      await renderToBuffer(
+        pdfDocument as any
+      );
 
-    if (!pdfBuffer || pdfBuffer.length === 0) {
+    if (
+      !pdfBuffer ||
+      pdfBuffer.length === 0
+    ) {
       return NextResponse.json(
         {
           ok: false,
-          error: "PDF was generated empty. Google Drive upload was not started.",
+
+          error:
+            "PDF was generated empty. Google Drive upload was not started.",
         },
-        { status: 500 }
+        {
+          status: 500,
+        }
       );
     }
 
-    let driveResult: DriveUploadResult = {
+    let driveResult:
+      DriveUploadResult = {
       uploaded: false,
       skipped: true,
       failed: false,
-      reason: "Google Drive upload not started.",
+      reason:
+        "Google Drive upload not started.",
     };
 
-    driveResult = await safeUploadToGoogleDrive({
-      booking,
-      fileName,
-      pdfBuffer: Buffer.from(pdfBuffer),
-    });
+    driveResult =
+      await safeUploadToGoogleDrive(
+        {
+          booking,
+          fileName,
+
+          pdfBuffer:
+            Buffer.from(
+              pdfBuffer
+            ),
+        }
+      );
 
     let storageResult: Awaited<
-      ReturnType<typeof persistContractPdfToSupabaseStorage>
-    > = { ok: false, error: "Storage upload not started." };
+      ReturnType<
+        typeof persistContractPdfToSupabaseStorage
+      >
+    > = {
+      ok: false,
+
+      error:
+        "Storage upload not started.",
+    };
 
     try {
-      storageResult = await withTimeout(
-        persistContractPdfToSupabaseStorage({
-          bookingKey,
-          fileName,
-          pdfBuffer: Buffer.from(pdfBuffer),
-        }),
-        12_000,
-        "Supabase storage upload"
+      storageResult =
+        await withTimeout(
+          persistContractPdfToSupabaseStorage(
+            {
+              bookingKey,
+              fileName,
+
+              pdfBuffer:
+                Buffer.from(
+                  pdfBuffer
+                ),
+            }
+          ),
+
+          12_000,
+
+          "Supabase storage upload"
+        );
+    } catch (
+      storageError: any
+    ) {
+      console.error(
+        "❌ Supabase storage upload failed:",
+        storageError
       );
-    } catch (storageError: any) {
-      console.error("❌ Supabase storage upload failed:", storageError);
+
       storageResult = {
         ok: false,
-        error: storageError?.message || "Supabase storage upload failed.",
+
+        error:
+          storageError?.message ||
+          "Supabase storage upload failed.",
       };
     }
 
-    const metadataUpdate = await tryUpdateBookingContractMetadata({
-      bookingKey,
-      contractNumber: getContractNumber(booking),
-      storage: storageResult,
-      drive: driveResult,
-      fileName,
-    });
+    const metadataUpdate =
+      await tryUpdateBookingContractMetadata(
+        {
+          bookingKey,
 
-    const includePdfBase64 = !storageResult.ok;
-    const pdfBase64 = includePdfBase64
-      ? bufferToBase64(Buffer.from(pdfBuffer))
-      : undefined;
+          contractNumber:
+            getContractNumber(
+              booking
+            ),
+
+          storage:
+            storageResult,
+
+          drive:
+            driveResult,
+
+          fileName,
+        }
+      );
+
+    const includePdfBase64 =
+      !storageResult.ok;
+
+    const pdfBase64 =
+      includePdfBase64
+        ? bufferToBase64(
+            Buffer.from(
+              pdfBuffer
+            )
+          )
+        : undefined;
 
     return NextResponse.json({
       ok: true,
+
       pdfGenerated: true,
+
       fileName,
+
       customerFolderName,
+
       pdfBase64,
-      storage: storageResult,
-      bookingMetadataUpdated: Boolean(metadataUpdate?.ok),
-      drive: driveResult,
-      googleDriveUploaded: Boolean(driveResult?.uploaded),
-      googleDriveFailed: Boolean(driveResult?.failed),
-      googleDriveSkipped: Boolean(driveResult?.skipped),
-      googleDriveFileLink: driveResult?.webViewLink || null,
-      googleDriveFolderLink: driveResult?.folderWebViewLink || null,
-      googleDriveReason: driveResult?.reason || driveResult?.error || null,
+
+      storage:
+        storageResult,
+
+      bookingMetadataUpdated:
+        Boolean(
+          metadataUpdate?.ok
+        ),
+
+      drive:
+        driveResult,
+
+      googleDriveUploaded:
+        Boolean(
+          driveResult?.uploaded
+        ),
+
+      googleDriveFailed:
+        Boolean(
+          driveResult?.failed
+        ),
+
+      googleDriveSkipped:
+        Boolean(
+          driveResult?.skipped
+        ),
+
+      googleDriveFileLink:
+        driveResult?.webViewLink ||
+        null,
+
+      googleDriveFolderLink:
+        driveResult
+          ?.folderWebViewLink ||
+        null,
+
+      googleDriveReason:
+        driveResult?.reason ||
+        driveResult?.error ||
+        null,
+
       warnings: [
         !storageResult.ok
-          ? storageResult.error || "Contract PDF was not saved to Supabase storage."
+          ? storageResult.error ||
+            "Contract PDF was not saved to Supabase storage."
           : null,
+
         driveResult?.failed
-          ? driveResult?.reason || driveResult?.error || "Google Drive upload failed."
+          ? driveResult?.reason ||
+            driveResult?.error ||
+            "Google Drive upload failed."
           : null,
+
         driveResult?.skipped
-          ? driveResult?.reason || "Google Drive upload skipped (check GOOGLE_DRIVE_* env vars)."
+          ? driveResult?.reason ||
+            "Google Drive upload skipped (check GOOGLE_DRIVE_* env vars)."
           : null,
       ].filter(Boolean),
     });
   } catch (error: any) {
-    console.error("❌ Contract generation error:", {
-      message: error?.message,
-      stack: error?.stack,
-      responseData: error?.response?.data,
-    });
+    console.error(
+      "❌ Contract generation error:",
+      {
+        message:
+          error?.message,
+
+        stack:
+          error?.stack,
+
+        responseData:
+          error?.response?.data,
+      }
+    );
 
     return NextResponse.json(
       {
         ok: false,
-        error: error?.message || "Failed to generate contract PDF.",
+
+        error:
+          error?.message ||
+          "Failed to generate contract PDF.",
       },
-      { status: 500 }
+      {
+        status: 500,
+      }
     );
   }
 }
