@@ -149,13 +149,6 @@ function getPickupDate(booking: BookingLike) {
   );
 }
 
-/*
- * Returns the ORIGINAL booking creation timestamp whenever possible.
- *
- * This is important because regenerating an existing contract should keep
- * using the same chronological Google Drive folder name rather than creating
- * a new folder based on the regeneration time.
- */
 function getCreatedAt(booking: BookingLike) {
   return (
     cleanText(booking?.createdAt) ||
@@ -164,18 +157,6 @@ function getCreatedAt(booking: BookingLike) {
   );
 }
 
-/*
- * Converts:
- *
- * 2026-08-23T08:42:15.123Z
- *
- * into:
- *
- * 20260823_084215
- *
- * This format sorts perfectly by Google Drive folder name.
- * When Drive is sorted Name -> Z to A, newest contracts appear first.
- */
 function getSortableCreatedAt(booking: BookingLike) {
   const rawCreatedAt = getCreatedAt(booking);
   const date = new Date(rawCreatedAt);
@@ -225,14 +206,6 @@ function getSortableCreatedAt(booking: BookingLike) {
   return `${year}${month}${day}_${hours}${minutes}${seconds}`;
 }
 
-/*
- * Google Drive contract folder format:
- *
- * 20260823_084215_NX-92498_2026-08-23_John_Smith_N1
- *
- * This keeps the random contract number while allowing the folders to be
- * sorted chronologically simply by sorting Google Drive Name -> Z to A.
- */
 function createCustomerFolderName(
   booking: BookingLike
 ) {
@@ -252,7 +225,7 @@ function createCustomerFolderName(
     getVehicleCode(booking);
 
   return sanitizeDriveName(
-    `${createdAt}_${contractNumber}_${pickupDate}_${customerName}_${vehicleCode}`
+    `Z_${createdAt}_${contractNumber}_${pickupDate}_${customerName}_${vehicleCode}`
   );
 }
 
@@ -696,15 +669,6 @@ async function safeUploadToGoogleDrive({
   fileName: string;
   pdfBuffer: Buffer;
 }): Promise<DriveUploadResult> {
-  /*
-   * IMPORTANT:
-   *
-   * Previously this was generated directly from the PDF filename.
-   *
-   * It is now generated from the booking creation timestamp so Google Drive
-   * can sort folders chronologically while the NX contract number remains
-   * random.
-   */
   const customerFolderName =
     createCustomerFolderName(
       booking
@@ -741,11 +705,6 @@ async function safeUploadToGoogleDrive({
           fileName,
           pdfBuffer,
 
-          /*
-           * Both values intentionally receive the same chronological folder
-           * name. This preserves your existing googleDrive.ts behaviour
-           * without requiring any change to that file.
-           */
           folderName:
             customerFolderName,
 
@@ -954,9 +913,6 @@ export async function POST(
         booking
       );
 
-    /*
-     * Same folder name used for the response and for Google Drive.
-     */
     const customerFolderName =
       createCustomerFolderName(
         booking
