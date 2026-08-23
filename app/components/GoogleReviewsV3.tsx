@@ -3,7 +3,12 @@
 import Image from "next/image";
 import { Montserrat } from "next/font/google";
 import { useLocale } from "next-intl";
-import type { CSSProperties, MouseEvent } from "react";
+import {
+  useEffect,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+} from "react";
 
 const reviewFont = Montserrat({
   subsets: ["latin"],
@@ -21,6 +26,10 @@ const reviewFont = Montserrat({
 const TRUST_BRAND_DESKTOP_GAP = "30px";
 const TRUST_BRAND_LAPTOP_GAP = "0px";
 const TRUST_BRAND_MOBILE_GAP = "0px";
+
+const FALLBACK_REVIEW_COUNT = 107;
+const FALLBACK_RATING = 5;
+
 type Locale =
   | "en"
   | "es"
@@ -48,105 +57,85 @@ type TrustBrand = {
   alt: string;
 };
 
+type GoogleReviewStats = {
+  rating: number;
+  reviewCount: number;
+};
+
 const COPY: Record<
   Locale,
   {
     title: string;
     rating: string;
-    reviews: string;
-    mobileProof: string;
     altPrefix: string;
   }
 > = {
   en: {
     title: "Loved by scooter riders in Mallorca.",
     rating: "Google Reviews",
-    reviews: "70 5.0 stars Reviews on Google",
-    mobileProof: "5.0 stars from 70 reviews",
     altPrefix: "Google review",
   },
   es: {
     title: "Scooters recomendados por clientes en Mallorca.",
     rating: "Reseñas de Google",
-    reviews: "70 reseñas en Google",
-    mobileProof: "5,0 estrellas de 70 reseñas",
     altPrefix: "Reseña de Google",
   },
   de: {
     title: "Beliebt bei Rollerfahrern auf Mallorca.",
     rating: "Google-Bewertungen",
-    reviews: "70 Bewertungen auf Google",
-    mobileProof: "5,0 Sterne aus 70 Bewertungen",
     altPrefix: "Google-Bewertung",
   },
   fr: {
-    title: "Apprécié par les conducteurs de scooters à Majorque.",
+    title:
+      "Apprécié par les conducteurs de scooters à Majorque.",
     rating: "Avis Google",
-    reviews: "70 avis sur Google",
-    mobileProof: "5,0 étoiles sur 70 avis",
     altPrefix: "Avis Google",
   },
   it: {
     title: "Amato dai clienti scooter a Maiorca.",
     rating: "Recensioni Google",
-    reviews: "70 recensioni su Google",
-    mobileProof: "5,0 stelle da 70 recensioni",
     altPrefix: "Recensione Google",
   },
   pt: {
     title: "Adorado por condutores de scooter em Maiorca.",
     rating: "Avaliações Google",
-    reviews: "70 avaliações no Google",
-    mobileProof: "5,0 estrelas em 70 avaliações",
     altPrefix: "Avaliação Google",
   },
   sv: {
     title: "Älskat av scooterförare på Mallorca.",
     rating: "Google-recensioner",
-    reviews: "70 recensioner på Google",
-    mobileProof: "5,0 stjärnor från 70 recensioner",
     altPrefix: "Google-recension",
   },
   nl: {
     title: "Geliefd bij scooterrijders in Mallorca.",
     rating: "Google Reviews",
-    reviews: "70 reviews op Google",
-    mobileProof: "5,0 sterren uit 70 reviews",
     altPrefix: "Google review",
   },
   pl: {
     title: "Polecane przez kierowców skuterów na Majorce.",
     rating: "Opinie Google",
-    reviews: "70 opinii w Google",
-    mobileProof: "5,0 gwiazdek z 70 opinii",
     altPrefix: "Opinia Google",
   },
   da: {
     title: "Elsket af scooterkunder på Mallorca.",
     rating: "Google-anmeldelser",
-    reviews: "70 anmeldelser på Google",
-    mobileProof: "5,0 stjerner fra 70 anmeldelser",
     altPrefix: "Google-anmeldelse",
   },
   no: {
     title: "Elsket av scooterførere på Mallorca.",
     rating: "Google-anmeldelser",
-    reviews: "70 anmeldelser på Google",
-    mobileProof: "5,0 stjerner fra 70 anmeldelser",
     altPrefix: "Google-anmeldelse",
   },
   cs: {
-    title: "Oblíbené mezi jezdci na skútru na Mallorce.",
+    title:
+      "Oblíbené mezi jezdci na skútru na Mallorce.",
     rating: "Recenze Google",
-    reviews: "70 recenzí na Google",
-    mobileProof: "5,0 hvězdiček ze 70 recenzí",
     altPrefix: "Recenze Google",
   },
   uk: {
-    title: "Улюблений сервіс серед водіїв скутерів на Майорці.",
+    title:
+      "Улюблений сервіс серед водіїв скутерів на Майорці.",
     rating: "Відгуки Google",
-    reviews: "70 відгуків у Google",
-    mobileProof: "5,0 зірок із 70 відгуку",
     altPrefix: "Відгук Google",
   },
 };
@@ -171,26 +160,198 @@ function getSafeLocale(locale: string): Locale {
     : "en";
 }
 
+function formatRating(
+  locale: Locale,
+  rating: number
+) {
+  const value = (
+    Number.isFinite(rating)
+      ? rating
+      : FALLBACK_RATING
+  ).toFixed(1);
+
+  return locale === "en"
+    ? value
+    : value.replace(".", ",");
+}
+
+function getDynamicReviewText(
+  locale: Locale,
+  reviewCount: number,
+  rating: number
+) {
+  const count =
+    Number.isFinite(reviewCount) &&
+    reviewCount > 0
+      ? Math.round(reviewCount)
+      : FALLBACK_REVIEW_COUNT;
+
+  const formattedRating = formatRating(
+    locale,
+    rating
+  );
+
+  switch (locale) {
+    case "es":
+      return {
+        reviews: `${count} reseñas en Google`,
+        mobileProof: `${formattedRating} estrellas de ${count} reseñas`,
+      };
+
+    case "de":
+      return {
+        reviews: `${count} Bewertungen auf Google`,
+        mobileProof: `${formattedRating} Sterne aus ${count} Bewertungen`,
+      };
+
+    case "fr":
+      return {
+        reviews: `${count} avis sur Google`,
+        mobileProof: `${formattedRating} étoiles sur ${count} avis`,
+      };
+
+    case "it":
+      return {
+        reviews: `${count} recensioni su Google`,
+        mobileProof: `${formattedRating} stelle da ${count} recensioni`,
+      };
+
+    case "pt":
+      return {
+        reviews: `${count} avaliações no Google`,
+        mobileProof: `${formattedRating} estrelas em ${count} avaliações`,
+      };
+
+    case "sv":
+      return {
+        reviews: `${count} recensioner på Google`,
+        mobileProof: `${formattedRating} stjärnor från ${count} recensioner`,
+      };
+
+    case "nl":
+      return {
+        reviews: `${count} reviews op Google`,
+        mobileProof: `${formattedRating} sterren uit ${count} reviews`,
+      };
+
+    case "pl":
+      return {
+        reviews: `${count} opinii w Google`,
+        mobileProof: `${formattedRating} gwiazdek z ${count} opinii`,
+      };
+
+    case "da":
+      return {
+        reviews: `${count} anmeldelser på Google`,
+        mobileProof: `${formattedRating} stjerner fra ${count} anmeldelser`,
+      };
+
+    case "no":
+      return {
+        reviews: `${count} anmeldelser på Google`,
+        mobileProof: `${formattedRating} stjerner fra ${count} anmeldelser`,
+      };
+
+    case "cs":
+      return {
+        reviews: `${count} recenzí na Google`,
+        mobileProof: `${formattedRating} hvězdiček ze ${count} recenzí`,
+      };
+
+    case "uk":
+      return {
+        reviews: `${count} відгуків у Google`,
+        mobileProof: `${formattedRating} зірок із ${count} відгуків`,
+      };
+
+    case "en":
+    default:
+      return {
+        reviews: `${count} Reviews on Google`,
+        mobileProof: `${formattedRating} stars from ${count} reviews`,
+      };
+  }
+}
+
 const reviews: ReviewImage[] = [
-  { id: 1, src: "/images/ReviewPNG1.png", alt: "Google review 1" },
-  { id: 2, src: "/images/ReviewPNG2.png", alt: "Google review 2" },
-  { id: 3, src: "/images/ReviewPNG3.png", alt: "Google review 3" },
-  { id: 4, src: "/images/ReviewPNG4.png", alt: "Google review 4" },
-  { id: 5, src: "/images/ReviewPNG5.png", alt: "Google review 5" },
-  { id: 6, src: "/images/ReviewPNG6.png", alt: "Google review 6" },
-  { id: 7, src: "/images/ReviewPNG7.png", alt: "Google review 7" },
-  { id: 8, src: "/images/ReviewPNG8.png", alt: "Google review 8" },
-  { id: 9, src: "/images/ReviewPNG9.png", alt: "Google review 9" },
-  { id: 10, src: "/images/ReviewPNG10.png", alt: "Google review 10" },
-  { id: 11, src: "/images/ReviewPNG11.png", alt: "Google review 11" },
-  { id: 12, src: "/images/ReviewPNG12.png", alt: "Google review 12" },
-  { id: 13, src: "/images/ReviewPNG13.png", alt: "Google review 13" },
-  { id: 14, src: "/images/ReviewPNG14.png", alt: "Google review 14" },
-  { id: 15, src: "/images/ReviewPNG15.png", alt: "Google review 15" },
+  {
+    id: 1,
+    src: "/images/ReviewPNG1.png",
+    alt: "Google review 1",
+  },
+  {
+    id: 2,
+    src: "/images/ReviewPNG2.png",
+    alt: "Google review 2",
+  },
+  {
+    id: 3,
+    src: "/images/ReviewPNG3.png",
+    alt: "Google review 3",
+  },
+  {
+    id: 4,
+    src: "/images/ReviewPNG4.png",
+    alt: "Google review 4",
+  },
+  {
+    id: 5,
+    src: "/images/ReviewPNG5.png",
+    alt: "Google review 5",
+  },
+  {
+    id: 6,
+    src: "/images/ReviewPNG6.png",
+    alt: "Google review 6",
+  },
+  {
+    id: 7,
+    src: "/images/ReviewPNG7.png",
+    alt: "Google review 7",
+  },
+  {
+    id: 8,
+    src: "/images/ReviewPNG8.png",
+    alt: "Google review 8",
+  },
+  {
+    id: 9,
+    src: "/images/ReviewPNG9.png",
+    alt: "Google review 9",
+  },
+  {
+    id: 10,
+    src: "/images/ReviewPNG10.png",
+    alt: "Google review 10",
+  },
+  {
+    id: 11,
+    src: "/images/ReviewPNG11.png",
+    alt: "Google review 11",
+  },
+  {
+    id: 12,
+    src: "/images/ReviewPNG12.png",
+    alt: "Google review 12",
+  },
+  {
+    id: 13,
+    src: "/images/ReviewPNG13.png",
+    alt: "Google review 13",
+  },
+  {
+    id: 14,
+    src: "/images/ReviewPNG14.png",
+    alt: "Google review 14",
+  },
+  {
+    id: 15,
+    src: "/images/ReviewPNG15.png",
+    alt: "Google review 15",
+  },
 ];
 
 const trustBrands: TrustBrand[] = [
-  
   {
     id: 1,
     src: "/images/ax1.png",
@@ -270,7 +431,12 @@ function ReviewStrip({
   direction: "left" | "right";
   altPrefix: string;
 }) {
-  const repeated = [...items, ...items, ...items, ...items];
+  const repeated = [
+    ...items,
+    ...items,
+    ...items,
+    ...items,
+  ];
 
   return (
     <div className="group/strip relative overflow-hidden py-2">
@@ -282,14 +448,16 @@ function ReviewStrip({
             : "animate-[reviewV3ScrollRight_48s_linear_infinite]",
         ].join(" ")}
       >
-        {repeated.map((review, index) => (
-          <ReviewImageCard
-            key={`${direction}-${review.id}-${index}`}
-            review={review}
-            altPrefix={altPrefix}
-            priority={index < 4}
-          />
-        ))}
+        {repeated.map(
+          (review, index) => (
+            <ReviewImageCard
+              key={`${direction}-${review.id}-${index}`}
+              review={review}
+              altPrefix={altPrefix}
+              priority={index < 4}
+            />
+          )
+        )}
       </div>
     </div>
   );
@@ -297,9 +465,12 @@ function ReviewStrip({
 
 function TrustBrandsStrip() {
   const trustGapStyle = {
-    "--trust-brand-gap-desktop": TRUST_BRAND_DESKTOP_GAP,
-    "--trust-brand-gap-laptop": TRUST_BRAND_LAPTOP_GAP,
-    "--trust-brand-gap-mobile": TRUST_BRAND_MOBILE_GAP,
+    "--trust-brand-gap-desktop":
+      TRUST_BRAND_DESKTOP_GAP,
+    "--trust-brand-gap-laptop":
+      TRUST_BRAND_LAPTOP_GAP,
+    "--trust-brand-gap-mobile":
+      TRUST_BRAND_MOBILE_GAP,
   } as CSSProperties;
 
   const repeatedTrustBrands = [
@@ -316,8 +487,8 @@ function TrustBrandsStrip() {
     >
       <div className="mx-auto flex min-h-[235px] max-w-[1320px] flex-col items-center justify-center px-5 py-12 text-center sm:px-8 lg:min-h-[245px]">
         <p className="review-v3-trust-title text-center text-[11px] font-extrabold uppercase tracking-[0.32em] text-black sm:text-[12px]">
-  Trusted by local brands in Mallorca
-</p>
+          Trusted by local brands in Mallorca
+        </p>
 
         <div className="review-v3-trust-logos-desktop mx-auto mt-10 flex w-full max-w-[1080px] flex-row flex-nowrap items-center justify-center">
           {trustBrands.map((brand) => (
@@ -326,34 +497,37 @@ function TrustBrandsStrip() {
               className="review-v3-trust-logo-box flex h-[78px] w-[185px] shrink-0 items-center justify-center overflow-visible"
             >
               <img
-  src={brand.src}
-  alt={brand.alt}
-  className={`review-v3-trust-logo-img ${
-    brand.id === 0
-      ? "review-v3-trust-logo-img-ax0"
-      : brand.id === 3 || brand.id === 6
-        ? "review-v3-trust-logo-img-big"
-        : ""
-  }`}
-/>
+                src={brand.src}
+                alt={brand.alt}
+                className={`review-v3-trust-logo-img ${
+                  brand.id === 0
+                    ? "review-v3-trust-logo-img-ax0"
+                    : brand.id === 3 ||
+                        brand.id === 6
+                      ? "review-v3-trust-logo-img-big"
+                      : ""
+                }`}
+              />
             </div>
           ))}
         </div>
 
         <div className="review-v3-trust-mobile-window mx-auto mt-8 hidden w-full overflow-hidden">
           <div className="review-v3-trust-mobile-track flex w-max will-change-transform">
-            {repeatedTrustBrands.map((brand, index) => (
-              <div
-                key={`mobile-trust-${brand.id}-${index}`}
-                className="review-v3-trust-logo-box flex h-[68px] w-[150px] shrink-0 items-center justify-center overflow-visible"
-              >
-                <img
-                  src={brand.src}
-                  alt={brand.alt}
-                  className="review-v3-trust-logo-img"
-                />
-              </div>
-            ))}
+            {repeatedTrustBrands.map(
+              (brand, index) => (
+                <div
+                  key={`mobile-trust-${brand.id}-${index}`}
+                  className="review-v3-trust-logo-box flex h-[68px] w-[150px] shrink-0 items-center justify-center overflow-visible"
+                >
+                  <img
+                    src={brand.src}
+                    alt={brand.alt}
+                    className="review-v3-trust-logo-img"
+                  />
+                </div>
+              )
+            )}
           </div>
         </div>
       </div>
@@ -362,20 +536,122 @@ function TrustBrandsStrip() {
 }
 
 export default function GoogleReviewsV3() {
-  const locale = getSafeLocale(useLocale());
+  const locale = getSafeLocale(
+    useLocale()
+  );
+
   const copy = COPY[locale];
 
-  function handleMouseMove(event: MouseEvent<HTMLElement>) {
-    const rect = event.currentTarget.getBoundingClientRect();
+  const [googleStats, setGoogleStats] =
+    useState<GoogleReviewStats>({
+      rating: FALLBACK_RATING,
+      reviewCount:
+        FALLBACK_REVIEW_COUNT,
+    });
+
+  useEffect(() => {
+    const controller =
+      new AbortController();
+
+    async function loadGoogleReviews() {
+      try {
+        const response = await fetch(
+          "/api/google-reviews",
+          {
+            method: "GET",
+            signal:
+              controller.signal,
+          }
+        );
+
+        const data =
+          await response.json();
+
+        if (
+          !response.ok ||
+          !data?.ok
+        ) {
+          console.warn(
+            "Could not load live Google review stats:",
+            data?.error ||
+              response.statusText
+          );
+          return;
+        }
+
+        const reviewCount = Number(
+          data.reviewCount
+        );
+
+        const rating = Number(
+          data.rating
+        );
+
+        if (
+          Number.isFinite(
+            reviewCount
+          ) &&
+          reviewCount > 0
+        ) {
+          setGoogleStats({
+            reviewCount,
+            rating:
+              Number.isFinite(
+                rating
+              ) && rating > 0
+                ? rating
+                : FALLBACK_RATING,
+          });
+        }
+      } catch (error: any) {
+        if (
+          error?.name ===
+          "AbortError"
+        ) {
+          return;
+        }
+
+        console.warn(
+          "Google review stats request failed:",
+          error
+        );
+      }
+    }
+
+    loadGoogleReviews();
+
+    return () => {
+      controller.abort();
+    };
+  }, []);
+
+  const dynamicReviewText =
+    getDynamicReviewText(
+      locale,
+      googleStats.reviewCount,
+      googleStats.rating
+    );
+
+  function handleMouseMove(
+    event: MouseEvent<HTMLElement>
+  ) {
+    const rect =
+      event.currentTarget.getBoundingClientRect();
 
     event.currentTarget.style.setProperty(
       "--review-mouse-x",
-      `${event.clientX - rect.left}px`
+      `${
+        event.clientX -
+        rect.left
+      }px`
     );
 
     event.currentTarget.style.setProperty(
       "--review-mouse-y",
-      `${event.clientY - rect.top}px`
+      `${
+        event.clientY -
+        rect.top
+      }px`
     );
   }
 
@@ -411,7 +687,9 @@ export default function GoogleReviewsV3() {
             </span>
 
             <span className="review-v3-pill-proof hidden text-[9px] uppercase tracking-[0.14em] text-black/48">
-              {copy.mobileProof}
+              {
+                dynamicReviewText.mobileProof
+              }
             </span>
           </div>
 
@@ -420,7 +698,9 @@ export default function GoogleReviewsV3() {
           </h2>
 
           <p className="review-v3-subtitle mt-4 text-[clamp(13px,1.35vw,18px)] uppercase tracking-[0.2em] text-black/48">
-            {copy.reviews}
+            {
+              dynamicReviewText.reviews
+            }
           </p>
         </div>
 
@@ -431,14 +711,18 @@ export default function GoogleReviewsV3() {
           <ReviewStrip
             items={firstRow}
             direction="left"
-            altPrefix={copy.altPrefix}
+            altPrefix={
+              copy.altPrefix
+            }
           />
 
           <div className="mt-2">
             <ReviewStrip
               items={secondRow}
               direction="right"
-              altPrefix={copy.altPrefix}
+              altPrefix={
+                copy.altPrefix
+              }
             />
           </div>
 
@@ -446,7 +730,9 @@ export default function GoogleReviewsV3() {
             <ReviewStrip
               items={thirdRow}
               direction="left"
-              altPrefix={copy.altPrefix}
+              altPrefix={
+                copy.altPrefix
+              }
             />
           </div>
         </div>
@@ -555,14 +841,17 @@ export default function GoogleReviewsV3() {
         .review-v3-trust-logo-img:hover {
           transform: scale(1.035);
         }
-.review-v3-trust-logo-img-big {
-  max-height: 86px !important;
-  transform: scale(1.28);
-} 
-  .review-v3-trust-logo-img-ax0 {
-  max-height: 86px !important;
-  transform: scale(1.35);
-}
+
+        .review-v3-trust-logo-img-big {
+          max-height: 86px !important;
+          transform: scale(1.28);
+        }
+
+        .review-v3-trust-logo-img-ax0 {
+          max-height: 86px !important;
+          transform: scale(1.35);
+        }
+
         @keyframes reviewV3ScrollLeft {
           from {
             transform: translateX(0);
@@ -598,15 +887,17 @@ export default function GoogleReviewsV3() {
             width: 338px;
             height: 102px;
           }
-.review-v3-trust-logo-img-ax0 {
-  max-height: 76px !important;
-  transform: scale(1.32);
-}
 
-.review-v3-trust-logo-img-big {
-  max-height: 76px !important;
-  transform: scale(1.22);
-}
+          .review-v3-trust-logo-img-ax0 {
+            max-height: 76px !important;
+            transform: scale(1.32);
+          }
+
+          .review-v3-trust-logo-img-big {
+            max-height: 76px !important;
+            transform: scale(1.22);
+          }
+
           .review-v3-track {
             gap: 16px;
           }
@@ -617,9 +908,9 @@ export default function GoogleReviewsV3() {
           }
 
           .review-v3-trust-logo-box {
-  width: 118px !important;
-  height: 68px !important;
-}
+            width: 118px !important;
+            height: 68px !important;
+          }
 
           .review-v3-trust-logo-img {
             max-height: 66px !important;
@@ -684,10 +975,12 @@ export default function GoogleReviewsV3() {
             line-height: 1.1 !important;
             letter-spacing: 0.12em !important;
           }
-.review-v3-trust-title {
-  color: #000000 !important;
-  font-weight: 800 !important;
-}
+
+          .review-v3-trust-title {
+            color: #000000 !important;
+            font-weight: 800 !important;
+          }
+
           .review-v3-subtitle {
             display: none !important;
           }
@@ -725,10 +1018,10 @@ export default function GoogleReviewsV3() {
           }
 
           .review-v3-trust-strip > div {
-  min-height: 185px !important;
-  padding-top: 26px !important;
-  padding-bottom: 28px !important;
-}
+            min-height: 185px !important;
+            padding-top: 26px !important;
+            padding-bottom: 28px !important;
+          }
 
           .review-v3-trust-title {
             max-width: 310px !important;
@@ -744,9 +1037,11 @@ export default function GoogleReviewsV3() {
           .review-v3-trust-mobile-window {
             display: block !important;
           }
-.review-v3-trust-mobile-window {
-  margin-top: 22px !important;
-}
+
+          .review-v3-trust-mobile-window {
+            margin-top: 22px !important;
+          }
+
           .review-v3-trust-mobile-track {
             column-gap: var(--trust-brand-gap-mobile);
             animation: trustBrandsMobileScroll 24s linear infinite;
