@@ -41,6 +41,7 @@ type BookingRow = {
   vehicle_name?: string | null;
   vehicle_id?: string | null;
   fleet_group?: string | null;
+  quantity?: number | string | null;
 
   vehicle?: {
     codigo?: string | null;
@@ -531,6 +532,7 @@ async function loadBookings() {
     vehicle_name,
     vehicle_id,
     fleet_group,
+    quantity,
     vehicle:vehicles (
       codigo,
       code,
@@ -551,7 +553,10 @@ async function loadBookings() {
     from,
     to,
     vehicle_code,
-    vehicle_name
+    vehicle_name,
+    assigned_vehicle_code,
+    fleet_group,
+    quantity
   `;
 
   const oldSelect = `
@@ -561,7 +566,10 @@ async function loadBookings() {
     pickup_time,
     dropoff_date,
     dropoff_time,
-    vehicle_name
+    vehicle_name,
+    assigned_vehicle_code,
+    fleet_group,
+    quantity
   `;
 
   const firstTry = await supabaseAdmin
@@ -643,8 +651,14 @@ function getUnknownFleetBlockingCount({
 
   for (const booking of blockingBookings) {
     const code = getBookingVehicleCode(booking);
+    const storedQuantity = Math.floor(Number(booking.quantity || 1));
+    const bookingQuantity =
+      Number.isFinite(storedQuantity) && storedQuantity > 0
+        ? storedQuantity
+        : 1;
 
     if (code && fleetCodes.includes(code)) {
+      count += Math.max(0, bookingQuantity - 1);
       continue;
     }
 
@@ -655,7 +669,7 @@ function getUnknownFleetBlockingCount({
     });
 
     if (belongs) {
-      count += 1;
+      count += bookingQuantity;
     }
   }
 
