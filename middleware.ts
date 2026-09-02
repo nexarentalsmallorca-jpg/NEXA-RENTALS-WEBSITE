@@ -1,7 +1,13 @@
 import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+
 import { defaultLocale, locales, type Locale } from "./i18n/routing";
+import {
+  SEO_LANGUAGES,
+  seoRouteGroups,
+  type SeoLanguage,
+} from "./lib/seoRoutes";
 
 const intlMiddleware = createMiddleware({
   locales: [...locales],
@@ -11,16 +17,35 @@ const intlMiddleware = createMiddleware({
 
 const ADMIN_COOKIE_NAME = "nexa_admin_session";
 
+type SeoRouteTarget = {
+  language: SeoLanguage;
+  path: string;
+};
+
 /*
-  SEO pages that should redirect to the main homepage.
+  Creates one lookup covering all 110 campaign URLs.
 
-  Example:
-  /en/scooter-rental-magaluf  -> /en
-  /es/scooter-rental-mallorca -> /es
-  /fr/cheap-scooter-rental-magaluf -> /fr
+  Examples:
+  /scooter-rental-magaluf -> English
+  /roller-mieten-magaluf -> German
+  /location-scooter-magaluf -> French
+*/
+const SEO_ROUTE_TARGETS = new Map<string, SeoRouteTarget>();
 
-  Non-locale versions:
-  /scooter-rental-magaluf -> /en
+for (const group of seoRouteGroups) {
+  for (const language of SEO_LANGUAGES) {
+    const path = group.routes[language];
+
+    SEO_ROUTE_TARGETS.set(path, {
+      language,
+      path,
+    });
+  }
+}
+
+/*
+  Legacy SEO pages that should redirect to the localized homepage.
+  These are not part of the 22-page multilingual campaign.
 */
 const SEO_REDIRECT_PATHS = new Set([
   "/best-scooter-rental-magaluf",
@@ -30,7 +55,6 @@ const SEO_REDIRECT_PATHS = new Set([
   "/ebike-rental-mallorca",
   "/ebike-rental-mallorca-cheap",
   "/rent-scooter-mallorca-125cc",
-  "/scooter-rental-magaluf",
   "/scooter-rental-mallorca",
 ]);
 
@@ -49,19 +73,22 @@ function isPublicAssetPath(pathname: string) {
     pathname === "/sitemap.xml" ||
     pathname === "/manifest.json" ||
     pathname === "/site.webmanifest" ||
-    pathname.match(/\.(.*)$/)
+    Boolean(pathname.match(/\.(.*)$/))
   );
 }
 
 function normalizePath(pathname: string) {
-  if (!pathname || pathname === "/") return "/";
+  if (!pathname || pathname === "/") {
+    return "/";
+  }
+
   return pathname.replace(/\/+$/, "");
 }
 
 export default function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
-  // Skip static files, APIs, images, icons and internal Next.js routes
+  // Skip assets, APIs and internal Next.js requests.
   if (isPublicAssetPath(pathname)) {
     return NextResponse.next();
   }
@@ -84,13 +111,33 @@ export default function middleware(request: NextRequest) {
     cleanPathWithoutLocale === "/admin-nexa-secret/login";
 
   /*
-    Redirect old SEO landing pages to the main localized homepage.
+    Force every campaign slug onto its intended language.
 
     Examples:
-    /en/scooter-rental-magaluf -> /en
-    /es/cheap-scooter-rental-mallorca -> /es
-    /scooter-rental-mallorca -> /en
+    /roller-mieten-magaluf
+      -> /de/roller-mieten-magaluf
+
+    /en/roller-mieten-magaluf
+      -> /de/roller-mieten-magaluf
+
+    /de/scooter-rental-magaluf
+      -> /en/scooter-rental-magaluf
   */
+  const seoRouteTarget = SEO_ROUTE_TARGETS.get(cleanPathWithoutLocale);
+
+  if (
+    seoRouteTarget &&
+    (!hasLocalePrefix || firstSegment !== seoRouteTarget.language)
+  ) {
+    const redirectUrl = request.nextUrl.clone();
+
+    redirectUrl.pathname =
+      `/${seoRouteTarget.language}${seoRouteTarget.path}`;
+
+    return NextResponse.redirect(redirectUrl, 308);
+  }
+
+  // Redirect legacy SEO pages to the localized homepage.
   if (SEO_REDIRECT_PATHS.has(cleanPathWithoutLocale)) {
     const redirectUrl = request.nextUrl.clone();
     const localeToUse = hasLocalePrefix ? firstSegment : defaultLocale;
@@ -102,9 +149,8 @@ export default function middleware(request: NextRequest) {
   }
 
   /*
-    Vehicles route should open the local Home showroom page.
+    Vehicles route should open the localized Home showroom.
 
-    Examples:
     /en/vehicles -> /en/Home
     /vehicles    -> /en/Home
   */
@@ -119,38 +165,30 @@ export default function middleware(request: NextRequest) {
   }
 
   /*
-    Admin must stay outside language routes.
+    Admin stays outside the language routes.
 
-    Example:
-    /en/admin-nexa-secret
-    becomes:
-    /admin-nexa-secret
+    /en/admin-nexa-secret -> /admin-nexa-secret
   */
   if (hasLocalePrefix && isAdminRoute) {
     const cleanAdminUrl = request.nextUrl.clone();
+
     cleanAdminUrl.pathname = cleanPathWithoutLocale;
+
     return NextResponse.redirect(cleanAdminUrl);
   }
 
-  /*
-    Allow login page without authentication.
-    This page must be reachable so you can log in.
-  */
+  // The admin login page must remain publicly reachable.
   if (isAdminLoginRoute) {
     return NextResponse.next();
   }
 
-  /*
-    Protect every private admin page.
-    Nobody can open the dashboard, bookings, contracts,
-    vehicles, sales, customers, calendar or settings
-    without the private admin cookie.
-  */
+  // Protect all private admin pages.
   if (isAdminRoute) {
     const adminToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
 
     if (adminToken !== "active") {
       const loginUrl = request.nextUrl.clone();
+
       loginUrl.pathname = "/admin-nexa-secret/login";
       loginUrl.searchParams.set("next", cleanPathWithoutLocale);
 
@@ -160,7 +198,7 @@ export default function middleware(request: NextRequest) {
     return NextResponse.next();
   }
 
-  // Everything else uses your normal language system
+  // Everything else uses the normal NextIntl language system.
   return intlMiddleware(request);
 }
 

@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 import {
   CalendarOff,
   CheckCircle2,
@@ -296,7 +297,9 @@ function WebAvailabilityEditor({
       ? `Set ${scope.vehicle.codigo} web availability`
       : "Block vehicle type availability";
 
-  return (
+  if (typeof document === "undefined") return null;
+
+  return createPortal(
     <div
       className="fixed inset-0 z-[200] flex items-end justify-center bg-black/75 p-0 backdrop-blur-sm sm:items-center sm:p-5"
       role="dialog"
@@ -552,7 +555,8 @@ function WebAvailabilityEditor({
           </section>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }
 

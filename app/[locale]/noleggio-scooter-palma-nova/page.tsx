@@ -1,4 +1,4 @@
-// app/[locale]/noleggio-scooter-palmanova/page.tsx
+// app/[locale]/noleggio-scooter-palma-nova/page.tsx
 
 import type { Metadata } from "next";
 import Image from "next/image";
@@ -10,6 +10,14 @@ import GoogleReviewsV3 from "../../components/GoogleReviewsV3";
 import LocationV3 from "../../components/LocationV3";
 import NexaStatsStripV3 from "../../components/NexaStatsStripV3";
 import NeroWebsiteAssistant from "../../components/NeroWebsiteAssistant";
+
+import {
+  SEO_LANGUAGES,
+  findSeoRouteGroup,
+  getSeoAlternates,
+  getSeoUrl,
+  type SeoLanguage,
+} from "../../../lib/seoRoutes";
 
 const pageFont = Poppins({
   subsets: ["latin"],
@@ -35,6 +43,18 @@ const SUPPORTED_LOCALES = [
 ] as const;
 
 type Locale = (typeof SUPPORTED_LOCALES)[number];
+
+const SEO_LANGUAGE = "it" satisfies SeoLanguage;
+const SEO_PATH = "/noleggio-scooter-palma-nova";
+const SEO_ROUTE_GROUP = (() => {
+  const group = findSeoRouteGroup(SEO_LANGUAGE, SEO_PATH);
+
+  if (!group) {
+    throw new Error(`Missing SEO route group for ${SEO_LANGUAGE}${SEO_PATH}`);
+  }
+
+  return group;
+})();
 
 type PageProps = {
   params:
@@ -81,7 +101,7 @@ const INCLUDED_ITEMS = [
   {
     image: "/images/ex2.jpg",
     title: "Portacellulare impermeabile",
-    text: "Ideale per la navigazione a Palmanova e Maiorca.",
+    text: "Ideale per la navigazione a Palma Nova e Maiorca.",
   },
   {
     image: "/images/ex3.png",
@@ -111,12 +131,9 @@ async function getPageLocale(params: PageProps["params"]) {
 }
 
 function getLanguageHref(languageCode: Locale) {
-  if (languageCode === "it") {
-    return "/it/noleggio-scooter-palmanova";
-  }
-
-  if (languageCode === "de") {
-    return "/de/roller-mieten-palmanova";
+  if (SEO_LANGUAGES.includes(languageCode as SeoLanguage)) {
+    const seoLanguage = languageCode as SeoLanguage;
+    return `/${seoLanguage}${SEO_ROUTE_GROUP.routes[seoLanguage]}`;
   }
 
   return `/${languageCode}`;
@@ -127,22 +144,22 @@ export async function generateMetadata({
 }: PageProps): Promise<Metadata> {
   const locale = await getPageLocale(params);
   const isItalianPage = locale === "it";
+  const canonicalUrl = getSeoUrl(
+    SEO_LANGUAGE,
+    SEO_ROUTE_GROUP.routes[SEO_LANGUAGE],
+  );
 
   return {
-    title:
-      "Noleggio scooter Palmanova | Scooter 125cc Palma Nova | NEXA Rentals",
+    title: "Noleggio scooter Palma Nova da 39 € | NEXA Rentals",
     description:
-      "Noleggio scooter a Palmanova e Palma Nova. Prenota online uno scooter 125cc con NEXA Rentals, ritiralo a Magaluf ed esplora Palmanova, Son Matias, Magaluf, Portals Nous, Santa Ponsa e Calvià.",
+      "Noleggia uno scooter 125cc per Palma Nova da 39 €. Prenota online con NEXA Rentals, ritira a Magaluf ed esplora il sud-ovest di Maiorca.",
     keywords: [
-      "noleggio scooter Palmanova",
-      "affitto scooter Palmanova",
-      "scooter 125cc Palmanova",
-      "noleggio motorino Palmanova",
-      "scooter a noleggio Palmanova",
-      "scooter rental Palmanova",
       "noleggio scooter Palma Nova",
       "affitto scooter Palma Nova",
       "scooter 125cc Palma Nova",
+      "noleggio motorino Palma Nova",
+      "scooter a noleggio Palma Nova",
+      "prenotare scooter Palma Nova",
       "noleggio scooter Son Matias",
       "affitto scooter Son Matias",
       "noleggio scooter Magaluf",
@@ -152,25 +169,27 @@ export async function generateMetadata({
       "noleggio scooter Santa Ponsa",
       "noleggio scooter sud-ovest Maiorca",
       "affitto scooter sud-ovest Maiorca",
-      "prenotare scooter online Palmanova",
-      "NEXA Rentals Palmanova",
+      "spiagge Palma Nova scooter",
+      "escursioni scooter Palma Nova",
+      "NEXA Rentals Palma Nova",
       "NEXA Rentals Magaluf",
     ],
     alternates: {
-      canonical: "https://www.nexarentals.es/it/noleggio-scooter-palmanova",
+      canonical: canonicalUrl,
+      languages: getSeoAlternates(SEO_ROUTE_GROUP),
     },
     openGraph: {
-      title: "Noleggio scooter Palmanova | NEXA Rentals Maiorca",
+      title: "Noleggio scooter Palma Nova | NEXA Rentals Maiorca",
       description:
-        "Prenota online uno scooter 125cc per Palmanova, Palma Nova, Son Matias, Magaluf e Calvià. Ritiro presso NEXA Rentals a Magaluf.",
-      url: "https://www.nexarentals.es/it/noleggio-scooter-palmanova",
+        "Prenota online uno scooter 125cc per Palma Nova da 39 € e ritiralo presso NEXA Rentals a Magaluf.",
+      url: canonicalUrl,
       siteName: "NEXA Rentals",
       images: [
         {
           url: "https://www.nexarentals.es/images/personscooter.jpg",
           width: 1200,
           height: 630,
-          alt: "Noleggio scooter a Palmanova con NEXA Rentals Maiorca",
+          alt: "Noleggio scooter a Palma Nova con NEXA Rentals Maiorca",
         },
       ],
       locale: "it_IT",
@@ -187,7 +206,7 @@ export async function generateMetadata({
   };
 }
 
-export default async function NoleggioScooterPalmanovaPage({
+export default async function NoleggioScooterPalmaNovaPage({
   params,
 }: PageProps) {
   const locale = await getPageLocale(params);
@@ -205,26 +224,26 @@ export default async function NoleggioScooterPalmanovaPage({
     mainEntity: [
       {
         "@type": "Question",
-        name: "Posso noleggiare uno scooter a Palmanova?",
+        name: "Posso noleggiare uno scooter per Palma Nova?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Sì. Puoi prenotare online il tuo scooter 125cc con NEXA Rentals e ritirarlo direttamente a Magaluf. È una soluzione particolarmente pratica per chi soggiorna a Palmanova, Palma Nova, Son Matias e Magaluf.",
+          text: "Sì. Puoi prenotare online uno scooter 125cc con NEXA Rentals e ritirarlo nel nostro ufficio di Magaluf, vicino a Palma Nova. È una soluzione pratica per raggiungere spiagge, hotel e località del sud-ovest di Maiorca.",
         },
       },
       {
         "@type": "Question",
-        name: "Quanto dista NEXA Rentals da Palmanova?",
+        name: "Dove si ritira lo scooter prenotato per Palma Nova?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "NEXA Rentals si trova a Magaluf. Da Palmanova puoi raggiungere la nostra sede in circa 5-10 minuti, a seconda del traffico. Il ritiro e la riconsegna avvengono direttamente presso NEXA Rentals a Magaluf.",
+          text: "Il ritiro e la riconsegna avvengono presso NEXA Rentals, C. Galeón, 13, Loc 57, 07181 Magaluf. La sede si trova a breve distanza da Palma Nova; il tempo di percorrenza varia in base al punto di partenza e al traffico.",
         },
       },
       {
         "@type": "Question",
-        name: "Uno scooter è pratico per Palmanova e Palma Nova?",
+        name: "Quali zone posso visitare in scooter da Palma Nova?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Sì. Uno scooter 125cc è pratico per esplorare liberamente Palmanova, Palma Nova, Son Matias, Magaluf, Portals Nous, Santa Ponsa, Cala Vinyes e il sud-ovest di Maiorca.",
+          text: "Da Palma Nova puoi raggiungere comodamente Son Matias, Magaluf, Portals Nous, Santa Ponsa, Cala Vinyes, El Toro e altre località del sud-ovest di Maiorca.",
         },
       },
       {
@@ -232,7 +251,7 @@ export default async function NoleggioScooterPalmanovaPage({
         name: "Quale patente serve per guidare uno scooter 125cc?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Sono accettate le patenti A, A1 e A2. Puoi guidare uno scooter 125cc anche con la patente B, purché sia valida da almeno 3 anni.",
+          text: "Sono accettate le patenti motociclistiche A, A1 e A2. Anche una patente B valida da almeno 3 anni può essere idonea secondo le regole applicabili in Spagna. L’accettazione può dipendere dal tipo di patente e dal Paese di rilascio: contattaci in caso di dubbi.",
         },
       },
       {
@@ -245,7 +264,7 @@ export default async function NoleggioScooterPalmanovaPage({
       },
       {
         "@type": "Question",
-        name: "È disponibile la consegna a Palmanova?",
+        name: "È disponibile la consegna dello scooter a Palma Nova?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "Al momento non offriamo un servizio di consegna. Il ritiro e la riconsegna avvengono direttamente presso NEXA Rentals a Magaluf.",
@@ -312,18 +331,18 @@ export default async function NoleggioScooterPalmanovaPage({
     ],
     makesOffer: {
       "@type": "Offer",
-      name: "Noleggio scooter 125cc a Palmanova",
+      name: "Noleggio scooter 125cc per Palma Nova",
       price: "39",
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
-      areaServed: "Palmanova",
+      areaServed: "Palma Nova",
     },
   };
 
   return (
     <main className={`${pageFont.variable} nexa-seo-page`}>
       <Script
-        id="nexa-seo-navbar-scroll-palmanova"
+        id="nexa-seo-navbar-scroll-palma-nova-it"
         strategy="afterInteractive"
         dangerouslySetInnerHTML={{
           __html: `
@@ -455,7 +474,7 @@ export default async function NoleggioScooterPalmanovaPage({
           <div className="nexa-hero-copy">
             <div className="nexa-hero-topline">
               <span className="nexa-hero-kicker">
-                A circa 5–10 minuti da Palmanova
+                Ritiro nella vicina Magaluf
               </span>
 
               <a
@@ -469,22 +488,22 @@ export default async function NoleggioScooterPalmanovaPage({
             </div>
 
             <h1>
-              Noleggia uno scooter a Palmanova ed esplora Maiorca liberamente.
+              Noleggia uno scooter per Palma Nova e scopri Maiorca in libertà.
             </h1>
 
             <p className="nexa-hero-text">
-              Cerchi un <strong>noleggio scooter a Palmanova</strong>, uno{" "}
-              <strong>scooter a noleggio a Palma Nova</strong> o uno{" "}
-              <strong>scooter 125cc a Palmanova</strong>? Con NEXA Rentals
-              prenoti online, paghi in modo sicuro e ritiri il tuo scooter
-              direttamente a Magaluf.
+              Cerchi un <strong>noleggio scooter a Palma Nova</strong>, un{" "}
+              <strong>motorino a noleggio a Palma Nova</strong> o uno{" "}
+              <strong>scooter 125cc vicino a Son Matias</strong>? Con NEXA
+              Rentals prenoti e paghi online, poi ritiri il veicolo presso il
+              nostro ufficio nella vicina Magaluf.
             </p>
 
             <p className="nexa-hero-text small">
-              Ideale per Palmanova, Palma Nova, Son Matias, Magaluf, Portals
-              Nous, Santa Ponsa, Cala Vinyes e il sud-ovest di Maiorca. Perfetto
-              per collegare liberamente spiagge, hotel, ristoranti e località
-              costiere.
+              Parti da Palma Nova per raggiungere Son Matias, Magaluf, Portals
+              Nous, Santa Ponsa, Cala Vinyes e altre mete del sud-ovest di
+              Maiorca. Lo scooter è ideale per alternare spiagge, ristoranti,
+              punti panoramici e località costiere nella stessa giornata.
             </p>
 
             <div className="nexa-hero-actions">
@@ -527,7 +546,7 @@ export default async function NoleggioScooterPalmanovaPage({
               <div className="nexa-photo-card nexa-photo-card-top">
                 <Image
                   src="/images/personscooter.jpg"
-                  alt="Noleggio scooter a Palmanova con NEXA Rentals Maiorca"
+                  alt="Noleggio scooter a Palma Nova con NEXA Rentals Maiorca"
                   width={900}
                   height={620}
                   priority
@@ -538,7 +557,7 @@ export default async function NoleggioScooterPalmanovaPage({
               <div className="nexa-photo-card nexa-photo-card-bottom">
                 <Image
                   src="/images/scooterperson2.jpg"
-                  alt="Noleggio scooter a Palmanova e Palma Nova"
+                  alt="Scooter 125cc a noleggio per Palma Nova"
                   width={900}
                   height={720}
                   className="nexa-hero-image"
@@ -556,13 +575,13 @@ export default async function NoleggioScooterPalmanovaPage({
       </section>
 
       <section className="nexa-trust-section">
-        <p>Per Palmanova, Palma Nova, Son Matias, Magaluf e Calvià</p>
+        <p>Per spiagge e itinerari da Palma Nova verso il sud-ovest</p>
 
         <div className="nexa-trust-logos">
-          <span>Palmanova</span>
           <span>Palma Nova</span>
           <span>Son Matias</span>
           <span>Magaluf</span>
+          <span>Portals Nous</span>
           <span>Scooter 125cc</span>
         </div>
       </section>
@@ -602,26 +621,27 @@ export default async function NoleggioScooterPalmanovaPage({
         <div className="nexa-content-grid">
           <article>
             <span className="nexa-section-label">
-              Noleggio scooter Palmanova
+              Noleggio scooter Palma Nova
             </span>
 
             <h2>
-              Collega facilmente Palmanova, Magaluf e il sud-ovest di Maiorca.
+              Dalla costa di Palma Nova alle migliori mete vicine in scooter.
             </h2>
 
             <p>
-              Palmanova è perfetta per le spiagge, gli hotel, i ristoranti e gli
-              spostamenti brevi verso Magaluf, Son Matias, Portals Nous o Santa
-              Ponsa. Con uno scooter 125cc puoi muoverti con maggiore libertà ed
-              esplorare Maiorca senza dipendere dagli autobus o attendere un
-              taxi.
+              Palma Nova offre tre spiagge, numerosi hotel e un lungomare ricco
+              di ristoranti. Con uno scooter 125cc puoi organizzare facilmente
+              una giornata tra Son Matias, Magaluf, Portals Nous e Santa Ponsa,
+              evitando di adattare ogni spostamento agli orari degli autobus o
+              alla disponibilità dei taxi.
             </p>
 
             <p>
-              NEXA Rentals è una soluzione pratica per chi cerca un noleggio
-              scooter a Palmanova, uno scooter a noleggio a Palma Nova o un
-              motorino a Palmanova. Prenoti online, paghi online e ritiri il tuo
-              scooter direttamente a Magaluf.
+              Prenotando con NEXA Rentals sai in anticipo quale veicolo hai
+              riservato e per quali date. Completi online la prenotazione e il
+              pagamento, quindi raggiungi il nostro ufficio di Magaluf per il
+              controllo dei documenti, la consegna dei caschi e il ritiro dello
+              scooter destinato al tuo soggiorno a Palma Nova.
             </p>
           </article>
 
@@ -629,7 +649,7 @@ export default async function NoleggioScooterPalmanovaPage({
             <h3>Tutto incluso</h3>
 
             <ul>
-              <li>Scooter 125cc per Palmanova e Maiorca</li>
+              <li>Scooter 125cc per Palma Nova e Maiorca</li>
               <li>Prenotazione e pagamento online</li>
               <li>Due caschi inclusi</li>
               <li>Bauletto da 50 litri per borsa, casco o accessori da spiaggia</li>
@@ -648,7 +668,7 @@ export default async function NoleggioScooterPalmanovaPage({
           <span className="nexa-section-label">Come funziona</span>
 
           <h2>
-            Prenota il tuo scooter da Palmanova in tre semplici passaggi.
+            Organizza il tuo noleggio per Palma Nova in tre passaggi.
           </h2>
 
           <div className="nexa-how-grid">
@@ -657,8 +677,8 @@ export default async function NoleggioScooterPalmanovaPage({
               <h3>Scegli online</h3>
               <p>
                 Seleziona il tuo scooter 125cc, la data e la durata del
-                noleggio. La prenotazione è veloce, chiara e ideale per la tua
-                vacanza a Palmanova.
+                noleggio. La procedura è veloce e ti permette di organizzare il
+                veicolo prima di iniziare la vacanza a Palma Nova.
               </p>
             </div>
 
@@ -666,8 +686,9 @@ export default async function NoleggioScooterPalmanovaPage({
               <span>02</span>
               <h3>Conferma online</h3>
               <p>
-                Paga online il prezzo del noleggio e riserva il tuo scooter per
-                Palmanova, Magaluf, Santa Ponsa o il tuo itinerario a Maiorca.
+                Paga online il prezzo del noleggio e conferma lo scooter per le
+                date scelte. Riceverai automaticamente la conferma della
+                prenotazione.
               </p>
             </div>
 
@@ -683,7 +704,7 @@ export default async function NoleggioScooterPalmanovaPage({
           </div>
 
           <Link href={bookHref} className="nexa-bottom-cta">
-            Prenota ora lo scooter per Palmanova
+            Prenota ora lo scooter per Palma Nova
           </Link>
         </div>
       </section>
@@ -695,33 +716,31 @@ export default async function NoleggioScooterPalmanovaPage({
           </span>
 
           <h2>
-            Per chi vuole esplorare Palmanova e il sud-ovest di Maiorca in
-            completa libertà.
+            Una base comoda per spiagge, escursioni e località del sud-ovest.
           </h2>
 
           <p>
-            Quando cerchi “noleggio scooter Palmanova”, “affitto scooter
-            Palmanova”, “noleggio scooter Palma Nova”, “scooter 125cc
-            Palmanova” o “noleggio motorino Palmanova”, hai bisogno di una
-            soluzione semplice: prenotazione online, pagamento sicuro e uno
-            scooter 125cc per muoverti liberamente.
+            Chi cerca “noleggio scooter Palma Nova”, “affitto scooter Palma
+            Nova”, “scooter 125cc Palma Nova” o “noleggio motorino Palma Nova”
+            vuole soprattutto organizzare gli spostamenti con semplicità. Con
+            NEXA Rentals puoi controllare online disponibilità e durata,
+            completare il pagamento e riservare il veicolo prima del ritiro.
           </p>
 
           <p>
-            Uno scooter è particolarmente pratico per gli spostamenti tra
-            Palmanova, Son Matias, Magaluf, Portals Nous, Cala Vinyes, Santa
-            Ponsa, Palma e altre località di Maiorca. NEXA Rentals offre una
-            prenotazione online semplice e il ritiro a Magaluf. Al momento non
-            offriamo un servizio di consegna, così la consegna del veicolo, il
-            controllo dei documenti e la riconsegna vengono gestiti in modo
-            chiaro e sicuro.
+            Da Palma Nova, uno scooter rende pratici sia i tragitti brevi verso
+            Son Matias e Magaluf sia le uscite verso Portals Nous, Cala Vinyes,
+            Santa Ponsa, El Toro e Palma. Il ritiro e la riconsegna avvengono
+            presso NEXA Rentals a Magaluf. Al momento non offriamo consegna a
+            domicilio o in hotel: in questo modo documenti, condizioni del
+            mezzo e accessori vengono controllati insieme prima della partenza.
           </p>
 
           <div className="nexa-keyword-cloud">
-            <span>Noleggio scooter Palmanova</span>
-            <span>Affitto scooter Palmanova</span>
             <span>Noleggio scooter Palma Nova</span>
-            <span>Scooter 125cc Palmanova</span>
+            <span>Affitto scooter Palma Nova</span>
+            <span>Scooter 125cc Palma Nova</span>
+            <span>Noleggio motorino Palma Nova</span>
             <span>Noleggio scooter Son Matias</span>
             <span>Noleggio scooter Magaluf</span>
             <span>Noleggio scooter Calvià</span>
@@ -738,25 +757,25 @@ export default async function NoleggioScooterPalmanovaPage({
         <div className="nexa-faq-inner">
           <span className="nexa-section-label">Domande frequenti</span>
 
-          <h2>Domande sul noleggio scooter a Palmanova</h2>
+          <h2>Domande sul noleggio scooter a Palma Nova</h2>
 
           <div className="nexa-faq-list">
             <details>
-              <summary>Posso prenotare uno scooter per Palmanova?</summary>
+              <summary>Posso prenotare uno scooter per Palma Nova?</summary>
               <p>
                 Sì. Puoi prenotare online il tuo scooter 125cc con NEXA Rentals
-                e ritirarlo direttamente a Magaluf. È una soluzione pratica per
-                Palmanova, Palma Nova, Son Matias e Magaluf.
+                e ritirarlo presso il nostro ufficio di Magaluf, vicino a Palma
+                Nova. Seleziona online veicolo, date e durata del noleggio.
               </p>
             </details>
 
             <details>
-              <summary>Quanto dista NEXA Rentals da Palmanova?</summary>
+              <summary>Dove avvengono il ritiro e la riconsegna?</summary>
               <p>
-                La nostra sede si trova a Magaluf. Da Palmanova puoi
-                raggiungerci in circa 5-10 minuti, a seconda del traffico. Il
-                ritiro e la riconsegna avvengono direttamente presso NEXA
-                Rentals a Magaluf.
+                Entrambi avvengono presso NEXA Rentals, C. Galeón, 13, Loc 57,
+                07181 Magaluf. La sede è a breve distanza da Palma Nova; il
+                tempo di percorrenza dipende dal punto di partenza e dal
+                traffico.
               </p>
             </details>
 
@@ -765,9 +784,11 @@ export default async function NoleggioScooterPalmanovaPage({
                 Quale patente serve per guidare uno scooter 125cc?
               </summary>
               <p>
-                Sono accettate le patenti A, A1 e A2. Puoi guidare uno scooter
-                125cc anche con la patente B, purché sia valida da almeno 3
-                anni. Patenti provvisorie e fogli rosa non sono accettati.
+                Sono accettate le patenti motociclistiche A, A1 e A2. Anche una
+                patente B valida da almeno 3 anni può essere idonea secondo le
+                regole applicabili in Spagna. L’accettazione può dipendere dal
+                tipo di patente e dal Paese di rilascio: contattaci in caso di
+                dubbi. Patenti provvisorie e fogli rosa non sono accettati.
               </p>
             </details>
 
@@ -781,7 +802,7 @@ export default async function NoleggioScooterPalmanovaPage({
             </details>
 
             <details>
-              <summary>È disponibile la consegna a Palmanova?</summary>
+              <summary>È disponibile la consegna a Palma Nova?</summary>
               <p>
                 Al momento non offriamo un servizio di consegna. Il ritiro e la
                 riconsegna avvengono direttamente presso NEXA Rentals a
@@ -791,7 +812,7 @@ export default async function NoleggioScooterPalmanovaPage({
           </div>
 
           <div className="nexa-final-cta">
-            <h3>Pronto a esplorare Palmanova?</h3>
+            <h3>Pronto a esplorare Palma Nova?</h3>
             <p>
               Prenota online il tuo scooter 125cc e parti direttamente da NEXA
               Rentals a Magaluf.

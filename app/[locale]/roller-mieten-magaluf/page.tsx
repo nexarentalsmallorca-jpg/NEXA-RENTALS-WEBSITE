@@ -8,6 +8,15 @@ import GoogleReviewsV3 from "../../components/GoogleReviewsV3";
 import LocationV3 from "../../components/LocationV3";
 import NexaStatsStripV3 from "../../components/NexaStatsStripV3";
 import NeroWebsiteAssistant from "../../components/NeroWebsiteAssistant";
+
+import {
+  SEO_LANGUAGES,
+  findSeoRouteGroup,
+  getSeoAlternates,
+  getSeoUrl,
+  type SeoLanguage,
+} from "../../../lib/seoRoutes";
+
 const pageFont = Poppins({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
@@ -32,6 +41,18 @@ const SUPPORTED_LOCALES = [
 ] as const;
 
 type Locale = (typeof SUPPORTED_LOCALES)[number];
+
+const SEO_LANGUAGE = "de" satisfies SeoLanguage;
+const SEO_PATH = "/roller-mieten-magaluf";
+const SEO_ROUTE_GROUP = (() => {
+  const group = findSeoRouteGroup(SEO_LANGUAGE, SEO_PATH);
+
+  if (!group) {
+    throw new Error(`Missing SEO route group for ${SEO_LANGUAGE}${SEO_PATH}`);
+  }
+
+  return group;
+})();
 
 type PageProps = {
   params:
@@ -105,63 +126,76 @@ async function getPageLocale(params: PageProps["params"]) {
   return normalizeLocale(resolvedParams?.locale);
 }
 
+function getLanguageHref(languageCode: Locale) {
+  if (SEO_LANGUAGES.includes(languageCode as SeoLanguage)) {
+    const seoLanguage = languageCode as SeoLanguage;
+    return `/${seoLanguage}${SEO_ROUTE_GROUP.routes[seoLanguage]}`;
+  }
+
+  return `/${languageCode}`;
+}
+
 export async function generateMetadata({
   params,
 }: PageProps): Promise<Metadata> {
   const locale = await getPageLocale(params);
+  const isGermanPage = locale === SEO_LANGUAGE;
+  const canonicalUrl = getSeoUrl(
+    SEO_LANGUAGE,
+    SEO_ROUTE_GROUP.routes[SEO_LANGUAGE],
+  );
 
   return {
-    title:
-      "Roller mieten Mallorca | Roller mieten Magaluf & Palmanova | NEXA Rentals",
+    title: "Roller mieten Magaluf ab 39 € | NEXA Rentals",
     description:
-      "Roller mieten auf Mallorca bei NEXA Rentals in Magaluf. 125cc Motorroller von 39€, online bezahlen, in Magaluf abholen und Mallorca flexibel entdecken. Ideal für Urlauber in Magaluf, Palmanova, Palma Nova und Santa Ponsa.",
+      "Roller in Magaluf ab 39 € mieten. 125cc, 2 Helme, unbegrenzte Kilometer und Versicherung inklusive. Online buchen und direkt in Magaluf abholen.",
     keywords: [
-      "Roller mieten Mallorca",
       "Roller mieten Magaluf",
+      "Rollerverleih Magaluf",
+      "Roller leihen Magaluf",
+      "Scooter mieten Magaluf",
+      "Motorroller mieten Magaluf",
+      "125cc Roller Magaluf",
+      "Roller Magaluf online buchen",
+      "günstig Roller mieten Magaluf",
+      "Roller mieten Mallorca",
       "Roller mieten Palmanova",
-      "Roller mieten Palma Nova",
       "Roller mieten Santa Ponsa",
-      "125cc Roller Mallorca",
-      "125cc Motorroller Mallorca",
-      "Motorroller mieten Mallorca",
-      "Mallorca Roller Verleih",
       "NEXA Rentals Magaluf",
-      "günstig Roller mieten Mallorca",
-      "Mallorca Roller buchen",
-      "Roller Mallorca online buchen",
     ],
     alternates: {
-      canonical: `https://www.nexarentals.es/${locale}/roller-mieten-mallorca`,
+      canonical: canonicalUrl,
+      languages: getSeoAlternates(SEO_ROUTE_GROUP),
     },
     openGraph: {
-      title: "Roller mieten Mallorca | NEXA Rentals Magaluf",
+      title: "Roller mieten Magaluf ab 39 € | NEXA Rentals",
       description:
-        "125cc Roller auf Mallorca mieten. Online bezahlen, in Magaluf abholen und Mallorca flexibel entdecken.",
-      url: `https://www.nexarentals.es/${locale}/roller-mieten-mallorca`,
+        "125cc Roller in Magaluf online buchen, direkt bei NEXA Rentals abholen und Mallorca flexibel entdecken.",
+      url: canonicalUrl,
       siteName: "NEXA Rentals",
       images: [
         {
           url: "https://www.nexarentals.es/images/personscooter.jpg",
           width: 1200,
           height: 630,
-          alt: "Roller mieten Mallorca bei NEXA Rentals in Magaluf",
+          alt: "Roller mieten in Magaluf bei NEXA Rentals",
         },
       ],
       locale: "de_DE",
       type: "website",
     },
     robots: {
-      index: true,
+      index: isGermanPage,
       follow: true,
       googleBot: {
-        index: true,
+        index: isGermanPage,
         follow: true,
       },
     },
   };
 }
 
-export default async function RollerMietenMallorcaPage({ params }: PageProps) {
+export default async function RollerMietenMagalufPage({ params }: PageProps) {
   const locale = await getPageLocale(params);
 
   const currentLanguage =
@@ -178,10 +212,10 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
     mainEntity: [
       {
         "@type": "Question",
-        name: "Wo kann ich bei NEXA Rentals einen Roller auf Mallorca mieten?",
+        name: "Wo kann ich in Magaluf einen Roller mieten?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Du kannst deinen 125cc Roller online buchen und direkt bei NEXA Rentals in Magaluf abholen. Die Abholung und Rückgabe erfolgt aktuell im Büro in Magaluf.",
+          text: "Du kannst deinen 125cc Roller online buchen und direkt bei NEXA Rentals in der C. Galeón 13, Loc 57, 07181 Magaluf abholen. Abholung und Rückgabe erfolgen in unserem Büro in Magaluf.",
         },
       },
       {
@@ -189,12 +223,12 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
         name: "Kann ich den Roller online bezahlen?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Ja. Bei NEXA Rentals kannst du deinen Roller online reservieren und den Mietpreis online bezahlen. So ist dein Roller für deine Reise auf Mallorca fest gebucht.",
+          text: "Ja. Bei NEXA Rentals kannst du deinen Roller online reservieren und den Mietpreis sicher online bezahlen. Damit ist das Fahrzeug für deine gewählten Daten reserviert.",
         },
       },
       {
         "@type": "Question",
-        name: "Welche Fahrerlaubnis brauche ich für einen 125cc Roller auf Mallorca?",
+        name: "Welchen Führerschein brauche ich für einen 125cc Roller in Magaluf?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "Du brauchst A, A1 oder A2. Mit einem B-Führerschein kannst du einen 125cc Roller fahren, wenn der Führerschein seit mindestens 3 Jahren gültig ist.",
@@ -202,10 +236,18 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
       },
       {
         "@type": "Question",
-        name: "Was ist beim Roller mieten auf Mallorca inklusive?",
+        name: "Was ist bei der Rollermiete in Magaluf inklusive?",
         acceptedAnswer: {
           "@type": "Answer",
           text: "Bei NEXA Rentals sind 2 Helme, Topcase, Schloss, wasserdichte Handyhalterung, unbegrenzte Kilometer und Basisversicherung inklusive.",
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Gibt es eine Rollerlieferung zum Hotel in Magaluf?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Nein. Die reguläre Abholung und Rückgabe erfolgen direkt im Büro von NEXA Rentals in Magaluf. Einen Lieferservice bieten wir derzeit nicht an.",
         },
       },
     ],
@@ -220,8 +262,10 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
     priceRange: "€€",
     address: {
       "@type": "PostalAddress",
+      streetAddress: "C. Galeón, 13, Loc 57",
+      postalCode: "07181",
       addressLocality: "Magaluf",
-      addressRegion: "Mallorca",
+      addressRegion: "Illes Balears",
       addressCountry: "ES",
     },
     areaServed: [
@@ -235,10 +279,10 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
     openingHours: "Mo-Su 09:00-20:00",
     makesOffer: {
       "@type": "Offer",
-      name: "125cc Roller mieten Mallorca",
+      name: "125cc Roller mieten Magaluf",
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
-      areaServed: "Mallorca",
+      areaServed: "Magaluf",
     },
   };
 
@@ -314,7 +358,10 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
 
       <header className="nexa-seo-navbar" data-scrolled="false">
         <div className="nexa-seo-nav-inner">
-          <Link href={homeHref} className="nexa-seo-logo-link nexa-hide-on-scroll">
+          <Link
+            href={homeHref}
+            className="nexa-seo-logo-link nexa-hide-on-scroll"
+          >
             <Image
               src="/images/reallogo.png"
               alt="NEXA Rentals"
@@ -325,7 +372,10 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
             />
           </Link>
 
-          <div className="nexa-scroll-arrows nexa-scroll-arrows-left" aria-hidden="true">
+          <div
+            className="nexa-scroll-arrows nexa-scroll-arrows-left"
+            aria-hidden="true"
+          >
             <span>→</span>
             <span>→</span>
             <span>→</span>
@@ -335,7 +385,10 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
             <span>Jetzt buchen</span>
           </Link>
 
-          <div className="nexa-scroll-arrows nexa-scroll-arrows-right" aria-hidden="true">
+          <div
+            className="nexa-scroll-arrows nexa-scroll-arrows-right"
+            aria-hidden="true"
+          >
             <span>←</span>
             <span>←</span>
             <span>←</span>
@@ -366,7 +419,7 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
                   return (
                     <Link
                       key={language.code}
-                      href={`/${language.code}/roller-mieten-mallorca`}
+                      href={getLanguageHref(language.code)}
                       className={
                         active
                           ? "nexa-seo-language-option active"
@@ -399,14 +452,14 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
       <section className="nexa-hero-section">
         <div className="nexa-hero-grid">
           <div className="nexa-hero-copy">
-            <h1>Roller mieten auf Mallorca direkt in Magaluf.</h1>
+            <h1>Roller in Magaluf mieten und Mallorca frei entdecken.</h1>
 
             <p className="nexa-hero-text">
-              Du suchst nach <strong>Roller mieten Mallorca</strong>,{" "}
-              <strong>Roller mieten Magaluf</strong> oder{" "}
-              <strong>125cc Roller auf Mallorca</strong>? Bei NEXA Rentals
-              buchst du deinen Roller online, bezahlst den Mietpreis direkt
-              online und holst den Roller unkompliziert in Magaluf ab.
+              Du suchst nach <strong>Roller mieten Magaluf</strong>,{" "}
+              <strong>Rollerverleih in Magaluf</strong> oder einem{" "}
+              <strong>125cc Roller in Magaluf</strong>? Bei NEXA Rentals buchst
+              du online, bezahlst sicher und holst deinen Roller direkt in
+              unserem Büro im Zentrum von Magaluf ab.
             </p>
 
             <p className="nexa-hero-text small">
@@ -457,7 +510,7 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
               <div className="nexa-photo-card nexa-photo-card-top">
                 <Image
                   src="/images/personscooter.jpg"
-                  alt="Roller mieten Mallorca mit NEXA Rentals in Magaluf"
+                  alt="125cc Roller mieten in Magaluf bei NEXA Rentals"
                   width={900}
                   height={620}
                   priority
@@ -468,7 +521,7 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
               <div className="nexa-photo-card nexa-photo-card-bottom">
                 <Image
                   src="/images/scooterperson2.jpg"
-                  alt="Scooter mieten Mallorca bei NEXA Rentals in Magaluf"
+                  alt="Rollerverleih Magaluf bei NEXA Rentals"
                   width={900}
                   height={720}
                   className="nexa-hero-image"
@@ -489,7 +542,7 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
         <p>Beliebt bei Urlaubern aus Deutschland, Österreich und der Schweiz</p>
 
         <div className="nexa-trust-logos">
-          <span>Roller mieten Mallorca</span>
+          <span>Roller mieten Magaluf</span>
           <span>Magaluf</span>
           <span>Palmanova</span>
           <span>Santa Ponsa</span>
@@ -533,15 +586,14 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
           <article>
             <span className="nexa-section-label">Warum NEXA Rentals?</span>
 
-            <h2>Der einfache Weg, einen Roller auf Mallorca zu mieten.</h2>
+            <h2>Der einfache Weg, einen Roller in Magaluf zu mieten.</h2>
 
             <p>
-              Viele Reisende suchen erst vor Ort nach einem Roller-Verleih in
-              Mallorca, Magaluf oder Palmanova. Bei NEXA Rentals machst du es
-              einfacher: Du reservierst deinen 125cc Roller online, bezahlst
-              online und holst ihn direkt im Büro in Magaluf ab. So verlierst
-              du keine Urlaubszeit und weißt schon vorher, dass dein Roller
-              bereitsteht.
+              Viele Reisende suchen erst nach ihrer Ankunft nach einem
+              Rollerverleih in Magaluf. Bei NEXA Rentals geht es einfacher: Du
+              reservierst deinen 125cc Roller online, bezahlst sicher und holst
+              ihn direkt in unserem Büro in Magaluf ab. So verlierst du keine
+              Urlaubszeit und weißt schon vorher, dass dein Roller bereitsteht.
             </p>
 
             <p>
@@ -557,7 +609,7 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
             <h3>Was du bekommst</h3>
 
             <ul>
-              <li>125cc Roller für Mallorca</li>
+              <li>125cc Roller direkt in Magaluf</li>
               <li>Online buchen und online bezahlen</li>
               <li>2 Helme inklusive</li>
               <li>50L Topcase für deine Sachen</li>
@@ -575,15 +627,16 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
         <div className="nexa-how-inner">
           <span className="nexa-section-label">So funktioniert es</span>
 
-          <h2>In wenigen Schritten zum Roller auf Mallorca.</h2>
+          <h2>In wenigen Schritten zu deinem Roller in Magaluf.</h2>
 
           <div className="nexa-how-grid">
             <div>
               <span>01</span>
               <h3>Roller online wählen</h3>
               <p>
-                Wähle deinen 125cc Roller, dein Datum und deine Mietdauer. Die
-                Buchung ist schnell, klar und für Mallorca Urlauber gemacht.
+                Wähle deinen 125cc Roller, das Datum und die Mietdauer. Die
+                Buchung für Magaluf ist schnell, übersichtlich und vollständig
+                online möglich.
               </p>
             </div>
 
@@ -592,7 +645,7 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
               <h3>Online bezahlen</h3>
               <p>
                 Du bezahlst den Mietpreis online und sicherst dir deinen Roller.
-                So ist dein Fahrzeug für Magaluf oder Palmanova fest reserviert.
+                Damit ist dein Fahrzeug für die gewählten Daten fest reserviert.
               </p>
             </div>
 
@@ -607,45 +660,45 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
           </div>
 
           <Link href={bookHref} className="nexa-bottom-cta">
-            Jetzt Roller auf Mallorca buchen
+            Jetzt Roller in Magaluf buchen
           </Link>
         </div>
       </section>
 
       <section className="nexa-seo-text-section">
         <div className="nexa-seo-text-inner">
-          <span className="nexa-section-label">Roller mieten Mallorca</span>
+          <span className="nexa-section-label">Roller mieten Magaluf</span>
 
           <h2>
-            Für deutsche Gäste, die Mallorca frei und flexibel erleben möchten.
+            Für deutsche Gäste, die Magaluf und Mallorca flexibel erleben
+            möchten.
           </h2>
 
           <p>
-            Wenn du bei Google nach “Roller mieten Mallorca”, “Roller mieten
-            Magaluf”, “Roller mieten Palmanova” oder “125cc Roller Mallorca”
-            suchst, willst du meistens keine komplizierte Seite, sondern eine
-            schnelle Lösung. Genau dafür ist diese Seite gemacht: klare
-            Informationen, echte Buchung, direkte Abholung in Magaluf und ein
-            Roller, mit dem du Mallorca flexibel erleben kannst.
+            Wenn du bei Google nach „Roller mieten Magaluf“, „Rollerverleih
+            Magaluf“, „Scooter mieten Magaluf“ oder „125cc Roller Magaluf“
+            suchst, möchtest du schnell Preise, Leistungen und den Abholort
+            sehen. Genau dafür ist diese Seite gemacht: klare Informationen,
+            sichere Online-Buchung und direkte Abholung bei NEXA Rentals.
           </p>
 
           <p>
-            NEXA Rentals ist besonders praktisch, wenn du in Magaluf,
-            Palmanova, Palma Nova, Torrenova, Santa Ponsa oder Calvià wohnst.
-            Du kannst deinen Roller online buchen und dann direkt bei uns
-            starten. Unser Ziel ist einfach: bessere Mobilität, faire Preise und
-            ein schneller Weg vom Hotel zum Strand, Restaurant, Aussichtspunkt
-            oder nächsten Ort.
+            NEXA Rentals ist besonders praktisch, wenn du in Magaluf, Palmanova,
+            Palma Nova, Torrenova, Santa Ponsa oder Calvià wohnst. Du kannst
+            deinen Roller online buchen und dann direkt bei uns starten. Unser
+            Ziel ist einfach: bessere Mobilität, faire Preise und ein schneller
+            Weg vom Hotel zum Strand, Restaurant, Aussichtspunkt oder nächsten
+            Ort.
           </p>
 
           <div className="nexa-keyword-cloud">
-            <span>Roller mieten Mallorca</span>
             <span>Roller mieten Magaluf</span>
-            <span>125cc Roller Mallorca</span>
+            <span>Rollerverleih Magaluf</span>
+            <span>125cc Roller Magaluf</span>
+            <span>Scooter mieten Magaluf</span>
             <span>Roller mieten Palmanova</span>
-            <span>Motorroller Mallorca</span>
-            <span>Roller Verleih Mallorca</span>
-            <span>Roller Mallorca online buchen</span>
+            <span>Motorroller mieten Magaluf</span>
+            <span>Roller Magaluf online buchen</span>
             <span>NEXA Rentals Magaluf</span>
           </div>
         </div>
@@ -659,11 +712,13 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
         <div className="nexa-faq-inner">
           <span className="nexa-section-label">Häufige Fragen</span>
 
-          <h2>Fragen zum Roller mieten auf Mallorca</h2>
+          <h2>Fragen zum Roller mieten in Magaluf</h2>
 
           <div className="nexa-faq-list">
             <details>
-              <summary>Welche Fahrerlaubnis brauche ich für einen 125cc Roller?</summary>
+              <summary>
+                Welche Fahrerlaubnis brauche ich für einen 125cc Roller?
+              </summary>
               <p>
                 Du brauchst A, A1 oder A2. Mit einem B-Führerschein kannst du
                 einen 125cc Roller fahren, wenn dein B-Führerschein seit
@@ -708,7 +763,7 @@ export default async function RollerMietenMallorcaPage({ params }: PageProps) {
           </div>
 
           <div className="nexa-final-cta">
-            <h3>Bereit für Mallorca?</h3>
+            <h3>Bereit für Magaluf?</h3>
             <p>
               Buche deinen 125cc Roller online und starte direkt in Magaluf.
             </p>

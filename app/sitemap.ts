@@ -1,46 +1,81 @@
 import type { MetadataRoute } from "next";
-import { getBlogsForLocale } from "../lib/blogs";
-import { locales, type Locale } from "../i18n/routing";
 
-const baseUrl = "https://www.nexarentals.es";
-const DEFAULT_LAST_MODIFIED = new Date("2026-06-08");
+import { getBlogsForLocale } from "../lib/blogs";
+import { type Locale } from "../i18n/routing";
+
+import {
+  SEO_BASE_URL,
+  SEO_LANGUAGES,
+  getSeoAlternates,
+  getSeoUrl,
+  seoRouteGroups,
+  type SeoLanguage,
+} from "../lib/seoRoutes";
+
+const baseUrl = SEO_BASE_URL;
 
 /**
- * NEXA Rentals sitemap strategy:
- * - Keep ALL important pages and ALL blogs visible to Google.
- * - Give strongest priority to real booking/money pages.
- * - Give hub/blog pages enough priority so Google crawls the full content cluster.
- * - Avoid using new Date() on every deploy because that makes every URL look freshly changed.
+ * Keep stable dates instead of using new Date() on every deployment.
+ *
+ * DEFAULT_LAST_MODIFIED:
+ * Existing/core pages.
+ *
+ * SEO_LAST_MODIFIED:
+ * The latest multilingual 22-page SEO campaign.
  */
+const DEFAULT_LAST_MODIFIED = new Date("2026-06-08");
+const SEO_LAST_MODIFIED = new Date("2026-08-29");
 
-const staticRoutes = [
+/**
+ * Only these languages are intentionally being pushed into the
+ * multilingual SEO indexing campaign right now.
+ *
+ * When Polish / Danish / Swedish / Dutch are finished, we add them
+ * to lib/seoRoutes.ts and this sitemap automatically expands.
+ */
+const INDEXED_LOCALES = SEO_LANGUAGES;
+
+/**
+ * Routes that genuinely use the same route slug across the currently
+ * indexed locales.
+ *
+ * Do NOT put translated SEO landing-page slugs here.
+ */
+const sharedStaticRoutes = [
   "",
-
-  // Core pages
   "/about",
   "/vehicles",
   "/blog",
   "/blog/scooter-rental-guides",
+] as const;
 
-  // Main money pages
-  "/scooter-rental-magaluf",
+/**
+ * Existing English SEO / commercial routes that are separate from
+ * the new 22-page multilingual campaign.
+ *
+ * These are intentionally included only under /en here so the sitemap
+ * does not create fake combinations such as:
+ *
+ * /de/cheap-scooter-rental-mallorca
+ * /fr/best-scooter-rental-mallorca
+ *
+ * Their translated equivalents can be mapped separately later.
+ */
+const englishOnlyRoutes = [
   "/scooter-rental-mallorca",
   "/rent-scooter-mallorca-125cc",
   "/ebike-rental-mallorca",
-
-  // Support SEO landing pages
   "/best-scooter-rental-magaluf",
   "/best-scooter-rental-mallorca",
   "/cheap-scooter-rental-magaluf",
   "/cheap-scooter-rental-mallorca",
   "/ebike-rental-mallorca-cheap",
-];
+] as const;
 
 function getStaticPriority(route: string) {
   if (route === "") return 1;
 
   if (
-    route === "/scooter-rental-magaluf" ||
     route === "/scooter-rental-mallorca" ||
     route === "/rent-scooter-mallorca-125cc" ||
     route === "/ebike-rental-mallorca"
@@ -73,11 +108,49 @@ function getStaticChangeFrequency(
   route: string
 ): MetadataRoute.Sitemap[number]["changeFrequency"] {
   if (route === "") return "daily";
+
   if (route === "/blog" || route === "/blog/scooter-rental-guides") {
     return "weekly";
   }
 
   return "monthly";
+}
+
+/**
+ * These values are mainly organizational.
+ * Google decides crawl frequency and ranking independently.
+ */
+function getSeoLandingPriority(routeId: string) {
+  if (
+    routeId === "motor-scooter-rental-mallorca" ||
+    routeId === "rent-a-scooter-mallorca" ||
+    routeId === "mallorca-scooter-rental" ||
+    routeId === "scooter-hire-mallorca"
+  ) {
+    return 0.95;
+  }
+
+  if (
+    routeId === "scooter-rental-magaluf" ||
+    routeId === "scooter-rental-santa-ponsa" ||
+    routeId === "scooter-rental-paguera" ||
+    routeId === "scooter-rental-palma" ||
+    routeId === "scooter-rental-palma-de-mallorca" ||
+    routeId === "scooter-rental-palmanova" ||
+    routeId === "scooter-rental-palma-nova"
+  ) {
+    return 0.93;
+  }
+
+  if (
+    routeId === "scooter-rental-mallorca-prices" ||
+    routeId === "scooter-rental-mallorca-driving-licence" ||
+    routeId === "scooter-rental-mallorca-airport"
+  ) {
+    return 0.92;
+  }
+
+  return 0.9;
 }
 
 function getBlogPriority(slug: string) {
@@ -176,7 +249,38 @@ function getBlogPriority(slug: string) {
   return 0.65;
 }
 
+function getSharedAlternates(route: string) {
+  const languages: Record<string, string> = {};
+
+  for (const locale of INDEXED_LOCALES) {
+    languages[locale] = `${baseUrl}/${locale}${route}`;
+  }
+
+  languages["x-default"] = `${baseUrl}/en${route}`;
+
+  return languages;
+}
+
+function createSeoEntries(): MetadataRoute.Sitemap {
+  return seoRouteGroups.flatMap((group) => {
+    const alternates = getSeoAlternates(group);
+
+    return INDEXED_LOCALES.map((language: SeoLanguage) => ({
+      url: getSeoUrl(language, group.routes[language]),
+      lastModified: SEO_LAST_MODIFIED,
+      changeFrequency: "monthly" as const,
+      priority: getSeoLandingPriority(group.id),
+      alternates: {
+        languages: alternates,
+      },
+    }));
+  });
+}
+
 export default function sitemap(): MetadataRoute.Sitemap {
+  /**
+   * Root / domain entry.
+   */
   const rootEntry: MetadataRoute.Sitemap[number] = {
     url: baseUrl,
     lastModified: DEFAULT_LAST_MODIFIED,
@@ -184,27 +288,95 @@ export default function sitemap(): MetadataRoute.Sitemap {
     priority: 1,
   };
 
-  const staticEntries: MetadataRoute.Sitemap = locales.flatMap((locale) =>
-    staticRoutes.map((route) => ({
-      url: `${baseUrl}/${locale}${route}`,
+  /**
+   * Shared routes for the five languages currently being intentionally
+   * indexed and promoted.
+   */
+  const sharedStaticEntries: MetadataRoute.Sitemap =
+    INDEXED_LOCALES.flatMap((locale) =>
+      sharedStaticRoutes.map((route) => ({
+        url: `${baseUrl}/${locale}${route}`,
+        lastModified: DEFAULT_LAST_MODIFIED,
+        changeFrequency: getStaticChangeFrequency(route),
+        priority: getStaticPriority(route),
+        alternates: {
+          languages: getSharedAlternates(route),
+        },
+      }))
+    );
+
+  /**
+   * Older English-only SEO / commercial pages.
+   *
+   * We keep them visible to Google without generating incorrect
+   * translated URL combinations.
+   */
+  const englishOnlyEntries: MetadataRoute.Sitemap = englishOnlyRoutes.map(
+    (route) => ({
+      url: `${baseUrl}/en${route}`,
       lastModified: DEFAULT_LAST_MODIFIED,
       changeFrequency: getStaticChangeFrequency(route),
       priority: getStaticPriority(route),
-    }))
+    })
   );
 
-  const blogEntries: MetadataRoute.Sitemap = locales.flatMap((locale) => {
-    const localeKey = locale as Locale;
+  /**
+   * The main 22-page campaign:
+   *
+   * 22 page groups
+   * x
+   * 5 languages
+   * =
+   * 110 correctly localized SEO URLs.
+   *
+   * Every URL includes hreflang relationships to the other four
+   * translated versions plus x-default.
+   */
+  const seoEntries = createSeoEntries();
 
-    return getBlogsForLocale(localeKey).map((blog) => ({
-      url: `${baseUrl}/${locale}/blog/${blog.slug}`,
-      lastModified: blog.updatedAt
-        ? new Date(blog.updatedAt)
-        : DEFAULT_LAST_MODIFIED,
-      changeFrequency: "monthly" as const,
-      priority: getBlogPriority(blog.slug),
-    }));
-  });
+  /**
+   * Localized blog content.
+   *
+   * For now we intentionally include only the five languages that are
+   * part of the current indexing campaign.
+   */
+  const blogEntries: MetadataRoute.Sitemap = INDEXED_LOCALES.flatMap(
+    (locale) => {
+      const localeKey = locale as Locale;
 
-  return [rootEntry, ...staticEntries, ...blogEntries];
+      return getBlogsForLocale(localeKey).map((blog) => ({
+        url: `${baseUrl}/${locale}/blog/${blog.slug}`,
+        lastModified: blog.updatedAt
+          ? new Date(blog.updatedAt)
+          : DEFAULT_LAST_MODIFIED,
+        changeFrequency: "monthly" as const,
+        priority: getBlogPriority(blog.slug),
+      }));
+    }
+  );
+
+  /**
+   * Final defensive deduplication.
+   *
+   * This prevents the same production URL from accidentally appearing
+   * twice if future route lists overlap.
+   */
+  const allEntries = [
+    rootEntry,
+    ...sharedStaticEntries,
+    ...englishOnlyEntries,
+    ...seoEntries,
+    ...blogEntries,
+  ];
+
+  const entriesByUrl = new Map<
+    string,
+    MetadataRoute.Sitemap[number]
+  >();
+
+  for (const entry of allEntries) {
+    entriesByUrl.set(entry.url, entry);
+  }
+
+  return Array.from(entriesByUrl.values());
 }

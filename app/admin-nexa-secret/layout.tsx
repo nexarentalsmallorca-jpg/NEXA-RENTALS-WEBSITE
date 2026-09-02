@@ -1,9 +1,15 @@
-import React from "react";
+// app/admin-nexa-secret/layout.tsx
 
-export default function AdminNexaSecretLayout({
-  children,
-}: {
+import "../globals.css";
+
+type Props = {
   children: React.ReactNode;
-}) {
-  return <>{children}</>;
+};
+
+export default function AdminNexaSecretLayout({ children }: Props) {
+  return (
+    <html lang="en">
+      <body>{children}</body>
+    </html>
+  );
 }

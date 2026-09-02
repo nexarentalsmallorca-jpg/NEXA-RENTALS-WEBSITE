@@ -1,4 +1,7 @@
 // app/[locale]/layout.tsx
+
+import "../globals.css";
+
 import type { Metadata } from "next";
 import { Inter, Playfair_Display, Poppins } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
@@ -39,9 +42,11 @@ const playfair = Playfair_Display({
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://www.nexarentals.es"),
-  title: "Scooter Rental Mallorca | Nexa Rentals Magaluf",
+
+  title: "Scooter Rental Mallorca | NEXA Rentals Magaluf",
+
   description:
-    "Looking for scooter rental in Mallorca? Nexa Rentals offers premium scooters and e-bikes in Magaluf with fast online booking, modern vehicles, and a smooth rental experience for tourists.",
+    "Scooter and e-bike rental in Mallorca with NEXA Rentals in Magaluf. Book online quickly and explore Mallorca with modern rental vehicles.",
 
   verification: {
     google: "sWbjYNtf_2ERVardp2bSeygbKnc0bSUEw-mmGo9PVgE",
@@ -51,20 +56,6 @@ export const metadata: Metadata = {
     icon: "/icon.png",
     shortcut: "/icon.png",
     apple: "/icon.png",
-  },
-
-  alternates: {
-    canonical: "/en",
-    languages: {
-      en: "/en",
-      es: "/es",
-      de: "/de",
-      fr: "/fr",
-      it: "/it",
-      pt: "/pt",
-      sv: "/sv",
-      "x-default": "/en",
-    },
   },
 };
 
@@ -77,7 +68,7 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
-export default async function RootLayout({ children, params }: Props) {
+export default async function LocaleLayout({ children, params }: Props) {
   const { locale: requestedLocale } = await params;
 
   const locale: Locale = isValidLocale(requestedLocale)
@@ -121,59 +112,14 @@ export default async function RootLayout({ children, params }: Props) {
                 /*
                   MOBILE ONLY:
                   Move Nero AI icon to the right side.
-                  Desktop is not touched.
+                  This targets the fixed AI wrapper by its z-index.
                 */
-               /*
-  MOBILE ONLY:
-  Move Nero AI icon to the right side.
-  This targets the fixed AI wrapper by its z-index.
-*/
-div[style*="2147483647"] {
-  left: auto !important;
-  right: 18px !important;
-  bottom: 84px !important;
-  align-items: flex-end !important;
-  gap: 10px !important;
-}
-
-/*
-  MOBILE ONLY:
-  Make the AI icon slightly smaller without breaking the inside design.
-*/
-
-
-                /*
-                  MOBILE ONLY:
-                  Move WhatsApp floating wrapper to the right side.
-                  This targets the WhatsApp portal wrapper by its z-index.
-                */
-                div[style*="2147483400"] {
+                div[style*="2147483647"] {
                   left: auto !important;
                   right: 18px !important;
-                  bottom: 20px !important;
-                  flex-direction: row-reverse !important;
+                  bottom: 84px !important;
                   align-items: flex-end !important;
-                  gap: 9px !important;
-                }
-
-                /*
-                  MOBILE ONLY:
-                  Make WhatsApp icon slightly smaller.
-                */
-                div[style*="2147483400"] > a[style*="border-radius: 50%"] {
-                  width: 58px !important;
-                  height: 58px !important;
-                  min-width: 58px !important;
-                  min-height: 58px !important;
-                }
-
-                /*
-                  MOBILE ONLY:
-                  Make WhatsApp bubble open from the right side.
-                */
-                div[style*="2147483400"] > a:not([style*="border-radius: 50%"]) {
-                  max-width: 230px !important;
-                  font-size: 12px !important;
+                  gap: 10px !important;
                 }
               }
             `,
