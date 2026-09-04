@@ -752,7 +752,6 @@ const I18N: Record<Locale, BookingPanelCopy> = {
 };
 
 const DEFAULT_PICKUP_LOCATION = "NEXA Rentals, Magaluf";
-const MAX_ONLINE_DAYS = 6;
 const KYMCO_SKY_TOWN_PRICE_INCREASE = 10;
 
 const PLAN_ATTENTION_ACTIVE_MS = 3000;
@@ -762,14 +761,14 @@ const PLAN_ATTENTION_RESTART_DELAY_MS = 20;
 const SEASONAL_PRICING: SeasonalPricing[] = [
   {
     seasonName: "Winter",
-    halfDayPrice: 35,
+    halfDayPrice: 36,
     halfDayOldPrice: 45,
     fullDayOldPrice: 55,
     fullDayPricing: { 1: 39, 2: 38, 3: 37, 4: 36, 5: 35, 6: 34 },
   },
   {
     seasonName: "Spring",
-    halfDayPrice: 35,
+    halfDayPrice: 36,
     halfDayOldPrice: 45,
     fullDayOldPrice: 55,
     fullDayPricing: { 1: 45, 2: 43, 3: 42, 4: 41, 5: 40, 6: 39 },
@@ -783,7 +782,7 @@ const SEASONAL_PRICING: SeasonalPricing[] = [
   },
   {
     seasonName: "Autumn",
-    halfDayPrice: 35,
+    halfDayPrice: 36,
     halfDayOldPrice: 45,
     fullDayOldPrice: 55,
     fullDayPricing: { 1: 45, 2: 43, 3: 42, 4: 41, 5: 40, 6: 39 },
@@ -851,8 +850,30 @@ function getVehiclePricing(
   };
 }
 
-function getRate(days: number, pricing: SeasonalPricing) {
-  return pricing.fullDayPricing[Math.min(Math.max(days, 1), MAX_ONLINE_DAYS)];
+function getRate(
+  days: number,
+  pricing: SeasonalPricing,
+  vehicleName: string
+) {
+  const normalizedDays = Math.max(days, 1);
+
+  if (normalizedDays <= 6) {
+    return pricing.fullDayPricing[normalizedDays];
+  }
+
+  if (normalizedDays <= 14) {
+    return pricing.fullDayPricing[6];
+  }
+
+  const vehiclePriceIncrease = isKymcoSkyTown(vehicleName)
+    ? KYMCO_SKY_TOWN_PRICE_INCREASE
+    : 0;
+
+  if (normalizedDays <= 19) return 38 + vehiclePriceIncrease;
+  if (normalizedDays <= 29) return 35 + vehiclePriceIncrease;
+  if (normalizedDays === 30) return 30 + vehiclePriceIncrease;
+
+  return 25 + vehiclePriceIncrease;
 }
 
 function getSameDayHourlyRate(
@@ -946,6 +967,21 @@ function buildMonthDays(month: Date) {
   );
 
   return [...leadingEmptyCells, ...monthDays];
+}
+
+function getLocalizedWeekdayLabels(locale: Locale) {
+  const formatter = new Intl.DateTimeFormat(
+    locale === "en" ? "en-GB" : locale,
+    { weekday: "short" }
+  );
+  const monday = new Date(2026, 0, 5);
+
+  return Array.from({ length: 7 }, (_, index) =>
+    formatter
+      .format(addDays(monday, index))
+      .replace(/\.$/, "")
+      .slice(0, 3)
+  );
 }
 
 function buildTimeOptions(
@@ -1218,6 +1254,10 @@ function CalendarModal({
 }) {
   const monthsScrollerRef = useRef<HTMLDivElement | null>(null);
   const wasOpenRef = useRef(false);
+  const weekdayLabels = useMemo(
+    () => getLocalizedWeekdayLabels(locale),
+    [locale]
+  );
 
   const monthsList = useMemo(() => {
     const base = startOfMonth(minBookableDate);
@@ -1245,6 +1285,32 @@ function CalendarModal({
     [monthsList]
   );
 
+  const scrollToDate = useCallback(
+    (date: Date, behavior: ScrollBehavior = "smooth") => {
+      const scroller = monthsScrollerRef.current;
+      const dateButton = scroller?.querySelector<HTMLButtonElement>(
+        `[data-calendar-date="${toISODate(date)}"]`
+      );
+
+      if (!scroller || !dateButton) {
+        scrollToMonth(startOfMonth(date), behavior);
+        return;
+      }
+
+      const scrollerRect = scroller.getBoundingClientRect();
+      const buttonRect = dateButton.getBoundingClientRect();
+      const centeredTop =
+        scroller.scrollTop +
+        buttonRect.top -
+        scrollerRect.top -
+        scroller.clientHeight / 2 +
+        buttonRect.height / 2;
+
+      scroller.scrollTo({ top: Math.max(0, centeredTop), behavior });
+    },
+    [scrollToMonth]
+  );
+
   useEffect(() => {
     if (!open) {
       wasOpenRef.current = false;
@@ -1252,13 +1318,27 @@ function CalendarModal({
     }
 
     if (!wasOpenRef.current) {
+      const focusDate =
+        activeField === "dropoff"
+          ? dropoffDate || pickupDate || minBookableDate
+          : pickupDate || minBookableDate;
+
       window.requestAnimationFrame(() => {
-        scrollToMonth(viewMonth, "auto");
+        window.requestAnimationFrame(() => {
+          scrollToDate(focusDate, "auto");
+        });
       });
     }
 
     wasOpenRef.current = true;
-  }, [open, scrollToMonth, viewMonth]);
+  }, [
+    open,
+    activeField,
+    pickupDate,
+    dropoffDate,
+    minBookableDate,
+    scrollToDate,
+  ]);
 
   const canConfirmFullRange = plan === "full" && !!pickupDate && !!dropoffDate;
 
@@ -1397,6 +1477,17 @@ function CalendarModal({
                     <div className="h-px flex-1 bg-black/10" />
                   </div>
 
+                  <div className="mb-1.5 grid grid-cols-7 gap-1.5">
+                    {weekdayLabels.map((weekday, index) => (
+                      <div
+                        key={`${weekday}-${index}`}
+                        className="py-1 text-center text-[8px] font-black uppercase tracking-[0.08em] text-black/38"
+                      >
+                        {weekday}
+                      </div>
+                    ))}
+                  </div>
+
                   <div className="grid grid-cols-7 gap-1.5">
                     {monthCells.map((day, index) => {
                       if (!day) {
@@ -1434,12 +1525,17 @@ function CalendarModal({
                         startOfDay(day) < startOfDay(dropoffDate);
 
                       const disabled = unavailable;
+                      const isToday =
+                        startOfDay(day).getTime() ===
+                        startOfDay(minBookableDate).getTime();
 
                       return (
                         <button
                           key={toISODate(day)}
+                          data-calendar-date={toISODate(day)}
                           type="button"
                           disabled={disabled}
+                          aria-current={isToday ? "date" : undefined}
                           onClick={() => onPick(day)}
                           className={[
                             "aspect-square rounded-[14px] text-[12px] font-black transition",
@@ -1453,6 +1549,9 @@ function CalendarModal({
                               : "",
                             disabled && selected
                               ? "cursor-not-allowed bg-black text-white opacity-100"
+                              : "",
+                            isToday && !selected
+                              ? "ring-2 ring-[#ff7a00] ring-offset-1"
                               : "",
                           ].join(" ")}
                         >
@@ -1599,8 +1698,8 @@ export default function BookingPanelV3({
       return activePricing.fullDayPricing[1];
     }
 
-    return getRate(fullDayCount, activePricing);
-  }, [plan, fullDayCount, activePricing]);
+    return getRate(fullDayCount, activePricing, vehicleName);
+  }, [plan, fullDayCount, activePricing, vehicleName]);
 
   const singleScooterTotal = useMemo(() => {
     if (plan === "half") return sameDayDynamicPrice;
@@ -1630,7 +1729,6 @@ export default function BookingPanelV3({
         !!pickupDate &&
         !!dropoffDate &&
         fullDayCount >= 1 &&
-        fullDayCount <= 6 &&
         quantity >= 1
       );
     }
@@ -2003,11 +2101,6 @@ export default function BookingPanelV3({
       return;
     }
 
-    if (days > MAX_ONLINE_DAYS) {
-      setNotice(tt.maxOnline6);
-      return;
-    }
-
     setDropoffDate(day);
     setNotice("");
     setViewMonth(startOfMonth(day));
@@ -2032,12 +2125,6 @@ export default function BookingPanelV3({
 
     if (days < 1) {
       setNotice(tt.fullMin24);
-      setActiveDateField("dropoff");
-      return;
-    }
-
-    if (days > MAX_ONLINE_DAYS) {
-      setNotice(tt.maxOnline6);
       setActiveDateField("dropoff");
       return;
     }
