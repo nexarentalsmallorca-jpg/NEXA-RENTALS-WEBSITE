@@ -2052,8 +2052,8 @@ useEffect(() => {
     activeMobileHeroSlide.vehicleId === "ebike-two"
       ? "9€"
       : activeMobileHeroSlide.vehicleId === "kymco-sky-town"
-        ? "45€"
-        : "35€"}
+        ? "46€"
+        : "36€"}
   </span>
 
   <span className="text-[8.5px] font-black uppercase leading-none tracking-[0.14em] text-white/78 drop-shadow-[0_8px_20px_rgba(0,0,0,0.9)]">
