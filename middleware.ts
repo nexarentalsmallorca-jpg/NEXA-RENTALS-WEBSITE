@@ -45,7 +45,10 @@ for (const group of seoRouteGroups) {
 
 /*
   Legacy SEO pages that should redirect to the localized homepage.
-  These are not part of the 22-page multilingual campaign.
+
+  IMPORTANT:
+  /scooter-rental-mallorca is NOT here anymore because it is now
+  an active SEO landing page.
 */
 const SEO_REDIRECT_PATHS = new Set([
   "/best-scooter-rental-magaluf",
@@ -55,7 +58,6 @@ const SEO_REDIRECT_PATHS = new Set([
   "/ebike-rental-mallorca",
   "/ebike-rental-mallorca-cheap",
   "/rent-scooter-mallorca-125cc",
-  "/scooter-rental-mallorca",
 ]);
 
 function hasLocale(pathSegment: string | undefined): pathSegment is Locale {
@@ -111,9 +113,10 @@ export default function middleware(request: NextRequest) {
     cleanPathWithoutLocale === "/admin-nexa-secret/login";
 
   /*
-    Force every campaign slug onto its intended language.
+    Force every SEO campaign slug onto its intended language.
 
     Examples:
+
     /roller-mieten-magaluf
       -> /de/roller-mieten-magaluf
 
@@ -137,10 +140,15 @@ export default function middleware(request: NextRequest) {
     return NextResponse.redirect(redirectUrl, 308);
   }
 
-  // Redirect legacy SEO pages to the localized homepage.
+  /*
+    Redirect ONLY old legacy SEO pages to the localized homepage.
+  */
   if (SEO_REDIRECT_PATHS.has(cleanPathWithoutLocale)) {
     const redirectUrl = request.nextUrl.clone();
-    const localeToUse = hasLocalePrefix ? firstSegment : defaultLocale;
+
+    const localeToUse = hasLocalePrefix
+      ? firstSegment
+      : defaultLocale;
 
     redirectUrl.pathname = `/${localeToUse}`;
     redirectUrl.search = "";
@@ -156,7 +164,10 @@ export default function middleware(request: NextRequest) {
   */
   if (cleanPathWithoutLocale === "/vehicles") {
     const redirectUrl = request.nextUrl.clone();
-    const localeToUse = hasLocalePrefix ? firstSegment : defaultLocale;
+
+    const localeToUse = hasLocalePrefix
+      ? firstSegment
+      : defaultLocale;
 
     redirectUrl.pathname = `/${localeToUse}/Home`;
     redirectUrl.search = "";

@@ -21,6 +21,39 @@ type DriverValidationResult = {
   rejectedDriverIndexes: number[];
 };
 
+type DeliveryDetails = {
+  serviceMethod: "hotel_delivery" | "airport_delivery";
+  deliveryArea: string;
+  deliveryAreaId: string;
+  destinationKind: string;
+  deliveryAddress: string;
+  deliveryTime: string;
+  collectionTime: string;
+  deliveryFeeCents: number;
+  collectionFeeCents: number;
+  serviceFeesCents: number;
+  rentalAmountCents: number;
+  hotelName: string;
+  hotelRoom: string;
+  hotelAddress: string;
+  hotelPlaceId: string;
+  hotelGoogleMapsUrl: string;
+  hotelPhotos: string[];
+  airbnbAddress: string;
+  airbnbPlaceId: string;
+  airbnbStreetName: string;
+  airbnbStreetNumber: string;
+  airbnbBlockNumber: string;
+  airbnbBuildingName: string;
+  airbnbFloor: string;
+  airbnbDoorNumber: string;
+  airbnbPostalCode: string;
+  airbnbCity: string;
+  airbnbGoogleMapsUrl: string;
+  airportReturnMethod: string;
+  officeReturnTime: string;
+};
+
 class DriverVerificationError extends Error {
   status: number;
   code: string;
@@ -74,6 +107,39 @@ function normalizeText(
   )
     .trim()
     .toLowerCase();
+}
+
+function cleanDeliveryValue(
+  value: unknown,
+  maxLength = 1000
+) {
+  return String(value || "").trim().slice(0, maxLength);
+}
+
+function feeToCents(value: unknown) {
+  const amount = Number(value);
+
+  return Number.isFinite(amount)
+    ? Math.max(0, Math.round(amount * 100))
+    : 0;
+}
+
+function parseHotelPhotos(value: unknown) {
+  try {
+    const parsed = Array.isArray(value)
+      ? value
+      : JSON.parse(String(value || "[]"));
+
+    return Array.isArray(parsed)
+      ? parsed
+          .filter((photo): photo is string => typeof photo === "string")
+          .map((photo) => cleanDeliveryValue(photo, 2000))
+          .filter(Boolean)
+          .slice(0, 3)
+      : [];
+  } catch {
+    return [];
+  }
 }
 
 function normalizeQuantity(
@@ -479,6 +545,33 @@ export async function POST(
       dropoffTime,
 
       pickupLocation,
+
+      serviceMethod,
+      deliveryArea,
+      deliveryAreaId,
+      destinationKind,
+      deliveryAddress,
+      hotelName,
+      hotelRoom,
+      hotelAddress,
+      hotelPlaceId,
+      hotelGoogleMapsUrl,
+      hotelPhotos,
+      airbnbAddress,
+      airbnbPlaceId,
+      airbnbStreetName,
+      airbnbStreetNumber,
+      airbnbBlockNumber,
+      airbnbBuildingName,
+      airbnbFloor,
+      airbnbDoorNumber,
+      airbnbPostalCode,
+      airbnbCity,
+      airbnbGoogleMapsUrl,
+      airportReturnMethod,
+      officeReturnTime,
+      deliveryFee,
+      collectionFee,
 
       bikeName,
       vehicle,
@@ -1045,6 +1138,80 @@ export async function POST(
     const remainingAmount =
       0;
 
+    const normalizedServiceMethod =
+      normalizeText(serviceMethod);
+
+    const isDeliveryBooking =
+      normalizedServiceMethod === "hotel_delivery" ||
+      normalizedServiceMethod === "airport_delivery";
+
+    const deliveryFeeCents =
+      feeToCents(deliveryFee);
+
+    const collectionFeeCents =
+      feeToCents(collectionFee);
+
+    const serviceFeesCents =
+      deliveryFeeCents + collectionFeeCents;
+
+    const deliveryDetails: DeliveryDetails | null =
+      isDeliveryBooking
+        ? {
+            serviceMethod:
+              normalizedServiceMethod as DeliveryDetails["serviceMethod"],
+            deliveryArea: cleanDeliveryValue(deliveryArea, 160),
+            deliveryAreaId: cleanDeliveryValue(deliveryAreaId, 120),
+            destinationKind: cleanDeliveryValue(destinationKind, 40),
+            deliveryAddress: cleanDeliveryValue(deliveryAddress, 1000),
+            deliveryTime: cleanDeliveryValue(pickupTime, 20),
+            collectionTime: cleanDeliveryValue(dropoffTime, 20),
+            deliveryFeeCents,
+            collectionFeeCents,
+            serviceFeesCents,
+            rentalAmountCents: Math.max(0, totalAmount - serviceFeesCents),
+            hotelName: cleanDeliveryValue(hotelName, 300),
+            hotelRoom: cleanDeliveryValue(hotelRoom, 100),
+            hotelAddress: cleanDeliveryValue(hotelAddress, 1000),
+            hotelPlaceId: cleanDeliveryValue(hotelPlaceId, 300),
+            hotelGoogleMapsUrl: cleanDeliveryValue(hotelGoogleMapsUrl, 2000),
+            hotelPhotos: parseHotelPhotos(hotelPhotos),
+            airbnbAddress: cleanDeliveryValue(airbnbAddress, 1000),
+            airbnbPlaceId: cleanDeliveryValue(airbnbPlaceId, 300),
+            airbnbStreetName: cleanDeliveryValue(airbnbStreetName, 300),
+            airbnbStreetNumber: cleanDeliveryValue(airbnbStreetNumber, 100),
+            airbnbBlockNumber: cleanDeliveryValue(airbnbBlockNumber, 100),
+            airbnbBuildingName: cleanDeliveryValue(airbnbBuildingName, 300),
+            airbnbFloor: cleanDeliveryValue(airbnbFloor, 100),
+            airbnbDoorNumber: cleanDeliveryValue(airbnbDoorNumber, 100),
+            airbnbPostalCode: cleanDeliveryValue(airbnbPostalCode, 40),
+            airbnbCity: cleanDeliveryValue(airbnbCity, 160),
+            airbnbGoogleMapsUrl: cleanDeliveryValue(airbnbGoogleMapsUrl, 2000),
+            airportReturnMethod: cleanDeliveryValue(airportReturnMethod, 80),
+            officeReturnTime: cleanDeliveryValue(officeReturnTime, 20),
+          }
+        : null;
+
+    if (deliveryDetails) {
+      const { error: deliveryHoldError } =
+        await supabaseAdmin
+          .from("payment_holds")
+          .update({
+            delivery_details: deliveryDetails,
+            updated_at: new Date().toISOString(),
+          })
+          .eq("id", createdHoldId)
+          .eq("status", "active");
+
+      if (deliveryHoldError) {
+        await cancelHold(createdHoldId, "cancelled");
+        createdHoldId = null;
+
+        throw new Error(
+          `Delivery details could not be secured: ${deliveryHoldError.message}`
+        );
+      }
+    }
+
     /*
      * No exact N1, N2 or other scooter code is assigned here.
      *
@@ -1093,6 +1260,14 @@ export async function POST(
 
             booking_status:
               "payment_pending",
+
+            service_method:
+              isDeliveryBooking
+                ? normalizedServiceMethod
+                : "office",
+
+            delivery_fee_total:
+              String(serviceFeesCents),
 
             payment_type:
               "pay_full_amount",
@@ -1463,6 +1638,8 @@ export async function POST(
       remainingAmount,
 
       totalAmount,
+
+      deliveryDetails,
 
       /*
        * Compatibility with the existing checkout component.

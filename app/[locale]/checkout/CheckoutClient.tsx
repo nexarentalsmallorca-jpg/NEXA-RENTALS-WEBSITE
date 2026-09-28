@@ -654,6 +654,8 @@ async function checkCheckoutAvailability({
   to,
   pickupTime,
   dropoffTime,
+  serviceMethod,
+  collectionRequired,
 }: {
   vehicleId: string;
   vehicleName: string;
@@ -666,6 +668,8 @@ async function checkCheckoutAvailability({
 
   pickupTime: string;
   dropoffTime: string;
+  serviceMethod: string;
+  collectionRequired: boolean;
 }): Promise<AvailabilityResult | null> {
   if (!from || !to) {
     return null;
@@ -703,6 +707,12 @@ async function checkCheckoutAvailability({
 
       dropoffTime:
         String(dropoffTime),
+
+      serviceMethod:
+        String(serviceMethod),
+
+      collectionRequired:
+        String(collectionRequired),
     });
 
   try {
@@ -837,6 +847,39 @@ export default function CheckoutClient({
       "pickupLocation"
     ) ??
     "NEXA Rentals, Magaluf";
+
+  const serviceMethod = safeParam(searchParams, "serviceMethod") || "office";
+  const deliveryArea = safeParam(searchParams, "deliveryArea") || "";
+  const deliveryAreaId = safeParam(searchParams, "deliveryAreaId") || "";
+  const destinationKind = safeParam(searchParams, "destinationKind") || "";
+  const hotelName = safeParam(searchParams, "hotelName") || "";
+  const hotelRoom = safeParam(searchParams, "hotelRoom") || "";
+  const hotelAddress = safeParam(searchParams, "hotelAddress") || "";
+  const hotelPlaceId = safeParam(searchParams, "hotelPlaceId") || "";
+  const hotelGoogleMapsUrl =
+    safeParam(searchParams, "hotelGoogleMapsUrl") || "";
+  const hotelPhotos = safeParam(searchParams, "hotelPhotos") || "[]";
+  const airbnbAddress = safeParam(searchParams, "airbnbAddress") || "";
+  const airbnbPlaceId = safeParam(searchParams, "airbnbPlaceId") || "";
+  const airbnbStreetName = safeParam(searchParams, "airbnbStreetName") || "";
+  const airbnbStreetNumber = safeParam(searchParams, "airbnbStreetNumber") || "";
+  const airbnbBlockNumber = safeParam(searchParams, "airbnbBlockNumber") || "";
+  const airbnbBuildingName = safeParam(searchParams, "airbnbBuildingName") || "";
+  const airbnbFloor = safeParam(searchParams, "airbnbFloor") || "";
+  const airbnbDoorNumber = safeParam(searchParams, "airbnbDoorNumber") || "";
+  const airbnbPostalCode = safeParam(searchParams, "airbnbPostalCode") || "";
+  const airbnbCity = safeParam(searchParams, "airbnbCity") || "";
+  const airbnbGoogleMapsUrl =
+    safeParam(searchParams, "airbnbGoogleMapsUrl") || "";
+  const deliveryAddress = safeParam(searchParams, "deliveryAddress") || "";
+  const airportReturnMethod =
+    safeParam(searchParams, "airportReturnMethod") || "";
+  const officeReturnTime = safeParam(searchParams, "officeReturnTime") || "";
+  const deliveryFee = safeParam(searchParams, "deliveryFee") || "0";
+  const collectionFee = safeParam(searchParams, "collectionFee") || "0";
+  const deliveryFeeEur = Math.max(0, Number(deliveryFee) || 0);
+  const collectionFeeEur = Math.max(0, Number(collectionFee) || 0);
+  const serviceFeesEur = deliveryFeeEur + collectionFeeEur;
 
   const from =
     parseISO(
@@ -1225,6 +1268,12 @@ export default function CheckoutClient({
   const totalCents =
     Math.round(
       totalEur * 100
+    );
+
+  const rentalAmountEur =
+    Math.max(
+      0,
+      Math.round((totalEur - serviceFeesEur) * 100) / 100
     );
 
   const payNowCents =
@@ -2265,6 +2314,13 @@ export default function CheckoutClient({
               pickupTime,
 
               dropoffTime,
+
+              serviceMethod,
+
+              collectionRequired:
+                serviceMethod === "hotel_delivery" ||
+                (serviceMethod === "airport_delivery" &&
+                  airportReturnMethod === "hotel_delivery"),
             }
           );
 
@@ -2378,6 +2434,45 @@ export default function CheckoutClient({
 
         const finalNotes =
           [
+            serviceMethod !== "office"
+              ? [
+                  `Service method: ${serviceMethod}`,
+                  deliveryArea ? `Delivery area: ${deliveryArea}` : "",
+                  `Delivery time: ${pickupTime}`,
+                  `Collection time: ${dropoffTime}`,
+                  destinationKind ? `Destination type: ${destinationKind}` : "",
+                  hotelName ? `Hotel: ${hotelName}` : "",
+                  hotelRoom ? `Room: ${hotelRoom}` : "",
+                  hotelAddress ? `Hotel address: ${hotelAddress}` : "",
+                  hotelPlaceId ? `Hotel place ID: ${hotelPlaceId}` : "",
+                  hotelGoogleMapsUrl
+                    ? `Hotel Google Maps: ${hotelGoogleMapsUrl}`
+                    : "",
+                  airbnbAddress ? `Airbnb address: ${airbnbAddress}` : "",
+                  airbnbStreetName ? `Street: ${airbnbStreetName}` : "",
+                  airbnbStreetNumber ? `Street number: ${airbnbStreetNumber}` : "",
+                  airbnbBlockNumber ? `Block: ${airbnbBlockNumber}` : "",
+                  airbnbBuildingName ? `Building: ${airbnbBuildingName}` : "",
+                  airbnbFloor ? `Floor: ${airbnbFloor}` : "",
+                  airbnbDoorNumber ? `Door: ${airbnbDoorNumber}` : "",
+                  airbnbPostalCode ? `Postal code: ${airbnbPostalCode}` : "",
+                  airbnbCity ? `City: ${airbnbCity}` : "",
+                  airbnbGoogleMapsUrl
+                    ? `Airbnb Google Maps: ${airbnbGoogleMapsUrl}`
+                    : "",
+                  airportReturnMethod
+                    ? `Airport return method: ${airportReturnMethod}`
+                    : "",
+                  officeReturnTime
+                    ? `Office return time: ${officeReturnTime}`
+                    : "",
+                  `Delivery fee: €${deliveryFee}`,
+                  `Collection fee: €${collectionFee}`,
+                ]
+                  .filter(Boolean)
+                  .join("\n")
+              : "",
+
             homeAddress.trim()
               ? `Home address: ${homeAddress.trim()}`
               : "",
@@ -2470,6 +2565,38 @@ export default function CheckoutClient({
                   dropoffTime,
 
                   pickupLocation,
+
+                  serviceMethod,
+                  deliveryArea,
+                  deliveryAreaId,
+                  destinationKind,
+                  deliveryAddress,
+                  hotelName,
+                  hotelRoom,
+                  hotelAddress,
+                  hotelPlaceId,
+                  hotelGoogleMapsUrl,
+                  hotelPhotos,
+                  airbnbAddress,
+                  airbnbPlaceId,
+                  airbnbStreetName,
+                  airbnbStreetNumber,
+                  airbnbBlockNumber,
+                  airbnbBuildingName,
+                  airbnbFloor,
+                  airbnbDoorNumber,
+                  airbnbPostalCode,
+                  airbnbCity,
+                  airbnbGoogleMapsUrl,
+                  airportReturnMethod,
+                  officeReturnTime,
+                  deliveryFee,
+                  collectionFee,
+                  serviceFees:
+                    serviceFeesEur,
+
+                  rentalAmount:
+                    rentalAmountEur,
 
                   /*
                    * Public category information.
@@ -2740,6 +2867,19 @@ export default function CheckoutClient({
                 pickupLocation
               }
 
+              serviceMethod={
+                serviceMethod
+              }
+
+              deliveryArea={
+                deliveryArea
+              }
+
+              deliveryMapUrl={
+                hotelGoogleMapsUrl ||
+                airbnbGoogleMapsUrl
+              }
+
               from={
                 from
               }
@@ -2774,6 +2914,18 @@ export default function CheckoutClient({
 
               totalEur={
                 totalEur
+              }
+
+              rentalAmountEur={
+                rentalAmountEur
+              }
+
+              deliveryFeeEur={
+                deliveryFeeEur
+              }
+
+              collectionFeeEur={
+                collectionFeeEur
               }
 
               deposit={
@@ -3163,6 +3315,9 @@ function BookingSummary({
   publicVehicleName,
   checkoutImage,
   pickupLocation,
+  serviceMethod,
+  deliveryArea,
+  deliveryMapUrl,
   from,
   to,
   pickupTime,
@@ -3172,6 +3327,9 @@ function BookingSummary({
   planLabel,
   durationLabel,
   totalEur,
+  rentalAmountEur,
+  deliveryFeeEur,
+  collectionFeeEur,
   deposit,
 }: {
   vehicle: Vehicle;
@@ -3181,6 +3339,10 @@ function BookingSummary({
   checkoutImage: string;
 
   pickupLocation: string;
+
+  serviceMethod: string;
+  deliveryArea: string;
+  deliveryMapUrl: string;
 
   from?: Date;
   to?: Date;
@@ -3196,6 +3358,9 @@ function BookingSummary({
   durationLabel: string;
 
   totalEur: number;
+  rentalAmountEur: number;
+  deliveryFeeEur: number;
+  collectionFeeEur: number;
 
   deposit: number;
 }) {
@@ -3314,21 +3479,69 @@ function BookingSummary({
           }
 
           href={
-            PICKUP_LOCATION_MAP_URL
+            serviceMethod === "office"
+              ? PICKUP_LOCATION_MAP_URL
+              : deliveryMapUrl || undefined
           }
         />
       </div>
 
       <div className="mt-4 border-t border-black/10 pt-2 2xl:mt-5">
-        <PlainLine
-          label={copy.rentalTotal}
+        {serviceMethod === "office" ? (
+          <PlainLine
+            label={copy.rentalTotal}
 
-          value={`€${eur(
-            totalEur
-          )}`}
+            value={`€${eur(
+              totalEur
+            )}`}
 
-          strong
-        />
+            strong
+          />
+        ) : (
+          <>
+            <PlainLine
+              label="Rental amount"
+              value={`€${eur(rentalAmountEur)}`}
+            />
+
+            {deliveryFeeEur > 0 && collectionFeeEur > 0 && deliveryFeeEur === collectionFeeEur ? (
+              <PlainLine
+                label={`Delivery fee · €${eur(deliveryFeeEur)} each way`}
+                value={`€${eur(deliveryFeeEur + collectionFeeEur)} total`}
+              />
+            ) : (
+              <>
+                {deliveryFeeEur > 0 ? (
+                  <PlainLine
+                    label="Delivery fee"
+                    value={`€${eur(deliveryFeeEur)}`}
+                  />
+                ) : null}
+
+                {collectionFeeEur > 0 ? (
+                  <PlainLine
+                    label="Collection fee"
+                    value={`€${eur(collectionFeeEur)}`}
+                  />
+                ) : null}
+              </>
+            )}
+
+            {deliveryArea ? (
+              <PlainLine
+                label="Delivery area"
+                value={deliveryArea}
+                muted
+              />
+            ) : null}
+
+            <PlainLine
+              label="Total amount paid online"
+              value={`€${eur(totalEur)}`}
+              strong
+            />
+          </>
+        )}
       </div>
 
       <p className="mt-3 text-xs font-medium leading-5 text-black/45 2xl:text-[13px] 2xl:leading-6">

@@ -1017,7 +1017,7 @@ function TypedLine({
   );
 }
 
-function LocationV3() {
+function LocationV3({ locale }: { locale: ShowroomLocale }) {
   const [status, setStatus] = useState<OpenStatus | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
 
@@ -1399,6 +1399,18 @@ function LocationV3() {
           </span>
         </a>
       </div>
+
+
+      {locale === "fr" && (
+        <div className="relative mx-auto mt-5 w-full max-w-[1180px] px-1 text-center">
+          <a
+            href="/fr/location-scooter-magaluf"
+            className="inline-flex items-center justify-center rounded-full border border-white/12 bg-white/[0.045] px-4 py-2 text-[11px] font-black uppercase tracking-[0.12em] text-white/82 transition hover:border-white/24 hover:bg-white/[0.08] hover:text-white"
+          >
+            Location scooter Magaluf
+          </a>
+        </div>
+      )}
 
       <style jsx>{`
         .nexa-location-cursor-active .nexa-location-reveal {
@@ -2967,7 +2979,7 @@ useEffect(() => {
       </section>
 
       <GoogleReviewsV3 />
-      <LocationV3 />
+      <LocationV3 locale={showroomLocale} />
       <NexaStatsStripV3 />
       <MallorcaScooterRentalGuideHub />
       <NeroWebsiteAssistant />

@@ -337,6 +337,203 @@ export default async function LocationScooterMagalufPage({
         }}
       />
 
+      <Script
+        id="nexa-mobile-hero-sequence"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function () {
+              var RETURN_RELOAD_KEY =
+                "nexa:location-scooter-magaluf:reload-on-return";
+
+              function isMobileHero() {
+                return window.matchMedia("(max-width: 680px)").matches;
+              }
+
+              function isThisSeoPage() {
+                return window.location.pathname.indexOf(
+                  "/location-scooter-magaluf"
+                ) !== -1;
+              }
+
+              function markBookingNavigation() {
+                try {
+                  window.sessionStorage.setItem(RETURN_RELOAD_KEY, "1");
+                } catch (error) {
+                  // Ignore storage errors. The normal page navigation still works.
+                }
+              }
+
+              function shouldForceReloadOnReturn() {
+                if (!isMobileHero() || !isThisSeoPage()) return false;
+
+                try {
+                  return (
+                    window.sessionStorage.getItem(RETURN_RELOAD_KEY) === "1"
+                  );
+                } catch (error) {
+                  return false;
+                }
+              }
+
+              function forceFreshPageAfterReturn() {
+                if (!shouldForceReloadOnReturn()) return false;
+
+                try {
+                  window.sessionStorage.removeItem(RETURN_RELOAD_KEY);
+                } catch (error) {
+                  // Continue with the reload even if storage cleanup fails.
+                }
+
+                window.location.reload();
+                return true;
+              }
+
+              function bindBookingLinks() {
+                if (!isThisSeoPage()) return;
+
+                document.addEventListener(
+                  "click",
+                  function (event) {
+                    var target = event.target;
+                    if (!(target instanceof Element)) return;
+
+                    var link = target.closest(
+                      ".nexa-primary-cta, " +
+                        ".nexa-seo-book-button, " +
+                        ".nexa-mobile-main-cta, " +
+                        ".nexa-bottom-cta, " +
+                        ".nexa-final-cta a"
+                    );
+
+                    if (!link) return;
+
+                    markBookingNavigation();
+                  },
+                  true
+                );
+              }
+
+              function runMobileHeroSequence() {
+                if (!isMobileHero()) return;
+
+                var page = document.querySelector(".nexa-seo-page");
+                var heading = document.querySelector(".nexa-hero-copy h1");
+
+                if (!page || !heading) return;
+
+                /*
+                 * Save the original heading once so the animation can always
+                 * rebuild the exact same text after a real reload.
+                 */
+                if (!heading.getAttribute("data-original-heading")) {
+                  heading.setAttribute(
+                    "data-original-heading",
+                    heading.textContent ||
+                      "Location de scooter à Magaluf, au cœur de Majorque."
+                  );
+                }
+
+                var fullText =
+                  heading.getAttribute("data-original-heading") ||
+                  "Location de scooter à Magaluf, au cœur de Majorque.";
+
+                /*
+                 * Reset every mobile entrance state before starting.
+                 */
+                page.classList.remove("nexa-mobile-hero-ready");
+                page.setAttribute("data-mobile-sequence", "running");
+
+                heading.classList.remove("nexa-mobile-typing");
+                heading.textContent = "";
+                heading.setAttribute("aria-label", fullText);
+
+                /*
+                 * Force a style/layout flush so opacity and transform reset
+                 * before the entrance animations begin.
+                 */
+                void page.offsetWidth;
+
+                heading.classList.add("nexa-mobile-typing");
+
+                var index = 0;
+                var speed = 30;
+
+                function typeNext() {
+                  if (index < fullText.length) {
+                    heading.textContent += fullText.charAt(index);
+                    index += 1;
+                    window.setTimeout(typeNext, speed);
+                    return;
+                  }
+
+                  heading.classList.remove("nexa-mobile-typing");
+
+                  /*
+                   * This class triggers the tagline, CTA and orange-panel
+                   * slide-in animations in the existing CSS.
+                   */
+                  window.requestAnimationFrame(function () {
+                    page.classList.add("nexa-mobile-hero-ready");
+                    page.setAttribute("data-mobile-sequence", "done");
+                  });
+                }
+
+                window.setTimeout(typeNext, 160);
+              }
+
+              function boot() {
+                /*
+                 * If the visitor has just returned from the booking page,
+                 * reload this SEO page once. The session marker is removed
+                 * before reload, so this cannot create a reload loop.
+                 */
+                if (forceFreshPageAfterReturn()) return;
+
+                bindBookingLinks();
+                runMobileHeroSequence();
+              }
+
+              if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", boot, {
+                  once: true
+                });
+              } else {
+                boot();
+              }
+
+              /*
+               * Browser back-forward cache:
+               * pageshow fires when Chrome/Safari restores the old page.
+               */
+              window.addEventListener("pageshow", function () {
+                forceFreshPageAfterReturn();
+              });
+
+              /*
+               * Next.js / browser history traversal can also surface through
+               * popstate without a full page load.
+               */
+              window.addEventListener("popstate", function () {
+                window.setTimeout(function () {
+                  forceFreshPageAfterReturn();
+                }, 0);
+              });
+
+              /*
+               * Android Chrome can restore a tab/page and only make it visible
+               * again. This catches that case too.
+               */
+              document.addEventListener("visibilitychange", function () {
+                if (document.visibilityState === "visible") {
+                  forceFreshPageAfterReturn();
+                }
+              });
+            })();
+          `,
+        }}
+      />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -451,6 +648,11 @@ export default async function LocationScooterMagalufPage({
           <div className="nexa-hero-copy">
             <h1>Location de scooter à Magaluf, au cœur de Majorque.</h1>
 
+            <div className="nexa-mobile-location">Magaluf, Majorque</div>
+            <p className="nexa-mobile-hero-tagline">
+              Location scooter Magaluf · Scooter 125cc · Réservation en ligne
+            </p>
+
             <p className="nexa-hero-text">
               Vous recherchez une{" "}
               <strong>location de scooter à Magaluf</strong>, un{" "}
@@ -468,7 +670,8 @@ export default async function LocationScooterMagalufPage({
 
             <div className="nexa-hero-actions">
               <Link href={bookHref} className="nexa-primary-cta">
-                Réserver mon scooter
+                <span className="nexa-cta-desktop-label">Réserver mon scooter</span>
+                <span className="nexa-cta-mobile-label">VOIR LES PRIX & SCOOTERS</span>
               </Link>
 
               <Link href={contactHref} className="nexa-secondary-cta">
@@ -533,6 +736,30 @@ export default async function LocationScooterMagalufPage({
               </div>
             </div>
           </div>
+
+          <div className="nexa-mobile-orange-arc" aria-hidden="true">
+            <svg
+              className="nexa-mobile-wave-svg"
+              viewBox="0 0 1000 104"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <linearGradient id="nexaMobileWaveGradientFr" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#ff6500" />
+                  <stop offset="58%" stopColor="#ff8a00" />
+                  <stop offset="100%" stopColor="#ff9f25" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M0 48 L165 48 Q190 48 212 44 L350 37 Q372 36 394 36 L530 36 Q552 36 574 31 L714 23 Q738 21 760 21 L874 21 Q898 21 920 17 L1000 13 L1000 104 L0 104 Z"
+                fill="url(#nexaMobileWaveGradientFr)"
+              />
+            </svg>
+            <div className="nexa-mobile-wave-copy">
+              <strong>Location scooter Magaluf dès 39 €</strong>
+              <span>Scooters 125cc · Réservation en ligne · NEXA Rentals Magaluf</span>
+            </div>
+          </div>
         </div>
       </section>
 
@@ -572,6 +799,17 @@ export default async function LocationScooterMagalufPage({
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="nexa-mobile-action-section">
+        <Link href={bookHref} className="nexa-mobile-main-cta">
+          Voir les scooters et les prix
+          <span aria-hidden="true">→</span>
+        </Link>
+
+        <Link href={contactHref} className="nexa-mobile-contact-cta">
+          Une question ? Contactez-nous
+        </Link>
       </section>
 
       <section className="nexa-components-section">
@@ -2318,6 +2556,615 @@ export default async function LocationScooterMagalufPage({
             height: 210px;
             top: 306px;
             left: 18px;
+          }
+        }
+
+        .nexa-mobile-location,
+        .nexa-mobile-hero-tagline,
+        .nexa-cta-mobile-label,
+        .nexa-mobile-orange-arc {
+          display: none;
+        }
+
+        .nexa-cta-desktop-label {
+          display: inline;
+        }
+
+        .nexa-mobile-action-section {
+          display: none;
+        }
+
+        @media (max-width: 680px) {
+          /* =========================================================
+             MOBILE HERO POSITION CONTROLS
+             Change ONLY these values to fine-tune the mobile hero.
+
+             HERO BUTTON:
+               --mobile-book-x: positive = right, negative = left
+               --mobile-book-y: positive = down, negative = up
+
+             ORANGE BOTTOM PANEL:
+               --mobile-arc-x: positive = right, negative = left
+               --mobile-arc-y: positive = up, negative = down
+               --mobile-arc-height: overall orange panel height
+
+             ORANGE PANEL TEXT:
+               --mobile-arc-text-x: positive = right, negative = left
+               --mobile-arc-text-y: positive = up, negative = down
+             ========================================================= */
+          .nexa-seo-page {
+            --mobile-book-x: 0px;
+            --mobile-book-y: -8px;
+
+            --mobile-arc-x: 0px;
+            --mobile-arc-y: 28px;
+            --mobile-arc-height: 114px;
+
+            --mobile-arc-text-x: 0px;
+            --mobile-arc-text-y: 12px;
+
+            padding-top: 64px;
+          }
+
+          .nexa-hero-section {
+            position: relative;
+            padding: 0;
+            background: #111116;
+          }
+
+          .nexa-hero-grid {
+            position: relative;
+            max-width: none;
+            width: 100%;
+            min-height: calc(94svh + 18px);
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-areas: "hero";
+            gap: 0;
+            overflow: hidden;
+            background: #111116;
+          }
+
+          .nexa-hero-visual {
+            grid-area: hero;
+            position: relative;
+            width: 100%;
+            max-width: none;
+            min-height: calc(94svh + 18px);
+            margin: 0;
+            z-index: 1;
+          }
+
+          .nexa-visual-stack {
+            position: relative;
+            width: 100%;
+            min-height: calc(94svh + 18px);
+          }
+
+          .nexa-orange-shape,
+          .nexa-photo-card-bottom,
+          .nexa-floating-price {
+            display: none;
+          }
+
+          .nexa-photo-card-top {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            box-shadow: none;
+            background: #111116;
+          }
+
+          .nexa-photo-card-top::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background:
+              linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.06) 30%, rgba(0, 0, 0, 0.015) 58%, rgba(0, 0, 0, 0.12) 100%),
+              linear-gradient(90deg, rgba(0, 0, 0, 0.26) 0%, rgba(0, 0, 0, 0.05) 58%, rgba(0, 0, 0, 0.01) 100%);
+          }
+
+          .nexa-photo-card-top .nexa-hero-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: 56% center;
+            filter: brightness(1.14) saturate(1.04) contrast(0.96);
+            transform: scale(0.985);
+            transform-origin: center center;
+          }
+
+          .nexa-hero-copy {
+            grid-area: hero;
+            position: relative;
+            z-index: 4;
+            min-height: calc(100svh - 168px);
+            padding: clamp(12px, 1.8svh, 18px) 22px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            text-align: left;
+            color: #ffffff;
+            pointer-events: none;
+          }
+
+          .nexa-mobile-location {
+            order: -1;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 10px;
+            color: rgba(255, 255, 255, 0.94);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            text-shadow: 0 3px 14px rgba(0, 0, 0, 0.32);
+          }
+
+          .nexa-mobile-location::before {
+            content: "●";
+            color: #ff7a00;
+            font-size: 10px;
+            line-height: 1;
+          }
+
+          .nexa-hero-copy h1 {
+            max-width: 338px;
+            margin: 0;
+            color: #ffffff;
+            font-size: clamp(29px, 8.1vw, 38px);
+            line-height: 0.99;
+            letter-spacing: -0.062em;
+            font-weight: 800;
+            text-wrap: balance;
+            text-shadow: 0 5px 28px rgba(0, 0, 0, 0.36);
+          }
+
+          .nexa-hero-copy h1.nexa-mobile-typing::after {
+            content: "";
+            display: inline-block;
+            width: 2px;
+            height: 0.86em;
+            margin-left: 4px;
+            vertical-align: -0.04em;
+            background: #ff8a00;
+            animation: nexaMobileCaret 720ms steps(1) infinite;
+          }
+
+          @keyframes nexaMobileCaret {
+            0%, 48% { opacity: 1; }
+            49%, 100% { opacity: 0; }
+          }
+
+          .nexa-mobile-hero-tagline {
+            display: block;
+            max-width: 325px;
+            margin: 9px 0 0;
+            opacity: 0;
+            transform: translateX(-56px);
+            color: rgba(255, 255, 255, 0.94);
+            font-size: 12.5px;
+            line-height: 1.45;
+            letter-spacing: -0.018em;
+            font-weight: 700;
+            text-shadow: 0 3px 18px rgba(0, 0, 0, 0.42);
+          }
+
+          .nexa-hero-text,
+          .nexa-hero-text.small,
+          .nexa-online-note,
+          .nexa-hero-points,
+          .nexa-secondary-cta {
+            display: none;
+          }
+
+          .nexa-hero-actions {
+            position: relative;
+            left: var(--mobile-book-x);
+            top: var(--mobile-book-y);
+            width: 100%;
+            margin-top: clamp(16px, 2.7svh, 26px);
+            display: flex;
+            opacity: 0;
+            transform: translateX(-72px);
+            justify-content: flex-start;
+            pointer-events: auto;
+          }
+
+          .nexa-mobile-hero-ready .nexa-mobile-hero-tagline {
+            animation: nexaMobileLeftIn 620ms cubic-bezier(.18,.85,.22,1) 80ms both;
+          }
+
+          .nexa-mobile-hero-ready .nexa-hero-actions {
+            animation: nexaMobileLeftIn 680ms cubic-bezier(.18,.85,.22,1) 180ms both;
+          }
+
+          @keyframes nexaMobileLeftIn {
+            from { opacity: 0; transform: translateX(-72px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+
+          .nexa-primary-cta {
+            position: relative;
+            width: auto;
+            min-width: 224px;
+            min-height: 56px;
+            padding: 0 29px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.95);
+            background: linear-gradient(135deg, #ff6500 0%, #ff8a00 58%, #ff9f25 100%);
+            color: #ffffff;
+            box-shadow:
+              0 18px 42px rgba(255, 122, 0, 0.38),
+              0 0 0 0 rgba(255, 122, 0, 0.42);
+            font-size: 14px;
+            letter-spacing: 0;
+            animation: nexaMobilePremiumHeartbeat 1.8s ease-in-out infinite;
+          }
+
+          .nexa-primary-cta::after {
+            content: "";
+            position: absolute;
+            top: -35%;
+            left: -35%;
+            width: 28%;
+            height: 170%;
+            transform: rotate(18deg);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+            animation: nexaMobileShine 2.8s ease-in-out infinite;
+          }
+
+          .nexa-cta-desktop-label {
+            display: none;
+          }
+
+          .nexa-cta-mobile-label {
+            position: relative;
+            z-index: 2;
+            display: inline;
+          }
+
+          @keyframes nexaMobilePremiumHeartbeat {
+            0%, 100% {
+              transform: scale(1);
+              box-shadow: 0 18px 42px rgba(255, 122, 0, 0.38), 0 0 0 0 rgba(255, 122, 0, 0.36);
+            }
+            12% {
+              transform: scale(1.045);
+              box-shadow: 0 20px 46px rgba(255, 122, 0, 0.44), 0 0 0 8px rgba(255, 122, 0, 0.10);
+            }
+            24% {
+              transform: scale(1);
+            }
+            36% {
+              transform: scale(1.025);
+            }
+            48% {
+              transform: scale(1);
+            }
+          }
+
+          @keyframes nexaMobileShine {
+            0%, 55% { left: -45%; opacity: 0; }
+            62% { opacity: 0.85; }
+            78% { left: 120%; opacity: 0; }
+            100% { left: 120%; opacity: 0; }
+          }
+
+
+          .nexa-mobile-orange-arc {
+            position: absolute;
+            left: calc(-6% + var(--mobile-arc-x));
+            right: auto;
+            bottom: calc(-1px + var(--mobile-arc-y));
+            z-index: 5;
+            width: 112%;
+            height: var(--mobile-arc-height);
+            display: block;
+            overflow: hidden;
+            pointer-events: none;
+            filter: drop-shadow(0 -7px 20px rgba(255, 122, 0, 0.16));
+          }
+
+          .nexa-mobile-wave-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+          }
+
+          .nexa-mobile-wave-copy {
+            position: absolute;
+            right: calc(9% - var(--mobile-arc-text-x));
+            bottom: calc(10px + var(--mobile-arc-text-y));
+            z-index: 2;
+            width: min(78%, 380px);
+            color: #ffffff;
+            text-align: right;
+            padding-left: 16px;
+            opacity: 0;
+            transform: translateX(64px);
+            text-shadow: 0 3px 18px rgba(0, 0, 0, 0.2);
+          }
+
+          .nexa-mobile-wave-copy strong {
+            display: block;
+            font-size: 14px;
+            line-height: 1.12;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+          }
+
+          .nexa-mobile-wave-copy span {
+            display: block;
+            margin-top: 5px;
+            font-size: 10.4px;
+            line-height: 1.35;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            opacity: 0.96;
+          }
+
+          .nexa-mobile-hero-ready .nexa-mobile-wave-copy {
+            animation: nexaMobileWaveCopyIn 680ms cubic-bezier(.18,.85,.22,1) 220ms both;
+          }
+
+          @keyframes nexaMobileWaveCopyIn {
+            from { opacity: 0; transform: translateX(64px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+
+          .nexa-trust-section {
+            display: none;
+          }
+
+          .nexa-fast-info-section {
+            padding: 30px 12px 26px;
+            background: #ffffff;
+          }
+
+          .nexa-fast-info-grid {
+            max-width: 560px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 24px 8px;
+            align-items: start;
+          }
+
+          .nexa-included-item {
+            min-width: 0;
+            padding: 0 2px;
+            text-align: center;
+          }
+
+          .nexa-orange-check {
+            top: -2px;
+            right: 8%;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: #ff7a00;
+            color: #ffffff;
+            font-size: 11px;
+            text-shadow: none;
+            box-shadow: 0 7px 18px rgba(255, 122, 0, 0.23);
+          }
+
+          .nexa-included-image-wrap {
+            height: 78px;
+          }
+
+          .nexa-included-image {
+            width: 100%;
+            max-width: 94px;
+            height: 74px;
+            object-fit: contain;
+          }
+
+          .nexa-included-item strong {
+            margin-top: 8px;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #15141c;
+            font-size: 12.5px;
+            line-height: 1.12;
+            letter-spacing: -0.035em;
+            font-weight: 900;
+          }
+
+          .nexa-included-item p {
+            max-width: 116px;
+            margin: 3px auto 0;
+            color: #777582;
+            font-size: 10px;
+            line-height: 1.28;
+            font-weight: 600;
+          }
+
+          .nexa-fast-info-grid .nexa-included-item:nth-child(4) {
+            grid-column: 1 / 2;
+            transform: translateX(52%);
+          }
+
+          .nexa-fast-info-grid .nexa-included-item:nth-child(5) {
+            grid-column: 2 / 3;
+            transform: translateX(52%);
+          }
+
+          .nexa-mobile-action-section {
+            padding: 0 16px 34px;
+            display: grid;
+            gap: 12px;
+            background: #ffffff;
+          }
+
+          .nexa-mobile-main-cta,
+          .nexa-mobile-contact-cta {
+            width: 100%;
+            min-height: 56px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            text-decoration: none;
+            font-size: 12.5px;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+          }
+
+          .nexa-mobile-main-cta {
+            background: #111116;
+            color: #ffffff;
+            box-shadow: 0 16px 34px rgba(17, 17, 22, 0.16);
+          }
+
+          .nexa-mobile-main-cta span {
+            color: #ff7a00;
+            font-size: 23px;
+            line-height: 1;
+          }
+
+          .nexa-mobile-contact-cta {
+            min-height: 52px;
+            border: 1px solid rgba(17, 17, 22, 0.12);
+            background: #ffffff;
+            color: #171720;
+          }
+
+          .nexa-components-section:first-of-type {
+            border-top: 1px solid rgba(17, 17, 22, 0.05);
+          }
+
+          .nexa-content-section,
+          .nexa-how-section,
+          .nexa-seo-text-section,
+          .nexa-faq-section {
+            padding-top: 62px;
+            padding-bottom: 62px;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .nexa-seo-page {
+            /* EXTRA SMALL PHONE OVERRIDES - edit these if needed */
+            --mobile-book-x: 0px;
+            --mobile-book-y: 100px;
+            --mobile-arc-x: 0px;
+            --mobile-arc-y: 20px;
+            --mobile-arc-height: 124px;
+            --mobile-arc-text-x: 0px;
+            --mobile-arc-text-y: 12px;
+          }
+
+          .nexa-hero-copy {
+            min-height: calc(100svh - 160px);
+            padding: 0px 18px 24px;
+transform: translateY(-30px);
+          }
+
+          .nexa-hero-copy h1 {
+            max-width: 300px;
+            font-size: 31px;
+          }
+
+          .nexa-mobile-hero-tagline {
+            max-width: 290px;
+            font-size: 12.5px;
+          }
+
+          .nexa-primary-cta {
+            min-width: 210px;
+            min-height: 54px;
+            padding: 0 24px;
+            font-size: 13px;
+          }
+
+          .nexa-photo-card-top .nexa-hero-image {
+            object-position: 54% center;
+            filter: brightness(1.16) saturate(1.04) contrast(0.95);
+            transform: scale(0.98);
+          }
+
+          .nexa-fast-info-section {
+            padding-left: 9px;
+            padding-right: 9px;
+          }
+
+          .nexa-fast-info-grid {
+            gap: 22px 6px;
+          }
+
+          .nexa-included-image-wrap {
+            height: 72px;
+          }
+
+          .nexa-included-image {
+            max-width: 86px;
+            height: 68px;
+          }
+
+          .nexa-included-item strong {
+            font-size: 12px;
+          }
+
+          .nexa-included-item p {
+            max-width: 108px;
+            font-size: 9.5px;
+          }
+        }
+
+        /* French mobile copy refinements */
+        @media (max-width: 680px) {
+          .nexa-hero-copy h1 {
+            max-width: 350px;
+            font-size: clamp(28px, 7.7vw, 36px);
+            line-height: 0.98;
+          }
+
+          .nexa-mobile-hero-tagline {
+            max-width: 336px;
+            font-size: 12px;
+          }
+
+          .nexa-primary-cta {
+            min-width: 236px;
+            font-size: 15px;
+          }
+
+          .nexa-mobile-wave-copy strong {
+            font-size: 14.5px;
+          }
+
+          .nexa-mobile-wave-copy span {
+            font-size: 10.5px;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .nexa-hero-copy h1 {
+            max-width: 315px;
+            font-size: 30px;
+          }
+
+          .nexa-primary-cta {
+            min-width: 224px;
+            min-height: 56px;
+            padding: 0 26px;
+            font-size: 14.5px;
           }
         }
 

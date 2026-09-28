@@ -65,6 +65,31 @@ type WebAvailabilityBlockRow = {
   note?: string | null;
 };
 
+type PaymentHoldRow = {
+  id: string;
+  status?: string | null;
+  expires_at?: string | null;
+  fleet_group?: string | null;
+  quantity?: number | string | null;
+  pickup_at?: string | null;
+  dropoff_at?: string | null;
+  pickup_date?: string | null;
+  pickup_time?: string | null;
+  dropoff_date?: string | null;
+  dropoff_time?: string | null;
+};
+
+type DeliverySlotResult = {
+  time: string;
+  available: boolean;
+  availableCount: number;
+  reason:
+    | "available"
+    | "pickup_slot_reserved"
+    | "collection_slot_reserved"
+    | "fleet_unavailable";
+};
+
 const BUFFER_MINUTES_AFTER_BOOKING = 60;
 const WEB_AVAILABILITY_TABLE = "web_availability_blocks";
 
@@ -638,6 +663,22 @@ async function loadWebAvailabilityBlocks(from: string, to: string) {
   };
 }
 
+async function loadActivePaymentHolds() {
+  const supabaseAdmin = getSupabaseAdmin();
+
+  const result = await supabaseAdmin
+    .from("payment_holds")
+    .select("*")
+    .eq("status", "active")
+    .gt("expires_at", new Date().toISOString())
+    .limit(1000);
+
+  return {
+    data: (result.data || []) as PaymentHoldRow[],
+    error: result.error,
+  };
+}
+
 function getUnknownFleetBlockingCount({
   blockingBookings,
   fleetGroup,
@@ -696,6 +737,122 @@ function getVehiclePublicName(vehicle: NexaVehicle) {
   return `${vehicle.marca} ${vehicle.modelo}`;
 }
 
+function normalizeClockTime(value?: string | null) {
+  return String(value || "").trim().slice(0, 5);
+}
+
+function getHoldDateTimeParts(
+  timestamp?: string | null,
+  date?: string | null,
+  time?: string | null
+) {
+  const timestampValue = String(timestamp || "").trim();
+  const timestampTime = timestampValue.match(/T(\d{2}:\d{2})/)?.[1] || "";
+
+  return {
+    date: String(date || timestampValue.slice(0, 10)).slice(0, 10),
+    time: normalizeClockTime(time || timestampTime),
+  };
+}
+
+function buildDeliverySlotTimes(stepMinutes: number) {
+  const safeStep = stepMinutes === 30 ? 30 : 10;
+  const times: string[] = [];
+  const startMinutes = 11 * 60 + 30;
+  const endMinutes = 17 * 60 + 30;
+
+  for (
+    let minutes = startMinutes;
+    minutes <= endMinutes;
+    minutes += safeStep
+  ) {
+    const hour = Math.floor(minutes / 60);
+    const minute = minutes % 60;
+    times.push(`${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`);
+  }
+
+  return times;
+}
+
+function bookingHasLogisticsEvent(
+  booking: BookingRow,
+  date: string,
+  time: string
+) {
+  if (!bookingShouldBlock(booking.status)) return false;
+
+  const pickupDate = String(booking.pickup_date || booking.from || "").slice(0, 10);
+  const dropoffDate = String(booking.dropoff_date || booking.to || "").slice(0, 10);
+  const selectedTime = normalizeClockTime(time);
+
+  return (
+    (pickupDate === date && normalizeClockTime(booking.pickup_time) === selectedTime) ||
+    (dropoffDate === date && normalizeClockTime(booking.dropoff_time) === selectedTime)
+  );
+}
+
+function holdHasLogisticsEvent(
+  hold: PaymentHoldRow,
+  date: string,
+  time: string
+) {
+  const selectedTime = normalizeClockTime(time);
+  const pickup = getHoldDateTimeParts(
+    hold.pickup_at,
+    hold.pickup_date,
+    hold.pickup_time
+  );
+  const dropoff = getHoldDateTimeParts(
+    hold.dropoff_at,
+    hold.dropoff_date,
+    hold.dropoff_time
+  );
+
+  return (
+    (pickup.date === date && pickup.time === selectedTime) ||
+    (dropoff.date === date && dropoff.time === selectedTime)
+  );
+}
+
+function holdBelongsToFleetGroup(
+  hold: PaymentHoldRow,
+  fleetGroup: NexaFleetGroup
+) {
+  return fleetGroupBlockApplies(String(hold.fleet_group || ""), fleetGroup);
+}
+
+function holdOverlapsSelection({
+  hold,
+  requestedStart,
+  requestedEnd,
+}: {
+  hold: PaymentHoldRow;
+  requestedStart: Date;
+  requestedEnd: Date;
+}) {
+  const pickup = getHoldDateTimeParts(
+    hold.pickup_at,
+    hold.pickup_date,
+    hold.pickup_time
+  );
+  const dropoff = getHoldDateTimeParts(
+    hold.dropoff_at,
+    hold.dropoff_date,
+    hold.dropoff_time
+  );
+  const holdStart = makeDateTime(pickup.date, pickup.time);
+  const holdEnd = makeDateTime(dropoff.date, dropoff.time);
+
+  if (!holdStart || !holdEnd) return false;
+
+  return rangesOverlapSelection({
+    blockedStart: holdStart,
+    blockedEnd: holdEnd,
+    requestedStart,
+    requestedEnd,
+  });
+}
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
@@ -707,6 +864,23 @@ export async function GET(request: NextRequest) {
     const to = searchParams.get("to") || "";
     const pickupTime = searchParams.get("pickupTime") || "10:00";
     const dropoffTime = searchParams.get("dropoffTime") || pickupTime;
+    const modeParam = searchParams.get("mode") || "";
+    const serviceMethodParam = safeNormalizeText(
+      searchParams.get("serviceMethod") || ""
+    );
+    const isDeliveryRequest =
+      serviceMethodParam === "hotel_delivery" ||
+      serviceMethodParam === "airport_delivery";
+    const rawRequestedQuantity = Number(searchParams.get("quantity") || 1);
+    const requestedQuantity = Number.isFinite(rawRequestedQuantity)
+      ? Math.max(1, Math.min(15, Math.floor(rawRequestedQuantity)))
+      : 1;
+    const requestedSlotMinutes =
+      Number(searchParams.get("slotMinutes")) === 30 ? 30 : 10;
+    const collectionRequired =
+      searchParams.get("collectionRequired") !== "false";
+    const rentalDropoffTime =
+      searchParams.get("rentalDropoffTime") || dropoffTime;
 
     if (!from || !to) {
       return createBadRequest("Missing pickup or drop-off date.");
@@ -741,9 +915,12 @@ export async function GET(request: NextRequest) {
       normalizeVehicleCode(vehicle.codigo)
     );
 
-    const [bookingResult, manualBlockResult] = await Promise.all([
+    const [bookingResult, manualBlockResult, paymentHoldResult] = await Promise.all([
       loadBookings(),
       loadWebAvailabilityBlocks(from, to),
+      modeParam === "delivery_slots" || isDeliveryRequest
+        ? loadActivePaymentHolds()
+        : Promise.resolve({ data: [] as PaymentHoldRow[], error: null }),
     ]);
 
     const { data, error, mode } = bookingResult;
@@ -779,7 +956,210 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    if (paymentHoldResult.error) {
+      console.error(
+        "❌ Payment holds Supabase error:",
+        paymentHoldResult.error
+      );
+
+      return NextResponse.json(
+        {
+          ok: false,
+          available: false,
+          message:
+            "Live delivery times could not be confirmed. Please try again.",
+        },
+        { status: 500 }
+      );
+    }
+
     const bookings = (data || []) as BookingRow[];
+
+    if (modeParam !== "delivery_slots" && isDeliveryRequest) {
+      const pickupSlotReserved =
+        bookings.some((booking) =>
+          bookingHasLogisticsEvent(booking, from, pickupTime)
+        ) ||
+        paymentHoldResult.data.some((hold) =>
+          holdHasLogisticsEvent(hold, from, pickupTime)
+        );
+
+      const collectionSlotReserved = collectionRequired
+        ? bookings.some((booking) =>
+            bookingHasLogisticsEvent(booking, to, dropoffTime)
+          ) ||
+          paymentHoldResult.data.some((hold) =>
+            holdHasLogisticsEvent(hold, to, dropoffTime)
+          )
+        : false;
+
+      if (pickupSlotReserved || collectionSlotReserved) {
+        return NextResponse.json({
+          ok: true,
+          available: false,
+          vehicleName: getFleetGroupDisplayName(fleetGroup),
+          fleetGroup,
+          totalFleet: fleet.length,
+          bookedCount: 0,
+          availableCount: 0,
+          logisticsConflict: pickupSlotReserved
+            ? "pickup_slot_reserved"
+            : "collection_slot_reserved",
+          message: pickupSlotReserved
+            ? "This delivery time has just been reserved. Please choose another green time."
+            : "The matching return-collection time has just been reserved. Please choose another green time.",
+        });
+      }
+    }
+
+    if (modeParam === "delivery_slots") {
+      const activeHolds = paymentHoldResult.data;
+      const slotTimes = buildDeliverySlotTimes(requestedSlotMinutes);
+
+      const slots: DeliverySlotResult[] = slotTimes.map((time) => {
+        const slotStart = makeDateTime(from, time);
+        const slotEnd = makeDateTime(
+          to,
+          collectionRequired ? time : rentalDropoffTime
+        );
+
+        if (!slotStart || !slotEnd || slotEnd <= slotStart) {
+          return {
+            time,
+            available: false,
+            availableCount: 0,
+            reason: "fleet_unavailable",
+          };
+        }
+
+        const pickupSlotReserved =
+          bookings.some((booking) => bookingHasLogisticsEvent(booking, from, time)) ||
+          activeHolds.some((hold) => holdHasLogisticsEvent(hold, from, time));
+
+        const collectionSlotReserved = collectionRequired
+          ? bookings.some((booking) => bookingHasLogisticsEvent(booking, to, time)) ||
+            activeHolds.some((hold) => holdHasLogisticsEvent(hold, to, time))
+          : false;
+
+        const overlappingBookings = bookings.filter((booking) => {
+          return (
+            bookingShouldBlock(booking.status) &&
+            bookingOverlapsSelection({
+              booking,
+              requestedStart: slotStart,
+              requestedEnd: slotEnd,
+            }) &&
+            bookingBelongsToFleetGroup({
+              booking,
+              fleetGroup,
+              fleetCodes,
+            })
+          );
+        });
+
+        const overlappingBlocks = manualBlockResult.data.filter((block) => {
+          if (
+            !blockOverlapsSelection({
+              block,
+              requestedStart: slotStart,
+              requestedEnd: slotEnd,
+            })
+          ) {
+            return false;
+          }
+
+          if (block.block_type === "vehicle") {
+            return fleetCodes.includes(normalizeVehicleCode(block.vehicle_code));
+          }
+
+          return fleetGroupBlockApplies(block.fleet_group, fleetGroup);
+        });
+
+        const overlappingHolds = activeHolds.filter(
+          (hold) =>
+            holdBelongsToFleetGroup(hold, fleetGroup) &&
+            holdOverlapsSelection({
+              hold,
+              requestedStart: slotStart,
+              requestedEnd: slotEnd,
+            })
+        );
+
+        const bookedCodes = getBookedVehicleCodes({
+          blockingBookings: overlappingBookings,
+          fleetCodes,
+        });
+
+        const bookingQuantity = getUnknownFleetBlockingCount({
+          blockingBookings: overlappingBookings,
+          fleetGroup,
+          fleetCodes,
+        });
+
+        const blockedVehicleCodes = new Set(
+          overlappingBlocks
+            .filter((block) => block.block_type === "vehicle")
+            .map((block) => normalizeVehicleCode(block.vehicle_code))
+            .filter(Boolean)
+        );
+
+        const manualQuantity = overlappingBlocks
+          .filter((block) => block.block_type === "fleet_group")
+          .reduce(
+            (total, block) =>
+              total + Math.max(0, Math.floor(Number(block.quantity || 0))),
+            0
+          );
+
+        const holdQuantity = overlappingHolds.reduce(
+          (total, hold) =>
+            total + Math.max(1, Math.floor(Number(hold.quantity || 1))),
+          0
+        );
+
+        const directlyUnavailable = new Set([
+          ...bookedCodes,
+          ...blockedVehicleCodes,
+        ]);
+
+        const directlyAvailableCount = fleetCodes.filter(
+          (code) => !directlyUnavailable.has(code)
+        ).length;
+
+        const availableCount = Math.max(
+          0,
+          directlyAvailableCount - bookingQuantity - manualQuantity - holdQuantity
+        );
+
+        const reason: DeliverySlotResult["reason"] = pickupSlotReserved
+          ? "pickup_slot_reserved"
+          : collectionSlotReserved
+            ? "collection_slot_reserved"
+            : availableCount < requestedQuantity
+              ? "fleet_unavailable"
+              : "available";
+
+        return {
+          time,
+          available: reason === "available",
+          availableCount,
+          reason,
+        };
+      });
+
+      return NextResponse.json({
+        ok: true,
+        available: slots.some((slot) => slot.available),
+        fleetGroup,
+        quantity: requestedQuantity,
+        pickupDate: from,
+        collectionDate: to,
+        slots,
+        message: slots.some((slot) => slot.available)
+          ? "Delivery times are available."
+          : "No delivery times are available for these dates.",
+      });
+    }
 
     const overlappingBlockingBookings = bookings.filter((booking) => {
       if (!bookingShouldBlock(booking.status)) {

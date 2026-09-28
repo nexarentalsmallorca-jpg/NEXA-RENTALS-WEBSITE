@@ -714,19 +714,13 @@ export default function NeroBookingCopilot() {
   }, [allowRender, copy.languageMaintenance.title, copy.languageMaintenance.text]);
 
   useEffect(() => {
-    if (!allowRender) return;
+  if (!allowRender) return;
 
-    const welcomeTimer = window.setTimeout(() => {
-      if (isMobileLikeNow()) {
-        showMobileIntroTip();
-        return;
-      }
-
-      showTip(copy.welcome, 2400);
-    }, 900);
-
-    return () => window.clearTimeout(welcomeTimer);
-  }, [allowRender, copy.welcome]);
+  // Do not automatically open Nero.
+  // The floating Nero icon stays visible and can still be clicked manually.
+  setMobileIntroActive(false);
+  setOpen(false);
+}, [allowRender]);
 
   useEffect(() => {
     if (!allowRender) return;

@@ -21,6 +21,39 @@ type HoldConversionResult = {
   wasAlreadyConverted: boolean;
 };
 
+type DeliveryDetails = {
+  serviceMethod: "hotel_delivery" | "airport_delivery";
+  deliveryArea: string;
+  deliveryAreaId: string;
+  destinationKind: string;
+  deliveryAddress: string;
+  deliveryTime: string;
+  collectionTime: string;
+  deliveryFeeCents: number;
+  collectionFeeCents: number;
+  serviceFeesCents: number;
+  rentalAmountCents: number;
+  hotelName: string;
+  hotelRoom: string;
+  hotelAddress: string;
+  hotelPlaceId: string;
+  hotelGoogleMapsUrl: string;
+  hotelPhotos: string[];
+  airbnbAddress: string;
+  airbnbPlaceId: string;
+  airbnbStreetName: string;
+  airbnbStreetNumber: string;
+  airbnbBlockNumber: string;
+  airbnbBuildingName: string;
+  airbnbFloor: string;
+  airbnbDoorNumber: string;
+  airbnbPostalCode: string;
+  airbnbCity: string;
+  airbnbGoogleMapsUrl: string;
+  airportReturnMethod: string;
+  officeReturnTime: string;
+};
+
 type DriverOutcome =
   | "accepted"
   | "manual_review"
@@ -397,6 +430,79 @@ function recordText(
   }
 
   return "";
+}
+
+function recordNumber(
+  record: Record<string, unknown>,
+  key: string
+) {
+  const value = Number(record[key]);
+  return Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+}
+
+function normalizeDeliveryDetails(
+  value: unknown
+): DeliveryDetails | null {
+  if (!isRecord(value)) return null;
+
+  const serviceMethod = normalizeText(value.serviceMethod);
+
+  if (
+    serviceMethod !== "hotel_delivery" &&
+    serviceMethod !== "airport_delivery"
+  ) {
+    return null;
+  }
+
+  const hotelPhotos = Array.isArray(value.hotelPhotos)
+    ? value.hotelPhotos
+        .filter((photo): photo is string => typeof photo === "string")
+        .slice(0, 3)
+    : [];
+
+  return {
+    serviceMethod,
+    deliveryArea: recordText(value, "deliveryArea"),
+    deliveryAreaId: recordText(value, "deliveryAreaId"),
+    destinationKind: recordText(value, "destinationKind"),
+    deliveryAddress: recordText(value, "deliveryAddress"),
+    deliveryTime: recordText(value, "deliveryTime"),
+    collectionTime: recordText(value, "collectionTime"),
+    deliveryFeeCents: recordNumber(value, "deliveryFeeCents"),
+    collectionFeeCents: recordNumber(value, "collectionFeeCents"),
+    serviceFeesCents: recordNumber(value, "serviceFeesCents"),
+    rentalAmountCents: recordNumber(value, "rentalAmountCents"),
+    hotelName: recordText(value, "hotelName"),
+    hotelRoom: recordText(value, "hotelRoom"),
+    hotelAddress: recordText(value, "hotelAddress"),
+    hotelPlaceId: recordText(value, "hotelPlaceId"),
+    hotelGoogleMapsUrl: recordText(value, "hotelGoogleMapsUrl"),
+    hotelPhotos,
+    airbnbAddress: recordText(value, "airbnbAddress"),
+    airbnbPlaceId: recordText(value, "airbnbPlaceId"),
+    airbnbStreetName: recordText(value, "airbnbStreetName"),
+    airbnbStreetNumber: recordText(value, "airbnbStreetNumber"),
+    airbnbBlockNumber: recordText(value, "airbnbBlockNumber"),
+    airbnbBuildingName: recordText(value, "airbnbBuildingName"),
+    airbnbFloor: recordText(value, "airbnbFloor"),
+    airbnbDoorNumber: recordText(value, "airbnbDoorNumber"),
+    airbnbPostalCode: recordText(value, "airbnbPostalCode"),
+    airbnbCity: recordText(value, "airbnbCity"),
+    airbnbGoogleMapsUrl: recordText(value, "airbnbGoogleMapsUrl"),
+    airportReturnMethod: recordText(value, "airportReturnMethod"),
+    officeReturnTime: recordText(value, "officeReturnTime"),
+  };
+}
+
+function safeWebUrl(value: string) {
+  try {
+    const url = new URL(value);
+    return url.protocol === "https:" || url.protocol === "http:"
+      ? url.toString()
+      : "";
+  } catch {
+    return "";
+  }
 }
 
 function parseDriverIndexes(
@@ -1331,7 +1437,9 @@ function buildCoreBookingPayload(
   pi:
     Stripe.PaymentIntent,
   verification:
-    VerificationBundle
+    VerificationBundle,
+  deliveryDetails:
+    DeliveryDetails | null
 ) {
   const metadata =
     pi.metadata ||
@@ -1474,6 +1582,9 @@ function buildCoreBookingPayload(
       currency:
         pi.currency ||
         "eur",
+
+      delivery_details:
+        deliveryDetails,
     };
 
   if (
@@ -1490,7 +1601,9 @@ function buildFullBookingPayload(
   pi:
     Stripe.PaymentIntent,
   verification:
-    VerificationBundle
+    VerificationBundle,
+  deliveryDetails:
+    DeliveryDetails | null
 ) {
   const metadata =
     pi.metadata ||
@@ -1499,7 +1612,8 @@ function buildFullBookingPayload(
   const corePayload =
     buildCoreBookingPayload(
       pi,
-      verification
+      verification,
+      deliveryDetails
     );
 
   const publicVehicleName =
@@ -1654,7 +1768,9 @@ async function savePaidBooking(
   pi:
     Stripe.PaymentIntent,
   verification:
-    VerificationBundle
+    VerificationBundle,
+  deliveryDetails:
+    DeliveryDetails | null
 ) {
   const existingBooking =
     await findExistingBooking(
@@ -1688,7 +1804,8 @@ async function savePaidBooking(
   const fullPayload =
     buildFullBookingPayload(
       pi,
-      verification
+      verification,
+      deliveryDetails
     );
 
   let result =
@@ -1713,7 +1830,8 @@ async function savePaidBooking(
     const corePayload =
       buildCoreBookingPayload(
         pi,
-        verification
+        verification,
+        deliveryDetails
       );
 
     result =
@@ -1788,7 +1906,7 @@ async function findPaymentHold(
           "payment_holds"
         )
         .select(
-          "id,status"
+          "id,status,delivery_details"
         )
         .eq(
           "id",
@@ -1820,7 +1938,7 @@ async function findPaymentHold(
         "payment_holds"
       )
       .select(
-        "id,status"
+        "id,status,delivery_details"
       )
       .eq(
         "stripe_payment_intent_id",
@@ -2244,6 +2362,70 @@ function buildDriverEmailHtml(
     );
 }
 
+function deliveryMethodLabel(details: DeliveryDetails) {
+  return details.serviceMethod === "airport_delivery"
+    ? "Airport delivery"
+    : "Hotel / Airbnb delivery";
+}
+
+function buildDeliveryEmailHtml(details: DeliveryDetails | null) {
+  if (!details) return "";
+
+  const mapsUrl = safeWebUrl(
+    details.hotelGoogleMapsUrl || details.airbnbGoogleMapsUrl
+  );
+
+  const destinationName =
+    details.destinationKind === "hotel"
+      ? details.hotelName || "Hotel"
+      : details.destinationKind === "airbnb"
+        ? "Airbnb / private address"
+        : details.serviceMethod === "airport_delivery"
+          ? "Palma de Mallorca Airport"
+          : "Delivery address";
+
+  const address =
+    details.deliveryAddress ||
+    details.hotelAddress ||
+    details.airbnbAddress ||
+    "-";
+
+  const hotelPhotos = details.hotelPhotos
+    .map((photo, index) => {
+      const safePhoto = safeWebUrl(photo);
+      return safePhoto
+        ? `<a href="${safeText(safePhoto)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin:0 8px 8px 0;"><img src="${safeText(safePhoto)}" alt="Hotel photo ${index + 1}" style="width:150px;height:100px;object-fit:cover;border-radius:8px;border:1px solid #d1d5db;"/></a>`
+        : "";
+    })
+    .join("");
+
+  return `
+    <div style="background:#fff7ed;border:1px solid #fb923c;padding:16px;border-radius:10px;margin:16px 0;">
+      <h2 style="margin:0 0 10px;color:#c2410c;">🚚 Delivery booking</h2>
+      <p><b>Service:</b> ${safeText(deliveryMethodLabel(details))}</p>
+      <p><b>Town / area:</b> ${safeText(details.deliveryArea || "-")}</p>
+      <p><b>Destination type:</b> ${safeText(details.destinationKind || "-")}</p>
+      <p><b>Destination:</b> ${safeText(destinationName)}</p>
+      <p><b>Full delivery address:</b> ${safeText(address)}</p>
+      ${details.hotelRoom ? `<p><b>Hotel room:</b> ${safeText(details.hotelRoom)}</p>` : ""}
+      ${details.hotelPlaceId ? `<p><b>Hotel Google place ID:</b> ${safeText(details.hotelPlaceId)}</p>` : ""}
+      ${details.airbnbStreetName ? `<p><b>Street:</b> ${safeText(details.airbnbStreetName)} ${safeText(details.airbnbStreetNumber)}</p>` : ""}
+      ${details.airbnbBlockNumber ? `<p><b>Block:</b> ${safeText(details.airbnbBlockNumber)}</p>` : ""}
+      ${details.airbnbBuildingName ? `<p><b>Building:</b> ${safeText(details.airbnbBuildingName)}</p>` : ""}
+      ${details.airbnbFloor ? `<p><b>Floor:</b> ${safeText(details.airbnbFloor)}</p>` : ""}
+      ${details.airbnbDoorNumber ? `<p><b>Door:</b> ${safeText(details.airbnbDoorNumber)}</p>` : ""}
+      ${details.airbnbPostalCode ? `<p><b>Postal code:</b> ${safeText(details.airbnbPostalCode)}</p>` : ""}
+      ${details.airbnbCity ? `<p><b>City:</b> ${safeText(details.airbnbCity)}</p>` : ""}
+      ${details.airbnbPlaceId ? `<p><b>Address Google place ID:</b> ${safeText(details.airbnbPlaceId)}</p>` : ""}
+      <p><b>Delivery time:</b> ${safeText(details.deliveryTime || "-")}</p>
+      <p><b>Collection time:</b> ${safeText(details.collectionTime || details.officeReturnTime || "-")}</p>
+      ${details.airportReturnMethod ? `<p><b>Airport return method:</b> ${safeText(details.airportReturnMethod)}</p>` : ""}
+      ${mapsUrl ? `<p><a href="${safeText(mapsUrl)}" target="_blank" rel="noopener noreferrer" style="display:inline-block;background:#111;color:#fff;text-decoration:none;padding:10px 14px;border-radius:7px;font-weight:700;">Open location in Google Maps</a></p>` : ""}
+      ${hotelPhotos ? `<div style="margin-top:12px;"><b>Hotel photos:</b><br/>${hotelPhotos}</div>` : ""}
+    </div>
+  `;
+}
+
 async function sendOwnerEmail(
   pi:
     Stripe.PaymentIntent,
@@ -2252,7 +2434,9 @@ async function sendOwnerEmail(
     number |
     undefined,
   verification:
-    VerificationBundle
+    VerificationBundle,
+  deliveryDetails:
+    DeliveryDetails | null
 ) {
   const resend =
     getResendClient();
@@ -2312,6 +2496,11 @@ async function sendOwnerEmail(
       fleetGroup
     );
 
+  const deliveryHtml =
+    buildDeliveryEmailHtml(
+      deliveryDetails
+    );
+
   const {
     data,
     error,
@@ -2326,7 +2515,7 @@ async function sendOwnerEmail(
           getOwnerEmails(),
 
         subject:
-          `✅ New booking paid — ${quantity} scooter${
+          `${deliveryDetails ? "🚚 New delivery booking paid" : "✅ New booking paid"} — ${quantity} scooter${
             quantity ===
               1
               ? ""
@@ -2390,6 +2579,10 @@ async function sendOwnerEmail(
             )}</p>
 
             <hr/>
+
+            ${deliveryHtml}
+
+            ${deliveryDetails ? "<hr/>" : ""}
 
             <p><b>Vehicle category:</b> ${safeText(
               getPublicVehicleName(
@@ -2530,10 +2723,25 @@ async function sendOwnerEmail(
 
             <p><b>Total rental amount:</b>
               ${moneyFromCents(
-                payment.totalAmount
+                deliveryDetails?.rentalAmountCents ?? payment.totalAmount
               )}
               ${currency}
             </p>
+
+            ${deliveryDetails ? `
+              <p><b>Delivery fee:</b>
+                ${moneyFromCents(deliveryDetails.deliveryFeeCents)} ${currency}
+              </p>
+              <p><b>Collection fee:</b>
+                ${moneyFromCents(deliveryDetails.collectionFeeCents)} ${currency}
+              </p>
+              <p><b>Total delivery fees:</b>
+                ${moneyFromCents(deliveryDetails.serviceFeesCents)} ${currency}
+              </p>
+              <p><b>Total amount paid online:</b>
+                ${moneyFromCents(payment.totalAmount)} ${currency}
+              </p>
+            ` : ""}
 
             <p><b>Amount paid online:</b>
               ${moneyFromCents(
@@ -2586,7 +2794,9 @@ async function sendCustomerEmail(
   pi:
     Stripe.PaymentIntent,
   verification:
-    VerificationBundle
+    VerificationBundle,
+  deliveryDetails:
+    DeliveryDetails | null
 ) {
   const metadata =
     pi.metadata ||
@@ -2675,7 +2885,9 @@ async function sendCustomerEmail(
           customerEmail,
 
         subject:
-          "✅ Your Nexa Rentals booking is confirmed",
+          deliveryDetails
+            ? "✅ Your Nexa Rentals delivery booking is confirmed"
+            : "✅ Your Nexa Rentals booking is confirmed",
 
         html: `
           <div style="font-family:Arial,sans-serif;line-height:1.6;color:#111;">
@@ -2767,14 +2979,33 @@ async function sendCustomerEmail(
 
             <hr/>
 
+            ${buildDeliveryEmailHtml(deliveryDetails)}
+
+            ${deliveryDetails ? "<hr/>" : ""}
+
             <h3>Payment summary</h3>
 
             <p><b>Total rental amount:</b>
               ${moneyFromCents(
-                payment.totalAmount
+                deliveryDetails?.rentalAmountCents ?? payment.totalAmount
               )}
               ${currency}
             </p>
+
+            ${deliveryDetails ? `
+              <p><b>Delivery fee:</b>
+                ${moneyFromCents(deliveryDetails.deliveryFeeCents)} ${currency}
+              </p>
+              <p><b>Collection fee:</b>
+                ${moneyFromCents(deliveryDetails.collectionFeeCents)} ${currency}
+              </p>
+              <p><b>Total delivery fees:</b>
+                ${moneyFromCents(deliveryDetails.serviceFeesCents)} ${currency}
+              </p>
+              <p><b>Total amount paid online:</b>
+                ${moneyFromCents(payment.totalAmount)} ${currency}
+              </p>
+            ` : ""}
 
             <p><b>Amount paid online:</b>
               ${moneyFromCents(
@@ -2962,6 +3193,16 @@ export async function POST(
             paymentIntent
           );
 
+        const paymentHold =
+          await findPaymentHold(
+            paymentIntent
+          );
+
+        const deliveryDetails =
+          normalizeDeliveryDetails(
+            paymentHold?.delivery_details
+          );
+
         /*
          * First save the confirmed booking.
          * If this fails, Stripe receives 500 and retries.
@@ -2969,7 +3210,8 @@ export async function POST(
         const bookingResult =
           await savePaidBooking(
             paymentIntent,
-            verification
+            verification,
+            deliveryDetails
           );
 
         /*
@@ -3002,7 +3244,8 @@ export async function POST(
               paymentIntent,
               bookingResult
                 .bookingRowId,
-              verification
+              verification,
+              deliveryDetails
             );
           } catch (
             emailError
@@ -3016,7 +3259,8 @@ export async function POST(
           try {
             await sendCustomerEmail(
               paymentIntent,
-              verification
+              verification,
+              deliveryDetails
             );
           } catch (
             emailError

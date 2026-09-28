@@ -200,7 +200,7 @@ const FLEET_OPTIONS: Array<{
   {
     value: "piaggio_liberty_125",
     label: "Piaggio Liberty 125",
-    description: "N1–N7",
+    description: "N1–N7, N10",
   },
   {
     value: "kymco_sky_town_125",
