@@ -1580,11 +1580,11 @@ const VIDEO_READY_TIMEOUT_MS = 9000;
  * before our API route can return JSON. Keep every document comfortably
  * below that limit while retaining enough detail for document analysis.
  */
-const DOCUMENT_MAX_LONG_EDGE = 1600;
+const DOCUMENT_MAX_LONG_EDGE = 2000;
 const DOCUMENT_MIN_LONG_EDGE = 1200;
-const DOCUMENT_MAX_FILE_BYTES = 900 * 1024;
-const DOCUMENT_INITIAL_JPEG_QUALITY = 0.82;
-const DOCUMENT_MIN_JPEG_QUALITY = 0.54;
+const DOCUMENT_MAX_FILE_BYTES = 950 * 1024;
+const DOCUMENT_INITIAL_JPEG_QUALITY = 0.9;
+const DOCUMENT_MIN_JPEG_QUALITY = 0.62;
 
 const WHATSAPP_SUPPORT_URL =
   "https://wa.me/34971482342?text=Hello%20NEXA%20Rentals%2C%20I%20need%20help%20with%20document%20verification.";
@@ -2116,9 +2116,9 @@ async function normalizePhoto(
     let sourceWidth = image.naturalWidth;
     let sourceHeight = image.naturalHeight;
 
-    if (detected.found && detected.confidence >= 0.38) {
-      const paddingX = (detected.right - detected.left) * 0.045;
-      const paddingY = (detected.bottom - detected.top) * 0.065;
+    if (detected.found && detected.confidence >= 0.55) {
+      const paddingX = (detected.right - detected.left) * 0.08;
+      const paddingY = (detected.bottom - detected.top) * 0.1;
       const left = Math.max(0, detected.left - paddingX);
       const top = Math.max(0, detected.top - paddingY);
       const right = Math.min(1, detected.right + paddingX);
@@ -2631,7 +2631,7 @@ export default function VerifyDocumentsPage() {
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.filter = "contrast(1.04) saturate(0.98)";
+    ctx.filter = "contrast(1.06) saturate(0.98)";
 
     ctx.drawImage(video, sx, sy, sw, sh, 0, 0, canvas.width, canvas.height);
 
