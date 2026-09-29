@@ -5,8 +5,8 @@
   "scripts": {
     "dev": "next dev",
     "dev:turbo": "next dev --turbo",
-    "dev:safe": "cmd /c \"set NEXT_TURBO=0&& next dev\"",
-    "build": "next build",
+    "dev:safe": "next dev --webpack",
+    "build": "next build --webpack",
     "start": "next start",
     "lint": "next lint",
     "translate:blogs": "node scripts/translate-blog-posts.mjs",

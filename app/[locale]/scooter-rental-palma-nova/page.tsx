@@ -57,13 +57,9 @@ const SEO_ROUTE_GROUP = (() => {
 })();
 
 type PageProps = {
-  params:
-    | {
-        locale: string;
-      }
-    | Promise<{
-        locale: string;
-      }>;
+  params: Promise<{
+    locale: string;
+  }>;
 };
 
 const LANGUAGES: {

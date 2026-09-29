@@ -69,9 +69,7 @@ type UploadedDocumentPaths = {
 
 type CheckoutDriverDetails = DriverProfile & {
   sessionToken: string;
-  status:
-    | "approved"
-    | "manual_review";
+  status: "approved";
 };
 
 type AvailabilityResult = {
@@ -446,7 +444,7 @@ function discountedPricePerDay(
 function emailOk(
   value: string
 ) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(
+  return /^[^\s@]+@[^\s@]+.[^\s@]+$/.test(
     value.trim()
   );
 }
@@ -1773,9 +1771,7 @@ export default function CheckoutClient({
       ).filter(
         (driver) =>
           driver.status ===
-            "approved" ||
-          driver.status ===
-            "manual_review"
+            "approved"
       )
         .sort(
           (a, b) =>
@@ -1794,11 +1790,7 @@ export default function CheckoutClient({
             sessionToken:
               driver.sessionToken,
 
-            status:
-              driver.status ===
-              "manual_review"
-                ? "manual_review"
-                : "approved",
+            status: "approved",
 
             firstName:
               driver.profile

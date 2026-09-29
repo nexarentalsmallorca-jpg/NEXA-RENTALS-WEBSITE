@@ -37,13 +37,9 @@ const SUPPORTED_LOCALES = [
 type Locale = (typeof SUPPORTED_LOCALES)[number];
 
 type PageProps = {
-  params:
-    | {
-        locale: string;
-      }
-    | Promise<{
-        locale: string;
-      }>;
+  params: Promise<{
+    locale: string;
+  }>;
 };
 
 const LANGUAGES: {
@@ -1913,4 +1909,4 @@ export default async function LocationScooterAeroportMajorquePage({
       `}</style>
     </main>
   );
-}
+} 

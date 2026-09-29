@@ -56,7 +56,6 @@ type DecisionKey =
   | "kymco_motorcycle_category_required"
   | "no_compatible_category"
   | "category_not_yet_valid"
-  | "manual_review"
   | "accepted";
 
 type SessionData = {
@@ -78,7 +77,7 @@ type SessionData = {
 
 type Analysis = {
   success: boolean;
-  outcome: "accepted" | "retake" | "manual_review" | "rejected";
+  outcome: "accepted" | "retake" | "rejected";
   messageKey?: DecisionKey;
   message: string;
   reasons: string[];
@@ -129,14 +128,12 @@ type Copy = {
   returnCheckout: string;
   documentsReceived: string;
   verificationComplete: string;
-  manualComplete: string;
   acceptedComplete: string;
   returningCheckout: string;
   returnBooking: string;
   attention: string;
   takePhotoInstead: string;
   tryAgain: string;
-  continueManual: string;
   missingSession: string;
   sessionError: string;
   updateError: string;
@@ -183,8 +180,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Return to checkout",
     documentsReceived: "Documents received",
     verificationComplete: "Verification complete",
-    manualComplete:
-      "Your booking can continue. NEXA Rentals will confirm the documents manually before pickup.",
     acceptedComplete:
       "Your documents passed the automatic checks and were connected to your booking.",
     returningCheckout: "Returning to checkout...",
@@ -192,7 +187,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Scanner needs attention",
     takePhotoInstead: "Take photo instead",
     tryAgain: "Try again",
-    continueManual: "Continue for manual review",
     missingSession: "The secure verification session is missing.",
     sessionError:
       "This verification session is unavailable. Please restart from checkout.",
@@ -247,8 +241,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "A valid A, A1, A2, or category B licence held for at least 3 years is required.",
       category_not_yet_valid:
         "The detected driving licence category is not valid yet.",
-      manual_review:
-        "Documents received. NEXA Rentals will confirm them manually before pickup.",
       accepted: "Documents accepted.",
     },
   },
@@ -284,8 +276,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Volver al pago",
     documentsReceived: "Documentos recibidos",
     verificationComplete: "Verificación completada",
-    manualComplete:
-      "Tu reserva puede continuar. NEXA Rentals confirmará los documentos manualmente antes de la recogida.",
     acceptedComplete:
       "Tus documentos han superado las comprobaciones automáticas y se han vinculado a tu reserva.",
     returningCheckout: "Volviendo al pago...",
@@ -293,7 +283,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "El escáner necesita atención",
     takePhotoInstead: "Hacer una foto",
     tryAgain: "Intentar de nuevo",
-    continueManual: "Continuar para revisión manual",
     missingSession: "Falta la sesión segura de verificación.",
     sessionError:
       "Esta sesión de verificación no está disponible. Reinicia el proceso desde el pago.",
@@ -350,8 +339,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Se requiere un permiso A, A1, A2 válido o un permiso B con al menos 3 años de antigüedad.",
       category_not_yet_valid:
         "La categoría detectada del permiso de conducir todavía no es válida.",
-      manual_review:
-        "Documentos recibidos. NEXA Rentals los confirmará manualmente antes de la recogida.",
       accepted: "Documentos aceptados.",
     },
   },
@@ -387,8 +374,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Zurück zur Kasse",
     documentsReceived: "Dokumente erhalten",
     verificationComplete: "Überprüfung abgeschlossen",
-    manualComplete:
-      "Deine Buchung kann fortgesetzt werden. NEXA Rentals prüft die Dokumente vor der Abholung manuell.",
     acceptedComplete:
       "Deine Dokumente haben die automatischen Prüfungen bestanden und wurden mit deiner Buchung verknüpft.",
     returningCheckout: "Zurück zur Kasse...",
@@ -396,7 +381,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Scanner benötigt Aufmerksamkeit",
     takePhotoInstead: "Stattdessen Foto aufnehmen",
     tryAgain: "Erneut versuchen",
-    continueManual: "Zur manuellen Prüfung fortfahren",
     missingSession: "Die sichere Verifizierungssitzung fehlt.",
     sessionError:
       "Diese Verifizierungssitzung ist nicht verfügbar. Starte erneut an der Kasse.",
@@ -452,8 +436,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Erforderlich ist ein gültiger Führerschein A, A1, A2 oder Klasse B seit mindestens 3 Jahren.",
       category_not_yet_valid:
         "Die erkannte Führerscheinklasse ist noch nicht gültig.",
-      manual_review:
-        "Dokumente erhalten. NEXA Rentals prüft sie vor der Abholung manuell.",
       accepted: "Dokumente akzeptiert.",
     },
   },
@@ -490,8 +472,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Retourner au paiement",
     documentsReceived: "Documents reçus",
     verificationComplete: "Vérification terminée",
-    manualComplete:
-      "Votre réservation peut continuer. NEXA Rentals confirmera manuellement les documents avant le retrait.",
     acceptedComplete:
       "Vos documents ont passé les contrôles automatiques et ont été associés à votre réservation.",
     returningCheckout: "Retour au paiement...",
@@ -499,7 +479,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Le scanner nécessite votre attention",
     takePhotoInstead: "Prendre une photo",
     tryAgain: "Réessayer",
-    continueManual: "Continuer pour vérification manuelle",
     missingSession: "La session de vérification sécurisée est manquante.",
     sessionError:
       "Cette session de vérification n’est pas disponible. Recommencez depuis le paiement.",
@@ -555,8 +534,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Un permis A, A1, A2 valide ou un permis B détenu depuis au moins 3 ans est requis.",
       category_not_yet_valid:
         "La catégorie de permis détectée n’est pas encore valide.",
-      manual_review:
-        "Documents reçus. NEXA Rentals les confirmera manuellement avant le retrait.",
       accepted: "Documents acceptés.",
     },
   },
@@ -593,8 +570,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Torna al pagamento",
     documentsReceived: "Documenti ricevuti",
     verificationComplete: "Verifica completata",
-    manualComplete:
-      "La prenotazione può continuare. NEXA Rentals confermerà manualmente i documenti prima del ritiro.",
     acceptedComplete:
       "I documenti hanno superato i controlli automatici e sono stati collegati alla prenotazione.",
     returningCheckout: "Ritorno al pagamento...",
@@ -602,7 +577,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Lo scanner richiede attenzione",
     takePhotoInstead: "Scatta una foto",
     tryAgain: "Riprova",
-    continueManual: "Continua per la verifica manuale",
     missingSession: "Manca la sessione di verifica sicura.",
     sessionError:
       "Questa sessione di verifica non è disponibile. Ricomincia dal pagamento.",
@@ -657,8 +631,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "È richiesta una patente A, A1, A2 valida oppure una patente B posseduta da almeno 3 anni.",
       category_not_yet_valid:
         "La categoria di patente rilevata non è ancora valida.",
-      manual_review:
-        "Documenti ricevuti. NEXA Rentals li confermerà manualmente prima del ritiro.",
       accepted: "Documenti accettati.",
     },
   },
@@ -694,8 +666,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Voltar ao pagamento",
     documentsReceived: "Documentos recebidos",
     verificationComplete: "Verificação concluída",
-    manualComplete:
-      "A reserva pode continuar. A NEXA Rentals confirmará os documentos manualmente antes do levantamento.",
     acceptedComplete:
       "Os documentos passaram nas verificações automáticas e foram associados à reserva.",
     returningCheckout: "A voltar ao pagamento...",
@@ -703,7 +673,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "O scanner precisa de atenção",
     takePhotoInstead: "Tirar uma fotografia",
     tryAgain: "Tentar novamente",
-    continueManual: "Continuar para revisão manual",
     missingSession: "Falta a sessão segura de verificação.",
     sessionError:
       "Esta sessão de verificação não está disponível. Recomece a partir do pagamento.",
@@ -758,8 +727,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "É necessária uma carta A, A1 ou A2 válida, ou uma carta B com pelo menos 3 anos.",
       category_not_yet_valid:
         "A categoria detetada da carta ainda não é válida.",
-      manual_review:
-        "Documentos recebidos. A NEXA Rentals irá confirmá-los manualmente antes do levantamento.",
       accepted: "Documentos aceites.",
     },
   },
@@ -795,8 +762,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Tillbaka till kassan",
     documentsReceived: "Dokument mottagna",
     verificationComplete: "Verifiering klar",
-    manualComplete:
-      "Din bokning kan fortsätta. NEXA Rentals kontrollerar dokumenten manuellt före hämtning.",
     acceptedComplete:
       "Dina dokument klarade de automatiska kontrollerna och kopplades till bokningen.",
     returningCheckout: "Återgår till kassan...",
@@ -804,7 +769,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Skannern behöver din uppmärksamhet",
     takePhotoInstead: "Ta ett foto i stället",
     tryAgain: "Försök igen",
-    continueManual: "Fortsätt till manuell kontroll",
     missingSession: "Den säkra verifieringssessionen saknas.",
     sessionError:
       "Verifieringssessionen är inte tillgänglig. Börja om från kassan.",
@@ -857,8 +821,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Ett giltigt A-, A1- eller A2-körkort, eller B-körkort som innehafts i minst 3 år, krävs.",
       category_not_yet_valid:
         "Den identifierade körkortskategorin är ännu inte giltig.",
-      manual_review:
-        "Dokumenten har tagits emot. NEXA Rentals kontrollerar dem manuellt före hämtning.",
       accepted: "Dokumenten godkändes.",
     },
   },
@@ -894,8 +856,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Tilbage til betaling",
     documentsReceived: "Dokumenter modtaget",
     verificationComplete: "Verifikation gennemført",
-    manualComplete:
-      "Din booking kan fortsætte. NEXA Rentals kontrollerer dokumenterne manuelt før afhentning.",
     acceptedComplete:
       "Dine dokumenter bestod de automatiske kontroller og blev knyttet til din booking.",
     returningCheckout: "Vender tilbage til betaling...",
@@ -903,7 +863,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Scanneren kræver din opmærksomhed",
     takePhotoInstead: "Tag et billede i stedet",
     tryAgain: "Prøv igen",
-    continueManual: "Fortsæt til manuel kontrol",
     missingSession: "Den sikre verifikationssession mangler.",
     sessionError:
       "Denne verifikationssession er ikke tilgængelig. Start igen fra betalingen.",
@@ -956,8 +915,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Der kræves et gyldigt A-, A1- eller A2-kørekort eller et B-kørekort, der har været gyldigt i mindst 3 år.",
       category_not_yet_valid:
         "Den registrerede kørekortkategori er endnu ikke gyldig.",
-      manual_review:
-        "Dokumenter modtaget. NEXA Rentals kontrollerer dem manuelt før afhentning.",
       accepted: "Dokumenter godkendt.",
     },
   },
@@ -992,8 +949,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Tilbake til betaling",
     documentsReceived: "Dokumenter mottatt",
     verificationComplete: "Verifisering fullført",
-    manualComplete:
-      "Bestillingen kan fortsette. NEXA Rentals kontrollerer dokumentene manuelt før henting.",
     acceptedComplete:
       "Dokumentene besto de automatiske kontrollene og ble koblet til bestillingen.",
     returningCheckout: "Går tilbake til betaling...",
@@ -1001,7 +956,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Skanneren trenger oppmerksomhet",
     takePhotoInstead: "Ta et bilde i stedet",
     tryAgain: "Prøv igjen",
-    continueManual: "Fortsett til manuell kontroll",
     missingSession: "Den sikre verifiseringsøkten mangler.",
     sessionError:
       "Denne verifiseringsøkten er ikke tilgjengelig. Start på nytt fra betalingen.",
@@ -1054,8 +1008,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Det kreves et gyldig A-, A1- eller A2-førerkort, eller et B-førerkort som har vært gyldig i minst 3 år.",
       category_not_yet_valid:
         "Den registrerte førerkortklassen er ennå ikke gyldig.",
-      manual_review:
-        "Dokumentene er mottatt. NEXA Rentals kontrollerer dem manuelt før henting.",
       accepted: "Dokumentene er godkjent.",
     },
   },
@@ -1091,8 +1043,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Terug naar afrekenen",
     documentsReceived: "Documenten ontvangen",
     verificationComplete: "Verificatie voltooid",
-    manualComplete:
-      "Je boeking kan doorgaan. NEXA Rentals controleert de documenten handmatig vóór het ophalen.",
     acceptedComplete:
       "Je documenten zijn door de automatische controles gekomen en aan je boeking gekoppeld.",
     returningCheckout: "Terug naar afrekenen...",
@@ -1100,7 +1050,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Scanner heeft aandacht nodig",
     takePhotoInstead: "Maak in plaats daarvan een foto",
     tryAgain: "Probeer opnieuw",
-    continueManual: "Doorgaan voor handmatige controle",
     missingSession: "De beveiligde verificatiesessie ontbreekt.",
     sessionError:
       "Deze verificatiesessie is niet beschikbaar. Begin opnieuw bij het afrekenen.",
@@ -1155,8 +1104,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Een geldig rijbewijs A, A1 of A2, of een rijbewijs B dat minimaal 3 jaar in bezit is, is vereist.",
       category_not_yet_valid:
         "De gevonden rijbewijscategorie is nog niet geldig.",
-      manual_review:
-        "Documenten ontvangen. NEXA Rentals controleert ze handmatig vóór het ophalen.",
       accepted: "Documenten geaccepteerd.",
     },
   },
@@ -1192,8 +1139,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Wróć do płatności",
     documentsReceived: "Dokumenty otrzymane",
     verificationComplete: "Weryfikacja zakończona",
-    manualComplete:
-      "Rezerwacja może być kontynuowana. NEXA Rentals ręcznie potwierdzi dokumenty przed odbiorem.",
     acceptedComplete:
       "Dokumenty przeszły automatyczne kontrole i zostały połączone z rezerwacją.",
     returningCheckout: "Powrót do płatności...",
@@ -1201,7 +1146,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Skaner wymaga uwagi",
     takePhotoInstead: "Zrób zdjęcie",
     tryAgain: "Spróbuj ponownie",
-    continueManual: "Kontynuuj do ręcznej kontroli",
     missingSession: "Brakuje bezpiecznej sesji weryfikacyjnej.",
     sessionError:
       "Ta sesja weryfikacyjna jest niedostępna. Rozpocznij ponownie od płatności.",
@@ -1255,8 +1199,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Wymagane jest ważne prawo jazdy A, A1, A2 lub kategoria B posiadana od co najmniej 3 lat.",
       category_not_yet_valid:
         "Wykryta kategoria prawa jazdy nie jest jeszcze ważna.",
-      manual_review:
-        "Dokumenty otrzymane. NEXA Rentals potwierdzi je ręcznie przed odbiorem.",
       accepted: "Dokumenty zaakceptowane.",
     },
   },
@@ -1292,8 +1234,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Zpět k platbě",
     documentsReceived: "Dokumenty přijaty",
     verificationComplete: "Ověření dokončeno",
-    manualComplete:
-      "Rezervace může pokračovat. NEXA Rentals dokumenty před vyzvednutím ručně potvrdí.",
     acceptedComplete:
       "Dokumenty prošly automatickou kontrolou a byly propojeny s rezervací.",
     returningCheckout: "Návrat k platbě...",
@@ -1301,7 +1241,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Skener vyžaduje pozornost",
     takePhotoInstead: "Pořídit fotografii",
     tryAgain: "Zkusit znovu",
-    continueManual: "Pokračovat k ruční kontrole",
     missingSession: "Chybí zabezpečená ověřovací relace.",
     sessionError:
       "Tato ověřovací relace není dostupná. Začněte znovu od platby.",
@@ -1355,8 +1294,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Je vyžadován platný průkaz A, A1, A2 nebo skupina B vlastněná alespoň 3 roky.",
       category_not_yet_valid:
         "Zjištěná skupina řidičského oprávnění ještě není platná.",
-      manual_review:
-        "Dokumenty přijaty. NEXA Rentals je před vyzvednutím ručně potvrdí.",
       accepted: "Dokumenty přijaty.",
     },
   },
@@ -1392,8 +1329,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     returnCheckout: "Повернутися до оплати",
     documentsReceived: "Документи отримано",
     verificationComplete: "Перевірку завершено",
-    manualComplete:
-      "Бронювання може продовжуватися. NEXA Rentals вручну підтвердить документи до отримання.",
     acceptedComplete:
       "Документи пройшли автоматичні перевірки та були прив’язані до бронювання.",
     returningCheckout: "Повернення до оплати...",
@@ -1401,7 +1336,6 @@ const COPY: Record<ScannerLocale, Copy> = {
     attention: "Сканер потребує уваги",
     takePhotoInstead: "Зробити фото",
     tryAgain: "Спробувати ще раз",
-    continueManual: "Продовжити для ручної перевірки",
     missingSession: "Відсутня безпечна сесія перевірки.",
     sessionError:
       "Ця сесія перевірки недоступна. Почніть знову зі сторінки оплати.",
@@ -1454,8 +1388,6 @@ const COPY: Record<ScannerLocale, Copy> = {
         "Потрібне чинне посвідчення A, A1, A2 або категорія B, отримана щонайменше 3 роки тому.",
       category_not_yet_valid:
         "Виявлена категорія водійського посвідчення ще не чинна.",
-      manual_review:
-        "Документи отримано. NEXA Rentals підтвердить їх вручну до отримання.",
       accepted: "Документи прийнято.",
     },
   },
@@ -1653,6 +1585,9 @@ const DOCUMENT_MIN_LONG_EDGE = 1200;
 const DOCUMENT_MAX_FILE_BYTES = 900 * 1024;
 const DOCUMENT_INITIAL_JPEG_QUALITY = 0.82;
 const DOCUMENT_MIN_JPEG_QUALITY = 0.54;
+
+const WHATSAPP_SUPPORT_URL =
+  "https://wa.me/34971482342?text=Hello%20NEXA%20Rentals%2C%20I%20need%20help%20with%20document%20verification.";
 
 function getScannerLocale(value: string): ScannerLocale {
   const locale = value.toLowerCase() as ScannerLocale;
@@ -2104,7 +2039,11 @@ async function encodeDocumentCanvas(
   throw new Error(invalidPhoto);
 }
 
-async function normalizePhoto(file: File, invalidPhoto: string) {
+async function normalizePhoto(
+  file: File,
+  invalidPhoto: string,
+  expectedAspect: number,
+) {
   if (!file.size || !file.type.startsWith("image/")) {
     throw new Error(invalidPhoto);
   }
@@ -2117,19 +2056,86 @@ async function normalizePhoto(file: File, invalidPhoto: string) {
 
       element.onload = () => resolve(element);
       element.onerror = () => reject(new Error(invalidPhoto));
-
       element.src = objectUrl;
     });
 
-    const longest = Math.max(image.naturalWidth, image.naturalHeight);
+    if (!image.naturalWidth || !image.naturalHeight) {
+      throw new Error(invalidPhoto);
+    }
 
+    /*
+     * Uploaded gallery photos often include a hand, table, or large background.
+     * Detect a document-shaped rectangle first and crop around it when detection
+     * is confident. If detection is not confident, preserve the complete photo
+     * and let the server-side document analysis decide whether a retake is needed.
+     */
+    const detectionScale = Math.min(1, 720 / Math.max(image.naturalWidth, image.naturalHeight));
+    const detectionCanvas = document.createElement("canvas");
+    detectionCanvas.width = Math.max(1, Math.round(image.naturalWidth * detectionScale));
+    detectionCanvas.height = Math.max(1, Math.round(image.naturalHeight * detectionScale));
+
+    const detectionContext = detectionCanvas.getContext("2d", {
+      willReadFrequently: true,
+    });
+
+    if (!detectionContext) {
+      throw new Error(invalidPhoto);
+    }
+
+    detectionContext.drawImage(
+      image,
+      0,
+      0,
+      detectionCanvas.width,
+      detectionCanvas.height,
+    );
+
+    const rgba = detectionContext.getImageData(
+      0,
+      0,
+      detectionCanvas.width,
+      detectionCanvas.height,
+    ).data;
+    const gray = new Uint8ClampedArray(rgba.length / 4);
+
+    for (let i = 0, p = 0; i < rgba.length; i += 4, p += 1) {
+      gray[p] =
+        (rgba[i] * 0.299 + rgba[i + 1] * 0.587 + rgba[i + 2] * 0.114) | 0;
+    }
+
+    const detected = detectDocumentRectangle(
+      rgba,
+      gray,
+      detectionCanvas.width,
+      detectionCanvas.height,
+      expectedAspect,
+    );
+
+    let sourceX = 0;
+    let sourceY = 0;
+    let sourceWidth = image.naturalWidth;
+    let sourceHeight = image.naturalHeight;
+
+    if (detected.found && detected.confidence >= 0.38) {
+      const paddingX = (detected.right - detected.left) * 0.045;
+      const paddingY = (detected.bottom - detected.top) * 0.065;
+      const left = Math.max(0, detected.left - paddingX);
+      const top = Math.max(0, detected.top - paddingY);
+      const right = Math.min(1, detected.right + paddingX);
+      const bottom = Math.min(1, detected.bottom + paddingY);
+
+      sourceX = Math.round(left * image.naturalWidth);
+      sourceY = Math.round(top * image.naturalHeight);
+      sourceWidth = Math.max(1, Math.round((right - left) * image.naturalWidth));
+      sourceHeight = Math.max(1, Math.round((bottom - top) * image.naturalHeight));
+    }
+
+    const longest = Math.max(sourceWidth, sourceHeight);
     const scale = Math.min(1, DOCUMENT_MAX_LONG_EDGE / longest);
-
     const canvas = document.createElement("canvas");
 
-    canvas.width = Math.max(1, Math.round(image.naturalWidth * scale));
-
-    canvas.height = Math.max(1, Math.round(image.naturalHeight * scale));
+    canvas.width = Math.max(1, Math.round(sourceWidth * scale));
+    canvas.height = Math.max(1, Math.round(sourceHeight * scale));
 
     const ctx = canvas.getContext("2d");
 
@@ -2139,7 +2145,17 @@ async function normalizePhoto(file: File, invalidPhoto: string) {
 
     ctx.imageSmoothingEnabled = true;
     ctx.imageSmoothingQuality = "high";
-    ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+    ctx.drawImage(
+      image,
+      sourceX,
+      sourceY,
+      sourceWidth,
+      sourceHeight,
+      0,
+      0,
+      canvas.width,
+      canvas.height,
+    );
 
     return encodeDocumentCanvas(
       canvas,
@@ -2240,9 +2256,7 @@ export default function VerifyDocumentsPage() {
 
   const [analysis, setAnalysis] = useState<Analysis | null>(null);
 
-  const [finalOutcome, setFinalOutcome] = useState<
-    "accepted" | "manual_review"
-  >("accepted");
+  const [finalOutcome, setFinalOutcome] = useState<"accepted">("accepted");
 
   const [error, setError] = useState("");
 
@@ -2687,7 +2701,7 @@ export default function VerifyDocumentsPage() {
 
       setAnalysis(data);
 
-      if (data.outcome === "accepted" || data.outcome === "manual_review") {
+      if (data.outcome === "accepted") {
         await saveAndComplete(data, nextFiles, selectedType);
       } else {
         setStage("decision");
@@ -2818,9 +2832,7 @@ export default function VerifyDocumentsPage() {
       return;
     }
 
-    setFinalOutcome(
-      result.outcome === "manual_review" ? "manual_review" : "accepted",
-    );
+    setFinalOutcome("accepted");
 
     setStage("complete");
   }
@@ -3241,7 +3253,11 @@ export default function VerifyDocumentsPage() {
       setCameraError(false);
       setError("");
 
-      const normalized = await normalizePhoto(selected, copy.invalidPhoto);
+      const normalized = await normalizePhoto(
+        selected,
+        copy.invalidPhoto,
+        frameAspect(),
+      );
 
       if (!mountedRef.current) {
         return;
@@ -3297,44 +3313,6 @@ export default function VerifyDocumentsPage() {
     setStage("camera");
   }
 
-  async function continueForManualReview() {
-    if (!identityType || submissionInFlightRef.current) {
-      return;
-    }
-
-    submissionInFlightRef.current = true;
-
-    try {
-      setStage("analyzing");
-      setError("");
-
-      await saveAndComplete(
-        {
-          outcome: "manual_review",
-          message: copy.decisions.manual_review,
-          reasons: ["Automatic screening was unavailable"],
-          licenceData: {},
-          identityData: {
-            selectedType: identityType,
-          },
-          analysis: null,
-        },
-        files,
-        identityType,
-      );
-    } catch (caught: any) {
-      if (!mountedRef.current) {
-        return;
-      }
-
-      setError(caught?.message || copy.saveError);
-      setCameraError(false);
-      setStage("error");
-    } finally {
-      submissionInFlightRef.current = false;
-    }
-  }
-
   function retryAfterError() {
     setError("");
     setCameraError(false);
@@ -3360,7 +3338,7 @@ export default function VerifyDocumentsPage() {
 
   const nextDriverIndex = Math.min(driverCount, driverIndex + 1);
 
-  function leaveScannerForGroup(result: "accepted" | "manual_review" | "rejected") {
+  function leaveScannerForGroup(result: "accepted" | "rejected") {
     if (verificationFlow === "mobile" && returnUrl) {
       const url = new URL(returnUrl);
 
@@ -3844,15 +3822,11 @@ export default function VerifyDocumentsPage() {
           </div>
 
           <h1 className="mt-7 text-[31px] font-black tracking-[-0.055em]">
-            {finalOutcome === "manual_review"
-              ? copy.documentsReceived
-              : copy.verificationComplete}
+{copy.verificationComplete}
           </h1>
 
           <p className="mx-auto mt-3 max-w-lg text-[13px] font-semibold leading-6 text-white/55">
-            {finalOutcome === "manual_review"
-              ? copy.manualComplete
-              : copy.acceptedComplete}
+{copy.acceptedComplete}
           </p>
 
           {driverCount > 1 || !returnUrl ? (
@@ -3910,20 +3884,15 @@ export default function VerifyDocumentsPage() {
               {copy.tryAgain}
             </button>
 
-            {!cameraError &&
-            identityType &&
-            files.dlFront &&
-            files.dlBack &&
-            files.idFront &&
-            (identityType === "passport" || files.idBack) ? (
-              <button
-                type="button"
-                onClick={() => void continueForManualReview()}
-                className="py-3 text-[11px] font-black text-white/50"
-              >
-                {copy.continueManual}
-              </button>
-            ) : null}
+            <a
+              href={WHATSAPP_SUPPORT_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex min-h-[54px] items-center justify-center rounded-[12px] bg-emerald-500 px-5 text-center text-[12px] font-black uppercase tracking-[0.14em] text-black transition active:scale-[0.97]"
+            >
+              Contact us on WhatsApp
+            </a>
+
           </div>
         </Centered>
       ) : null}
