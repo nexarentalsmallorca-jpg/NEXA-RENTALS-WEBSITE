@@ -4,18 +4,9 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import Script from "next/script";
-import { Poppins } from "next/font/google";
-
 import GoogleReviewsV3 from "../../components/GoogleReviewsV3";
 import LocationV3 from "../../components/LocationV3";
 import NexaStatsStripV3 from "../../components/NexaStatsStripV3";
-
-const pageFont = Poppins({
-  subsets: ["latin"],
-  weight: ["400", "500", "600", "700", "800", "900"],
-  display: "swap",
-  variable: "--font-nexa-seo",
-});
 
 const LANGUAGES = [
   { code: "en", label: "English", short: "EN", flagSrc: "/images/en.png", href: "/en/scooter-delivery-santa-ponsa" },
@@ -177,7 +168,7 @@ export default function ScooterDeliverySantaPonsaPage() {
   };
 
   return (
-    <main className={`${pageFont.variable} nexa-seo-page`}>
+    <main className="nexa-seo-page">
       <Script
         id="nexa-seo-navbar-scroll"
         strategy="afterInteractive"
