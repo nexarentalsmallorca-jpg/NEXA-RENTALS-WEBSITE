@@ -2,6 +2,7 @@
 
 
 
+import NexaSeoMobileSkin from "../../components/NexaSeoMobileSkin";
 import type { Metadata } from "next";
 
 import Image from "next/image";
@@ -549,6 +550,7 @@ export default async function OneTwoFiveCcRollerMietenMallorcaPage({
   return (
 
     <main className={`${pageFont.variable} nexa-seo-page`}>
+      <NexaSeoMobileSkin />
 
       <Script
 

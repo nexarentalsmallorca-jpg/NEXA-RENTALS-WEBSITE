@@ -1,5 +1,6 @@
 // app/[locale]/precios-alquiler-scooter-mallorca/page.tsx
 
+import NexaSeoMobileSkin from "../../components/NexaSeoMobileSkin";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -339,6 +340,7 @@ export default async function ScooterRentalMallorcaPricesPage({
 
   return (
     <main className={`${pageFont.variable} nexa-seo-page`}>
+      <NexaSeoMobileSkin />
       <Script
         id="nexa-seo-navbar-scroll-prices"
         strategy="afterInteractive"

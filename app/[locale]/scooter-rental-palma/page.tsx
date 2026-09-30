@@ -1,5 +1,6 @@
 // app/[locale]/scooter-rental-palma/page.tsx
 
+import NexaSeoMobileSkin from "../../components/NexaSeoMobileSkin";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -319,6 +320,7 @@ export default async function ScooterRentalPalmaPage({
 
   return (
     <main className={`${pageFont.variable} nexa-seo-page`}>
+      <NexaSeoMobileSkin />
       <Script
         id="nexa-seo-navbar-scroll-palma"
         strategy="afterInteractive"

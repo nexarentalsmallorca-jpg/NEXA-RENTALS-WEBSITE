@@ -1,5 +1,6 @@
 // app/[locale]/roller-mieten-santa-ponsa/page.tsx
 
+import NexaSeoMobileSkin from "../../components/NexaSeoMobileSkin";
 import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
@@ -277,6 +278,7 @@ export default async function RollerMietenSantaPonsaPage({
 
   return (
     <main className={`${pageFont.variable} nexa-seo-page`}>
+      <NexaSeoMobileSkin />
       <Script
         id="nexa-seo-navbar-scroll-santa-ponsa"
         strategy="afterInteractive"

@@ -9,7 +9,6 @@ import { Poppins } from "next/font/google";
 import GoogleReviewsV3 from "../../components/GoogleReviewsV3";
 import LocationV3 from "../../components/LocationV3";
 import NexaStatsStripV3 from "../../components/NexaStatsStripV3";
-import NeroWebsiteAssistant from "../../components/NeroWebsiteAssistant";
 
 const pageFont = Poppins({
   subsets: ["latin"],
@@ -18,178 +17,97 @@ const pageFont = Poppins({
   variable: "--font-nexa-seo",
 });
 
-const SUPPORTED_LOCALES = [
-  "en",
-  "es",
-  "de",
-  "fr",
-  "it",
-  "nl",
-  "pl",
-  "sv",
-  "da",
-  "no",
-  "pt",
-  "cs",
-  "uk",
+const LANGUAGES = [
+  { code: "en", label: "English", short: "EN", flagSrc: "/images/en.png", href: "/en/rent-a-scooter-mallorca" },
+  { code: "es", label: "Español", short: "ES", flagSrc: "/images/es.png", href: "/es/alquiler-de-scooters-en-mallorca" },
+  { code: "de", label: "Deutsch", short: "DE", flagSrc: "/images/de.png", href: "/de/roller-mieten-mallorca" },
+  { code: "fr", label: "Français", short: "FR", flagSrc: "/images/fr.png", href: "/fr/location-scooter-majorque" },
+  { code: "it", label: "Italiano", short: "IT", flagSrc: "/images/it.png", href: "/it/noleggio-scooter-maiorca" },
 ] as const;
-
-type Locale = (typeof SUPPORTED_LOCALES)[number];
-
-type PageProps = {
-  params: Promise<{
-    locale: string;
-  }>;
-};
-
-const LANGUAGES: {
-  code: Locale;
-  label: string;
-  short: string;
-  flagSrc: string;
-}[] = [
-  { code: "en", label: "English", short: "EN", flagSrc: "/images/en.png" },
-  { code: "es", label: "Español", short: "ES", flagSrc: "/images/es.png" },
-  { code: "de", label: "Deutsch", short: "DE", flagSrc: "/images/de.png" },
-  { code: "fr", label: "Français", short: "FR", flagSrc: "/images/fr.png" },
-  { code: "it", label: "Italiano", short: "IT", flagSrc: "/images/it.png" },
-  { code: "nl", label: "Nederlands", short: "NL", flagSrc: "/images/NL.png" },
-  { code: "pl", label: "Polski", short: "PL", flagSrc: "/images/PL.png" },
-  { code: "sv", label: "Svenska", short: "SV", flagSrc: "/images/sv.png" },
-  { code: "da", label: "Dansk", short: "DA", flagSrc: "/images/DA.png" },
-  { code: "no", label: "Norsk", short: "NO", flagSrc: "/images/NO.png" },
-  { code: "pt", label: "Português", short: "PT", flagSrc: "/images/pt.png" },
-  { code: "cs", label: "Čeština", short: "CS", flagSrc: "/images/CS.png" },
-  { code: "uk", label: "Українська", short: "UK", flagSrc: "/images/UK.png" },
-];
 
 const INCLUDED_ITEMS = [
   {
     image: "/images/ex4.png",
     title: "Two helmets",
-    text: "Included for the rider and passenger.",
+    text: "Included for rider and passenger.",
   },
   {
     image: "/images/ex1.jpg",
-    title: "50-litre top box",
-    text: "Practical storage for a helmet, bag and personal belongings.",
+    title: "Top case",
+    text: "Practical storage for your belongings.",
   },
   {
     image: "/images/ex2.jpg",
-    title: "Waterproof phone holder",
-    text: "Ideal for navigation throughout Mallorca.",
+    title: "Phone holder",
+    text: "Ideal for navigation around Mallorca.",
   },
   {
     image: "/images/ex3.png",
     title: "Security lock",
-    text: "For secure stops at the beach, hotel or a restaurant.",
+    text: "Included for safer stops at the beach or hotel.",
   },
   {
     image: "/images/ex5.png",
-    title: "Insurance",
-    text: "Basic insurance is included in the price.",
+    title: "Basic insurance",
+    text: "Basic insurance is included.",
   },
 ];
 
-function normalizeLocale(locale: string | undefined): Locale {
-  if (SUPPORTED_LOCALES.includes(locale as Locale)) {
-    return locale as Locale;
-  }
-
-  return "en";
-}
-
-async function getPageLocale(params: PageProps["params"]) {
-  const resolvedParams = await params;
-  return normalizeLocale(resolvedParams?.locale);
-}
-
-function getLanguageHref(languageCode: Locale) {
-  if (languageCode === "en") {
-    return "/en/rent-a-scooter-mallorca";
-  }
-
-  if (languageCode === "it") {
-    return "/it/affitto-scooter-maiorca";
-  }
-
-  if (languageCode === "de") {
-    return "/de/roller-mieten-mallorca";
-  }
-
-  return `/${languageCode}`;
-}
-
-export async function generateMetadata({
-  params,
-}: PageProps): Promise<Metadata> {
-  const locale = await getPageLocale(params);
-  const isEnglishPage = locale === "en";
-
-  return {
-    title:
-      "Rent a Scooter Mallorca | 125cc Scooters from €39 | NEXA Rentals",
+export const metadata: Metadata = {
+  title: "Rent a Scooter Mallorca | 50cc & 125cc | NEXA Rentals",
+  description:
+    "Rent a scooter in Mallorca with NEXA Rentals. Choose 50cc or 125cc scooters, book online easily and collect from our convenient Magaluf location.",
+  keywords: [
+    "rent a scooter Mallorca",
+    "rent scooter Mallorca",
+    "rent a scooter in Mallorca",
+    "scooter rental Mallorca",
+    "scooter hire Mallorca",
+    "motor scooter rental Mallorca",
+    "125cc scooter Mallorca",
+    "50cc scooter Mallorca",
+    "rent scooter Magaluf",
+    "scooter rental Magaluf",
+    "book scooter Mallorca",
+    "scooter rental Mallorca online",
+    "NEXA Rentals Magaluf",
+  ],
+  alternates: {
+    canonical: "https://www.nexarentals.es/en/rent-a-scooter-mallorca",
+  },
+  openGraph: {
+    title: "Rent a Scooter Mallorca | NEXA Rentals",
     description:
-      "Rent a scooter in Mallorca with NEXA Rentals in Magaluf. Book a 125cc scooter online from €39, collect it from our office and explore Magaluf, Palmanova, Santa Ponsa and Calvià freely.",
-    keywords: [
-      "rent a scooter Mallorca",
-      "scooter rental Mallorca",
-      "scooter hire Mallorca",
-      "rent scooter Mallorca",
-      "motor scooter rental Mallorca",
-      "125cc scooter Mallorca",
-      "motor scooter hire Mallorca",
-      "scooter rental Magaluf",
-      "scooter rental Palmanova",
-      "scooter rental Santa Ponsa",
-      "cheap scooter rental Mallorca",
-      "book scooter Mallorca",
-      "scooter rental Mallorca online",
-      "NEXA Rentals Magaluf",
-    ],
-    alternates: {
-      canonical: "https://www.nexarentals.es/en/rent-a-scooter-mallorca",
-    },
-    openGraph: {
-      title: "Rent a Scooter Mallorca | NEXA Rentals Magaluf",
-      description:
-        "Rent a 125cc scooter in Mallorca from €39. Book online and collect from NEXA Rentals in Magaluf.",
-      url: "https://www.nexarentals.es/en/rent-a-scooter-mallorca",
-      siteName: "NEXA Rentals",
-      images: [
-        {
-          url: "https://www.nexarentals.es/images/personscooter.jpg",
-          width: 1200,
-          height: 630,
-          alt: "Rent a scooter in Mallorca with NEXA Rentals in Magaluf",
-        },
-      ],
-      locale: "en_GB",
-      type: "website",
-    },
-    robots: {
-      index: isEnglishPage,
-      follow: true,
-      googleBot: {
-        index: isEnglishPage,
-        follow: true,
+      "Rent a 50cc or 125cc scooter in Mallorca with easy online booking from NEXA Rentals in Magaluf.",
+    url: "https://www.nexarentals.es/en/rent-a-scooter-mallorca",
+    siteName: "NEXA Rentals",
+    images: [
+      {
+        url: "https://www.nexarentals.es/images/personscooter.jpg",
+        width: 1200,
+        height: 630,
+        alt: "Scooter rental Mallorca with NEXA Rentals in Magaluf",
       },
+    ],
+    locale: "en_GB",
+    type: "website",
+  },
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
     },
-  };
-}
+  },
+};
 
-export default async function RentAScooterMallorcaPage({
-  params,
-}: PageProps) {
-  const locale = await getPageLocale(params);
-
-  const currentLanguage =
-    LANGUAGES.find((language) => language.code === locale) || LANGUAGES[0];
-
-  const homeHref = `/${locale}`;
-  const bookHref = `/${locale}/home`;
-  const contactHref = `/${locale}/contact`;
-  const externalBookingHref = `/${locale}/home`;
+export default function RentAScooterMallorcaPage() {
+  const homeHref = "/en";
+  const bookHref = "/en/home";
+  const contactHref = "/en/contact";
+  const externalBookingHref = "/en/home";
+  const currentLanguage = LANGUAGES[0];
 
   const faqSchema = {
     "@context": "https://schema.org",
@@ -200,39 +118,31 @@ export default async function RentAScooterMallorcaPage({
         name: "Where can I rent a scooter in Mallorca with NEXA Rentals?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "You can book a 125cc scooter online and collect it directly from NEXA Rentals at C. Galeón, 13, Loc 57, 07181 Magaluf. Standard collection and return take place at our Magaluf office.",
+          text: "You can book your scooter online with NEXA Rentals and collect it from our Magaluf location.",
         },
       },
       {
         "@type": "Question",
-        name: "Can I book and pay for the scooter online?",
+        name: "Can I book and pay for my scooter online?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Yes. With NEXA Rentals, you can book your scooter and pay the rental price online. This reserves the vehicle for your selected dates.",
+          text: "Yes. You can reserve your scooter online and complete your booking through the NEXA Rentals booking system before your rental date.",
         },
       },
       {
         "@type": "Question",
-        name: "Which driving licence do I need for a 125cc scooter in Mallorca?",
+        name: "What driving licence do I need for a 125cc scooter in Mallorca?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "A, A1 and A2 motorcycle licences are accepted. You may also ride a 125cc scooter with a category B car licence if it has been valid for at least 3 years. Provisional and learner licences are not accepted.",
+          text: "Licence requirements depend on the licence category you hold. Check the dedicated driving-licence page or your booking requirements before riding a 125cc scooter in Mallorca.",
         },
       },
       {
         "@type": "Question",
-        name: "What is included when I rent a scooter in Mallorca?",
+        name: "What is included with a NEXA Rentals scooter?",
         acceptedAnswer: {
           "@type": "Answer",
-          text: "Two helmets, a 50-litre top box, security lock, waterproof phone holder, unlimited kilometres and basic insurance are included.",
-        },
-      },
-      {
-        "@type": "Question",
-        name: "Is hotel scooter delivery available?",
-        acceptedAnswer: {
-          "@type": "Answer",
-          text: "No. Standard collection and return take place directly at NEXA Rentals in Magaluf. We do not currently provide a scooter delivery service.",
+          text: "Depending on the vehicle and booking, your rental can include helmets, a top case, phone holder, security lock, unlimited kilometres and basic insurance.",
         },
       },
     ],
@@ -247,10 +157,8 @@ export default async function RentAScooterMallorcaPage({
     priceRange: "€€",
     address: {
       "@type": "PostalAddress",
-      streetAddress: "C. Galeón, 13, Loc 57",
-      postalCode: "07181",
       addressLocality: "Magaluf",
-      addressRegion: "Illes Balears",
+      addressRegion: "Mallorca",
       addressCountry: "ES",
     },
     areaServed: [
@@ -258,44 +166,12 @@ export default async function RentAScooterMallorcaPage({
       "Palmanova",
       "Palma Nova",
       "Santa Ponsa",
-      "Portals Nous",
       "Calvià",
       "Mallorca",
     ],
-    openingHoursSpecification: [
-      {
-        "@type": "OpeningHoursSpecification",
-        dayOfWeek: [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-          "Sunday",
-        ],
-        opens: "09:00",
-        closes: "14:00",
-      },
-      {
-        "@type": "OpeningHoursSpecification",
-        dayOfWeek: [
-          "Monday",
-          "Tuesday",
-          "Wednesday",
-          "Thursday",
-          "Friday",
-          "Saturday",
-          "Sunday",
-        ],
-        opens: "15:00",
-        closes: "20:00",
-      },
-    ],
     makesOffer: {
       "@type": "Offer",
-      name: "125cc scooter rental in Mallorca",
-      price: "39",
+      name: "Scooter rental Mallorca",
       priceCurrency: "EUR",
       availability: "https://schema.org/InStock",
       areaServed: "Mallorca",
@@ -358,6 +234,203 @@ export default async function RentAScooterMallorcaPage({
         }}
       />
 
+      <Script
+        id="nexa-mobile-hero-sequence"
+        strategy="afterInteractive"
+        dangerouslySetInnerHTML={{
+          __html: `
+            (function () {
+              var RETURN_RELOAD_KEY =
+                "nexa:rent-a-scooter-mallorca:reload-on-return";
+
+              function isMobileHero() {
+                return window.matchMedia("(max-width: 680px)").matches;
+              }
+
+              function isThisSeoPage() {
+                return window.location.pathname.indexOf(
+                  "/rent-a-scooter-mallorca"
+                ) !== -1;
+              }
+
+              function markBookingNavigation() {
+                try {
+                  window.sessionStorage.setItem(RETURN_RELOAD_KEY, "1");
+                } catch (error) {
+                  // Ignore storage errors. The normal page navigation still works.
+                }
+              }
+
+              function shouldForceReloadOnReturn() {
+                if (!isMobileHero() || !isThisSeoPage()) return false;
+
+                try {
+                  return (
+                    window.sessionStorage.getItem(RETURN_RELOAD_KEY) === "1"
+                  );
+                } catch (error) {
+                  return false;
+                }
+              }
+
+              function forceFreshPageAfterReturn() {
+                if (!shouldForceReloadOnReturn()) return false;
+
+                try {
+                  window.sessionStorage.removeItem(RETURN_RELOAD_KEY);
+                } catch (error) {
+                  // Continue with the reload even if storage cleanup fails.
+                }
+
+                window.location.reload();
+                return true;
+              }
+
+              function bindBookingLinks() {
+                if (!isThisSeoPage()) return;
+
+                document.addEventListener(
+                  "click",
+                  function (event) {
+                    var target = event.target;
+                    if (!(target instanceof Element)) return;
+
+                    var link = target.closest(
+                      ".nexa-primary-cta, " +
+                        ".nexa-seo-book-button, " +
+                        ".nexa-mobile-main-cta, " +
+                        ".nexa-bottom-cta, " +
+                        ".nexa-final-cta a"
+                    );
+
+                    if (!link) return;
+
+                    markBookingNavigation();
+                  },
+                  true
+                );
+              }
+
+              function runMobileHeroSequence() {
+                if (!isMobileHero()) return;
+
+                var page = document.querySelector(".nexa-seo-page");
+                var heading = document.querySelector(".nexa-hero-copy h1");
+
+                if (!page || !heading) return;
+
+                /*
+                 * Save the original heading once so the animation can always
+                 * rebuild the exact same text after a real reload.
+                 */
+                if (!heading.getAttribute("data-original-heading")) {
+                  heading.setAttribute(
+                    "data-original-heading",
+                    heading.textContent ||
+                      "Rent a scooter in Mallorca, directly from Magaluf."
+                  );
+                }
+
+                var fullText =
+                  heading.getAttribute("data-original-heading") ||
+                  "Rent a scooter in Mallorca, directly from Magaluf.";
+
+                /*
+                 * Reset every mobile entrance state before starting.
+                 */
+                page.classList.remove("nexa-mobile-hero-ready");
+                page.setAttribute("data-mobile-sequence", "running");
+
+                heading.classList.remove("nexa-mobile-typing");
+                heading.textContent = "";
+                heading.setAttribute("aria-label", fullText);
+
+                /*
+                 * Force a style/layout flush so opacity and transform reset
+                 * before the entrance animations begin.
+                 */
+                void page.offsetWidth;
+
+                heading.classList.add("nexa-mobile-typing");
+
+                var index = 0;
+                var speed = 34;
+
+                function typeNext() {
+                  if (index < fullText.length) {
+                    heading.textContent += fullText.charAt(index);
+                    index += 1;
+                    window.setTimeout(typeNext, speed);
+                    return;
+                  }
+
+                  heading.classList.remove("nexa-mobile-typing");
+
+                  /*
+                   * This class triggers the tagline, CTA and orange-panel
+                   * slide-in animations in the existing CSS.
+                   */
+                  window.requestAnimationFrame(function () {
+                    page.classList.add("nexa-mobile-hero-ready");
+                    page.setAttribute("data-mobile-sequence", "done");
+                  });
+                }
+
+                window.setTimeout(typeNext, 180);
+              }
+
+              function boot() {
+                /*
+                 * If the visitor has just returned from the booking page,
+                 * reload this SEO page once. The session marker is removed
+                 * before reload, so this cannot create a reload loop.
+                 */
+                if (forceFreshPageAfterReturn()) return;
+
+                bindBookingLinks();
+                runMobileHeroSequence();
+              }
+
+              if (document.readyState === "loading") {
+                document.addEventListener("DOMContentLoaded", boot, {
+                  once: true
+                });
+              } else {
+                boot();
+              }
+
+              /*
+               * Browser back-forward cache:
+               * pageshow fires when Chrome/Safari restores the old page.
+               */
+              window.addEventListener("pageshow", function () {
+                forceFreshPageAfterReturn();
+              });
+
+              /*
+               * Next.js / browser history traversal can also surface through
+               * popstate without a full page load.
+               */
+              window.addEventListener("popstate", function () {
+                window.setTimeout(function () {
+                  forceFreshPageAfterReturn();
+                }, 0);
+              });
+
+              /*
+               * Android Chrome can restore a tab/page and only make it visible
+               * again. This catches that case too.
+               */
+              document.addEventListener("visibilitychange", function () {
+                if (document.visibilityState === "visible") {
+                  forceFreshPageAfterReturn();
+                }
+              });
+            })();
+          `,
+        }}
+      />
+
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -374,10 +447,7 @@ export default async function RentAScooterMallorcaPage({
 
       <header className="nexa-seo-navbar" data-scrolled="false">
         <div className="nexa-seo-nav-inner">
-          <Link
-            href={homeHref}
-            className="nexa-seo-logo-link nexa-hide-on-scroll"
-          >
+          <Link href={homeHref} className="nexa-seo-logo-link nexa-hide-on-scroll">
             <Image
               src="/images/reallogo.png"
               alt="NEXA Rentals"
@@ -388,26 +458,16 @@ export default async function RentAScooterMallorcaPage({
             />
           </Link>
 
-          <div
-            className="nexa-scroll-arrows nexa-scroll-arrows-left"
-            aria-hidden="true"
-          >
-            <span>→</span>
-            <span>→</span>
-            <span>→</span>
+          <div className="nexa-scroll-arrows nexa-scroll-arrows-left" aria-hidden="true">
+            <span>→</span><span>→</span><span>→</span>
           </div>
 
           <Link href={bookHref} className="nexa-seo-book-button">
             <span>Book now</span>
           </Link>
 
-          <div
-            className="nexa-scroll-arrows nexa-scroll-arrows-right"
-            aria-hidden="true"
-          >
-            <span>←</span>
-            <span>←</span>
-            <span>←</span>
+          <div className="nexa-scroll-arrows nexa-scroll-arrows-right" aria-hidden="true">
+            <span>←</span><span>←</span><span>←</span>
           </div>
 
           <div className="nexa-seo-nav-right nexa-hide-on-scroll">
@@ -429,36 +489,29 @@ export default async function RentAScooterMallorcaPage({
               </summary>
 
               <div className="nexa-seo-language-menu">
-                {LANGUAGES.map((language) => {
-                  const active = language.code === locale;
-
-                  return (
-                    <Link
-                      key={language.code}
-                      href={getLanguageHref(language.code)}
-                      className={
-                        active
-                          ? "nexa-seo-language-option active"
-                          : "nexa-seo-language-option"
-                      }
-                    >
-                      <span className="nexa-seo-language-left">
-                        <Image
-                          src={language.flagSrc}
-                          alt={language.label}
-                          width={22}
-                          height={22}
-                          className="nexa-seo-flag"
-                        />
-                        <span>{language.label}</span>
-                      </span>
-
-                      <span className="nexa-seo-language-short">
-                        {language.short}
-                      </span>
-                    </Link>
-                  );
-                })}
+                {LANGUAGES.map((language) => (
+                  <Link
+                    key={language.code}
+                    href={language.href}
+                    className={
+                      language.code === "en"
+                        ? "nexa-seo-language-option active"
+                        : "nexa-seo-language-option"
+                    }
+                  >
+                    <span className="nexa-seo-language-left">
+                      <Image
+                        src={language.flagSrc}
+                        alt={language.label}
+                        width={22}
+                        height={22}
+                        className="nexa-seo-flag"
+                      />
+                      <span>{language.label}</span>
+                    </span>
+                    <span className="nexa-seo-language-short">{language.short}</span>
+                  </Link>
+                ))}
               </div>
             </details>
           </div>
@@ -468,25 +521,31 @@ export default async function RentAScooterMallorcaPage({
       <section className="nexa-hero-section">
         <div className="nexa-hero-grid">
           <div className="nexa-hero-copy">
-            <h1>Rent a scooter in Mallorca directly from Magaluf.</h1>
+            <h1>Rent a scooter in Mallorca, directly from Magaluf.</h1>
+
+            <div className="nexa-mobile-location">Magaluf, Mallorca</div>
+            <p className="nexa-mobile-hero-tagline">
+              Rent a scooter Mallorca · 50cc &amp; 125cc · Easy online booking
+            </p>
 
             <p className="nexa-hero-text">
-              Looking to <strong>rent a scooter in Mallorca</strong>,{" "}
-              find <strong>scooter rental in Magaluf</strong> or book a{" "}
-              <strong>125cc scooter in Mallorca</strong>? With NEXA Rentals,
-              you can book online, pay securely and collect your scooter
-              directly from our office in Magaluf.
+              Looking to <strong>rent a scooter in Mallorca</strong>, find a{" "}
+              <strong>scooter rental in Magaluf</strong> or book a{" "}
+              <strong>125cc scooter in Mallorca</strong>? With NEXA Rentals you
+              can choose your scooter online, book easily and collect it directly
+              from our Magaluf location.
             </p>
 
             <p className="nexa-hero-text small">
-              Ideal for Magaluf, Palmanova, Palma Nova, Santa Ponsa, Portals
-              Nous and Calvià, whether you are planning beach days, viewpoints,
-              beach clubs or trips without relying on taxis or buses.
+              Ideal for Magaluf, Palmanova, Palma Nova, Santa Ponsa, Calvià,
+              beach days, viewpoints, restaurants and flexible island trips
+              without relying on taxis.
             </p>
 
             <div className="nexa-hero-actions">
               <Link href={bookHref} className="nexa-primary-cta">
-                Rent your scooter
+                <span className="nexa-cta-desktop-label">Rent your scooter now</span>
+                <span className="nexa-cta-mobile-label">CHECK PRICES & SCOOTERS</span>
               </Link>
 
               <Link href={contactHref} className="nexa-secondary-cta">
@@ -495,26 +554,22 @@ export default async function RentAScooterMallorcaPage({
             </div>
 
             <div className="nexa-online-note">
-              Book online at{" "}
-              <a href={externalBookingHref} target="_blank" rel="noreferrer">
-                www.nexarentals.es/en/home
-              </a>
+              Online booking available through{" "}
+              <a href={externalBookingHref}>NEXA Rentals online booking</a>
             </div>
 
             <div className="nexa-hero-points">
               <div>
-                <strong>from €39</strong>
-                <span>Half-day scooter rental</span>
+                <strong>50cc & 125cc</strong>
+                <span>Scooter options for your trip</span>
               </div>
-
               <div>
-                <strong>125cc</strong>
-                <span>Piaggio and SYM scooters</span>
+                <strong>Online</strong>
+                <span>Fast booking before you arrive</span>
               </div>
-
               <div>
                 <strong>Magaluf</strong>
-                <span>Collection from our rental office</span>
+                <span>Convenient local pickup</span>
               </div>
             </div>
           </div>
@@ -526,7 +581,7 @@ export default async function RentAScooterMallorcaPage({
               <div className="nexa-photo-card nexa-photo-card-top">
                 <Image
                   src="/images/personscooter.jpg"
-                  alt="Rent a scooter in Mallorca with NEXA Rentals in Magaluf"
+                  alt="Scooter rental Mallorca with NEXA Rentals in Magaluf"
                   width={900}
                   height={620}
                   priority
@@ -537,7 +592,7 @@ export default async function RentAScooterMallorcaPage({
               <div className="nexa-photo-card nexa-photo-card-bottom">
                 <Image
                   src="/images/scooterperson2.jpg"
-                  alt="125cc scooter rental in Mallorca with NEXA Rentals"
+                  alt="Rent a scooter in Mallorca with NEXA Rentals"
                   width={900}
                   height={720}
                   className="nexa-hero-image"
@@ -545,24 +600,47 @@ export default async function RentAScooterMallorcaPage({
               </div>
 
               <div className="nexa-floating-price">
-                <span>from</span>
-                <strong>€39</strong>
-                <small>all included</small>
+                <span>easy</span>
+                <strong>BOOK</strong>
+                <small>online</small>
               </div>
+            </div>
+          </div>
+
+          <div className="nexa-mobile-orange-arc" aria-hidden="true">
+            <svg
+              className="nexa-mobile-wave-svg"
+              viewBox="0 0 1000 104"
+              preserveAspectRatio="none"
+            >
+              <defs>
+                <linearGradient id="nexaMobileWaveGradient" x1="0" y1="0" x2="1" y2="1">
+                  <stop offset="0%" stopColor="#ff6500" />
+                  <stop offset="58%" stopColor="#ff8a00" />
+                  <stop offset="100%" stopColor="#ff9f25" />
+                </linearGradient>
+              </defs>
+              <path
+                d="M0 48 L165 48 Q190 48 212 44 L350 37 Q372 36 394 36 L530 36 Q552 36 574 31 L714 23 Q738 21 760 21 L874 21 Q898 21 920 17 L1000 13 L1000 104 L0 104 Z"
+                fill="url(#nexaMobileWaveGradient)"
+              />
+            </svg>
+            <div className="nexa-mobile-wave-copy">
+              <strong>Rent a scooter Mallorca</strong>
+              <span>50cc &amp; 125cc scooters · Easy online booking · NEXA Rentals Magaluf</span>
             </div>
           </div>
         </div>
       </section>
 
       <section className="nexa-trust-section">
-        <p>A simple way to explore Mallorca freely</p>
-
+        <p>A simple way to rent a scooter in Mallorca from Magaluf</p>
         <div className="nexa-trust-logos">
-          <span>Rent a scooter Mallorca</span>
+          <span>Scooter rental Mallorca</span>
           <span>Magaluf</span>
           <span>Palmanova</span>
           <span>Santa Ponsa</span>
-          <span>125cc scooters</span>
+          <span>50cc & 125cc</span>
         </div>
       </section>
 
@@ -571,7 +649,6 @@ export default async function RentAScooterMallorcaPage({
           {INCLUDED_ITEMS.map((item) => (
             <div key={item.title} className="nexa-included-item">
               <span className="nexa-orange-check">✓</span>
-
               <div className="nexa-included-image-wrap">
                 <Image
                   src={item.image}
@@ -581,12 +658,22 @@ export default async function RentAScooterMallorcaPage({
                   className="nexa-included-image"
                 />
               </div>
-
               <strong>{item.title}</strong>
               <p>{item.text}</p>
             </div>
           ))}
         </div>
+      </section>
+
+      <section className="nexa-mobile-action-section">
+        <Link href={bookHref} className="nexa-mobile-main-cta">
+          Book your scooter now
+          <span aria-hidden="true">→</span>
+        </Link>
+
+        <Link href={contactHref} className="nexa-mobile-contact-cta">
+          Questions? Contact us
+        </Link>
       </section>
 
       <section className="nexa-components-section">
@@ -601,40 +688,32 @@ export default async function RentAScooterMallorcaPage({
         <div className="nexa-content-grid">
           <article>
             <span className="nexa-section-label">Why NEXA Rentals?</span>
-
-            <h2>The simple way to rent a scooter in Mallorca.</h2>
-
+            <h2>A simple way to rent a scooter in Mallorca.</h2>
             <p>
-              Many travellers wait until they arrive on holiday before looking
-              for scooter rental in Mallorca, Magaluf or Palmanova. With NEXA
-              Rentals, you can organise everything in advance: book your 125cc
-              scooter online, pay securely and collect it directly from our
-              Magaluf office. This saves time and ensures that your vehicle is
-              reserved for you.
+              Instead of wasting holiday time searching after you arrive, you can
+              organise your scooter online and collect it from NEXA Rentals in
+              Magaluf. It is a straightforward option for visitors who want more
+              freedom while staying in Mallorca.
             </p>
-
             <p>
-              Our scooters are ideal for short journeys, beach days and trips
-              to Magaluf, Palmanova, Palma Nova, Portals Nous, Santa Ponsa and
-              Calvià. You do not need to wait for taxis, check bus timetables
-              or deal with long waits. Collect your scooter and explore
-              Mallorca at your own pace.
+              A scooter is useful for beach trips, restaurants, short local journeys
+              and exploring areas around Magaluf, Palmanova, Palma Nova, Portals Nous,
+              Santa Ponsa and Calvià without depending on taxi queues or bus timetables.
             </p>
           </article>
 
           <aside className="nexa-info-box">
-            <h3>Everything included</h3>
-
+            <h3>What you can get</h3>
             <ul>
-              <li>125cc scooter for exploring Mallorca</li>
-              <li>Online booking and secure online payment</li>
-              <li>Two helmets included</li>
-              <li>50-litre top box for a helmet, bag or accessories</li>
-              <li>Waterproof phone holder</li>
-              <li>Security lock included</li>
-              <li>Unlimited kilometres</li>
-              <li>Basic insurance included</li>
-              <li>Collection and return at NEXA Rentals in Magaluf</li>
+              <li>50cc and 125cc scooter options</li>
+              <li>Online booking</li>
+              <li>Helmets included where specified</li>
+              <li>Top case on applicable scooters</li>
+              <li>Phone holder on applicable scooters</li>
+              <li>Security lock</li>
+              <li>Unlimited kilometres where included in the booking</li>
+              <li>Basic insurance according to the rental conditions</li>
+              <li>Convenient service from NEXA Rentals in Magaluf</li>
             </ul>
           </aside>
         </div>
@@ -643,43 +722,28 @@ export default async function RentAScooterMallorcaPage({
       <section className="nexa-how-section">
         <div className="nexa-how-inner">
           <span className="nexa-section-label">How it works</span>
-
-          <h2>Rent a scooter in Mallorca in three simple steps.</h2>
+          <h2>Rent a scooter in Mallorca in a few simple steps.</h2>
 
           <div className="nexa-how-grid">
             <div>
               <span>01</span>
-              <h3>Choose your scooter online</h3>
-              <p>
-                Select your 125cc scooter, rental date and rental duration. The
-                booking process is quick, clear and designed for visitors to
-                Mallorca.
-              </p>
+              <h3>Choose your scooter</h3>
+              <p>Select the vehicle, rental dates and the option that suits your Mallorca trip.</p>
             </div>
-
             <div>
               <span>02</span>
-              <h3>Pay online</h3>
-              <p>
-                Pay the rental price online and reserve your scooter for the
-                selected dates. You will automatically receive your booking
-                confirmation.
-              </p>
+              <h3>Book online</h3>
+              <p>Complete your reservation online so your scooter is arranged before pickup.</p>
             </div>
-
             <div>
               <span>03</span>
               <h3>Collect in Magaluf</h3>
-              <p>
-                Visit NEXA Rentals with your original driving licence and
-                passport or identity card. We will explain everything before
-                you begin your journey.
-              </p>
+              <p>Bring the required original documents, collect your scooter and start your trip.</p>
             </div>
           </div>
 
           <Link href={bookHref} className="nexa-bottom-cta">
-            Rent your scooter in Mallorca
+            Book a scooter in Mallorca
           </Link>
         </div>
       </section>
@@ -687,37 +751,29 @@ export default async function RentAScooterMallorcaPage({
       <section className="nexa-seo-text-section">
         <div className="nexa-seo-text-inner">
           <span className="nexa-section-label">Rent a scooter Mallorca</span>
-
-          <h2>
-            For travellers who want to explore Mallorca freely, simply and
-            conveniently.
-          </h2>
-
+          <h2>For visitors who want to rent a scooter and explore Mallorca freely.</h2>
           <p>
-            When you search for “rent a scooter Mallorca”, “scooter rental
-            Mallorca”, “scooter hire Mallorca” or “125cc scooter Mallorca”,
-            you need a simple solution: clear information, online booking,
-            secure payment and an easy-to-reach collection point. NEXA Rentals
-            is located directly in Magaluf at C. Galeón, 13, Loc 57.
+            When travellers search for “rent a scooter Mallorca”, “rent scooter Mallorca”,
+            “rent a scooter in Mallorca”, “scooter rental Mallorca” or “125cc scooter
+            Mallorca”, they usually want the same thing: a clear rental option, easy
+            online booking and a convenient place to collect the scooter. NEXA Rentals
+            provides that service directly from Magaluf.
           </p>
-
           <p>
-            Our service is particularly convenient for guests staying in
-            Magaluf, Palmanova, Palma Nova, Torrenova, Santa Ponsa, Portals Nous
-            or Calvià. With a scooter, you can reach beaches, restaurants,
-            beach clubs, viewpoints and nearby destinations without depending
-            on a taxi every time. Standard collection and return take place at
-            our Magaluf office. We do not currently provide a scooter delivery
-            service.
+            Our location is particularly convenient for visitors staying in Magaluf,
+            Palmanova, Palma Nova, Torrenova, Santa Ponsa, Portals Nous or Calvià.
+            Renting a scooter gives you flexibility for beaches, restaurants, viewpoints,
+            nearby resorts and everyday journeys during your stay in Mallorca.
           </p>
 
           <div className="nexa-keyword-cloud">
             <span>Rent a scooter Mallorca</span>
+            <span>Rent scooter Mallorca</span>
+            <span>Rent a scooter in Mallorca</span>
             <span>Scooter rental Mallorca</span>
-            <span>Scooter hire Mallorca</span>
             <span>125cc scooter Mallorca</span>
-            <span>Motor scooter rental Mallorca</span>
-            <span>Scooter rental Magaluf</span>
+            <span>50cc scooter Mallorca</span>
+            <span>Rent scooter Magaluf</span>
             <span>Book scooter Mallorca</span>
             <span>NEXA Rentals Magaluf</span>
           </div>
@@ -731,64 +787,53 @@ export default async function RentAScooterMallorcaPage({
       <section className="nexa-faq-section">
         <div className="nexa-faq-inner">
           <span className="nexa-section-label">Frequently asked questions</span>
-
           <h2>Questions about renting a scooter in Mallorca</h2>
 
           <div className="nexa-faq-list">
             <details>
-              <summary>
-                Which driving licence do I need for a 125cc scooter?
-              </summary>
+              <summary>Where do I collect my scooter?</summary>
               <p>
-                A, A1 and A2 motorcycle licences are accepted. You may also
-                ride a 125cc scooter with a category B car licence if it has
-                been valid for at least 3 years. Provisional and learner
-                licences are not accepted.
+                NEXA Rentals is based in Magaluf. Your booking flow will show the
+                available pickup or delivery option for your reservation.
               </p>
             </details>
 
             <details>
-              <summary>Where do I collect and return the scooter?</summary>
+              <summary>Can I book my scooter online?</summary>
               <p>
-                Standard collection and return take place directly at NEXA
-                Rentals, C. Galeón, 13, Loc 57, 07181 Magaluf.
+                Yes. You can choose your vehicle and complete your reservation through
+                the online booking system.
               </p>
             </details>
 
             <details>
-              <summary>Can I book and pay online?</summary>
+              <summary>What licence do I need for a 125cc scooter?</summary>
               <p>
-                Yes. You can choose your scooter, dates and rental duration
-                directly online. Online payment confirms your booking for the
-                selected dates.
+                Licence requirements depend on the category and validity of your licence.
+                Check the dedicated Mallorca driving-licence page before booking if you are unsure.
               </p>
             </details>
 
             <details>
-              <summary>What is included in the price?</summary>
+              <summary>What is included in the rental?</summary>
               <p>
-                Two helmets, a 50-litre top box, security lock, waterproof
-                phone holder, unlimited kilometres and basic insurance are
-                included.
+                Included equipment can vary by vehicle and booking. The booking flow shows
+                the equipment and rental conditions applicable to the scooter you choose.
               </p>
             </details>
 
             <details>
-              <summary>Is hotel delivery available?</summary>
+              <summary>Is NEXA Rentals convenient for Magaluf and Palmanova?</summary>
               <p>
-                No. Standard collection and return take place directly at NEXA
-                Rentals in Magaluf. We do not currently provide a scooter
-                delivery service.
+                Yes. Our Magaluf location is convenient for visitors staying in Magaluf,
+                Palmanova, Palma Nova, Torrenova and nearby areas.
               </p>
             </details>
           </div>
 
           <div className="nexa-final-cta">
-            <h3>Ready to explore Mallorca?</h3>
-            <p>
-              Book your 125cc scooter online and begin your journey directly
-              from Magaluf.
-            </p>
+            <h3>Ready to rent a scooter in Mallorca?</h3>
+            <p>Choose your scooter online and organise your rental before you arrive.</p>
             <Link href={bookHref}>Rent your scooter now</Link>
           </div>
         </div>
@@ -804,9 +849,7 @@ export default async function RentAScooterMallorcaPage({
               height={72}
               className="nexa-seo-footer-logo"
             />
-            <p>
-              NEXA Rentals · Scooter and e-bike rental in Magaluf, Mallorca
-            </p>
+            <p>NEXA Rentals · Scooter & E-Bike Rental in Magaluf, Mallorca</p>
           </div>
 
           <div className="nexa-seo-footer-actions">
@@ -815,8 +858,6 @@ export default async function RentAScooterMallorcaPage({
           </div>
         </div>
       </footer>
-
-      <NeroWebsiteAssistant />
 
       <style>{`
         .nexa-seo-page,
@@ -1420,7 +1461,7 @@ export default async function RentAScooterMallorcaPage({
         }
 
         .nexa-online-note {
-          margin-top: 16px;
+          margin-top: 6px;
           color: #787682;
           font-size: 13px;
           font-weight: 600;
@@ -1763,11 +1804,7 @@ export default async function RentAScooterMallorcaPage({
           padding: 30px;
           border-radius: 34px;
           background:
-            radial-gradient(
-              circle at 100% 0%,
-              rgba(255, 122, 0, 0.16),
-              transparent 34%
-            ),
+            radial-gradient(circle at 100% 0%, rgba(255, 122, 0, 0.16), transparent 34%),
             #f7f7fb;
           border: 1px solid rgba(17, 17, 22, 0.06);
           box-shadow: 0 26px 70px rgba(17, 17, 22, 0.08);
@@ -1793,7 +1830,7 @@ export default async function RentAScooterMallorcaPage({
           position: relative;
           padding-left: 24px;
           color: #53525e;
-          font-size: 15px;
+          font-size: 13.5px;
           font-weight: 700;
           line-height: 1.45;
         }
@@ -1813,11 +1850,7 @@ export default async function RentAScooterMallorcaPage({
         .nexa-how-section {
           padding: 96px clamp(18px, 4vw, 56px);
           background:
-            radial-gradient(
-              circle at 15% 0%,
-              rgba(255, 122, 0, 0.13),
-              transparent 34%
-            ),
+            radial-gradient(circle at 15% 0%, rgba(255, 122, 0, 0.13), transparent 34%),
             #fbfbfd;
         }
 
@@ -1948,11 +1981,7 @@ export default async function RentAScooterMallorcaPage({
           padding: 32px;
           border-radius: 34px;
           background:
-            radial-gradient(
-              circle at 90% 0%,
-              rgba(255, 179, 71, 0.28),
-              transparent 38%
-            ),
+            radial-gradient(circle at 90% 0%, rgba(255, 179, 71, 0.28), transparent 38%),
             linear-gradient(135deg, #111116 0%, #242128 100%);
           color: #ffffff;
           text-align: center;
@@ -2315,6 +2344,575 @@ export default async function RentAScooterMallorcaPage({
           }
         }
 
+
+        .nexa-mobile-location,
+        .nexa-mobile-hero-tagline,
+        .nexa-cta-mobile-label,
+        .nexa-mobile-orange-arc {
+          display: none;
+        }
+
+        .nexa-cta-desktop-label {
+          display: inline;
+        }
+
+        .nexa-mobile-action-section {
+          display: none;
+        }
+
+        @media (max-width: 680px) {
+          /* =========================================================
+             MOBILE HERO POSITION CONTROLS
+             Change ONLY these values to fine-tune the mobile hero.
+
+             HERO BUTTON:
+               --mobile-book-x: positive = right, negative = left
+               --mobile-book-y: positive = down, negative = up
+
+             ORANGE BOTTOM PANEL:
+               --mobile-arc-x: positive = right, negative = left
+               --mobile-arc-y: positive = up, negative = down
+               --mobile-arc-height: overall orange panel height
+
+             ORANGE PANEL TEXT:
+               --mobile-arc-text-x: positive = right, negative = left
+               --mobile-arc-text-y: positive = up, negative = down
+             ========================================================= */
+          .nexa-seo-page {
+            --mobile-book-x: 0px;
+            --mobile-book-y: -8px;
+
+            --mobile-arc-x: 0px;
+            --mobile-arc-y: 28px;
+            --mobile-arc-height: 114px;
+
+            --mobile-arc-text-x: 0px;
+            --mobile-arc-text-y: 12px;
+
+            padding-top: 64px;
+          }
+
+          .nexa-hero-section {
+            position: relative;
+            padding: 0;
+            background: #111116;
+          }
+
+          .nexa-hero-grid {
+            position: relative;
+            max-width: none;
+            width: 100%;
+            min-height: calc(94svh + 18px);
+            display: grid;
+            grid-template-columns: 1fr;
+            grid-template-areas: "hero";
+            gap: 0;
+            overflow: hidden;
+            background: #111116;
+          }
+
+          .nexa-hero-visual {
+            grid-area: hero;
+            position: relative;
+            width: 100%;
+            max-width: none;
+            min-height: calc(94svh + 18px);
+            margin: 0;
+            z-index: 1;
+          }
+
+          .nexa-visual-stack {
+            position: relative;
+            width: 100%;
+            min-height: calc(94svh + 18px);
+          }
+
+          .nexa-orange-shape,
+          .nexa-photo-card-bottom,
+          .nexa-floating-price {
+            display: none;
+          }
+
+          .nexa-photo-card-top {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border-radius: 0;
+            box-shadow: none;
+            background: #111116;
+          }
+
+          .nexa-photo-card-top::after {
+            content: "";
+            position: absolute;
+            inset: 0;
+            z-index: 2;
+            pointer-events: none;
+            background:
+              linear-gradient(180deg, rgba(0, 0, 0, 0.25) 0%, rgba(0, 0, 0, 0.06) 30%, rgba(0, 0, 0, 0.015) 58%, rgba(0, 0, 0, 0.12) 100%),
+              linear-gradient(90deg, rgba(0, 0, 0, 0.26) 0%, rgba(0, 0, 0, 0.05) 58%, rgba(0, 0, 0, 0.01) 100%);
+          }
+
+          .nexa-photo-card-top .nexa-hero-image {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            object-position: 56% center;
+            filter: brightness(1.14) saturate(1.04) contrast(0.96);
+            transform: scale(0.985);
+            transform-origin: center center;
+          }
+
+          .nexa-hero-copy {
+            grid-area: hero;
+            position: relative;
+            z-index: 4;
+            min-height: calc(100svh - 168px);
+            padding: clamp(12px, 1.8svh, 18px) 22px 28px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            justify-content: flex-start;
+            text-align: left;
+            color: #ffffff;
+            pointer-events: none;
+          }
+
+          .nexa-mobile-location {
+            order: -1;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            margin: 0 0 10px;
+            color: rgba(255, 255, 255, 0.94);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.16em;
+            text-transform: uppercase;
+            text-shadow: 0 3px 14px rgba(0, 0, 0, 0.32);
+          }
+
+          .nexa-mobile-location::before {
+            content: "●";
+            color: #ff7a00;
+            font-size: 10px;
+            line-height: 1;
+          }
+
+          .nexa-hero-copy h1 {
+            max-width: 338px;
+            margin: 0;
+            color: #ffffff;
+            font-size: clamp(29px, 8.1vw, 38px);
+            line-height: 0.99;
+            letter-spacing: -0.062em;
+            font-weight: 800;
+            text-wrap: balance;
+            text-shadow: 0 5px 28px rgba(0, 0, 0, 0.36);
+          }
+
+          .nexa-hero-copy h1.nexa-mobile-typing::after {
+            content: "";
+            display: inline-block;
+            width: 2px;
+            height: 0.86em;
+            margin-left: 4px;
+            vertical-align: -0.04em;
+            background: #ff8a00;
+            animation: nexaMobileCaret 720ms steps(1) infinite;
+          }
+
+          @keyframes nexaMobileCaret {
+            0%, 48% { opacity: 1; }
+            49%, 100% { opacity: 0; }
+          }
+
+          .nexa-mobile-hero-tagline {
+            display: block;
+            max-width: 325px;
+            margin: 9px 0 0;
+            opacity: 0;
+            transform: translateX(-56px);
+            color: rgba(255, 255, 255, 0.94);
+            font-size: 12.5px;
+            line-height: 1.45;
+            letter-spacing: -0.018em;
+            font-weight: 700;
+            text-shadow: 0 3px 18px rgba(0, 0, 0, 0.42);
+          }
+
+          .nexa-hero-text,
+          .nexa-hero-text.small,
+          .nexa-online-note,
+          .nexa-hero-points,
+          .nexa-secondary-cta {
+            display: none;
+          }
+
+          .nexa-hero-actions {
+            position: relative;
+            left: var(--mobile-book-x);
+            top: var(--mobile-book-y);
+            width: 100%;
+            margin-top: clamp(16px, 2.7svh, 26px);
+            display: flex;
+            opacity: 0;
+            transform: translateX(-72px);
+            justify-content: flex-start;
+            pointer-events: auto;
+          }
+
+          .nexa-mobile-hero-ready .nexa-mobile-hero-tagline {
+            animation: nexaMobileLeftIn 620ms cubic-bezier(.18,.85,.22,1) 80ms both;
+          }
+
+          .nexa-mobile-hero-ready .nexa-hero-actions {
+            animation: nexaMobileLeftIn 680ms cubic-bezier(.18,.85,.22,1) 180ms both;
+          }
+
+          @keyframes nexaMobileLeftIn {
+            from { opacity: 0; transform: translateX(-72px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+
+          .nexa-primary-cta {
+            position: relative;
+            width: auto;
+            min-width: 224px;
+            min-height: 56px;
+            padding: 0 29px;
+            overflow: hidden;
+            border: 2px solid rgba(255, 255, 255, 0.95);
+            background: linear-gradient(135deg, #ff6500 0%, #ff8a00 58%, #ff9f25 100%);
+            color: #ffffff;
+            box-shadow:
+              0 18px 42px rgba(255, 122, 0, 0.38),
+              0 0 0 0 rgba(255, 122, 0, 0.42);
+            font-size: 14px;
+            letter-spacing: 0;
+            animation: nexaMobilePremiumHeartbeat 1.8s ease-in-out infinite;
+          }
+
+          .nexa-primary-cta::after {
+            content: "";
+            position: absolute;
+            top: -35%;
+            left: -35%;
+            width: 28%;
+            height: 170%;
+            transform: rotate(18deg);
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+            animation: nexaMobileShine 2.8s ease-in-out infinite;
+          }
+
+          .nexa-cta-desktop-label {
+            display: none;
+          }
+
+          .nexa-cta-mobile-label {
+            position: relative;
+            z-index: 2;
+            display: inline;
+          }
+
+          @keyframes nexaMobilePremiumHeartbeat {
+            0%, 100% {
+              transform: scale(1);
+              box-shadow: 0 18px 42px rgba(255, 122, 0, 0.38), 0 0 0 0 rgba(255, 122, 0, 0.36);
+            }
+            12% {
+              transform: scale(1.045);
+              box-shadow: 0 20px 46px rgba(255, 122, 0, 0.44), 0 0 0 8px rgba(255, 122, 0, 0.10);
+            }
+            24% {
+              transform: scale(1);
+            }
+            36% {
+              transform: scale(1.025);
+            }
+            48% {
+              transform: scale(1);
+            }
+          }
+
+          @keyframes nexaMobileShine {
+            0%, 55% { left: -45%; opacity: 0; }
+            62% { opacity: 0.85; }
+            78% { left: 120%; opacity: 0; }
+            100% { left: 120%; opacity: 0; }
+          }
+
+
+          .nexa-mobile-orange-arc {
+            position: absolute;
+            left: calc(-6% + var(--mobile-arc-x));
+            right: auto;
+            bottom: calc(-1px + var(--mobile-arc-y));
+            z-index: 5;
+            width: 112%;
+            height: var(--mobile-arc-height);
+            display: block;
+            overflow: hidden;
+            pointer-events: none;
+            filter: drop-shadow(0 -7px 20px rgba(255, 122, 0, 0.16));
+          }
+
+          .nexa-mobile-wave-svg {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            display: block;
+          }
+
+          .nexa-mobile-wave-copy {
+            position: absolute;
+            right: calc(9% - var(--mobile-arc-text-x));
+            bottom: calc(10px + var(--mobile-arc-text-y));
+            z-index: 2;
+            width: min(78%, 380px);
+            color: #ffffff;
+            text-align: right;
+            padding-left: 16px;
+            opacity: 0;
+            transform: translateX(64px);
+            text-shadow: 0 3px 18px rgba(0, 0, 0, 0.2);
+          }
+
+          .nexa-mobile-wave-copy strong {
+            display: block;
+            font-size: 14px;
+            line-height: 1.12;
+            font-weight: 900;
+            letter-spacing: -0.03em;
+          }
+
+          .nexa-mobile-wave-copy span {
+            display: block;
+            margin-top: 5px;
+            font-size: 10.4px;
+            line-height: 1.35;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            opacity: 0.96;
+          }
+
+          .nexa-mobile-hero-ready .nexa-mobile-wave-copy {
+            animation: nexaMobileWaveCopyIn 680ms cubic-bezier(.18,.85,.22,1) 220ms both;
+          }
+
+          @keyframes nexaMobileWaveCopyIn {
+            from { opacity: 0; transform: translateX(64px); }
+            to { opacity: 1; transform: translateX(0); }
+          }
+
+          .nexa-trust-section {
+            display: none;
+          }
+
+          .nexa-fast-info-section {
+            padding: 30px 12px 26px;
+            background: #ffffff;
+          }
+
+          .nexa-fast-info-grid {
+            max-width: 560px;
+            margin: 0 auto;
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 24px 8px;
+            align-items: start;
+          }
+
+          .nexa-included-item {
+            min-width: 0;
+            padding: 0 2px;
+            text-align: center;
+          }
+
+          .nexa-orange-check {
+            top: -2px;
+            right: 8%;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 999px;
+            background: #ff7a00;
+            color: #ffffff;
+            font-size: 11px;
+            text-shadow: none;
+            box-shadow: 0 7px 18px rgba(255, 122, 0, 0.23);
+          }
+
+          .nexa-included-image-wrap {
+            height: 78px;
+          }
+
+          .nexa-included-image {
+            width: 100%;
+            max-width: 94px;
+            height: 74px;
+            object-fit: contain;
+          }
+
+          .nexa-included-item strong {
+            margin-top: 8px;
+            min-height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #15141c;
+            font-size: 12.5px;
+            line-height: 1.12;
+            letter-spacing: -0.035em;
+            font-weight: 900;
+          }
+
+          .nexa-included-item p {
+            max-width: 116px;
+            margin: 3px auto 0;
+            color: #777582;
+            font-size: 10px;
+            line-height: 1.28;
+            font-weight: 600;
+          }
+
+          .nexa-fast-info-grid .nexa-included-item:nth-child(4) {
+            grid-column: 1 / 2;
+            transform: translateX(52%);
+          }
+
+          .nexa-fast-info-grid .nexa-included-item:nth-child(5) {
+            grid-column: 2 / 3;
+            transform: translateX(52%);
+          }
+
+          .nexa-mobile-action-section {
+            padding: 0 16px 34px;
+            display: grid;
+            gap: 12px;
+            background: #ffffff;
+          }
+
+          .nexa-mobile-main-cta,
+          .nexa-mobile-contact-cta {
+            width: 100%;
+            min-height: 56px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 14px;
+            text-decoration: none;
+            font-size: 12.5px;
+            font-weight: 900;
+            letter-spacing: -0.02em;
+          }
+
+          .nexa-mobile-main-cta {
+            background: #111116;
+            color: #ffffff;
+            box-shadow: 0 16px 34px rgba(17, 17, 22, 0.16);
+          }
+
+          .nexa-mobile-main-cta span {
+            color: #ff7a00;
+            font-size: 23px;
+            line-height: 1;
+          }
+
+          .nexa-mobile-contact-cta {
+            min-height: 52px;
+            border: 1px solid rgba(17, 17, 22, 0.12);
+            background: #ffffff;
+            color: #171720;
+          }
+
+          .nexa-components-section:first-of-type {
+            border-top: 1px solid rgba(17, 17, 22, 0.05);
+          }
+
+          .nexa-content-section,
+          .nexa-how-section,
+          .nexa-seo-text-section,
+          .nexa-faq-section {
+            padding-top: 62px;
+            padding-bottom: 62px;
+          }
+        }
+
+        @media (max-width: 420px) {
+          .nexa-seo-page {
+            /* EXTRA SMALL PHONE OVERRIDES - edit these if needed */
+            --mobile-book-x: 0px;
+            --mobile-book-y: 100px;
+            --mobile-arc-x: 0px;
+            --mobile-arc-y: 20px;
+            --mobile-arc-height: 124px;
+            --mobile-arc-text-x: 0px;
+            --mobile-arc-text-y: 12px;
+          }
+
+          .nexa-hero-copy {
+            min-height: calc(100svh - 160px);
+            padding: 0px 18px 24px;
+transform: translateY(-30px);
+          }
+
+          .nexa-hero-copy h1 {
+            max-width: 300px;
+            font-size: 31px;
+          }
+
+          .nexa-mobile-hero-tagline {
+            max-width: 290px;
+            font-size: 12.5px;
+          }
+
+          .nexa-primary-cta {
+            min-width: 210px;
+            min-height: 54px;
+            padding: 0 24px;
+            font-size: 13px;
+          }
+
+          .nexa-photo-card-top .nexa-hero-image {
+            object-position: 54% center;
+            filter: brightness(1.16) saturate(1.04) contrast(0.95);
+            transform: scale(0.98);
+          }
+
+          .nexa-fast-info-section {
+            padding-left: 9px;
+            padding-right: 9px;
+          }
+
+          .nexa-fast-info-grid {
+            gap: 22px 6px;
+          }
+
+          .nexa-included-image-wrap {
+            height: 72px;
+          }
+
+          .nexa-included-image {
+            max-width: 86px;
+            height: 68px;
+          }
+
+          .nexa-included-item strong {
+            font-size: 12px;
+          }
+
+          .nexa-included-item p {
+            max-width: 108px;
+            font-size: 9.5px;
+          }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .nexa-seo-book-button,
           .nexa-primary-cta,
@@ -2324,7 +2922,16 @@ export default async function RentAScooterMallorcaPage({
           .nexa-seo-contact-button,
           .nexa-scroll-arrows span,
           .nexa-hide-on-scroll,
-          .nexa-scroll-arrows {
+          .nexa-scroll-arrows,
+          .nexa-primary-cta::after {
+            animation: none !important;
+          }
+
+          .nexa-mobile-hero-tagline,
+          .nexa-hero-actions,
+          .nexa-mobile-wave-copy {
+            opacity: 1 !important;
+            transform: none !important;
             animation: none !important;
           }
 
