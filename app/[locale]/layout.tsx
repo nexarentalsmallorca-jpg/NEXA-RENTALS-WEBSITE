@@ -3,6 +3,7 @@
 import "../globals.css";
 
 import type { Metadata } from "next";
+import Script from "next/script";
 import { Inter, Playfair_Display, Poppins } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -85,6 +86,22 @@ export default async function LocaleLayout({ children, params }: Props) {
       className={`${inter.variable} ${playfair.variable} ${poppins.variable}`}
       suppressHydrationWarning
     >
+      <head>
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=AW-18058340467"
+          strategy="afterInteractive"
+        />
+
+        <Script id="google-ads-tag" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'AW-18058340467');
+          `}
+        </Script>
+      </head>
+
       <body className="overflow-x-clip" suppressHydrationWarning>
         <NextIntlClientProvider locale={locale} messages={messages}>
           {children}
