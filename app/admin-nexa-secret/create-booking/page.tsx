@@ -8,6 +8,10 @@ import {
   setManualBookingsLocalStorage,
   stripBookingForLocalStorage,
 } from "@/lib/manualBookingsLocalStorage";
+import CustomerDocumentsPanel, {
+  type CustomerDocumentAutofill,
+  type CustomerDocumentBundle,
+} from "./CustomerDocumentsPanel";
 
 type PaymentMethod = "cash" | "card" | "";
 type BookingAction = "rent_now" | "reserve_now";
@@ -136,6 +140,7 @@ type ManualBooking = {
     drive?: any;
     generatedAt?: string;
   };
+  customerDocuments?: CustomerDocumentBundle | null;
 };
 
 type OnlineBookingRow = {
@@ -834,6 +839,9 @@ export default function CreateBookingPage() {
   const [isGeneratingContract, setIsGeneratingContract] = useState(false);
   const [isLoadingOnlineBookings, setIsLoadingOnlineBookings] = useState(true);
   const [selectedRouteIds, setSelectedRouteIds] = useState<string[]>([]);
+  const [customerDocuments, setCustomerDocuments] =
+    useState<CustomerDocumentBundle | null>(null);
+  const [documentPanelResetKey, setDocumentPanelResetKey] = useState(0);
 
   const timeOptions = useMemo(() => generateTimeOptions(), []);
 
@@ -1028,6 +1036,30 @@ export default function CreateBookingPage() {
             pagado: value,
           }
         : {}),
+    }));
+  }
+
+  function applyCustomerDocumentAutofill(values: CustomerDocumentAutofill) {
+    setForm((prev) => ({
+      ...prev,
+
+      // Never destroy information already typed by the admin.
+      // AI values only fill fields that are still empty.
+      nombreCliente:
+        prev.nombreCliente.trim() || String(values.nombreCliente || "").trim(),
+      dniPasaporte:
+        prev.dniPasaporte.trim() || String(values.dniPasaporte || "").trim(),
+      direccion:
+        prev.direccion.trim() || String(values.direccion || "").trim(),
+      permisoConducir:
+        prev.permisoConducir.trim() ||
+        String(values.permisoConducir || "").trim(),
+      paisExpedicion:
+        prev.paisExpedicion.trim() ||
+        String(values.paisExpedicion || "").trim(),
+      fechaCaducidad:
+        prev.fechaCaducidad.trim() ||
+        String(values.fechaCaducidad || "").trim(),
     }));
   }
 
@@ -1353,6 +1385,7 @@ export default function CreateBookingPage() {
       source: "Manual",
       bookingAction,
       vehicle: selectedVehicle,
+      customerDocuments,
       contractData: {
         ...form,
         email: form.email.trim(),
@@ -1422,6 +1455,8 @@ export default function CreateBookingPage() {
 
     setBookingAction("rent_now");
     setSelectedRouteIds([]);
+    setCustomerDocuments(null);
+    setDocumentPanelResetKey((current) => current + 1);
 
     window.setTimeout(() => {
       window.scrollTo({
@@ -1644,6 +1679,14 @@ export default function CreateBookingPage() {
                 Datos del Cliente
               </h3>
             </div>
+
+            <CustomerDocumentsPanel
+              key={documentPanelResetKey}
+              contractNumber={form.numeroContrato || nextContractNumber}
+              vehicleCode={form.codigoVehiculo}
+              onAutofill={applyCustomerDocumentAutofill}
+              onBundleChange={setCustomerDocuments}
+            />
 
             <div className="grid gap-4 md:grid-cols-2">
               <input
