@@ -1,8 +1,14 @@
+
 import createMiddleware from "next-intl/middleware";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 
-import { defaultLocale, locales, type Locale } from "./i18n/routing";
+import {
+  defaultLocale,
+  locales,
+  type Locale,
+} from "./i18n/routing";
+
 import {
   SEO_LANGUAGES,
   seoRouteGroups,
@@ -23,14 +29,12 @@ type SeoRouteTarget = {
 };
 
 /*
-  Creates one lookup covering all 110 campaign URLs.
-
-  Examples:
-  /scooter-rental-magaluf -> English
-  /roller-mieten-magaluf -> German
-  /location-scooter-magaluf -> French
+  All SEO campaign URLs.
 */
-const SEO_ROUTE_TARGETS = new Map<string, SeoRouteTarget>();
+const SEO_ROUTE_TARGETS = new Map<
+  string,
+  SeoRouteTarget
+>();
 
 for (const group of seoRouteGroups) {
   for (const language of SEO_LANGUAGES) {
@@ -44,11 +48,7 @@ for (const group of seoRouteGroups) {
 }
 
 /*
-  Legacy SEO pages that should redirect to the localized homepage.
-
-  IMPORTANT:
-  /scooter-rental-mallorca is NOT here anymore because it is now
-  an active SEO landing page.
+  Legacy SEO redirects.
 */
 const SEO_REDIRECT_PATHS = new Set([
   "/best-scooter-rental-magaluf",
@@ -60,8 +60,13 @@ const SEO_REDIRECT_PATHS = new Set([
   "/rent-scooter-mallorca-125cc",
 ]);
 
-function hasLocale(pathSegment: string | undefined): pathSegment is Locale {
-  return Boolean(pathSegment && locales.includes(pathSegment as Locale));
+function hasLocale(
+  pathSegment: string | undefined
+): pathSegment is Locale {
+  return Boolean(
+    pathSegment &&
+      locales.includes(pathSegment as Locale)
+  );
 }
 
 function isPublicAssetPath(pathname: string) {
@@ -87,132 +92,324 @@ function normalizePath(pathname: string) {
   return pathname.replace(/\/+$/, "");
 }
 
-export default function middleware(request: NextRequest) {
+/*
+  Convert a byte array into lowercase hexadecimal.
+*/
+function bytesToHex(bytes: Uint8Array): string {
+  return Array.from(bytes)
+    .map((byte) =>
+      byte.toString(16).padStart(2, "0")
+    )
+    .join("");
+}
+
+/*
+  Verify the signed admin session.
+
+  Token format:
+  v1.expiration.nonce.signature
+
+  The login API signs the payload using
+  HMAC-SHA256 and NEXA_ADMIN_SESSION_SECRET.
+*/
+async function verifyAdminSession(
+  request: NextRequest
+): Promise<boolean> {
+  const token = request.cookies.get(
+    ADMIN_COOKIE_NAME
+  )?.value;
+
+  const secret =
+    process.env.NEXA_ADMIN_SESSION_SECRET;
+
+  if (!token || !secret || secret.length < 32) {
+    return false;
+  }
+
+  const parts = token.split(".");
+
+  if (parts.length !== 4) {
+    return false;
+  }
+
+  const [
+    version,
+    expiresText,
+    nonce,
+    providedSignature,
+  ] = parts;
+
+  if (version !== "v1") {
+    return false;
+  }
+
+  if (!/^\d+$/.test(expiresText)) {
+    return false;
+  }
+
+  if (!/^[a-f0-9]{32}$/.test(nonce)) {
+    return false;
+  }
+
+  if (!/^[a-f0-9]{64}$/.test(providedSignature)) {
+    return false;
+  }
+
+  const expiresAt = Number(expiresText);
+
+  if (
+    !Number.isSafeInteger(expiresAt) ||
+    expiresAt <= Math.floor(Date.now() / 1000)
+  ) {
+    return false;
+  }
+
+  try {
+    const encoder = new TextEncoder();
+
+    const key = await crypto.subtle.importKey(
+      "raw",
+      encoder.encode(secret),
+      {
+        name: "HMAC",
+        hash: "SHA-256",
+      },
+      false,
+      ["sign"]
+    );
+
+    const payload =
+      `${version}.${expiresText}.${nonce}`;
+
+    const signature = await crypto.subtle.sign(
+      "HMAC",
+      key,
+      encoder.encode(payload)
+    );
+
+    const expectedSignature = bytesToHex(
+      new Uint8Array(signature)
+    );
+
+    /*
+      Constant-time comparison is handled
+      by verifying the HMAC using Web Crypto
+      instead of comparing strings directly.
+    */
+
+    const signatureBytes = new Uint8Array(32);
+
+    for (let i = 0; i < 32; i++) {
+      signatureBytes[i] = parseInt(
+        providedSignature.slice(
+          i * 2,
+          i * 2 + 2
+        ),
+        16
+      );
+    }
+
+    return crypto.subtle.verify(
+      "HMAC",
+      key,
+      signatureBytes,
+      encoder.encode(payload)
+    );
+  } catch (error) {
+    console.error(
+      "NEXA admin session verification error:",
+      error
+    );
+
+    return false;
+  }
+}
+
+export default async function middleware(
+  request: NextRequest
+) {
   const { pathname } = request.nextUrl;
 
-  // Skip assets, APIs and internal Next.js requests.
+  /*
+    Skip APIs, assets and internal Next.js
+    requests.
+
+    Private fleet APIs perform their own
+    server-side session verification.
+  */
   if (isPublicAssetPath(pathname)) {
     return NextResponse.next();
   }
 
-  const segments = pathname.split("/").filter(Boolean);
+  const segments = pathname
+    .split("/")
+    .filter(Boolean);
+
   const firstSegment = segments[0];
-  const hasLocalePrefix = hasLocale(firstSegment);
+
+  const hasLocalePrefix = hasLocale(
+    firstSegment
+  );
 
   const pathWithoutLocale = hasLocalePrefix
     ? `/${segments.slice(1).join("/")}`
     : pathname;
 
-  const cleanPathWithoutLocale = normalizePath(pathWithoutLocale);
+  const cleanPathWithoutLocale = normalizePath(
+    pathWithoutLocale
+  );
 
   const isAdminRoute =
-    cleanPathWithoutLocale === "/admin-nexa-secret" ||
-    cleanPathWithoutLocale.startsWith("/admin-nexa-secret/");
+    cleanPathWithoutLocale ===
+      "/admin-nexa-secret" ||
+    cleanPathWithoutLocale.startsWith(
+      "/admin-nexa-secret/"
+    );
 
   const isAdminLoginRoute =
-    cleanPathWithoutLocale === "/admin-nexa-secret/login";
+    cleanPathWithoutLocale ===
+    "/admin-nexa-secret/login";
 
   /*
-    Force every SEO campaign slug onto its intended language.
-
-    Examples:
-
-    /roller-mieten-magaluf
-      -> /de/roller-mieten-magaluf
-
-    /en/roller-mieten-magaluf
-      -> /de/roller-mieten-magaluf
-
-    /de/scooter-rental-magaluf
-      -> /en/scooter-rental-magaluf
+    SEO campaign language redirects.
   */
-  const seoRouteTarget = SEO_ROUTE_TARGETS.get(cleanPathWithoutLocale);
+  const seoRouteTarget = SEO_ROUTE_TARGETS.get(
+    cleanPathWithoutLocale
+  );
 
   if (
     seoRouteTarget &&
-    (!hasLocalePrefix || firstSegment !== seoRouteTarget.language)
+    (
+      !hasLocalePrefix ||
+      firstSegment !== seoRouteTarget.language
+    )
   ) {
-    const redirectUrl = request.nextUrl.clone();
+    const redirectUrl =
+      request.nextUrl.clone();
 
     redirectUrl.pathname =
       `/${seoRouteTarget.language}${seoRouteTarget.path}`;
 
-    return NextResponse.redirect(redirectUrl, 308);
+    return NextResponse.redirect(
+      redirectUrl,
+      308
+    );
   }
 
   /*
-    Redirect ONLY old legacy SEO pages to the localized homepage.
+    Legacy SEO redirects.
   */
-  if (SEO_REDIRECT_PATHS.has(cleanPathWithoutLocale)) {
-    const redirectUrl = request.nextUrl.clone();
+  if (
+    SEO_REDIRECT_PATHS.has(
+      cleanPathWithoutLocale
+    )
+  ) {
+    const redirectUrl =
+      request.nextUrl.clone();
 
     const localeToUse = hasLocalePrefix
       ? firstSegment
       : defaultLocale;
 
-    redirectUrl.pathname = `/${localeToUse}`;
+    redirectUrl.pathname =
+      `/${localeToUse}`;
+
     redirectUrl.search = "";
 
-    return NextResponse.redirect(redirectUrl, 308);
+    return NextResponse.redirect(
+      redirectUrl,
+      308
+    );
   }
 
   /*
-    Vehicles route should open the localized Home showroom.
-
-    /en/vehicles -> /en/Home
-    /vehicles    -> /en/Home
+    Vehicle showroom redirects.
   */
-  if (cleanPathWithoutLocale === "/vehicles") {
-    const redirectUrl = request.nextUrl.clone();
+  if (
+    cleanPathWithoutLocale === "/vehicles"
+  ) {
+    const redirectUrl =
+      request.nextUrl.clone();
 
     const localeToUse = hasLocalePrefix
       ? firstSegment
       : defaultLocale;
 
-    redirectUrl.pathname = `/${localeToUse}/Home`;
+    redirectUrl.pathname =
+      `/${localeToUse}/Home`;
+
     redirectUrl.search = "";
 
-    return NextResponse.redirect(redirectUrl, 308);
+    return NextResponse.redirect(
+      redirectUrl,
+      308
+    );
   }
 
   /*
-    Admin stays outside the language routes.
+    Admin routes stay outside next-intl.
 
-    /en/admin-nexa-secret -> /admin-nexa-secret
+    /en/admin-nexa-secret
+      -> /admin-nexa-secret
   */
-  if (hasLocalePrefix && isAdminRoute) {
-    const cleanAdminUrl = request.nextUrl.clone();
+  if (
+    hasLocalePrefix &&
+    isAdminRoute
+  ) {
+    const cleanAdminUrl =
+      request.nextUrl.clone();
 
-    cleanAdminUrl.pathname = cleanPathWithoutLocale;
+    cleanAdminUrl.pathname =
+      cleanPathWithoutLocale;
 
-    return NextResponse.redirect(cleanAdminUrl);
+    return NextResponse.redirect(
+      cleanAdminUrl
+    );
   }
 
-  // The admin login page must remain publicly reachable.
+  /*
+    Login page is publicly accessible.
+  */
   if (isAdminLoginRoute) {
     return NextResponse.next();
   }
 
-  // Protect all private admin pages.
+  /*
+    Protect private admin pages using
+    the signed session.
+  */
   if (isAdminRoute) {
-    const adminToken = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
+    const authenticated =
+      await verifyAdminSession(request);
 
-    if (adminToken !== "active") {
-      const loginUrl = request.nextUrl.clone();
+    if (!authenticated) {
+      const loginUrl =
+        request.nextUrl.clone();
 
-      loginUrl.pathname = "/admin-nexa-secret/login";
-      loginUrl.searchParams.set("next", cleanPathWithoutLocale);
+      loginUrl.pathname =
+        "/admin-nexa-secret/login";
 
-      return NextResponse.redirect(loginUrl);
+      loginUrl.searchParams.set(
+        "next",
+        cleanPathWithoutLocale
+      );
+
+      return NextResponse.redirect(
+        loginUrl
+      );
     }
 
     return NextResponse.next();
   }
 
-  // Everything else uses the normal NextIntl language system.
+  /*
+    All other pages use next-intl.
+  */
   return intlMiddleware(request);
 }
 
 export const config = {
-  matcher: ["/((?!api|_next|.*\\..*).*)"],
+  matcher: [
+    "/((?!api|_next|.*\\..*).*)",
+  ],
 };
