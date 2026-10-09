@@ -15,6 +15,10 @@ import {
   type SeoLanguage,
 } from "./lib/seoRoutes";
 
+export const config = {
+  matcher: ["/((?!api|_next|.*\\..*).*)"],
+};
+
 const intlMiddleware = createMiddleware({
   locales: [...locales],
   defaultLocale,
@@ -29,8 +33,12 @@ type SeoRouteTarget = {
 };
 
 /*
-  All SEO campaign URLs.
+  SEO CAMPAIGN ROUTES
+
+  Preserve all existing campaign URLs
+  and their intended languages.
 */
+
 const SEO_ROUTE_TARGETS = new Map<
   string,
   SeoRouteTarget
@@ -48,8 +56,12 @@ for (const group of seoRouteGroups) {
 }
 
 /*
-  Legacy SEO redirects.
+  LEGACY SEO REDIRECTS
+
+  /scooter-rental-mallorca remains active
+  and must not be redirected.
 */
+
 const SEO_REDIRECT_PATHS = new Set([
   "/best-scooter-rental-magaluf",
   "/best-scooter-rental-mallorca",
@@ -69,6 +81,14 @@ function hasLocale(
   );
 }
 
+function normalizePath(pathname: string) {
+  if (!pathname || pathname === "/") {
+    return "/";
+  }
+
+  return pathname.replace(/\/+$/, "");
+}
+
 function isPublicAssetPath(pathname: string) {
   return (
     pathname.startsWith("/_next") ||
@@ -84,34 +104,24 @@ function isPublicAssetPath(pathname: string) {
   );
 }
 
-function normalizePath(pathname: string) {
-  if (!pathname || pathname === "/") {
-    return "/";
-  }
-
-  return pathname.replace(/\/+$/, "");
-}
-
 /*
-  Convert a byte array into lowercase hexadecimal.
-*/
-function bytesToHex(bytes: Uint8Array): string {
-  return Array.from(bytes)
-    .map((byte) =>
-      byte.toString(16).padStart(2, "0")
+  ADMIN SESSION VERIFICATION
+
+  Compatible with the signed session created
+  by app/api/admin/login/route.ts.
+
+  Token:
+    v1.expiration.nonce.signature
+
+  Signature:
+    HMAC-SHA256(
+      NEXA_ADMIN_SESSION_SECRET,
+      "v1.expiration.nonce"
     )
-    .join("");
-}
 
-/*
-  Verify the signed admin session.
-
-  Token format:
-  v1.expiration.nonce.signature
-
-  The login API signs the payload using
-  HMAC-SHA256 and NEXA_ADMIN_SESSION_SECRET.
+  Uses Web Crypto, not Node.js crypto.
 */
+
 async function verifyAdminSession(
   request: NextRequest
 ): Promise<boolean> {
@@ -122,7 +132,11 @@ async function verifyAdminSession(
   const secret =
     process.env.NEXA_ADMIN_SESSION_SECRET;
 
-  if (!token || !secret || secret.length < 32) {
+  if (
+    !token ||
+    !secret ||
+    secret.length < 32
+  ) {
     return false;
   }
 
@@ -136,7 +150,7 @@ async function verifyAdminSession(
     version,
     expiresText,
     nonce,
-    providedSignature,
+    signatureHex,
   ] = parts;
 
   if (version !== "v1") {
@@ -151,15 +165,16 @@ async function verifyAdminSession(
     return false;
   }
 
-  if (!/^[a-f0-9]{64}$/.test(providedSignature)) {
+  if (!/^[a-f0-9]{64}$/.test(signatureHex)) {
     return false;
   }
 
   const expiresAt = Number(expiresText);
+  const now = Math.floor(Date.now() / 1000);
 
   if (
     !Number.isSafeInteger(expiresAt) ||
-    expiresAt <= Math.floor(Date.now() / 1000)
+    expiresAt <= now
   ) {
     return false;
   }
@@ -175,41 +190,25 @@ async function verifyAdminSession(
         hash: "SHA-256",
       },
       false,
-      ["sign"]
+      ["verify"]
     );
-
-    const payload =
-      `${version}.${expiresText}.${nonce}`;
-
-    const signature = await crypto.subtle.sign(
-      "HMAC",
-      key,
-      encoder.encode(payload)
-    );
-
-    const expectedSignature = bytesToHex(
-      new Uint8Array(signature)
-    );
-
-    /*
-      Constant-time comparison is handled
-      by verifying the HMAC using Web Crypto
-      instead of comparing strings directly.
-    */
 
     const signatureBytes = new Uint8Array(32);
 
-    for (let i = 0; i < 32; i++) {
-      signatureBytes[i] = parseInt(
-        providedSignature.slice(
-          i * 2,
-          i * 2 + 2
+    for (let index = 0; index < 32; index++) {
+      signatureBytes[index] = Number.parseInt(
+        signatureHex.slice(
+          index * 2,
+          index * 2 + 2
         ),
         16
       );
     }
 
-    return crypto.subtle.verify(
+    const payload =
+      `${version}.${expiresText}.${nonce}`;
+
+    return await crypto.subtle.verify(
       "HMAC",
       key,
       signatureBytes,
@@ -217,7 +216,7 @@ async function verifyAdminSession(
     );
   } catch (error) {
     console.error(
-      "NEXA admin session verification error:",
+      "NEXA admin session verification failed:",
       error
     );
 
@@ -225,21 +224,60 @@ async function verifyAdminSession(
   }
 }
 
+function redirectToAdminLogin(
+  request: NextRequest,
+  requestedPath: string
+) {
+  const loginUrl = request.nextUrl.clone();
+
+  loginUrl.pathname =
+    "/admin-nexa-secret/login";
+
+  loginUrl.search = "";
+
+  loginUrl.searchParams.set(
+    "next",
+    requestedPath
+  );
+
+  return NextResponse.redirect(loginUrl);
+}
+
+/*
+  MAIN ROUTING MIDDLEWARE
+
+  Public website:
+    next-intl
+
+  SEO campaign routes:
+    language-specific redirects
+
+  Private admin:
+    signed-session verification
+
+  Public QR pages:
+    normal next-intl routing
+*/
+
 export default async function middleware(
   request: NextRequest
 ) {
   const { pathname } = request.nextUrl;
 
   /*
-    Skip APIs, assets and internal Next.js
-    requests.
+    1. Ignore API endpoints and static assets.
 
-    Private fleet APIs perform their own
-    server-side session verification.
+    Private APIs verify admin sessions
+    independently.
   */
+
   if (isPublicAssetPath(pathname)) {
     return NextResponse.next();
   }
+
+  /*
+    2. Detect locale prefixes.
+  */
 
   const segments = pathname
     .split("/")
@@ -259,6 +297,10 @@ export default async function middleware(
     pathWithoutLocale
   );
 
+  /*
+    3. Identify private admin routes.
+  */
+
   const isAdminRoute =
     cleanPathWithoutLocale ===
       "/admin-nexa-secret" ||
@@ -271,8 +313,11 @@ export default async function middleware(
     "/admin-nexa-secret/login";
 
   /*
-    SEO campaign language redirects.
+    4. SEO campaign language redirects.
+
+    Preserve all existing campaign routes.
   */
+
   const seoRouteTarget = SEO_ROUTE_TARGETS.get(
     cleanPathWithoutLocale
   );
@@ -297,8 +342,9 @@ export default async function middleware(
   }
 
   /*
-    Legacy SEO redirects.
+    5. Legacy SEO redirects.
   */
+
   if (
     SEO_REDIRECT_PATHS.has(
       cleanPathWithoutLocale
@@ -323,8 +369,12 @@ export default async function middleware(
   }
 
   /*
-    Vehicle showroom redirects.
+    6. Vehicle showroom redirects.
+
+    /vehicles -> /en/Home
+    /en/vehicles -> /en/Home
   */
+
   if (
     cleanPathWithoutLocale === "/vehicles"
   ) {
@@ -347,11 +397,12 @@ export default async function middleware(
   }
 
   /*
-    Admin routes stay outside next-intl.
+    7. Admin routes stay outside next-intl.
 
     /en/admin-nexa-secret
       -> /admin-nexa-secret
   */
+
   if (
     hasLocalePrefix &&
     isAdminRoute
@@ -368,34 +419,28 @@ export default async function middleware(
   }
 
   /*
-    Login page is publicly accessible.
+    8. Allow access to the admin login page.
   */
+
   if (isAdminLoginRoute) {
     return NextResponse.next();
   }
 
   /*
-    Protect private admin pages using
-    the signed session.
+    9. Protect all private admin pages.
+
+    Invalid, missing or expired sessions
+    redirect to the login page.
   */
+
   if (isAdminRoute) {
     const authenticated =
       await verifyAdminSession(request);
 
     if (!authenticated) {
-      const loginUrl =
-        request.nextUrl.clone();
-
-      loginUrl.pathname =
-        "/admin-nexa-secret/login";
-
-      loginUrl.searchParams.set(
-        "next",
+      return redirectToAdminLogin(
+        request,
         cleanPathWithoutLocale
-      );
-
-      return NextResponse.redirect(
-        loginUrl
       );
     }
 
@@ -403,13 +448,9 @@ export default async function middleware(
   }
 
   /*
-    All other pages use next-intl.
+    10. All other pages use normal
+    next-intl routing.
   */
+
   return intlMiddleware(request);
 }
-
-export const config = {
-  matcher: [
-    "/((?!api|_next|.*\\..*).*)",
-  ],
-};
