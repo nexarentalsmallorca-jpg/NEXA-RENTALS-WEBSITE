@@ -47,24 +47,31 @@ type AnalyzeResponse = {
   analyzedAt?: string;
 };
 
-type MobileSessionCreateResponse = {
+type MobileStatus =
+  | "waiting"
+  | "uploading"
+  | "processing"
+  | "ready"
+  | "expired";
+
+type MobileSessionResponse = {
   ok?: boolean;
   error?: string;
   sessionToken?: string;
   mobileUrl?: string;
-  expiresAt?: string;
 };
 
-type MobileSessionStatusResponse = {
+type MobileStatusResponse = {
   ok?: boolean;
   error?: string;
-  status?: "waiting" | "uploading" | "processing" | "ready" | "expired";
+  status?: MobileStatus;
   uploadedCount?: number;
   bundle?: CustomerDocumentBundle | null;
 };
 
 const MAX_FILES = 30;
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
+const MAX_TOTAL_BYTES = 80 * 1024 * 1024;
 
 const ALLOWED_TYPES = new Set([
   "image/jpeg",
@@ -75,24 +82,36 @@ const ALLOWED_TYPES = new Set([
   "application/pdf",
 ]);
 
-function makeLocalKey(file: File, index: number) {
-  return `${file.name}-${file.size}-${file.lastModified}-${index}`;
-}
+const ALLOWED_EXTENSIONS = new Set([
+  "jpg",
+  "jpeg",
+  "png",
+  "webp",
+  "heic",
+  "heif",
+  "pdf",
+]);
 
 function formatBytes(bytes: number) {
   if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes < 1024 * 1024) {
+    return `${(bytes / 1024).toFixed(1)} KB`;
+  }
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-}
-
-function fileIcon(file: File) {
-  if (file.type === "application/pdf") return "PDF";
-  if (file.type.startsWith("image/")) return "IMG";
-  return "FILE";
 }
 
 function displayValue(value?: string) {
   return String(value || "").trim() || "No detectado";
+}
+
+function countFields(values?: CustomerDocumentAutofill) {
+  return Object.values(values || {}).filter(
+    (value) => Boolean(String(value || "").trim()),
+  ).length;
+}
+
+function getError(error: unknown, fallback: string) {
+  return error instanceof Error ? error.message : fallback;
 }
 
 export default function CustomerDocumentsPanel({
@@ -107,6 +126,7 @@ export default function CustomerDocumentsPanel({
   onBundleChange: (bundle: CustomerDocumentBundle | null) => void;
 }) {
   const inputRef = useRef<HTMLInputElement | null>(null);
+  const callbackRef = useRef(onBundleChange);
 
   const [items, setItems] = useState<LocalFileItem[]>([]);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
@@ -116,17 +136,27 @@ export default function CustomerDocumentsPanel({
 
   const [sessionToken, setSessionToken] = useState("");
   const [mobileUrl, setMobileUrl] = useState("");
-  const [mobileStatus, setMobileStatus] =
-    useState<MobileSessionStatusResponse["status"]>("waiting");
+  const [mobileStatus, setMobileStatus] = useState<MobileStatus>("waiting");
   const [mobileUploadedCount, setMobileUploadedCount] = useState(0);
   const [mobileSessionError, setMobileSessionError] = useState("");
   const [isCreatingSession, setIsCreatingSession] = useState(true);
+  const [isMobileProcessing, setIsMobileProcessing] = useState(false);
+
+  const processingRef = useRef(false);
+  const processingAttemptedRef = useRef(false);
+  const mobileResultRef = useRef("");
+  const mobileReadyRef = useRef(false);
+
+  useEffect(() => {
+    callbackRef.current = onBundleChange;
+  }, [onBundleChange]);
 
   const totalBytes = useMemo(
     () => items.reduce((sum, item) => sum + item.file.size, 0),
     [items],
   );
 
+  // Create QR session when the panel opens.
   useEffect(() => {
     let cancelled = false;
 
@@ -135,33 +165,51 @@ export default function CustomerDocumentsPanel({
       setMobileSessionError("");
 
       try {
-        const response = await fetch("/api/admin/documents/mobile-session", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contractNumber, vehicleCode }),
-        });
+        const response = await fetch(
+          "/api/admin/documents/mobile-session",
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            credentials: "same-origin",
+            body: JSON.stringify({
+              contractNumber,
+              vehicleCode,
+            }),
+          },
+        );
 
-        const data = (await response.json().catch(() => null)) as
-          | MobileSessionCreateResponse
-          | null;
+        const data = (await response.json().catch(
+          () => null,
+        )) as MobileSessionResponse | null;
 
-        if (!response.ok || !data?.ok || !data.sessionToken || !data.mobileUrl) {
+        if (
+          !response.ok ||
+          !data?.ok ||
+          !data.sessionToken ||
+          !data.mobileUrl
+        ) {
           throw new Error(
-            data?.error || `No se pudo crear la sesión QR (${response.status}).`,
+            data?.error ||
+              `No se pudo crear la sesión QR (${response.status}).`,
           );
         }
 
         if (cancelled) return;
 
+        processingAttemptedRef.current = false;
+        mobileReadyRef.current = false;
+        mobileResultRef.current = "";
+
         setSessionToken(data.sessionToken);
         setMobileUrl(data.mobileUrl);
         setMobileStatus("waiting");
-      } catch (caught: unknown) {
+        setMobileUploadedCount(0);
+      } catch (caught) {
         if (!cancelled) {
           setMobileSessionError(
-            caught instanceof Error
-              ? caught.message
-              : "No se pudo crear la sesión QR.",
+            getError(caught, "No se pudo crear la sesión QR."),
           );
         }
       } finally {
@@ -169,72 +217,183 @@ export default function CustomerDocumentsPanel({
       }
     }
 
-    createSession();
+    void createSession();
 
     return () => {
       cancelled = true;
     };
+    // Keep the QR session stable while booking fields change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Start AI processing only once per QR upload.
+  async function processMobileDocuments(token: string) {
+    if (
+      !token ||
+      processingRef.current ||
+      processingAttemptedRef.current ||
+      mobileReadyRef.current
+    ) {
+      return;
+    }
+
+    processingRef.current = true;
+    processingAttemptedRef.current = true;
+
+    setIsMobileProcessing(true);
+    setMobileSessionError("");
+    setStatus("Fotos recibidas. Analizando documentos con IA...");
+
+    try {
+      const response = await fetch(
+        "/api/admin/documents/mobile-session/process",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          credentials: "same-origin",
+          cache: "no-store",
+          body: JSON.stringify({ token }),
+        },
+      );
+
+      const data = (await response.json().catch(
+        () => null,
+      )) as {
+        ok?: boolean;
+        success?: boolean;
+        error?: string;
+        status?: string;
+      } | null;
+
+      if (!response.ok || !data?.ok) {
+        throw new Error(
+          data?.error ||
+            `Error al analizar documentos (${response.status}).`,
+        );
+      }
+
+      setStatus(
+        "Análisis terminado. Recibiendo los datos del cliente...",
+      );
+    } catch (caught) {
+      setMobileSessionError(
+        getError(caught, "No se pudieron analizar los documentos."),
+      );
+      setStatus(
+        "Las fotos están guardadas. Puedes reintentar el análisis.",
+      );
+    } finally {
+      processingRef.current = false;
+      setIsMobileProcessing(false);
+    }
+  }
+
+  function retryMobileProcessing() {
+    if (!sessionToken || processingRef.current) return;
+
+    processingAttemptedRef.current = false;
+    setMobileSessionError("");
+
+    void processMobileDocuments(sessionToken);
+  }
+
+  // Poll for uploaded photos and completed AI results.
   useEffect(() => {
     if (!sessionToken) return;
 
     let stopped = false;
+    let busy = false;
 
     async function poll() {
+      if (stopped || busy) return;
+      busy = true;
+
       try {
         const response = await fetch(
           `/api/admin/documents/mobile-session/status?token=${encodeURIComponent(
             sessionToken,
           )}`,
-          { cache: "no-store" },
+          {
+            cache: "no-store",
+            credentials: "same-origin",
+          },
         );
 
-        const data = (await response.json().catch(() => null)) as
-          | MobileSessionStatusResponse
-          | null;
+        const data = (await response.json().catch(
+          () => null,
+        )) as MobileStatusResponse | null;
 
         if (!response.ok || !data?.ok || stopped) return;
 
         if (data.status) setMobileStatus(data.status);
+
         if (typeof data.uploadedCount === "number") {
           setMobileUploadedCount(data.uploadedCount);
         }
 
+        // A completed bundle is the source of truth.
         if (data.bundle?.sessionId) {
-          setBundle(data.bundle);
-          onBundleChange(data.bundle);
+          mobileReadyRef.current = true;
+          processingAttemptedRef.current = true;
 
-          const count = Object.values(data.bundle.autofill || {}).filter((value) =>
-            Boolean(String(value || "").trim()),
-          ).length;
+          if (mobileResultRef.current !== data.bundle.sessionId) {
+            mobileResultRef.current = data.bundle.sessionId;
 
-          setStatus(
-            count
-              ? `Fotos recibidas desde el móvil. IA terminada: ${count} campos detectados.`
-              : "Fotos recibidas desde el móvil y vinculadas al contrato.",
+            setBundle(data.bundle);
+            callbackRef.current(data.bundle);
+            setMobileSessionError("");
+
+            const count = countFields(data.bundle.autofill);
+
+            setStatus(
+              count
+                ? `Fotos recibidas. IA terminada: ${count} campos detectados. Revisa y aplica los datos.`
+                : "Fotos recibidas y vinculadas al contrato.",
+            );
+          }
+
+          return;
+        }
+
+        // Upload endpoint now returns before AI processing.
+        // The laptop starts processing when files are ready.
+        if (
+          data.status === "processing" &&
+          (data.uploadedCount || 0) > 0 &&
+          !processingAttemptedRef.current &&
+          !processingRef.current
+        ) {
+          void processMobileDocuments(sessionToken);
+        }
+
+        if (data.status === "expired") {
+          setMobileSessionError(
+            "La sesión QR ha caducado. Abre de nuevo el formulario para generar otro QR.",
           );
         }
       } catch {
-        // The next poll can recover.
+        // Temporary network errors can recover on the next poll.
+      } finally {
+        busy = false;
       }
     }
 
-    poll();
-    const timer = window.setInterval(poll, 2500);
+    void poll();
+
+    const timer = window.setInterval(() => {
+      void poll();
+    }, 2500);
 
     return () => {
       stopped = true;
       window.clearInterval(timer);
     };
-  }, [sessionToken, onBundleChange]);
+  }, [sessionToken]);
 
   function openFilePicker() {
     inputRef.current?.click();
-  }
-
-  function cleanupPreview(item: LocalFileItem) {
-    if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
   }
 
   function handleSelectedFiles(files: FileList | null) {
@@ -253,39 +412,27 @@ export default function CustomerDocumentsPanel({
     const accepted: LocalFileItem[] = [];
 
     for (const [index, file] of incoming.entries()) {
-      const type = String(file.type || "").toLowerCase();
-      const extension = file.name.toLowerCase().split(".").pop() || "";
-      const extensionAllowed = [
-        "jpg",
-        "jpeg",
-        "png",
-        "webp",
-        "heic",
-        "heif",
-        "pdf",
-      ].includes(extension);
+      const type = file.type.toLowerCase();
+      const extension =
+        file.name.toLowerCase().split(".").pop() || "";
 
-      if (!ALLOWED_TYPES.has(type) && !extensionAllowed) {
-        setError(
-          `Archivo no permitido: ${file.name}. Usa JPG, PNG, WEBP, HEIC/HEIF o PDF.`,
-        );
+      if (
+        !ALLOWED_TYPES.has(type) &&
+        !ALLOWED_EXTENSIONS.has(extension)
+      ) {
+        setError(`Archivo no permitido: ${file.name}.`);
         continue;
       }
 
-      if (file.size <= 0) {
-        setError(`El archivo ${file.name} está vacío.`);
-        continue;
-      }
-
-      if (file.size > MAX_FILE_BYTES) {
+      if (file.size <= 0 || file.size > MAX_FILE_BYTES) {
         setError(
-          `${file.name} supera el máximo de ${formatBytes(MAX_FILE_BYTES)}.`,
+          `${file.name} está vacío o supera ${formatBytes(MAX_FILE_BYTES)}.`,
         );
         continue;
       }
 
       accepted.push({
-        key: makeLocalKey(file, items.length + index),
+        key: `${file.name}-${file.size}-${file.lastModified}-${index}-${crypto.randomUUID()}`,
         file,
         previewUrl: file.type.startsWith("image/")
           ? URL.createObjectURL(file)
@@ -295,9 +442,21 @@ export default function CustomerDocumentsPanel({
 
     if (!accepted.length) return;
 
+    const newTotal =
+      totalBytes +
+      accepted.reduce((sum, item) => sum + item.file.size, 0);
+
+    if (newTotal > MAX_TOTAL_BYTES) {
+      accepted.forEach((item) => {
+        if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+      });
+      setError("Los archivos superan el tamaño total permitido.");
+      return;
+    }
+
     setItems((current) => [...current, ...accepted]);
     setBundle(null);
-    onBundleChange(null);
+    callbackRef.current(null);
 
     if (inputRef.current) inputRef.current.value = "";
   }
@@ -305,26 +464,31 @@ export default function CustomerDocumentsPanel({
   function removeItem(key: string) {
     setItems((current) => {
       const found = current.find((item) => item.key === key);
-      if (found) cleanupPreview(found);
+      if (found?.previewUrl) URL.revokeObjectURL(found.previewUrl);
       return current.filter((item) => item.key !== key);
     });
 
     setBundle(null);
-    onBundleChange(null);
+    callbackRef.current(null);
     setStatus("");
     setError("");
   }
 
   function clearAll() {
-    items.forEach(cleanupPreview);
+    items.forEach((item) => {
+      if (item.previewUrl) URL.revokeObjectURL(item.previewUrl);
+    });
+
     setItems([]);
     setBundle(null);
-    onBundleChange(null);
+    callbackRef.current(null);
     setStatus("");
     setError("");
+
     if (inputRef.current) inputRef.current.value = "";
   }
 
+  // Preserve the existing desktop analysis endpoint.
   async function analyzeDocuments() {
     if (!items.length || isAnalyzing) return;
 
@@ -334,6 +498,7 @@ export default function CustomerDocumentsPanel({
 
     try {
       const formData = new FormData();
+
       formData.append("contractNumber", contractNumber || "");
       formData.append("vehicleCode", vehicleCode || "");
 
@@ -341,24 +506,27 @@ export default function CustomerDocumentsPanel({
         formData.append("documents", item.file, item.file.name);
       }
 
-      const response = await fetch("/api/admin/documents/analyze", {
-        method: "POST",
-        body: formData,
-      });
+      const response = await fetch(
+        "/api/admin/documents/analyze",
+        {
+          method: "POST",
+          credentials: "same-origin",
+          body: formData,
+        },
+      );
 
-      const rawText = await response.text();
-      const data = rawText ? (JSON.parse(rawText) as AnalyzeResponse) : {};
+      const data = (await response.json().catch(
+        () => null,
+      )) as AnalyzeResponse | null;
 
-      if (!response.ok || (!data.ok && !data.success)) {
+      if (
+        !response.ok ||
+        (!data?.ok && !data?.success) ||
+        !data?.sessionId
+      ) {
         throw new Error(
-          data.error ||
+          data?.error ||
             `No se pudieron analizar los documentos (${response.status}).`,
-        );
-      }
-
-      if (!data.sessionId) {
-        throw new Error(
-          "El servidor analizó los documentos pero no devolvió sessionId.",
         );
       }
 
@@ -367,30 +535,26 @@ export default function CustomerDocumentsPanel({
         files: Array.isArray(data.files) ? data.files : [],
         autofill: data.autofill || {},
         analyzedAt: data.analyzedAt || new Date().toISOString(),
-        warnings: Array.isArray(data.warnings) ? data.warnings : [],
+        warnings: Array.isArray(data.warnings)
+          ? data.warnings
+          : [],
       };
 
       setBundle(nextBundle);
-      onBundleChange(nextBundle);
+      callbackRef.current(nextBundle);
 
-      const extractedCount = Object.values(nextBundle.autofill || {}).filter(
-        (value) => Boolean(String(value || "").trim()),
-      ).length;
+      const count = countFields(nextBundle.autofill);
 
       setStatus(
-        extractedCount
-          ? `IA terminada. ${extractedCount} campos detectados. Revisa los datos y pulsa "Aplicar datos al formulario".`
+        count
+          ? `IA terminada. ${count} campos detectados. Revisa y aplica los datos.`
           : "IA terminada. Los documentos quedaron adjuntos.",
       );
-    } catch (caught: unknown) {
+    } catch (caught) {
       setError(
-        caught instanceof Error
-          ? caught.message
-          : "No se pudieron analizar los documentos.",
+        getError(caught, "No se pudieron analizar los documentos."),
       );
       setStatus("");
-      setBundle(null);
-      onBundleChange(null);
     } finally {
       setIsAnalyzing(false);
     }
@@ -398,9 +562,11 @@ export default function CustomerDocumentsPanel({
 
   function applyDetectedValues() {
     if (!bundle?.autofill) return;
+
     onAutofill(bundle.autofill);
+
     setStatus(
-      "Datos aplicados. Los campos que ya habías rellenado manualmente no se han sobrescrito.",
+      "Datos aplicados. Revisa la información antes de generar el contrato.",
     );
   }
 
@@ -410,6 +576,21 @@ export default function CustomerDocumentsPanel({
       )}`
     : "";
 
+  const mobileStatusLabel =
+    mobileStatus === "waiting"
+      ? "Esperando móvil"
+      : mobileStatus === "uploading"
+        ? "Recibiendo fotos"
+        : mobileStatus === "processing"
+          ? isMobileProcessing
+            ? "Analizando con IA"
+            : mobileSessionError
+              ? "Reintento disponible"
+              : "Preparando análisis"
+          : mobileStatus === "ready"
+            ? "Listo"
+            : "Caducado";
+
   return (
     <div className="rounded-[28px] border border-violet-400/20 bg-violet-500/[0.06] p-5">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
@@ -417,13 +598,15 @@ export default function CustomerDocumentsPanel({
           <p className="text-[11px] font-black uppercase tracking-[0.22em] text-violet-300">
             Documentos del cliente · IA
           </p>
+
           <h4 className="mt-2 text-xl font-black text-white">
             Escanear documentos con el móvil
           </h4>
+
           <p className="mt-2 max-w-2xl text-sm font-semibold leading-6 text-white/50">
-            Escanea el QR, haz las fotos del DNI/pasaporte y permiso de conducir,
-            y NEXA las recibirá en esta reserva. Si ya tienes los documentos en el
-            ordenador, usa “Subir archivos”.
+            Escanea el QR, haz fotos del DNI, pasaporte o permiso
+            de conducir y envíalas a NEXA OS. La IA analizará
+            los documentos automáticamente.
           </p>
         </div>
 
@@ -443,7 +626,9 @@ export default function CustomerDocumentsPanel({
         multiple
         accept=".jpg,.jpeg,.png,.webp,.heic,.heif,.pdf,image/jpeg,image/png,image/webp,image/heic,image/heif,application/pdf"
         className="hidden"
-        onChange={(event) => handleSelectedFiles(event.target.files)}
+        onChange={(event) =>
+          handleSelectedFiles(event.target.files)
+        }
       />
 
       <div className="mt-5 grid gap-4 lg:grid-cols-[230px_1fr]">
@@ -463,9 +648,12 @@ export default function CustomerDocumentsPanel({
             />
           ) : (
             <div className="px-4 text-center">
-              <p className="text-sm font-black text-red-600">QR no disponible</p>
+              <p className="text-sm font-black text-red-600">
+                QR no disponible
+              </p>
               <p className="mt-2 text-xs font-semibold text-black/50">
-                {mobileSessionError || "No se pudo crear la sesión móvil."}
+                {mobileSessionError ||
+                  "No se pudo crear la sesión móvil."}
               </p>
             </div>
           )}
@@ -475,35 +663,61 @@ export default function CustomerDocumentsPanel({
           <p className="text-[11px] font-black uppercase tracking-[0.18em] text-violet-300">
             Opción principal
           </p>
+
           <h5 className="mt-2 text-lg font-black text-white">
             Escanea el QR con la cámara del móvil
           </h5>
 
           <div className="mt-4 space-y-2 text-sm font-semibold leading-6 text-white/55">
             <p>1. Escanea este QR desde tu móvil.</p>
-            <p>2. Se abrirá la página privada de esta reserva.</p>
-            <p>3. Haz fotos del DNI/pasaporte y permiso de conducir.</p>
-            <p>4. Las imágenes aparecerán aquí y la IA leerá los datos.</p>
+            <p>2. Abre la página privada de documentos.</p>
+            <p>3. Haz fotos del DNI, pasaporte o permiso.</p>
+            <p>4. Envía las fotos a NEXA OS.</p>
+            <p>5. La IA detectará los datos del cliente.</p>
           </div>
 
           <div className="mt-5 flex flex-wrap gap-2 text-[11px] font-black">
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-white/55">
-              Estado:{" "}
-              {mobileStatus === "waiting"
-                ? "Esperando móvil"
-                : mobileStatus === "uploading"
-                  ? "Recibiendo fotos"
-                  : mobileStatus === "processing"
-                    ? "Analizando"
-                    : mobileStatus === "ready"
-                      ? "Listo"
-                      : "Caducado"}
+              Estado: {mobileStatusLabel}
             </span>
 
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-white/55">
-              {mobileUploadedCount} foto{mobileUploadedCount === 1 ? "" : "s"}
+              {mobileUploadedCount} foto
+              {mobileUploadedCount === 1 ? "" : "s"}
             </span>
           </div>
+
+          {isMobileProcessing ? (
+            <div className="mt-4 flex items-center gap-3 rounded-2xl border border-violet-400/20 bg-violet-500/10 p-3">
+              <div className="h-5 w-5 shrink-0 animate-spin rounded-full border-2 border-violet-300/20 border-t-violet-300" />
+              <p className="text-xs font-bold text-violet-200">
+                Leyendo documentos con IA. Las fotos ya están
+                guardadas.
+              </p>
+            </div>
+          ) : null}
+
+          {mobileSessionError ? (
+            <div className="mt-4 rounded-2xl border border-red-400/20 bg-red-500/10 p-3">
+              <p className="text-xs font-bold text-red-300">
+                {mobileSessionError}
+              </p>
+            </div>
+          ) : null}
+
+          {mobileStatus === "processing" &&
+          mobileUploadedCount > 0 &&
+          !isMobileProcessing &&
+          !mobileReadyRef.current &&
+          processingAttemptedRef.current ? (
+            <button
+              type="button"
+              onClick={retryMobileProcessing}
+              className="mt-4 w-full rounded-2xl border border-violet-400/30 bg-violet-500/15 px-4 py-3 text-xs font-black text-violet-200 transition hover:bg-violet-500/25"
+            >
+              ↻ Reintentar análisis sin volver a subir fotos
+            </button>
+          ) : null}
 
           {mobileUrl ? (
             <p className="mt-4 break-all text-[10px] font-semibold text-white/25">
@@ -524,9 +738,9 @@ export default function CustomerDocumentsPanel({
             </p>
           </div>
 
-          <div className="flex flex-wrap gap-2 text-[11px] font-black">
+          <div className="flex gap-2 text-[11px] font-black">
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-white/55">
-              {items.length} archivo{items.length === 1 ? "" : "s"}
+              {items.length} archivos
             </span>
             <span className="rounded-full border border-white/10 bg-white/[0.04] px-3 py-2 text-white/55">
               {formatBytes(totalBytes)}
@@ -560,7 +774,7 @@ export default function CustomerDocumentsPanel({
                   />
                 ) : (
                   <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl border border-white/10 bg-white/[0.05] text-[10px] font-black text-white/55">
-                    {fileIcon(item.file)}
+                    PDF
                   </div>
                 )}
 
@@ -577,7 +791,7 @@ export default function CustomerDocumentsPanel({
                   type="button"
                   onClick={() => removeItem(item.key)}
                   disabled={isAnalyzing}
-                  className="rounded-xl border border-red-400/15 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300"
+                  className="rounded-xl border border-red-400/15 bg-red-500/10 px-3 py-2 text-xs font-black text-red-300 disabled:opacity-50"
                 >
                   ✕
                 </button>
@@ -605,7 +819,7 @@ export default function CustomerDocumentsPanel({
               type="button"
               onClick={clearAll}
               disabled={isAnalyzing}
-              className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm font-black text-white/55"
+              className="rounded-2xl border border-white/10 bg-white/[0.04] px-5 py-4 text-sm font-black text-white/55 disabled:opacity-50"
             >
               Quitar todos
             </button>
@@ -635,13 +849,47 @@ export default function CustomerDocumentsPanel({
           </div>
 
           <div className="mt-4 grid gap-3 md:grid-cols-2">
-            <DetectedField label="Nombre completo" value={displayValue(bundle.autofill.nombreCliente)} />
-            <DetectedField label="DNI / Pasaporte" value={displayValue(bundle.autofill.dniPasaporte)} />
-            <DetectedField label="Dirección" value={displayValue(bundle.autofill.direccion)} />
-            <DetectedField label="Permiso de conducir" value={displayValue(bundle.autofill.permisoConducir)} />
-            <DetectedField label="País de expedición" value={displayValue(bundle.autofill.paisExpedicion)} />
-            <DetectedField label="Caducidad permiso" value={displayValue(bundle.autofill.fechaCaducidad)} />
+            <DetectedField
+              label="Nombre completo"
+              value={displayValue(bundle.autofill.nombreCliente)}
+            />
+            <DetectedField
+              label="DNI / Pasaporte"
+              value={displayValue(bundle.autofill.dniPasaporte)}
+            />
+            <DetectedField
+              label="Dirección"
+              value={displayValue(bundle.autofill.direccion)}
+            />
+            <DetectedField
+              label="Permiso de conducir"
+              value={displayValue(bundle.autofill.permisoConducir)}
+            />
+            <DetectedField
+              label="País de expedición"
+              value={displayValue(bundle.autofill.paisExpedicion)}
+            />
+            <DetectedField
+              label="Caducidad permiso"
+              value={displayValue(bundle.autofill.fechaCaducidad)}
+            />
           </div>
+
+          {bundle.warnings?.length ? (
+            <div className="mt-4 rounded-xl border border-amber-400/20 bg-amber-500/10 p-3">
+              <p className="text-xs font-black text-amber-200">
+                Avisos del análisis
+              </p>
+              {bundle.warnings.map((warning, index) => (
+                <p
+                  key={index}
+                  className="mt-1 text-xs font-semibold text-amber-100/70"
+                >
+                  {warning}
+                </p>
+              ))}
+            </div>
+          ) : null}
         </div>
       ) : null}
 
@@ -660,7 +908,13 @@ export default function CustomerDocumentsPanel({
   );
 }
 
-function DetectedField({ label, value }: { label: string; value: string }) {
+function DetectedField({
+  label,
+  value,
+}: {
+  label: string;
+  value: string;
+}) {
   const detected = value !== "No detectado";
 
   return (
