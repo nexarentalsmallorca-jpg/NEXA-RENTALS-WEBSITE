@@ -2,7 +2,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
 
 /*
   IMAGE SETTINGS
@@ -124,11 +124,12 @@ function getServiceRemainingText(remaining: number | null) {
 
 export default function PublicFleetPage() {
   const params = useParams();
-  const router = useRouter();
 
   const code = String(params?.code || "").toUpperCase();
 
-  const [data, setData] = useState<PublicFleetData | null>(null);
+  const [data, setData] = useState<PublicFleetData | null>(
+    null
+  );
   const [loading, setLoading] = useState(true);
   const [errorMessage, setErrorMessage] = useState("");
 
@@ -268,6 +269,7 @@ export default function PublicFleetPage() {
 
       <main className="min-h-[100svh] w-full bg-black text-white">
         <div className="mx-auto flex min-h-[100svh] w-full max-w-[520px] flex-col bg-black">
+
           {/* TOP IDENTITY */}
 
           <header className="shrink-0 px-5 pt-[max(18px,env(safe-area-inset-top))]">
@@ -345,13 +347,16 @@ export default function PublicFleetPage() {
           {/* INFORMATION */}
 
           <section className="flex min-h-0 flex-1 flex-col bg-black px-5">
+
             {/* HEALTH */}
 
             <div className="shrink-0 pt-1">
               <div className="flex items-center gap-2">
                 <span
                   className={`h-2 w-2 rounded-full ${
-                    healthy ? "bg-emerald-400" : "bg-amber-400"
+                    healthy
+                      ? "bg-emerald-400"
+                      : "bg-amber-400"
                   }`}
                 />
 
@@ -361,7 +366,9 @@ export default function PublicFleetPage() {
               </div>
 
               <h2 className="mt-1.5 text-[21px] font-medium leading-none tracking-[-0.015em] text-white">
-                {healthy ? "Healthy" : "Temporarily unavailable"}
+                {healthy
+                  ? "Healthy"
+                  : "Temporarily unavailable"}
               </h2>
 
               <p className="mt-1.5 text-[10px] leading-[1.45] text-white/50">
@@ -380,7 +387,9 @@ export default function PublicFleetPage() {
 
               <p className="mt-0.5 text-[8px] text-white/30">
                 {data.inspection
-                  ? `Last checked ${formatDate(data.inspection.inspectedAt)}`
+                  ? `Last checked ${formatDate(
+                      data.inspection.inspectedAt
+                    )}`
                   : "Inspection record pending"}
               </p>
 
@@ -402,7 +411,9 @@ export default function PublicFleetPage() {
 
                     <span
                       className={`truncate text-[9px] ${
-                        item.ok ? "text-white/90" : "text-white/45"
+                        item.ok
+                          ? "text-white/90"
+                          : "text-white/45"
                       }`}
                     >
                       {item.label}
@@ -448,47 +459,19 @@ export default function PublicFleetPage() {
               </div>
             </div>
 
-            <div className="min-h-2 flex-1" />
+            {/* CLEAN PUBLIC FOOTER */}
 
-            {/* STAFF ONLY */}
+            <div className="min-h-6 flex-1" />
 
-            <button
-              type="button"
-              onClick={() =>
-                router.push(
-                  `/admin-nexa-secret/login?next=${encodeURIComponent(
-                    `/admin-nexa-secret/maintenance/${data.vehicle.code}`
-                  )}`
-                )
-              }
-              className="mb-[max(18px,env(safe-area-inset-bottom))] mt-4 flex min-h-[70px] w-full shrink-0 items-center justify-between rounded-xl bg-amber-400 px-4 py-3.5 text-black transition active:scale-[0.99] active:bg-amber-300"
-            >
-              <div className="flex items-center gap-3">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center">
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="h-7 w-7 fill-black"
-                    aria-hidden="true"
-                  >
-                    <path d="M12 2.5c.53 0 1.02.28 1.29.74l9.02 15.6A1.49 1.49 0 0 1 21.02 21H2.98a1.49 1.49 0 0 1-1.29-2.16l9.02-15.6A1.49 1.49 0 0 1 12 2.5Zm0 5.1a.9.9 0 0 0-.9.9v5.2a.9.9 0 1 0 1.8 0V8.5a.9.9 0 0 0-.9-.9Zm0 9.2a1.1 1.1 0 1 0 0 2.2 1.1 1.1 0 0 0 0-2.2Z" />
-                  </svg>
-                </span>
+            <footer className="mb-[max(18px,env(safe-area-inset-bottom))] mt-4 border-t border-white/10 pt-3 text-center">
+              <p className="text-[8px] font-medium uppercase tracking-[0.22em] text-white/30">
+                NEXA RENTALS
+              </p>
+              <p className="mt-1 text-[8px] text-white/25">
+                Vehicle information &amp; maintenance status
+              </p>
+            </footer>
 
-                <div className="text-left">
-                  <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-black">
-                    Staff Only
-                  </p>
-
-                  <p className="mt-0.5 text-[10px] font-semibold uppercase tracking-[0.1em] text-black/70">
-                    Do Not Press
-                  </p>
-                </div>
-              </div>
-
-              <span className="text-[18px] font-medium text-black">
-                →
-              </span>
-            </button>
           </section>
         </div>
       </main>

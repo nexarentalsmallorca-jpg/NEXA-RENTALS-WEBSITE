@@ -1,20 +1,24 @@
-import { NextResponse } from "next/server";
 
+import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
-export const maxDuration = 60;
+export const maxDuration = 120;
 
-const MODEL = process.env.OPENAI_DOCUMENT_MODEL?.trim() || "gpt-5.6";
-const OPENAI_TIMEOUT_MS = 75_000;
+const MODEL =
+  process.env.OPENAI_DOCUMENT_MODEL?.trim() || "gpt-4.1-mini";
+
+const OPENAI_TIMEOUT_MS = 45_000;
 
 const TEMP_BUCKET =
-  process.env.NEXA_DOCUMENT_TEMP_BUCKET?.trim() || "nexa-customer-documents-temp";
+  process.env.NEXA_DOCUMENT_TEMP_BUCKET?.trim() ||
+  "nexa-customer-documents-temp";
 
 const MAX_FILES = 30;
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 80 * 1024 * 1024;
+const STORAGE_CONCURRENCY = 4;
 
 type DocumentKind =
   | "passport"
@@ -23,18 +27,11 @@ type DocumentKind =
   | "other"
   | "unknown";
 
-type DocumentSide = "front" | "back" | "photo_page" | "unknown";
-
-type StoredDocument = {
-  id: string;
-  originalName: string;
-  storedName: string;
-  mimeType: string;
-  size: number;
-  kind: DocumentKind;
-  side: DocumentSide;
-  tempPath: string;
-};
+type DocumentSide =
+  | "front"
+  | "back"
+  | "photo_page"
+  | "unknown";
 
 type Autofill = {
   nombreCliente: string;
@@ -45,7 +42,7 @@ type Autofill = {
   fechaCaducidad: string;
 };
 
-type AiDocumentResult = {
+type AiDocument = {
   kind: DocumentKind;
   side: DocumentSide;
   originalName: string;
@@ -53,124 +50,126 @@ type AiDocumentResult = {
 
 type AiResult = {
   autofill: Autofill;
-  documents: AiDocumentResult[];
+  documents: AiDocument[];
   warnings: string[];
 };
 
-class ApiError extends Error {
-  status: number;
+type PreparedDocument = {
+  file: File;
+  buffer: Buffer;
+  mimeType: string;
+  storedName: string;
+  tempPath: string;
+};
 
-  constructor(message: string, status: number) {
+class ApiError extends Error {
+  constructor(
+    message: string,
+    public status: number,
+  ) {
     super(message);
     this.name = "ApiError";
-    this.status = status;
   }
 }
 
-function cleanText(value: unknown) {
+function cleanText(value: unknown): string {
   return String(value ?? "").trim();
 }
 
-function cleanFileName(value: string) {
-  const cleaned = cleanText(value || "document")
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[<>:"/\\|?*]+/g, "-")
-    .replace(/[^\w.\- ]+/g, "")
-    .replace(/\s+/g, "_")
-    .replace(/_+/g, "_")
-    .replace(/^[-_.\s]+|[-_.\s]+$/g, "")
-    .slice(0, 120);
-
-  return cleaned || "document";
+function elapsed(start: number): number {
+  return Math.round(performance.now() - start);
 }
 
-function extensionFromName(name: string) {
-  const match = cleanText(name).toLowerCase().match(/\.([a-z0-9]+)$/);
-  return match?.[1] || "";
+function randomId(prefix: string): string {
+  return `${prefix}_${crypto.randomUUID()}`;
 }
 
-function normalizedMimeType(file: File) {
-  const type = cleanText(file.type).toLowerCase();
-
-  if (type) return type;
-
-  const ext = extensionFromName(file.name);
-
-  if (ext === "jpg" || ext === "jpeg") return "image/jpeg";
-  if (ext === "png") return "image/png";
-  if (ext === "webp") return "image/webp";
-  if (ext === "heic") return "image/heic";
-  if (ext === "heif") return "image/heif";
-  if (ext === "pdf") return "application/pdf";
-
-  return "application/octet-stream";
+function extension(name: string): string {
+  return name.toLowerCase().match(/\.([a-z0-9]+)$/)?.[1] || "";
 }
 
-function isAllowedFile(file: File) {
-  const mimeType = normalizedMimeType(file);
-  const ext = extensionFromName(file.name);
-
+function cleanFileName(name: string): string {
   return (
-    [
-      "image/jpeg",
-      "image/png",
-      "image/webp",
-      "image/heic",
-      "image/heif",
-      "application/pdf",
-    ].includes(mimeType) ||
-    ["jpg", "jpeg", "png", "webp", "heic", "heif", "pdf"].includes(ext)
+    name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/[<>:"/\\|?*]+/g, "-")
+      .replace(/[^\w.\- ]+/g, "")
+      .replace(/\s+/g, "_")
+      .replace(/^[-_. ]+|[-_. ]+$/g, "")
+      .slice(0, 120) || "document"
   );
 }
 
-function randomId(prefix = "doc") {
-  const cryptoObject = globalThis.crypto;
+function mimeTypeOf(file: File): string {
+  const ext = extension(file.name);
 
-  if (cryptoObject && typeof cryptoObject.randomUUID === "function") {
-    return `${prefix}_${cryptoObject.randomUUID()}`;
-  }
+  const byExtension: Record<string, string> = {
+    jpg: "image/jpeg",
+    jpeg: "image/jpeg",
+    png: "image/png",
+    webp: "image/webp",
+    heic: "image/heic",
+    heif: "image/heif",
+    pdf: "application/pdf",
+  };
 
-  return `${prefix}_${Date.now()}_${Math.random().toString(36).slice(2, 12)}`;
+  return (
+    byExtension[ext] ||
+    cleanText(file.type).toLowerCase() ||
+    "application/octet-stream"
+  );
 }
 
-function getOutputText(data: any) {
-  if (typeof data?.output_text === "string") {
-    return data.output_text;
+function validateFiles(files: File[]) {
+  if (!files.length) {
+    throw new ApiError("No customer documents were uploaded.", 400);
   }
 
-  const parts: string[] = [];
+  if (files.length > MAX_FILES) {
+    throw new ApiError("Too many documents.", 400);
+  }
 
-  for (const item of data?.output || []) {
-    if (item?.type !== "message") continue;
+  let total = 0;
 
-    for (const content of item?.content || []) {
-      if (content?.type === "output_text" && typeof content.text === "string") {
-        parts.push(content.text);
-      }
+  for (const file of files) {
+    const mime = mimeTypeOf(file);
+
+    if (
+      ![
+        "image/jpeg",
+        "image/png",
+        "image/webp",
+        "image/heic",
+        "image/heif",
+        "application/pdf",
+      ].includes(mime)
+    ) {
+      throw new ApiError(
+        `Unsupported document format: ${file.name}`,
+        400,
+      );
     }
-  }
 
-  return parts.join("");
-}
-
-function getRefusalText(data: any) {
-  const refusals: string[] = [];
-
-  for (const item of data?.output || []) {
-    if (item?.type !== "message") continue;
-
-    for (const content of item?.content || []) {
-      if (content?.type === "refusal" && typeof content.refusal === "string") {
-        refusals.push(content.refusal);
-      }
+    if (file.size <= 0 || file.size > MAX_FILE_BYTES) {
+      throw new ApiError(
+        `Invalid document size: ${file.name}`,
+        400,
+      );
     }
+
+    total += file.size;
   }
 
-  return refusals.join(" ");
+  if (total > MAX_TOTAL_BYTES) {
+    throw new ApiError(
+      "Documents exceed the 80 MB total limit.",
+      400,
+    );
+  }
 }
 
-function documentAnalysisSchema() {
+function schema() {
   return {
     type: "object",
     additionalProperties: false,
@@ -213,7 +212,12 @@ function documentAnalysisSchema() {
             },
             side: {
               type: "string",
-              enum: ["front", "back", "photo_page", "unknown"],
+              enum: [
+                "front",
+                "back",
+                "photo_page",
+                "unknown",
+              ],
             },
             originalName: { type: "string" },
           },
@@ -229,393 +233,430 @@ function documentAnalysisSchema() {
   } as const;
 }
 
-function buildPrompt(fileNames: string[], vehicleCode: string) {
-  return `You are the document-reading engine for NEXA Rentals, a scooter-rental company in Spain.
+function buildPrompt(names: string[], vehicleCode: string) {
+  return `You extract customer identity information for NEXA Rentals in Spain.
 
-Read all customer documents supplied in this request. They may include:
-- passport photo/details pages;
-- national identity cards;
-- driving licences;
-- front and back images;
-- PDFs containing one or several document pages;
-- unrelated supporting documents.
+Read ALL supplied documents together. They belong to one rental customer unless clearly inconsistent.
 
-The files belong to ONE rental customer unless the documents clearly show otherwise.
+FILES:
+${names.map((name, i) => `${i + 1}. ${name}`).join("\n")}
 
-FILES IN THIS REQUEST:
-${fileNames.map((name, index) => `${index + 1}. ${name}`).join("\n")}
+Vehicle: ${vehicleCode || "not selected"}
 
-SELECTED VEHICLE CODE:
-${vehicleCode || "not selected yet"}
+Return these six fields:
+- nombreCliente: full legal name from passport or identity document.
+- dniPasaporte: passport or national identity document number, NOT the driving licence number.
+- direccion: residential address ONLY when actually printed.
+- permisoConducir: driving licence document number.
+- paisExpedicion: country issuing the driving licence, as a readable country name.
+- fechaCaducidad: driving licence expiry date YYYY-MM-DD. Use the licence document expiry, not the birth date or issue date. If a valid permanent licence has no printed expiry, return empty.
 
-PRIMARY GOAL:
-Extract reliable customer data that can be proposed for the NEXA admin rental-contract form.
+For each file, classify:
+kind: passport, identity, driving_licence, other, unknown.
+side: front, back, photo_page, unknown.
+Include the exact originalName.
 
-Map the values as follows:
-- nombreCliente: the customer's full legal name. Prefer the identity/passport name when clear. Use readable natural spacing and capitalization.
-- dniPasaporte: passport number or national ID/document number. Prefer passport/identity number, NOT the driving-licence number.
-- direccion: residential address only if it is actually printed on one of the supplied documents. Never invent it.
-- permisoConducir: driving-licence document number.
-- paisExpedicion: country that issued the driving licence. Return a readable country name where possible.
-- fechaCaducidad: driving-licence expiry date as YYYY-MM-DD. If a clearly valid old/permanent licence has no expiry printed, return an empty string.
-
-CLASSIFICATION:
-For every uploaded file, classify the primary document represented by that file:
-- passport
-- identity
-- driving_licence
-- other
-- unknown
-
-Also classify the visible side:
-- front
-- back
-- photo_page
-- unknown
-
-When a PDF contains multiple different pages/documents, classify it according to the most important rental document it contains. Mention mixed/multiple contents in warnings.
-
-READING RULES:
-- Use all files together. Front/back pairs can complement one another.
-- Ordinary phone photographs are acceptable: perspective, hands, background, mild reflections or mild blur do not automatically make a document unreadable.
-- Never guess text, numbers, dates, countries or addresses.
-- Do not copy a driving-licence number into dniPasaporte.
-- Do not copy an identity/passport number into permisoConducir.
-- Do not invent an address when none is printed.
-- Do not reject the customer or make the rental eligibility decision here. This endpoint is for extraction/classification only.
-- If two documents disagree materially about the person's name or document data, choose the most authoritative/clear value and add a concise warning.
-- If a requested form field cannot be recovered confidently, return an empty string.
-- Return dates as YYYY-MM-DD.
-- Keep warnings concise and operational for the rental-desk admin.
-
-Return only the structured JSON required by the schema.`;
+Rules:
+- Combine front and back images.
+- Read ordinary phone photographs despite minor perspective or reflections.
+- Never invent names, addresses, dates, or document numbers.
+- Never confuse the passport/ID number with the driving licence number.
+- If a field cannot be read confidently, return an empty string.
+- Use warnings for unreadable fields, conflicting identities, or mixed PDFs.
+- Do not determine driving eligibility.
+- Keep warnings short.
+- Return only structured JSON.`;
 }
 
-async function ensureTempBucket() {
-  const { data: bucket, error: bucketError } =
-    await supabaseAdmin.storage.getBucket(TEMP_BUCKET);
+function outputText(data: any): string {
+  if (typeof data?.output_text === "string") {
+    return data.output_text;
+  }
 
-  if (bucket?.id) return;
+  const parts: string[] = [];
 
-  if (bucketError) {
-    const message = cleanText(bucketError.message).toLowerCase();
+  for (const item of data?.output || []) {
+    if (item?.type !== "message") continue;
 
-    // Only create the bucket when it truly does not exist.
-    if (
-      !message.includes("not found") &&
-      !message.includes("does not exist") &&
-      !message.includes("404")
-    ) {
-      throw new Error(
-        `Could not inspect temporary document bucket: ${bucketError.message}`,
-      );
+    for (const part of item?.content || []) {
+      if (
+        part?.type === "output_text" &&
+        typeof part.text === "string"
+      ) {
+        parts.push(part.text);
+      }
     }
   }
 
-  const { error: createError } = await supabaseAdmin.storage.createBucket(
-    TEMP_BUCKET,
-    {
+  return parts.join("");
+}
+
+async function ensureBucket() {
+  const { data, error } =
+    await supabaseAdmin.storage.getBucket(TEMP_BUCKET);
+
+  if (data?.id) return;
+
+  const message = cleanText(error?.message).toLowerCase();
+
+  if (
+    error &&
+    !message.includes("not found") &&
+    !message.includes("does not exist") &&
+    !message.includes("404")
+  ) {
+    throw new Error("Temporary document storage is unavailable.");
+  }
+
+  const { error: createError } =
+    await supabaseAdmin.storage.createBucket(TEMP_BUCKET, {
       public: false,
       fileSizeLimit: MAX_FILE_BYTES,
+    });
+
+  if (createError) {
+    const reason = createError.message.toLowerCase();
+
+    if (
+      !reason.includes("already exists") &&
+      !reason.includes("duplicate")
+    ) {
+      throw new Error("Could not initialize document storage.");
+    }
+  }
+}
+
+async function prepareFiles(
+  files: File[],
+  sessionId: string,
+): Promise<PreparedDocument[]> {
+  return Promise.all(
+    files.map(async (file, index) => {
+      const storedName =
+        `${String(index + 1).padStart(2, "0")}_` +
+        cleanFileName(file.name);
+
+      return {
+        file,
+        buffer: Buffer.from(await file.arrayBuffer()),
+        mimeType: mimeTypeOf(file),
+        storedName,
+        tempPath: `${sessionId}/${storedName}`,
+      };
+    }),
+  );
+}
+
+async function saveDocuments(
+  prepared: PreparedDocument[],
+): Promise<void> {
+  const failures: string[] = [];
+
+  for (
+    let start = 0;
+    start < prepared.length;
+    start += STORAGE_CONCURRENCY
+  ) {
+    const batch = prepared.slice(
+      start,
+      start + STORAGE_CONCURRENCY,
+    );
+
+    const results = await Promise.allSettled(
+      batch.map(async (item) => {
+        const { error } = await supabaseAdmin.storage
+          .from(TEMP_BUCKET)
+          .upload(item.tempPath, item.buffer, {
+            contentType: item.mimeType,
+            upsert: false,
+            cacheControl: "3600",
+          });
+
+        if (error) throw new Error(error.message);
+      }),
+    );
+
+    for (const result of results) {
+      if (result.status === "rejected") {
+        failures.push("storage_upload_failed");
+      }
+    }
+
+    if (failures.length) break;
+  }
+
+  if (failures.length) {
+    throw new ApiError(
+      "Could not save all customer documents.",
+      502,
+    );
+  }
+}
+
+async function uploadOpenAiFile(
+  apiKey: string,
+  item: PreparedDocument,
+): Promise<string> {
+  const body = new FormData();
+
+  body.append("purpose", "user_data");
+  body.append("file", item.file, item.file.name);
+
+  const response = await fetch(
+    "https://api.openai.com/v1/files",
+    {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+      },
+      body,
+      signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
     },
   );
 
-  if (createError) {
-    const message = cleanText(createError.message).toLowerCase();
+  const raw = await response.json().catch(() => null);
 
-    // Another request may have created it between getBucket and createBucket.
-    if (
-      !message.includes("already exists") &&
-      !message.includes("duplicate")
-    ) {
-      throw new Error(
-        `Could not create temporary document bucket: ${createError.message}`,
-      );
-    }
-  }
-}
-
-async function saveTemporaryFile({
-  sessionId,
-  file,
-  index,
-}: {
-  sessionId: string;
-  file: File;
-  index: number;
-}) {
-  const mimeType = normalizedMimeType(file);
-  const safeOriginalName = cleanFileName(file.name);
-  const storedName = `${String(index + 1).padStart(2, "0")}_${safeOriginalName}`;
-  const tempPath = `${sessionId}/${storedName}`;
-
-  const buffer = Buffer.from(await file.arrayBuffer());
-
-  const { error } = await supabaseAdmin.storage
-    .from(TEMP_BUCKET)
-    .upload(tempPath, buffer, {
-      contentType: mimeType,
-      upsert: true,
-      cacheControl: "3600",
-    });
-
-  if (error) {
-    throw new Error(
-      `Could not save temporary document "${file.name}": ${error.message}`,
-    );
-  }
-
-  return {
-    buffer,
-    mimeType,
-    storedName,
-    tempPath,
-  };
-}
-
-async function uploadPdfToOpenAi({
-  apiKey,
-  file,
-}: {
-  apiKey: string;
-  file: File;
-}) {
-  const body = new FormData();
-  body.append("purpose", "user_data");
-  body.append("file", file, file.name);
-
-  const response = await fetch("https://api.openai.com/v1/files", {
-    method: "POST",
-    headers: {
-      Authorization: `Bearer ${apiKey}`,
-    },
-    body,
-  });
-
-  const text = await response.text();
-  let data: any = {};
-
-  try {
-    data = text ? JSON.parse(text) : {};
-  } catch {
-    throw new ApiError("OpenAI returned an invalid file-upload response.", 502);
-  }
-
-  if (!response.ok || !data?.id) {
-    console.error("OPENAI ADMIN DOCUMENT FILE UPLOAD ERROR", {
+  if (!response.ok || !raw?.id) {
+    console.error("NEXA OPENAI FILE ERROR", {
       status: response.status,
-      errorType: cleanText(data?.error?.type),
-      errorCode: cleanText(data?.error?.code),
+      code: cleanText(raw?.error?.code),
     });
 
     throw new ApiError(
-      "The document analysis service could not prepare the PDF.",
+      "Could not prepare document for AI analysis.",
       502,
     );
   }
 
-  return cleanText(data.id);
+  return cleanText(raw.id);
 }
 
-async function deleteOpenAiFile(apiKey: string, fileId: string) {
-  if (!fileId) return;
-
+async function deleteOpenAiFile(
+  apiKey: string,
+  id: string,
+) {
   try {
-    await fetch(`https://api.openai.com/v1/files/${encodeURIComponent(fileId)}`, {
-      method: "DELETE",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
+    await fetch(
+      `https://api.openai.com/v1/files/${encodeURIComponent(id)}`,
+      {
+        method: "DELETE",
+        headers: {
+          Authorization: `Bearer ${apiKey}`,
+        },
+        signal: AbortSignal.timeout(5000),
       },
-    });
-  } catch (error) {
-    console.warn("OPENAI TEMP FILE CLEANUP WARNING", {
-      message: error instanceof Error ? error.message : "Unknown cleanup error",
-    });
+    );
+  } catch {
+    console.warn("NEXA OPENAI FILE CLEANUP WARNING");
   }
 }
 
-async function callOpenAi({
-  apiKey,
-  prompt,
-  preparedFiles,
-}: {
-  apiKey: string;
-  prompt: string;
-  preparedFiles: Array<{
-    file: File;
-    mimeType: string;
-    buffer: Buffer;
-  }>;
-}) {
-  const content: any[] = [{ type: "input_text", text: prompt }];
-  const uploadedOpenAiFileIds: string[] = [];
+async function analyzeWithAi(
+  apiKey: string,
+  prepared: PreparedDocument[],
+  vehicleCode: string,
+): Promise<AiResult> {
+  const started = performance.now();
+
+  const uploadedIds: string[] = [];
 
   try {
-    for (const prepared of preparedFiles) {
-      const nameLabel = `FILE: ${prepared.file.name}`;
-      content.push({ type: "input_text", text: nameLabel });
+    const fileInputs = await Promise.allSettled(
+      prepared.map(async (item) => {
+        if (
+          ["image/jpeg", "image/png", "image/webp"].includes(
+            item.mimeType,
+          )
+        ) {
+          return {
+            type: "input_image",
+            image_url:
+              `data:${item.mimeType};base64,` +
+              item.buffer.toString("base64"),
+            detail: "high",
+          };
+        }
 
-      if (
-        ["image/jpeg", "image/png", "image/webp"].includes(prepared.mimeType)
-      ) {
-        content.push({
-          type: "input_image",
-          image_url: `data:${prepared.mimeType};base64,${prepared.buffer.toString(
-            "base64",
-          )}`,
-          detail: "high",
-        });
+        const id = await uploadOpenAiFile(apiKey, item);
 
-        continue;
+        uploadedIds.push(id);
+
+        return {
+          type: "input_file",
+          file_id: id,
+        };
+      }),
+    );
+
+    const content: any[] = [
+      {
+        type: "input_text",
+        text: buildPrompt(
+          prepared.map((item) => item.file.name),
+          vehicleCode,
+        ),
+      },
+    ];
+
+    for (let i = 0; i < fileInputs.length; i++) {
+      const result = fileInputs[i];
+
+      if (result.status === "rejected") {
+        throw result.reason;
       }
 
-      // PDFs are intentionally sent as file inputs so multi-page customer PDFs
-      // can be read as documents. HEIC/HEIF files also use the file-input path,
-      // which avoids forcing a client-side conversion in the rental desk UI.
-      const fileId = await uploadPdfToOpenAi({
-        apiKey,
-        file: prepared.file,
-      });
-
-      uploadedOpenAiFileIds.push(fileId);
-
       content.push({
-        type: "input_file",
-        file_id: fileId,
+        type: "input_text",
+        text: `FILE: ${prepared[i].file.name}`,
       });
+
+      content.push(result.value);
     }
 
-    const controller = new AbortController();
-    const timeout = setTimeout(() => controller.abort(), OPENAI_TIMEOUT_MS);
+    const requestStarted = performance.now();
 
     let response: Response;
 
     try {
-      response = await fetch("https://api.openai.com/v1/responses", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${apiKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          model: MODEL,
-          store: false,
-          input: [{ role: "user", content }],
-          text: {
-            format: {
-              type: "json_schema",
-              name: "nexa_admin_document_extraction",
-              strict: true,
-              schema: documentAnalysisSchema(),
-            },
+      response = await fetch(
+        "https://api.openai.com/v1/responses",
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${apiKey}`,
+            "Content-Type": "application/json",
           },
-          max_output_tokens: 3200,
-        }),
-        signal: controller.signal,
-      });
-    } catch (caught: any) {
-      if (caught?.name === "AbortError") {
+          body: JSON.stringify({
+            model: MODEL,
+            store: false,
+            input: [
+              {
+                role: "user",
+                content,
+              },
+            ],
+            text: {
+              format: {
+                type: "json_schema",
+                name: "nexa_admin_document_extraction",
+                strict: true,
+                schema: schema(),
+              },
+            },
+            max_output_tokens: 1600,
+          }),
+          signal: AbortSignal.timeout(OPENAI_TIMEOUT_MS),
+        },
+      );
+    } catch (error) {
+      if (
+        error instanceof Error &&
+        (error.name === "AbortError" ||
+          error.name === "TimeoutError")
+      ) {
         throw new ApiError(
-          "Document analysis timed out. Please try again.",
+          "Document AI analysis timed out.",
           504,
         );
       }
 
-      throw caught;
-    } finally {
-      clearTimeout(timeout);
+      throw error;
     }
 
-    const requestId = response.headers.get("x-request-id");
-    const responseText = await response.text();
+    const raw = await response.json().catch(() => null);
 
-    let raw: any = {};
-
-    try {
-      raw = responseText ? JSON.parse(responseText) : {};
-    } catch {
-      throw new ApiError(
-        "The document analysis service returned an invalid response.",
-        502,
-      );
-    }
+    console.info("NEXA OPENAI TIMING", {
+      model: MODEL,
+      fileCount: prepared.length,
+      requestMs: elapsed(requestStarted),
+      totalAiMs: elapsed(started),
+      status: response.status,
+    });
 
     if (!response.ok) {
-      console.error("OPENAI ADMIN DOCUMENT ANALYSIS ERROR", {
+      console.error("NEXA OPENAI RESPONSE ERROR", {
         status: response.status,
-        requestId,
-        errorType: cleanText(raw?.error?.type),
-        errorCode: cleanText(raw?.error?.code),
+        requestId: response.headers.get("x-request-id"),
+        code: cleanText(raw?.error?.code),
+        type: cleanText(raw?.error?.type),
       });
 
       throw new ApiError(
-        "The document analysis service is temporarily unavailable.",
+        "The document analysis service is unavailable.",
         502,
-      );
-    }
-
-    const refusal = getRefusalText(raw);
-
-    if (refusal) {
-      console.error("OPENAI ADMIN DOCUMENT ANALYSIS REFUSAL", {
-        requestId,
-      });
-
-      throw new ApiError(
-        "The customer documents could not be analyzed automatically.",
-        422,
       );
     }
 
     if (raw?.status === "incomplete") {
-      console.error("OPENAI ADMIN DOCUMENT ANALYSIS INCOMPLETE", {
-        requestId,
-        reason: cleanText(raw?.incomplete_details?.reason),
-      });
-
       throw new ApiError(
-        "Document analysis was incomplete. Please try again.",
+        "AI analysis was incomplete.",
         502,
       );
     }
 
-    const outputText = getOutputText(raw);
+    const hasRefusal = (raw?.output || []).some(
+      (item: any) =>
+        (item?.content || []).some(
+          (part: any) => part?.type === "refusal",
+        ),
+    );
 
-    if (!outputText) {
-      throw new ApiError("OpenAI returned no document result.", 502);
+    if (hasRefusal) {
+      throw new ApiError(
+        "The customer documents could not be analyzed.",
+        422,
+      );
     }
+
+    const text = outputText(raw);
+
+    if (!text) {
+      throw new ApiError(
+        "AI returned an empty document result.",
+        502,
+      );
+    }
+
+    let parsed: AiResult;
 
     try {
-      return JSON.parse(outputText) as AiResult;
+      parsed = JSON.parse(text) as AiResult;
     } catch {
-      console.error("OPENAI ADMIN DOCUMENT JSON PARSE ERROR", {
-        requestId,
-      });
-
-      throw new ApiError("The document result could not be read.", 502);
+      throw new ApiError(
+        "AI returned an invalid document result.",
+        502,
+      );
     }
+
+    if (
+      !parsed ||
+      typeof parsed !== "object" ||
+      !parsed.autofill ||
+      !Array.isArray(parsed.documents)
+    ) {
+      throw new ApiError(
+        "AI returned incomplete document data.",
+        502,
+      );
+    }
+
+    return parsed;
   } finally {
-    await Promise.all(
-      uploadedOpenAiFileIds.map((fileId) => deleteOpenAiFile(apiKey, fileId)),
-    );
+    // Do not delay the successful scan while waiting
+    // for nonessential OpenAI temporary-file deletion.
+    if (uploadedIds.length) {
+      void Promise.allSettled(
+        uploadedIds.map((id) =>
+          deleteOpenAiFile(apiKey, id),
+        ),
+      );
+    }
   }
 }
 
-function findAiClassification(
-  ai: AiResult,
-  originalName: string,
-  index: number,
-) {
-  const exact = ai.documents.find(
-    (item) =>
-      cleanText(item.originalName).toLowerCase() ===
-      cleanText(originalName).toLowerCase(),
-  );
-
-  return exact || ai.documents[index] || null;
-}
-
-function normalizeAutofill(value: AiResult["autofill"] | undefined): Autofill {
+function normalizeAutofill(
+  value: Partial<Autofill> | undefined,
+): Autofill {
   return {
     nombreCliente: cleanText(value?.nombreCliente),
     dniPasaporte: cleanText(value?.dniPasaporte),
@@ -626,143 +667,144 @@ function normalizeAutofill(value: AiResult["autofill"] | undefined): Autofill {
   };
 }
 
+function classificationFor(
+  ai: AiResult,
+  name: string,
+  index: number,
+): AiDocument | null {
+  const exact = ai.documents.find(
+    (item) =>
+      cleanText(item.originalName).toLowerCase() ===
+      name.toLowerCase(),
+  );
+
+  return exact || ai.documents[index] || null;
+}
+
+async function cleanupStorage(paths: string[]) {
+  if (!paths.length) return;
+
+  try {
+    const { error } = await supabaseAdmin.storage
+      .from(TEMP_BUCKET)
+      .remove(paths);
+
+    if (error) {
+      console.warn("NEXA DOCUMENT STORAGE CLEANUP WARNING");
+    }
+  } catch {
+    console.warn("NEXA DOCUMENT STORAGE CLEANUP WARNING");
+  }
+}
+
 export async function POST(request: Request) {
-  const tempPathsCreated: string[] = [];
+  const started = performance.now();
+
+  let pathsToCleanup: string[] = [];
+  let shouldCleanup = false;
 
   try {
     const apiKey = process.env.OPENAI_API_KEY;
 
     if (!apiKey) {
-      throw new ApiError("OPENAI_API_KEY is missing in Vercel.", 500);
+      throw new ApiError("OPENAI_API_KEY is missing.", 500);
     }
 
     const form = await request.formData();
 
-    const contractNumber = cleanText(form.get("contractNumber"));
-    const vehicleCode = cleanText(form.get("vehicleCode"));
-
-    const rawDocuments = form.getAll("documents");
-    const documents = rawDocuments.filter(
-      (value): value is File => value instanceof File,
+    const contractNumber = cleanText(
+      form.get("contractNumber"),
     );
 
-    if (!documents.length) {
-      throw new ApiError("No customer documents were uploaded.", 400);
-    }
+    const vehicleCode = cleanText(
+      form.get("vehicleCode"),
+    );
 
-    if (documents.length > MAX_FILES) {
-      throw new ApiError(
-        `Too many files. Maximum ${MAX_FILES} documents per analysis.`,
-        400,
-      );
-    }
+    const documents = form
+      .getAll("documents")
+      .filter((value): value is File => value instanceof File);
 
-    let totalBytes = 0;
-
-    for (const file of documents) {
-      if (!isAllowedFile(file)) {
-        throw new ApiError(
-          `Unsupported file "${file.name}". Use JPG, PNG, WEBP, HEIC/HEIF or PDF.`,
-          400,
-        );
-      }
-
-      if (file.size <= 0) {
-        throw new ApiError(`File "${file.name}" is empty.`, 400);
-      }
-
-      if (file.size > MAX_FILE_BYTES) {
-        throw new ApiError(
-          `File "${file.name}" is larger than 15 MB.`,
-          400,
-        );
-      }
-
-      totalBytes += file.size;
-    }
-
-    if (totalBytes > MAX_TOTAL_BYTES) {
-      throw new ApiError(
-        "The selected customer documents are too large in total. Upload fewer files at once.",
-        400,
-      );
-    }
+    validateFiles(documents);
 
     const sessionId = randomId(
       contractNumber
-        ? `nexa_${contractNumber.replace(/[^a-zA-Z0-9_-]/g, "_")}`
+        ? `nexa_${contractNumber.replace(
+            /[^a-zA-Z0-9_-]/g,
+            "_",
+          )}`
         : "nexa_documents",
     );
 
-    await ensureTempBucket();
+    const prepareStarted = performance.now();
 
-    const preparedFiles: Array<{
-      file: File;
-      mimeType: string;
-      buffer: Buffer;
-      storedName: string;
-      tempPath: string;
-    }> = [];
+    const prepared = await prepareFiles(
+      documents,
+      sessionId,
+    );
 
-    for (const [index, file] of documents.entries()) {
-      const stored = await saveTemporaryFile({
-        sessionId,
-        file,
-        index,
-      });
+    const prepareMs = elapsed(prepareStarted);
 
-      tempPathsCreated.push(stored.tempPath);
+    pathsToCleanup = prepared.map((item) => item.tempPath);
+    shouldCleanup = true;
 
-      preparedFiles.push({
-        file,
-        mimeType: stored.mimeType,
-        buffer: stored.buffer,
-        storedName: stored.storedName,
-        tempPath: stored.tempPath,
-      });
+    // Start AI and document storage independently.
+    // Neither operation needs to wait for the other.
+    const storageStarted = performance.now();
+    const aiStarted = performance.now();
+
+    const [storageResult, aiResult] =
+      await Promise.allSettled([
+        (async () => {
+          await ensureBucket();
+          await saveDocuments(prepared);
+        })(),
+        analyzeWithAi(apiKey, prepared, vehicleCode),
+      ]);
+
+    const parallelMs = elapsed(storageStarted);
+
+    if (storageResult.status === "rejected") {
+      throw storageResult.reason;
     }
 
-    let aiResult: AiResult;
-
-    try {
-      aiResult = await callOpenAi({
-        apiKey,
-        prompt: buildPrompt(
-          documents.map((file) => file.name),
-          vehicleCode,
-        ),
-        preparedFiles,
-      });
-    } catch (error) {
-      // Keep temporary files available only when analysis succeeded.
-      // Failed analysis should not leave sensitive documents sitting in temp storage.
-      if (tempPathsCreated.length) {
-        await supabaseAdmin.storage
-          .from(TEMP_BUCKET)
-          .remove(tempPathsCreated)
-          .catch(() => null);
-      }
-
-      throw error;
+    if (aiResult.status === "rejected") {
+      throw aiResult.reason;
     }
 
-    const files: StoredDocument[] = preparedFiles.map((prepared, index) => {
-      const classification = findAiClassification(
-        aiResult,
-        prepared.file.name,
+    const ai = aiResult.value;
+
+    const files = prepared.map((item, index) => {
+      const classification = classificationFor(
+        ai,
+        item.file.name,
         index,
       );
 
       return {
         id: randomId("file"),
-        originalName: prepared.file.name,
-        storedName: prepared.storedName,
-        mimeType: prepared.mimeType,
-        size: prepared.file.size,
+        originalName: item.file.name,
+        storedName: item.storedName,
+        mimeType: item.mimeType,
+        size: item.file.size,
         kind: classification?.kind || "unknown",
         side: classification?.side || "unknown",
-        tempPath: prepared.tempPath,
+        tempPath: item.tempPath,
       };
+    });
+
+    // Keep stored documents for Google Drive generation.
+    shouldCleanup = false;
+
+    console.info("NEXA DOCUMENT ANALYZE TIMING", {
+      model: MODEL,
+      fileCount: documents.length,
+      totalBytes: documents.reduce(
+        (sum, file) => sum + file.size,
+        0,
+      ),
+      prepareMs,
+      parallelMs,
+      totalMs: elapsed(started),
     });
 
     return NextResponse.json({
@@ -772,31 +814,36 @@ export async function POST(request: Request) {
       contractNumber: contractNumber || null,
       vehicleCode: vehicleCode || null,
       files,
-      autofill: normalizeAutofill(aiResult.autofill),
-      warnings: Array.isArray(aiResult.warnings)
-        ? aiResult.warnings.map(cleanText).filter(Boolean)
+      autofill: normalizeAutofill(ai.autofill),
+      warnings: Array.isArray(ai.warnings)
+        ? ai.warnings.map(cleanText).filter(Boolean)
         : [],
       analyzedAt: new Date().toISOString(),
       tempBucket: TEMP_BUCKET,
     });
-  } catch (error: any) {
-    // Never log uploaded document contents, extracted identity data, API keys,
-    // base64 image data or request bodies.
-    console.error("ADMIN DOCUMENT ANALYSIS ERROR", {
-      name: cleanText(error?.name),
-      status: error instanceof ApiError ? error.status : 500,
-      message: cleanText(error?.message).slice(0, 350),
-    });
+  } catch (error) {
+    if (shouldCleanup) {
+      await cleanupStorage(pathsToCleanup);
+    }
 
-    const status = error instanceof ApiError ? error.status : 500;
+    const status =
+      error instanceof ApiError ? error.status : 500;
+
+    console.error("NEXA DOCUMENT ANALYSIS ERROR", {
+      status,
+      name:
+        error instanceof Error ? error.name : "Unknown",
+      elapsedMs: elapsed(started),
+    });
 
     return NextResponse.json(
       {
         ok: false,
         success: false,
         error:
-          error?.message ||
-          "Could not analyze the customer documents.",
+          error instanceof ApiError
+            ? error.message
+            : "Could not analyze customer documents.",
       },
       { status },
     );
