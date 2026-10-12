@@ -1,11 +1,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
 import {
   findVehicleByCodigo,
   normalizeVehicleCode,
 } from "@/lib/nexaFleet";
-import { verifyNexaAdminSession } from "@/lib/nexaAdminSession";
+
+import {
+  verifyNexaAdminSession,
+  verifyNexaPasskeySession,
+} from "@/lib/nexaAdminSession";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -32,7 +37,12 @@ function jsonError(message: string, status = 400) {
       ok: false,
       error: message,
     },
-    { status }
+    {
+      status,
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
   );
 }
 
@@ -40,6 +50,13 @@ function unauthorized() {
   return jsonError(
     "Unauthorized. Please log in to NEXA OS.",
     401
+  );
+}
+
+function passkeyRequired() {
+  return jsonError(
+    "Verified passkey login required to save inspections.",
+    403
   );
 }
 
@@ -114,6 +131,13 @@ function safeText(
   return text.slice(0, maxLength);
 }
 
+/*
+  GET
+
+  Existing signed admin sessions may
+  view inspection history.
+*/
+
 export async function GET(request: NextRequest) {
   if (!verifyNexaAdminSession(request)) {
     return unauthorized();
@@ -184,10 +208,17 @@ export async function GET(request: NextRequest) {
       })
     );
 
-    return NextResponse.json({
-      ok: true,
-      data: output,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        data: output,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (error) {
     console.error(
       "Fleet inspection GET error:",
@@ -201,9 +232,23 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/*
+  POST
+
+  Only a verified v2 passkey session
+  may save an inspection.
+
+  Password-only v1 sessions cannot
+  modify inspection records.
+*/
+
 export async function POST(request: NextRequest) {
   if (!verifyNexaAdminSession(request)) {
     return unauthorized();
+  }
+
+  if (!verifyNexaPasskeySession(request)) {
+    return passkeyRequired();
   }
 
   try {
@@ -367,9 +412,10 @@ export async function POST(request: NextRequest) {
     /*
       LOAD EXISTING STATE FIRST
 
-      We preserve current_km.
-      We also preserve a manually blocked scooter
-      unless staff explicitly clears that block
+      Preserve current_km.
+
+      Also preserve a manually blocked scooter
+      unless staff explicitly clears the block
       using the separate Road Ready action.
     */
 
@@ -453,8 +499,10 @@ export async function POST(request: NextRequest) {
 
       Passed inspection:
         Existing road-ready setting remains
-        unchanged. Staff can explicitly mark
-        the scooter Road Ready separately.
+        unchanged.
+
+      Staff can explicitly mark the scooter
+      Road Ready separately.
     */
 
     const wasRoadReady =
@@ -498,14 +546,14 @@ export async function POST(request: NextRequest) {
     };
 
     /*
-      IMPORTANT:
+      IMPORTANT
 
       If state already exists, preserve
       current_km exactly.
 
       For a new vehicle state, initialize
-      current_km to zero because there is no
-      previous saved odometer reading.
+      current_km to zero.
+
       This is not a service history entry.
     */
 

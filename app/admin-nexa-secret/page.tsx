@@ -2,6 +2,9 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
+
+import NexaFleetScannerButton from "../../components/admin/NexaFleetScannerButton";
+
 import {
   AlertTriangle,
   ArrowRight,
@@ -937,6 +940,11 @@ export default function AdminDashboardPage() {
 
                 <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
                   <FleetWebAvailabilityButton />
+
+<NexaFleetScannerButton
+  compact
+  className="w-full sm:w-auto"
+/>
 
                   <Link
                     href="/admin-nexa-secret/vehicles"

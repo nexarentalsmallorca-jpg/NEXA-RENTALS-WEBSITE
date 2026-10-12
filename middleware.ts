@@ -107,19 +107,19 @@ function isPublicAssetPath(pathname: string) {
 /*
   ADMIN SESSION VERIFICATION
 
-  Compatible with the signed session created
-  by app/api/admin/login/route.ts.
+  Supported formats:
 
-  Token:
+  Existing password session:
     v1.expiration.nonce.signature
 
-  Signature:
-    HMAC-SHA256(
-      NEXA_ADMIN_SESSION_SECRET,
-      "v1.expiration.nonce"
-    )
+  New passkey session:
+    v2.passkey.expiration.nonce.signature
 
-  Uses Web Crypto, not Node.js crypto.
+  Both formats use HMAC-SHA256 with
+  NEXA_ADMIN_SESSION_SECRET.
+
+  Uses Web Crypto for middleware
+  compatibility.
 */
 
 async function verifyAdminSession(
@@ -142,18 +142,48 @@ async function verifyAdminSession(
 
   const parts = token.split(".");
 
-  if (parts.length !== 4) {
-    return false;
-  }
+  let payload: string;
+  let expiresText: string;
+  let nonce: string;
+  let signatureHex: string;
 
-  const [
-    version,
-    expiresText,
-    nonce,
-    signatureHex,
-  ] = parts;
+  if (
+    parts.length === 4 &&
+    parts[0] === "v1"
+  ) {
+    const [
+      version,
+      expiration,
+      tokenNonce,
+      signature,
+    ] = parts;
 
-  if (version !== "v1") {
+    expiresText = expiration;
+    nonce = tokenNonce;
+    signatureHex = signature;
+
+    payload =
+      `${version}.${expiresText}.${nonce}`;
+  } else if (
+    parts.length === 5 &&
+    parts[0] === "v2" &&
+    parts[1] === "passkey"
+  ) {
+    const [
+      version,
+      authMethod,
+      expiration,
+      tokenNonce,
+      signature,
+    ] = parts;
+
+    expiresText = expiration;
+    nonce = tokenNonce;
+    signatureHex = signature;
+
+    payload =
+      `${version}.${authMethod}.${expiresText}.${nonce}`;
+  } else {
     return false;
   }
 
@@ -204,9 +234,6 @@ async function verifyAdminSession(
         16
       );
     }
-
-    const payload =
-      `${version}.${expiresText}.${nonce}`;
 
     return await crypto.subtle.verify(
       "HMAC",
@@ -429,8 +456,12 @@ export default async function middleware(
   /*
     9. Protect all private admin pages.
 
-    Invalid, missing or expired sessions
-    redirect to the login page.
+    Both valid v1 password sessions and
+    v2 passkey sessions can access the
+    existing admin dashboard.
+
+    Maintenance API authorization is
+    handled separately on the server.
   */
 
   if (isAdminRoute) {

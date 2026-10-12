@@ -1,11 +1,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
 import {
   findVehicleByCodigo,
   normalizeVehicleCode,
 } from "@/lib/nexaFleet";
-import { verifyNexaAdminSession } from "@/lib/nexaAdminSession";
+
+import {
+  verifyNexaAdminSession,
+  verifyNexaPasskeySession,
+} from "@/lib/nexaAdminSession";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -31,8 +36,16 @@ const ALLOWED_SEVERITIES = [
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json(
-    { ok: false, error: message },
-    { status }
+    {
+      ok: false,
+      error: message,
+    },
+    {
+      status,
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
   );
 }
 
@@ -40,6 +53,13 @@ function unauthorized() {
   return jsonError(
     "Unauthorized. Please log in to NEXA OS.",
     401
+  );
+}
+
+function passkeyRequired() {
+  return jsonError(
+    "Verified passkey login required to report or modify vehicle issues.",
+    403
   );
 }
 
@@ -54,6 +74,16 @@ function getVehicle(rawCode: unknown) {
     ? findVehicleByCodigo(code)
     : null;
 }
+
+/*
+  GET
+
+  Existing password sessions and
+  verified passkey sessions can
+  view vehicle issue history.
+
+  No database modifications.
+*/
 
 export async function GET(request: NextRequest) {
   if (!verifyNexaAdminSession(request)) {
@@ -73,16 +103,28 @@ export async function GET(request: NextRequest) {
       .from("nexa_fleet_issues")
       .select("*")
       .eq("vehicle_code", vehicle.codigo)
-      .order("opened_at", { ascending: false });
+      .order("opened_at", {
+        ascending: false,
+      });
 
     if (error) throw error;
 
-    return NextResponse.json({
-      ok: true,
-      data: data || [],
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        data: data || [],
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (error) {
-    console.error("Fleet issues GET error:", error);
+    console.error(
+      "Fleet issues GET error:",
+      error
+    );
 
     return jsonError(
       "Failed to load vehicle issues.",
@@ -91,9 +133,27 @@ export async function GET(request: NextRequest) {
   }
 }
 
+/*
+  POST
+
+  Requires verified v2 passkey session.
+
+  Creates a vehicle issue report.
+
+  Critical issues automatically mark
+  the scooter Do Not Rent.
+
+  Existing mileage and maintenance
+  history remain unchanged.
+*/
+
 export async function POST(request: NextRequest) {
   if (!verifyNexaAdminSession(request)) {
     return unauthorized();
+  }
+
+  if (!verifyNexaPasskeySession(request)) {
+    return passkeyRequired();
   }
 
   try {
@@ -142,7 +202,9 @@ export async function POST(request: NextRequest) {
     ).trim();
 
     if (!description) {
-      return jsonError("Issue description is required.");
+      return jsonError(
+        "Issue description is required."
+      );
     }
 
     if (description.length > 3000) {
@@ -153,22 +215,26 @@ export async function POST(request: NextRequest) {
 
     const reportedBy = String(
       body.reportedBy || "NEXA Staff"
-    ).trim().slice(0, 120);
+    )
+      .trim()
+      .slice(0, 120);
 
-    const { data: issue, error: issueError } =
-      await supabaseAdmin
-        .from("nexa_fleet_issues")
-        .insert({
-          vehicle_code: vehicle.codigo,
-          category,
-          severity,
-          description,
-          status: "open",
-          opened_at: new Date().toISOString(),
-          reported_by: reportedBy || "NEXA Staff",
-        })
-        .select("*")
-        .single();
+    const {
+      data: issue,
+      error: issueError,
+    } = await supabaseAdmin
+      .from("nexa_fleet_issues")
+      .insert({
+        vehicle_code: vehicle.codigo,
+        category,
+        severity,
+        description,
+        status: "open",
+        opened_at: new Date().toISOString(),
+        reported_by: reportedBy || "NEXA Staff",
+      })
+      .select("*")
+      .single();
 
     if (issueError) throw issueError;
 
@@ -183,18 +249,23 @@ export async function POST(request: NextRequest) {
     */
 
     if (severity === "do_not_rent") {
-      const { data: existingState, error: stateReadError } =
-        await supabaseAdmin
-          .from("nexa_fleet_vehicle_state")
-          .select("*")
-          .eq("vehicle_code", vehicle.codigo)
-          .maybeSingle();
+      const {
+        data: existingState,
+        error: stateReadError,
+      } = await supabaseAdmin
+        .from("nexa_fleet_vehicle_state")
+        .select("*")
+        .eq("vehicle_code", vehicle.codigo)
+        .maybeSingle();
 
-      if (stateReadError) throw stateReadError;
+      if (stateReadError) {
+        throw stateReadError;
+      }
 
       const statePayload = {
         road_ready: false,
-        public_health_status: "temporarily_unavailable",
+        public_health_status:
+          "temporarily_unavailable",
         internal_status: "do_not_rent",
       };
 
@@ -211,7 +282,10 @@ export async function POST(request: NextRequest) {
               ...statePayload,
             });
 
-      const { data, error: stateError } = await query
+      const {
+        data,
+        error: stateError,
+      } = await query
         .select("*")
         .single();
 
@@ -220,19 +294,20 @@ export async function POST(request: NextRequest) {
       updatedState = data;
     }
 
-    const { error: auditError } = await supabaseAdmin
-      .from("nexa_fleet_activity_log")
-      .insert({
-        vehicle_code: vehicle.codigo,
-        action_type: "issue_reported",
-        entity_type: "issue",
-        entity_id: issue.id,
-        new_value: {
-          issue,
-          state: updatedState,
-        },
-        performed_by: issue.reported_by,
-      });
+    const { error: auditError } =
+      await supabaseAdmin
+        .from("nexa_fleet_activity_log")
+        .insert({
+          vehicle_code: vehicle.codigo,
+          action_type: "issue_reported",
+          entity_type: "issue",
+          entity_id: issue.id,
+          new_value: {
+            issue,
+            state: updatedState,
+          },
+          performed_by: issue.reported_by,
+        });
 
     if (auditError) {
       console.error(
@@ -249,7 +324,10 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error("Fleet issues POST error:", error);
+    console.error(
+      "Fleet issues POST error:",
+      error
+    );
 
     return jsonError(
       "Failed to report issue.",

@@ -1,11 +1,16 @@
 
 import { NextRequest, NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
+
 import {
   findVehicleByCodigo,
   normalizeVehicleCode,
 } from "@/lib/nexaFleet";
-import { verifyNexaAdminSession } from "@/lib/nexaAdminSession";
+
+import {
+  verifyNexaAdminSession,
+  verifyNexaPasskeySession,
+} from "@/lib/nexaAdminSession";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -51,7 +56,12 @@ type MaintenanceRecord = {
 function jsonError(message: string, status = 400) {
   return NextResponse.json(
     { ok: false, error: message },
-    { status }
+    {
+      status,
+      headers: {
+        "Cache-Control": "no-store",
+      },
+    }
   );
 }
 
@@ -59,6 +69,13 @@ function unauthorized() {
   return jsonError(
     "Unauthorized. Please log in to NEXA OS.",
     401
+  );
+}
+
+function passkeyRequired() {
+  return jsonError(
+    "Verified passkey login required for maintenance changes.",
+    403
   );
 }
 
@@ -215,7 +232,9 @@ async function buildVehicleSnapshot(vehicleCode: string) {
   const vehicle = getVehicle(vehicleCode);
 
   if (!vehicle) {
-    throw new Error(`Unknown vehicle code: ${vehicleCode}`);
+    throw new Error(
+      `Unknown vehicle code: ${vehicleCode}`
+    );
   }
 
   const [
@@ -236,9 +255,15 @@ async function buildVehicleSnapshot(vehicleCode: string) {
     getLatestMaintenance(vehicle.codigo, "engine_oil"),
     getLatestMaintenance(vehicle.codigo, "oil_filter"),
     getLatestMaintenance(vehicle.codigo, "air_filter"),
-    getLatestMaintenance(vehicle.codigo, "injector_cleaner"),
+    getLatestMaintenance(
+      vehicle.codigo,
+      "injector_cleaner"
+    ),
     getLatestMaintenance(vehicle.codigo, "cvt_belt"),
-    getLatestMaintenance(vehicle.codigo, "variator_weights"),
+    getLatestMaintenance(
+      vehicle.codigo,
+      "variator_weights"
+    ),
     getLatestMaintenance(vehicle.codigo, "spark_plug"),
     getLatestInspection(vehicle.codigo),
     getOpenIssues(vehicle.codigo),
@@ -306,7 +331,7 @@ async function buildVehicleSnapshot(vehicleCode: string) {
   ?vehicleCode=N1 -> one vehicle
   No vehicleCode -> fleet overview
 
-  Private endpoint: requires signed admin session.
+  Existing signed admin sessions remain supported.
 */
 
 export async function GET(request: NextRequest) {
@@ -329,10 +354,17 @@ export async function GET(request: NextRequest) {
         vehicle.codigo
       );
 
-      return NextResponse.json({
-        ok: true,
-        data: snapshot,
-      });
+      return NextResponse.json(
+        {
+          ok: true,
+          data: snapshot,
+        },
+        {
+          headers: {
+            "Cache-Control": "no-store",
+          },
+        }
+      );
     }
 
     const { data: states, error } = await supabaseAdmin
@@ -344,18 +376,30 @@ export async function GET(request: NextRequest) {
 
     const snapshots = await Promise.all(
       (states || [])
-        .filter((state) => !!getVehicle(state.vehicle_code))
+        .filter((state) =>
+          Boolean(getVehicle(state.vehicle_code))
+        )
         .map((state) =>
           buildVehicleSnapshot(state.vehicle_code)
         )
     );
 
-    return NextResponse.json({
-      ok: true,
-      data: snapshots,
-    });
+    return NextResponse.json(
+      {
+        ok: true,
+        data: snapshots,
+      },
+      {
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      }
+    );
   } catch (error) {
-    console.error("Fleet maintenance GET error:", error);
+    console.error(
+      "Fleet maintenance GET error:",
+      error
+    );
 
     return jsonError(
       "Failed to load fleet maintenance.",
@@ -366,6 +410,8 @@ export async function GET(request: NextRequest) {
 
 /*
   PATCH
+
+  Requires verified passkey session.
 
   Manually updates:
   - current KM
@@ -381,6 +427,10 @@ export async function GET(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   if (!verifyNexaAdminSession(request)) {
     return unauthorized();
+  }
+
+  if (!verifyNexaPasskeySession(request)) {
+    return passkeyRequired();
   }
 
   try {
@@ -492,7 +542,8 @@ export async function PATCH(request: NextRequest) {
           vehicle_code: vehicle.codigo,
           current_km: 0,
           road_ready: false,
-          public_health_status: "temporarily_unavailable",
+          public_health_status:
+            "temporarily_unavailable",
           internal_status: "attention_required",
           ...updatePayload,
         });
@@ -527,7 +578,10 @@ export async function PATCH(request: NextRequest) {
       data,
     });
   } catch (error) {
-    console.error("Fleet maintenance PATCH error:", error);
+    console.error(
+      "Fleet maintenance PATCH error:",
+      error
+    );
 
     return jsonError(
       "Failed to update vehicle.",
@@ -538,6 +592,8 @@ export async function PATCH(request: NextRequest) {
 
 /*
   POST
+
+  Requires verified passkey session.
 
   Records actual completed maintenance.
 
@@ -552,6 +608,10 @@ export async function PATCH(request: NextRequest) {
 export async function POST(request: NextRequest) {
   if (!verifyNexaAdminSession(request)) {
     return unauthorized();
+  }
+
+  if (!verifyNexaPasskeySession(request)) {
+    return passkeyRequired();
   }
 
   try {
@@ -788,14 +848,11 @@ export async function POST(request: NextRequest) {
         .from("nexa_fleet_activity_log")
         .insert({
           vehicle_code: vehicle.codigo,
-          action_type:
-            "maintenance_record_created",
-          entity_type:
-            "maintenance_record",
+          action_type: "maintenance_record_created",
+          entity_type: "maintenance_record",
           entity_id: record.id,
           new_value: record,
-          performed_by:
-            record.performed_by,
+          performed_by: record.performed_by,
         });
 
     if (auditError) {
