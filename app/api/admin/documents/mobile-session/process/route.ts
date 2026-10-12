@@ -1,11 +1,9 @@
+
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createHmac,
-  timingSafeEqual,
-} from "crypto";
+import { createHmac, timingSafeEqual, randomUUID } from "crypto";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
-import { POST as analyzeDocuments } from "@/app/api/admin/documents/analyze/route";
+import { analyzeExistingDocuments } from "@/lib/nexaDocumentAnalyzer";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -20,6 +18,7 @@ const BUCKET =
 const MAX_FILES = 30;
 const MAX_FILE_BYTES = 15 * 1024 * 1024;
 const MAX_TOTAL_BYTES = 80 * 1024 * 1024;
+const DOWNLOAD_CONCURRENCY = 6;
 
 type UploadedFile = {
   id: string;
@@ -28,7 +27,7 @@ type UploadedFile = {
   mimeType: string;
   size: number;
   tempPath: string;
-  uploadedAt: string;
+  uploadedAt?: string;
 };
 
 type DocumentBundle = {
@@ -39,13 +38,8 @@ type DocumentBundle = {
     storedName?: string;
     mimeType: string;
     size: number;
-    kind?:
-      | "passport"
-      | "identity"
-      | "driving_licence"
-      | "other"
-      | "unknown";
-    side?: "front" | "back" | "photo_page" | "unknown";
+    kind?: string;
+    side?: string;
     tempPath?: string;
   }>;
   autofill?: {
@@ -58,10 +52,11 @@ type DocumentBundle = {
   };
   analyzedAt?: string;
   warnings?: string[];
+  tempBucket?: string;
 };
 
 type Manifest = {
-  version: 1;
+  version: number;
   sessionToken: string;
   contractNumber: string;
   vehicleCode: string;
@@ -79,6 +74,11 @@ type Manifest = {
   expiresAt: string;
 };
 
+type ProcessingLock = {
+  owner: string;
+  startedAt: string;
+};
+
 function jsonError(message: string, status: number) {
   return NextResponse.json(
     {
@@ -90,18 +90,12 @@ function jsonError(message: string, status: number) {
   );
 }
 
-/*
-  Verify the same signed admin session
-  created by app/api/admin/login/route.ts.
+function elapsed(startedAt: number) {
+  return Math.round(performance.now() - startedAt);
+}
 
-  Format:
-  v1.expiration.nonce.signature
-*/
 function verifyAdminSession(request: NextRequest): boolean {
-  const token = request.cookies.get(
-    ADMIN_COOKIE_NAME,
-  )?.value;
-
+  const token = request.cookies.get(ADMIN_COOKIE_NAME)?.value;
   const secret = process.env.NEXA_ADMIN_SESSION_SECRET;
 
   if (!token || !secret || secret.length < 32) {
@@ -117,11 +111,8 @@ function verifyAdminSession(request: NextRequest): boolean {
   const [version, expiresText, nonce, signatureHex] = parts;
 
   if (version !== "v1") return false;
-
   if (!/^\d+$/.test(expiresText)) return false;
-
   if (!/^[a-f0-9]{32}$/.test(nonce)) return false;
-
   if (!/^[a-f0-9]{64}$/.test(signatureHex)) return false;
 
   const expiresAt = Number(expiresText);
@@ -137,24 +128,15 @@ function verifyAdminSession(request: NextRequest): boolean {
   try {
     const payload = `${version}.${expiresText}.${nonce}`;
 
-    const expectedSignature = createHmac(
-      "sha256",
-      secret,
-    )
+    const expected = createHmac("sha256", secret)
       .update(payload)
       .digest();
 
-    const receivedSignature = Buffer.from(
-      signatureHex,
-      "hex",
-    );
+    const received = Buffer.from(signatureHex, "hex");
 
     return (
-      expectedSignature.length === receivedSignature.length &&
-      timingSafeEqual(
-        expectedSignature,
-        receivedSignature,
-      )
+      expected.length === received.length &&
+      timingSafeEqual(expected, received)
     );
   } catch {
     return false;
@@ -163,6 +145,10 @@ function verifyAdminSession(request: NextRequest): boolean {
 
 function manifestPath(token: string) {
   return `mobile-sessions/${token}/session.json`;
+}
+
+function lockPath(token: string) {
+  return `mobile-sessions/${token}/processing.lock`;
 }
 
 async function loadManifest(
@@ -203,8 +189,240 @@ async function saveManifest(manifest: Manifest) {
   }
 }
 
+function validateUploadedFiles(
+  files: UploadedFile[],
+  token: string,
+) {
+  if (
+    !Array.isArray(files) ||
+    files.length === 0 ||
+    files.length > MAX_FILES
+  ) {
+    throw new Error(
+      "No valid uploaded documents were found.",
+    );
+  }
+
+  const allowedPrefix =
+    `mobile-sessions/${token}/uploads/`;
+
+  const seenPaths = new Set<string>();
+  let totalBytes = 0;
+
+  const allowedMimeTypes = new Set([
+    "image/jpeg",
+    "image/png",
+    "image/webp",
+    "image/heic",
+    "image/heif",
+    "application/pdf",
+  ]);
+
+  for (const file of files) {
+    if (
+      !file ||
+      typeof file.tempPath !== "string" ||
+      !file.tempPath.startsWith(allowedPrefix) ||
+      file.tempPath
+        .slice(allowedPrefix.length)
+        .includes("/") ||
+      file.tempPath.includes("..")
+    ) {
+      throw new Error("Invalid document storage path.");
+    }
+
+    if (seenPaths.has(file.tempPath)) {
+      throw new Error("Duplicate document storage path.");
+    }
+
+    seenPaths.add(file.tempPath);
+
+    if (
+      !Number.isSafeInteger(file.size) ||
+      file.size <= 0 ||
+      file.size > MAX_FILE_BYTES
+    ) {
+      throw new Error("Invalid document size.");
+    }
+
+    if (!allowedMimeTypes.has(file.mimeType)) {
+      throw new Error("Invalid document format.");
+    }
+
+    totalBytes += file.size;
+
+    if (totalBytes > MAX_TOTAL_BYTES) {
+      throw new Error(
+        "Documents exceed the total size limit.",
+      );
+    }
+  }
+}
+
+async function downloadOneFile(file: UploadedFile) {
+  const { data, error } = await supabaseAdmin.storage
+    .from(BUCKET)
+    .download(file.tempPath);
+
+  if (error || !data) {
+    throw new Error(
+      "Could not retrieve an uploaded document.",
+    );
+  }
+
+  const buffer = Buffer.from(await data.arrayBuffer());
+
+  if (buffer.length !== file.size) {
+    throw new Error(
+      "Uploaded document size does not match.",
+    );
+  }
+
+  return {
+    id: file.id,
+    originalName: file.originalName,
+    storedName: file.storedName,
+    mimeType: file.mimeType,
+    size: file.size,
+    tempPath: file.tempPath,
+    buffer,
+  };
+}
+
+async function downloadFiles(files: UploadedFile[]) {
+  const results = new Array<
+    Awaited<ReturnType<typeof downloadOneFile>>
+  >(files.length);
+
+  for (
+    let start = 0;
+    start < files.length;
+    start += DOWNLOAD_CONCURRENCY
+  ) {
+    const batch = files.slice(
+      start,
+      start + DOWNLOAD_CONCURRENCY,
+    );
+
+    const downloaded = await Promise.all(
+      batch.map(downloadOneFile),
+    );
+
+    downloaded.forEach((file, index) => {
+      results[start + index] = file;
+    });
+  }
+
+  return results;
+}
+
+/**
+ * Best-effort lock using Supabase Storage.
+ *
+ * This prevents ordinary simultaneous processing
+ * requests, but is not a transactional database lock.
+ *
+ * A database lease is recommended for production
+ * crash recovery.
+ */
+async function acquireLock(
+  token: string,
+): Promise<{
+  acquired: boolean;
+  owner: string;
+}> {
+  const owner = randomUUID();
+
+  const lock: ProcessingLock = {
+    owner,
+    startedAt: new Date().toISOString(),
+  };
+
+  const { error } = await supabaseAdmin.storage
+    .from(BUCKET)
+    .upload(
+      lockPath(token),
+      Buffer.from(JSON.stringify(lock)),
+      {
+        contentType: "application/json",
+        upsert: false,
+        cacheControl: "no-store",
+      },
+    );
+
+  if (!error) {
+    return {
+      acquired: true,
+      owner,
+    };
+  }
+
+  const statusCode = String(
+    (error as { statusCode?: string | number }).statusCode ??
+      "",
+  );
+
+  const message = error.message.toLowerCase();
+
+  const duplicate =
+    statusCode === "409" ||
+    message.includes("already exists") ||
+    message.includes("duplicate") ||
+    message.includes("resource already exists");
+
+  if (duplicate) {
+    return {
+      acquired: false,
+      owner,
+    };
+  }
+
+  throw new Error(
+    `Could not acquire processing lock: ${error.message}`,
+  );
+}
+
+async function releaseLock(
+  token: string,
+  owner: string,
+) {
+  try {
+    const { data, error } = await supabaseAdmin.storage
+      .from(BUCKET)
+      .download(lockPath(token));
+
+    if (error || !data) {
+      return;
+    }
+
+    const lock = JSON.parse(
+      await data.text(),
+    ) as ProcessingLock;
+
+    if (lock.owner !== owner) {
+      return;
+    }
+
+    const { error: removeError } =
+      await supabaseAdmin.storage
+        .from(BUCKET)
+        .remove([lockPath(token)]);
+
+    if (removeError) {
+      console.warn(
+        "NEXA PROCESS LOCK RELEASE WARNING",
+        removeError.message,
+      );
+    }
+  } catch (error) {
+    console.warn(
+      "NEXA PROCESS LOCK RELEASE WARNING",
+      error instanceof Error ? error.message : "Unknown",
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
-  // Verify authentication before reading session data.
   if (!verifyAdminSession(request)) {
     return jsonError(
       "Admin session expired or invalid. Please log in again.",
@@ -212,7 +430,11 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  const startedAt = performance.now();
+
   let token = "";
+  let lockOwner = "";
+  let lockAcquired = false;
 
   try {
     const body = await request.json().catch(() => null);
@@ -226,17 +448,16 @@ export async function POST(request: NextRequest) {
       return jsonError("Invalid QR session token.", 400);
     }
 
+    const manifestStartedAt = performance.now();
     const manifest = await loadManifest(token);
 
     if (!manifest || manifest.sessionToken !== token) {
       return jsonError("QR session not found.", 404);
     }
 
-    const expiresAt = Date.parse(manifest.expiresAt);
-
     if (
-      !Number.isFinite(expiresAt) ||
-      Date.now() >= expiresAt
+      !Number.isFinite(Date.parse(manifest.expiresAt)) ||
+      Date.now() >= Date.parse(manifest.expiresAt)
     ) {
       return jsonError(
         "QR session expired. Generate a new QR.",
@@ -244,7 +465,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (manifest.status === "ready" && manifest.bundle) {
+    if (
+      manifest.status === "ready" &&
+      manifest.bundle
+    ) {
       return NextResponse.json({
         ok: true,
         success: true,
@@ -260,153 +484,122 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const uploadedFiles = manifest.uploadedFiles;
+    validateUploadedFiles(
+      manifest.uploadedFiles,
+      token,
+    );
+
+    const manifestMs = elapsed(manifestStartedAt);
+
+    const lockStartedAt = performance.now();
+
+    const lock = await acquireLock(token);
+
+    lockOwner = lock.owner;
+    lockAcquired = lock.acquired;
+
+    if (!lockAcquired) {
+      return NextResponse.json(
+        {
+          ok: true,
+          success: true,
+          status: "processing",
+          message: "Analysis is already running.",
+        },
+        { status: 202 },
+      );
+    }
+
+    const lockMs = elapsed(lockStartedAt);
+
+    // Recheck the session after acquiring the lock.
+    const current = await loadManifest(token);
+
+    if (!current || current.sessionToken !== token) {
+      return jsonError("QR session not found.", 404);
+    }
 
     if (
-      !Array.isArray(uploadedFiles) ||
-      uploadedFiles.length === 0 ||
-      uploadedFiles.length > MAX_FILES
+      current.status === "ready" &&
+      current.bundle
     ) {
+      return NextResponse.json({
+        ok: true,
+        success: true,
+        status: "ready",
+        sessionId: current.bundle.sessionId,
+      });
+    }
+
+    if (current.status !== "processing") {
       return jsonError(
-        "No valid uploaded documents were found.",
-        400,
+        "QR session is not ready for analysis.",
+        409,
       );
     }
 
-    let totalBytes = 0;
-
-    const form = new FormData();
-
-    form.set(
-      "contractNumber",
-      manifest.contractNumber || "",
+    validateUploadedFiles(
+      current.uploadedFiles,
+      token,
     );
 
-    form.set(
-      "vehicleCode",
-      manifest.vehicleCode || "",
+    // Download the already uploaded photos.
+    // Do not upload another copy to Supabase.
+    const downloadStartedAt = performance.now();
+
+    const documents = await downloadFiles(
+      current.uploadedFiles,
     );
 
-    /*
-      Download files previously uploaded
-      from the phone.
+    const downloadMs = elapsed(downloadStartedAt);
 
-      Never trust arbitrary storage paths
-      provided by session metadata.
-    */
-    for (const file of uploadedFiles) {
-      const allowedPrefix =
-        `mobile-sessions/${token}/uploads/`;
+    // Run the shared AI analyzer.
+    const analysisStartedAt = performance.now();
 
-      if (
-        !file.tempPath ||
-        !file.tempPath.startsWith(allowedPrefix)
-      ) {
-        throw new Error("Invalid document storage path.");
-      }
-
-      if (
-        !Number.isFinite(file.size) ||
-        file.size <= 0 ||
-        file.size > MAX_FILE_BYTES
-      ) {
-        throw new Error("Invalid document size.");
-      }
-
-      totalBytes += file.size;
-
-      if (totalBytes > MAX_TOTAL_BYTES) {
-        throw new Error(
-          "Documents exceed the total size limit.",
-        );
-      }
-
-      const { data, error } = await supabaseAdmin.storage
-        .from(BUCKET)
-        .download(file.tempPath);
-
-      if (error || !data) {
-        throw new Error(
-          "Could not retrieve an uploaded document.",
-        );
-      }
-
-      const buffer = await data.arrayBuffer();
-
-      if (buffer.byteLength !== file.size) {
-        throw new Error(
-          "Uploaded document size does not match.",
-        );
-      }
-
-      form.append(
-        "documents",
-        new File(
-          [buffer],
-          file.originalName || file.storedName,
-          {
-            type:
-              file.mimeType ||
-              "application/octet-stream",
-          },
-        ),
-      );
-    }
-
-    /*
-      Run the existing AI scanner directly.
-
-      This avoids making a second HTTP
-      request through the admin middleware.
-    */
-    const analysisRequest = new Request(
-      new URL("/api/admin/documents/analyze", request.url),
-      {
-        method: "POST",
-        body: form,
-      },
+    const result = await analyzeExistingDocuments(
+      documents,
+      `nexa_qr_${token}`,
     );
 
-    const response = await analyzeDocuments(analysisRequest);
+    const analysisMs = elapsed(analysisStartedAt);
 
-    const result = await response.json().catch(() => null);
-
-    if (
-      !response.ok ||
-      (!result?.ok && !result?.success) ||
-      !result?.sessionId
-    ) {
-      throw new Error(
-        typeof result?.error === "string"
-          ? result.error
-          : "Document AI analysis failed.",
-      );
-    }
-
-    /*
-      Reload the session before saving
-      the AI result.
-    */
     const latest = await loadManifest(token);
 
-    if (!latest || latest.status !== "processing") {
+    if (!latest || latest.sessionToken !== token) {
+      return jsonError(
+        "QR session disappeared during analysis.",
+        409,
+      );
+    }
+
+    if (
+      latest.status === "ready" &&
+      latest.bundle
+    ) {
+      return NextResponse.json({
+        ok: true,
+        success: true,
+        status: "ready",
+        sessionId: latest.bundle.sessionId,
+      });
+    }
+
+    if (latest.status !== "processing") {
       return jsonError(
         "QR session changed during analysis.",
         409,
       );
     }
 
+    // Preserve the existing file paths for the
+    // Google Drive contract attachment workflow.
     const nextBundle: DocumentBundle = {
       sessionId: result.sessionId,
-      files: Array.isArray(result.files)
-        ? result.files
-        : [],
-      autofill: result.autofill || {},
-      warnings: Array.isArray(result.warnings)
-        ? result.warnings
-        : [],
-      analyzedAt:
-        result.analyzedAt || new Date().toISOString(),
+      files: result.files,
+      autofill: result.autofill,
+      warnings: result.warnings,
+      analyzedAt: result.analyzedAt,
+      tempBucket: BUCKET,
     };
 
     latest.bundle = nextBundle;
@@ -415,29 +608,22 @@ export async function POST(request: NextRequest) {
 
     await saveManifest(latest);
 
-    /*
-      Remove redundant phone uploads only
-      after the AI bundle is safely saved.
+    console.info("NEXA DOCUMENT PROCESS TIMING", {
+      fileCount: documents.length,
+      totalBytes: documents.reduce(
+        (sum, document) => sum + document.size,
+        0,
+      ),
+      manifestMs,
+      lockMs,
+      downloadMs,
+      analysisMs,
+      totalMs: elapsed(startedAt),
+      duplicateStorageUploads: 0,
+    });
 
-      The analyze route's own temporary files
-      remain available for contract generation.
-    */
-    const rawPaths = latest.uploadedFiles
-      .map((file) => file.tempPath)
-      .filter(Boolean);
-
-    if (rawPaths.length) {
-      const { error } = await supabaseAdmin.storage
-        .from(BUCKET)
-        .remove(rawPaths);
-
-      if (error) {
-        console.warn(
-          "MOBILE DOCUMENT CLEANUP WARNING",
-          error.message,
-        );
-      }
-    }
+    // Do not delete the original QR uploads.
+    // Their paths are referenced by the bundle.
 
     return NextResponse.json({
       ok: true,
@@ -446,20 +632,21 @@ export async function POST(request: NextRequest) {
       sessionId: nextBundle.sessionId,
     });
   } catch (error) {
-    console.error(
-      "MOBILE DOCUMENT PROCESS ERROR:",
-      error instanceof Error
-        ? error.message
-        : "Unknown error",
-    );
+    console.error("MOBILE DOCUMENT PROCESS ERROR", {
+      message:
+        error instanceof Error
+          ? error.message
+          : "Unknown error",
+      elapsedMs: elapsed(startedAt),
+    });
 
-    /*
-      Keep original phone documents
-      in storage if AI processing fails.
-    */
     return jsonError(
       "AI processing failed. Uploaded photos are saved. Please retry.",
       500,
     );
+  } finally {
+    if (lockAcquired && token && lockOwner) {
+      await releaseLock(token, lockOwner);
+    }
   }
 }
