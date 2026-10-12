@@ -3,8 +3,7 @@
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 
-import NexaFleetScannerButton from "../../components/admin/NexaFleetScannerButton";
-
+import NexaFleetScannerButton from "../components/admin/NexaFleetScannerButton";
 import {
   AlertTriangle,
   ArrowRight,
