@@ -1,9 +1,6 @@
 
 import { NextRequest, NextResponse } from "next/server";
-import {
-  createHmac,
-  randomBytes,
-} from "node:crypto";
+import { createHmac, randomBytes } from "node:crypto";
 
 import { supabaseAdmin } from "@/lib/supabaseAdmin";
 
@@ -18,38 +15,28 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const ADMIN_COOKIE_NAME = "nexa_admin_session";
-
-const LOGIN_CHALLENGE_COOKIE =
-  "nexa_owner_login_challenge";
-
+const LOGIN_CHALLENGE_COOKIE = "nexa_owner_login_challenge";
 const SESSION_DURATION = 60 * 60 * 24;
 
 function jsonError(message: string, status = 400) {
   return NextResponse.json(
-    {
-      success: false,
-      error: message,
-    },
+    { success: false, error: message },
     {
       status,
-      headers: {
-        "Cache-Control": "no-store",
-      },
+      headers: { "Cache-Control": "no-store" },
     }
   );
 }
 
-function createAdminSession(secret: string): string {
+function createOwnerSession(secret: string): string {
   const expiresAt =
-    Math.floor(Date.now() / 1000) +
-    SESSION_DURATION;
+    Math.floor(Date.now() / 1000) + SESSION_DURATION;
 
   const nonce = randomBytes(16).toString("hex");
 
-  // v1 maintains compatibility with the
-  // existing NEXA admin session verifier.
-
-  const payload = `v1.${expiresAt}.${nonce}`;
+  // Passkey-authenticated owner sessions use v2.
+  // Password sessions continue using their existing format.
+  const payload = `v2.${expiresAt}.${nonce}`;
 
   const signature = createHmac("sha256", secret)
     .update(payload)
@@ -60,40 +47,22 @@ function createAdminSession(secret: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    // Only accept requests from the official
-    // NEXA website.
-
-    if (
-      request.headers.get("origin") !==
-      NEXA_WEBAUTHN_ORIGIN
-    ) {
-      return jsonError(
-        "Invalid authentication origin.",
-        403
-      );
+    if (request.headers.get("origin") !== NEXA_WEBAUTHN_ORIGIN) {
+      return jsonError("Invalid authentication origin.", 403);
     }
 
-    const sessionSecret =
-      process.env.NEXA_ADMIN_SESSION_SECRET;
+    const sessionSecret = process.env.NEXA_ADMIN_SESSION_SECRET;
 
     if (!sessionSecret || sessionSecret.length < 32) {
-      console.error(
-        "NEXA admin session secret is missing."
-      );
-
       return jsonError(
         "Owner authentication is not configured.",
         500
       );
     }
 
-    // Read the challenge bound to the browser
-    // that initiated authentication.
-
-    const expectedChallenge =
-      request.cookies.get(
-        LOGIN_CHALLENGE_COOKIE
-      )?.value;
+    const expectedChallenge = request.cookies.get(
+      LOGIN_CHALLENGE_COOKIE
+    )?.value;
 
     if (!expectedChallenge) {
       return jsonError(
@@ -101,9 +70,6 @@ export async function POST(request: NextRequest) {
         400
       );
     }
-
-    // Verify that this challenge exists,
-    // is unexpired and has not been used.
 
     const { data: pendingChallenge, error: challengeError } =
       await supabaseAdmin
@@ -115,9 +81,7 @@ export async function POST(request: NextRequest) {
         .gt("expires_at", new Date().toISOString())
         .maybeSingle();
 
-    if (challengeError) {
-      throw challengeError;
-    }
+    if (challengeError) throw challengeError;
 
     if (!pendingChallenge) {
       return jsonError(
@@ -126,14 +90,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Load the single approved owner credential.
-
-    const ownerPasskey =
-      await getRegisteredOwnerPasskey();
+    const ownerPasskey = await getRegisteredOwnerPasskey();
 
     if (!ownerPasskey) {
       return jsonError(
-        "No owner passkey is registered.",
+        "No owner passkey is registered. Register your Samsung first.",
         401
       );
     }
@@ -153,14 +114,11 @@ export async function POST(request: NextRequest) {
     if (
       !body ||
       typeof body !== "object" ||
-      Array.isArray(body)
+      Array.isArray(body) ||
+      typeof body.id !== "string"
     ) {
-      return jsonError(
-        "Invalid authentication response."
-      );
+      return jsonError("Invalid authentication response.");
     }
-
-    // Only the enrolled credential is allowed.
 
     if (body.id !== ownerPasskey.credential_id) {
       return jsonError(
@@ -169,61 +127,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Decode the stored credential public key.
-
     const publicKey = new Uint8Array(
-      Buffer.from(
-        ownerPasskey.public_key,
-        "base64url"
-      )
+      Buffer.from(ownerPasskey.public_key, "base64url")
     );
 
-    // Cryptographically verify the passkey
-    // assertion and require user verification.
-
-    const verification =
-      await verifyAuthenticationResponse({
-        response: body,
-
-        expectedChallenge,
-        expectedOrigin: NEXA_WEBAUTHN_ORIGIN,
-        expectedRPID: NEXA_WEBAUTHN_RP_ID,
-
-        credential: {
-          id: ownerPasskey.credential_id,
-          publicKey,
-          counter: Number(ownerPasskey.counter),
-          transports: ownerPasskey.transports || [],
-        },
-
-        requireUserVerification: true,
-      });
+    const verification = await verifyAuthenticationResponse({
+      response: body,
+      expectedChallenge,
+      expectedOrigin: NEXA_WEBAUTHN_ORIGIN,
+      expectedRPID: NEXA_WEBAUTHN_RP_ID,
+      credential: {
+        id: ownerPasskey.credential_id,
+        publicKey,
+        counter: Number(ownerPasskey.counter),
+        transports: ownerPasskey.transports || [],
+      },
+      requireUserVerification: true,
+    });
 
     if (!verification.verified) {
-      return jsonError(
-        "Owner authentication failed.",
-        401
-      );
+      return jsonError("Owner authentication failed.", 401);
     }
-
-    // Consume the challenge before issuing
-    // an authenticated session.
 
     const { data: consumed, error: consumeError } =
       await supabaseAdmin
         .from("nexa_owner_auth_challenges")
-        .update({
-          consumed_at: new Date().toISOString(),
-        })
+        .update({ consumed_at: new Date().toISOString() })
         .eq("id", pendingChallenge.id)
         .is("consumed_at", null)
         .gt("expires_at", new Date().toISOString())
         .select("id")
         .maybeSingle();
 
-    if (consumeError) {
-      throw consumeError;
-    }
+    if (consumeError) throw consumeError;
 
     if (!consumed) {
       return jsonError(
@@ -232,53 +168,35 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Store the new signature counter.
-    // Preserve the credential's device-bound
-    // status and reject any backup state.
+    const { error: updateError } = await supabaseAdmin
+      .from("nexa_owner_passkeys")
+      .update({
+        counter: verification.authenticationInfo.newCounter,
+        last_used_at: new Date().toISOString(),
+      })
+      .eq("id", ownerPasskey.id);
 
-    const { error: updateError } =
-      await supabaseAdmin
-        .from("nexa_owner_passkeys")
-        .update({
-          counter:
-            verification.authenticationInfo.newCounter,
-          last_used_at: new Date().toISOString(),
-        })
-        .eq("id", ownerPasskey.id);
-
-    if (updateError) {
-      throw updateError;
-    }
-
-    // Create a signed NEXA admin session.
-
-    const sessionToken =
-      createAdminSession(sessionSecret);
+    if (updateError) throw updateError;
 
     const response = NextResponse.json(
       {
         success: true,
-        message:
-          "Owner authentication successful.",
+        message: "Owner authentication successful.",
       },
       {
-        headers: {
-          "Cache-Control": "no-store",
-        },
+        headers: { "Cache-Control": "no-store" },
       }
     );
 
     response.cookies.set({
       name: ADMIN_COOKIE_NAME,
-      value: sessionToken,
+      value: createOwnerSession(sessionSecret),
       httpOnly: true,
       secure: true,
       sameSite: "lax",
       path: "/",
       maxAge: SESSION_DURATION,
     });
-
-    // Clear the one-time authentication cookie.
 
     response.cookies.set({
       name: LOGIN_CHALLENGE_COOKIE,
@@ -292,10 +210,7 @@ export async function POST(request: NextRequest) {
 
     return response;
   } catch (error) {
-    console.error(
-      "NEXA passkey authentication error:",
-      error
-    );
+    console.error("NEXA passkey authentication error:", error);
 
     return jsonError(
       "Unable to verify owner authentication.",
