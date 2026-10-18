@@ -3,6 +3,7 @@
 import React, {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -2600,6 +2601,29 @@ const SEASONAL_PRICING: SeasonalPricing[] = [
   },
 ];
 
+// Promotional office/delivery rental rates: 17 Oct 2026 through 30 Apr 2027.
+// April ends on the 30th. The Kymco vehicle surcharge is applied separately.
+const WINTER_PROMO_START = new Date(2026, 9, 17);
+const WINTER_PROMO_END = new Date(2027, 3, 30);
+const WINTER_PROMO_DAY_RATES: Record<number, number> = {
+  1: 39, 2: 37, 3: 36, 4: 35, 5: 34,
+  6: 33, 7: 32, 8: 31, 9: 30, 10: 29,
+};
+
+function isWinterPromo(date: Date): boolean {
+  const day = startOfDay(date).getTime();
+  return day >= WINTER_PROMO_START.getTime() && day <= WINTER_PROMO_END.getTime();
+}
+
+function getMobileOfficeDefaultDate(): Date {
+  const now = new Date();
+  const today = startOfDay(now);
+  // A safe, editable starting slot. Winter office slots begin at 09:30.
+  // In the evening we start tomorrow instead of assuming same-day availability.
+  const minutesNow = now.getHours() * 60 + now.getMinutes();
+  return minutesNow >= 18 * 60 ? addDays(today, 1) : today;
+}
+
 function normalizeLocale(value: string | undefined): Locale {
   if (
     value === "es" ||
@@ -2623,6 +2647,15 @@ function normalizeLocale(value: string | undefined): Locale {
 }
 
 function getSeasonalPricing(date: Date): SeasonalPricing {
+  if (isWinterPromo(date)) {
+    return {
+      seasonName: "Winter Promotion",
+      halfDayPrice: 34,
+      halfDayOldPrice: 45,
+      fullDayOldPrice: 55,
+      fullDayPricing: WINTER_PROMO_DAY_RATES,
+    };
+  }
   const month = date.getMonth() + 1;
 
   if (month === 12 || month === 1 || month === 2) return SEASONAL_PRICING[0];
@@ -2668,6 +2701,12 @@ function getRate(
   vehicleName: string
 ) {
   const normalizedDays = Math.max(days, 1);
+
+  if (pricing.seasonName === "Winter Promotion") {
+    const vehiclePriceIncrease = isKymcoSkyTown(vehicleName)
+      ? KYMCO_SKY_TOWN_PRICE_INCREASE : 0;
+    return (WINTER_PROMO_DAY_RATES[Math.min(normalizedDays, 10)] || 29) + vehiclePriceIncrease;
+  }
 
   if (normalizedDays <= 6) {
     return pricing.fullDayPricing[normalizedDays];
@@ -3076,7 +3115,7 @@ function TimeDropdown({
         type="button"
         disabled={disabled}
         onClick={onToggle}
-        className="min-h-[58px] w-full rounded-[15px] border border-black/10 bg-white px-3 py-2 text-left transition hover:border-black/26 hover:bg-black/[0.025] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-black/[0.025] disabled:text-black/35"
+        className="min-h-[58px] w-full rounded-[15px] border border-black/10 bg-white px-3 py-2 text-left transition hover:border-[#f58220] hover:bg-orange-50/40 active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-black/[0.025] disabled:text-black/35"
       >
         <div className="text-[8px] font-black uppercase tracking-[0.16em] text-black/42">
           {label}
@@ -3094,7 +3133,7 @@ function TimeDropdown({
               className={[
                 "mb-1 flex w-full items-center justify-between rounded-[13px] px-3 py-2 text-left text-[12px] font-black transition last:mb-0",
                 option === value
-                  ? "bg-black text-white"
+                  ? "bg-[linear-gradient(115deg,#f47719,#ff9b3f)] text-white shadow-[0_5px_15px_rgba(245,130,32,0.22)]"
                   : "bg-black/[0.035] text-black hover:bg-black/[0.08]",
               ].join(" ")}
             >
@@ -3107,18 +3146,69 @@ function TimeDropdown({
   );
 }
 
+// OFFICE PICKUP SPACING CONTROLS (pixels) — edit these values only.
+// Increase a number for more space; decrease it for less.
+const OFFICE_PICKUP_SPACING = {
+  topPadding: 5,         // Space above the title/icon row
+  titleToAddress: 0,     // Gap between title row and address
+  addressToMaps: 0,      // Gap between address and Google Maps link
+  bottomPadding: 5,     // Space below the Maps link
+} as const;
+
 function ServiceMethodButton({
   selected,
   title,
   icon,
   onClick,
+  officeMapsLink = false,
 }: {
   selected: boolean;
   title: string;
   icon: React.ReactNode;
   onClick: () => void;
+  officeMapsLink?: boolean;
 }) {
+  if (officeMapsLink) {
+    return (
+      <div className={[
+        "service-method-button group relative w-full overflow-hidden rounded-[8px] border border-transparent text-black transition-[color,box-shadow] duration-300",
+        selected ? "service-method-selected" : "",
+      ].join(" ")}>
+        <button
+          type="button"
+          onClick={onClick}
+          className="relative flex w-full items-center gap-3 px-4 pb-0 text-left sm:gap-4 sm:px-5"
+          style={{ paddingTop: OFFICE_PICKUP_SPACING.topPadding }}
+        >
+          <span className="service-method-shine pointer-events-none absolute inset-y-0 -left-1/2 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/35 to-transparent opacity-0" aria-hidden="true" />
+          <span className="service-method-icon relative flex h-14 w-14 shrink-0 items-center justify-center rounded-[6px] border border-black/10 bg-black/[0.035] transition-all duration-300 group-hover:border-white/20 group-hover:bg-white/10" aria-hidden="true">{icon}</span>
+          <span className="min-w-0 flex-1">
+            <span className="block text-[13px] font-black uppercase leading-snug tracking-normal sm:text-[15px]">{title} (Magaluf)</span>
+          </span>
+          <span className="service-method-arrow relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] border border-current/[0.14] text-[20px] font-medium transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">→</span>
+        </button>
+        <div className="flex flex-col items-start pl-[92px] pr-4 sm:pl-[100px]"
+          style={{ paddingTop: OFFICE_PICKUP_SPACING.titleToAddress, paddingBottom: OFFICE_PICKUP_SPACING.bottomPadding }}>
+          <span className="block text-[12px] font-medium leading-5 text-black/60 group-hover:text-white/70">Carrer Galleon 13, Magaluf</span>
+          <a
+            href="https://www.google.com/maps/search/?api=1&query=Nexa%20Rentals%20Magaluf"
+            target="_blank"
+            rel="noopener noreferrer"
+            onClick={(event) => event.stopPropagation()}
+            className="inline-flex max-w-full items-center gap-1.5 text-[11px] font-semibold leading-5 text-[#c45c16] underline underline-offset-2 hover:text-[#9a410a] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#c45c16]"
+            style={{ marginTop: OFFICE_PICKUP_SPACING.addressToMaps }}
+            aria-label="View Nexa Rentals Magaluf on Google Maps"
+          >
+            <svg viewBox="0 0 24 24" className="h-3.5 w-3.5 shrink-0" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+            View on Google Maps ↗
+          </a>
+        </div>
+      </div>
+    );
+  }
+
   return (
+    <div className="relative w-full">
     <button
       type="button"
       onClick={onClick}
@@ -3140,9 +3230,7 @@ function ServiceMethodButton({
       </span>
 
       <span className="relative min-w-0 flex-1 pl-4">
-        <span className="block text-[15px] font-black uppercase leading-[1.16] tracking-[0.06em]">
-          {title}
-        </span>
+        <span className="block text-[15px] font-black uppercase leading-[1.16] tracking-[0.06em]">{title}</span>
       </span>
 
       <span
@@ -3152,6 +3240,8 @@ function ServiceMethodButton({
         →
       </span>
     </button>
+
+    </div>
   );
 }
 
@@ -4592,7 +4682,7 @@ function CalendarModal({
 
     if (!wasOpenRef.current) {
       window.requestAnimationFrame(() => {
-        scrollToMonth(viewMonth, "auto");
+        scrollToMonth(startOfMonth(new Date()), "auto");
       });
     }
 
@@ -4648,7 +4738,7 @@ function CalendarModal({
   return (
     <dialog
       ref={dialogRef}
-      className="nexa-calendar-dialog fixed inset-0 m-0 h-[100dvh] w-screen max-h-none max-w-none overflow-hidden border-0 bg-transparent p-3 text-black"
+      className="nexa-calendar-dialog fixed inset-0 m-0 h-[100dvh] w-screen max-h-none max-w-none overflow-hidden border-0 bg-transparent p-0 text-black"
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -4658,8 +4748,8 @@ function CalendarModal({
       }}
     >
       <div
-        className="flex w-[min(760px,calc(100vw-24px))] flex-col overflow-hidden rounded-[22px] border border-black/10 bg-white text-black shadow-[0_32px_110px_rgba(0,0,0,0.36)]"
-        style={{ maxHeight: "min(700px, calc(100svh - 24px))" }}
+        className="nexa-calendar-card flex w-[min(760px,calc(100vw-24px))] min-h-0 flex-col overflow-hidden rounded-[22px] border border-black/10 bg-white text-black shadow-[0_32px_110px_rgba(0,0,0,0.36)]"
+        style={{ maxHeight: "min(700px, calc(100dvh - 24px))" }}
       >
         <div className="shrink-0 flex items-start justify-between gap-4 border-b border-black/10 px-5 py-3">
           <div>
@@ -4723,7 +4813,9 @@ function CalendarModal({
         <div
           ref={monthsScrollerRef}
           onScroll={handleCalendarScroll}
-          className="calendar-months-scroll min-h-0 flex-1 overflow-y-auto px-4 py-4"
+          className="calendar-months-scroll min-h-0 flex-1 overflow-y-scroll px-4 py-4"
+          onTouchMove={(event) => event.stopPropagation()}
+          onWheel={(event) => event.stopPropagation()}
         >
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
             {monthsList.map((month, monthIndex) => {
@@ -4807,6 +4899,7 @@ function CalendarModal({
                           onClick={() => onPick(day)}
                           className={[
                             "aspect-square rounded-[14px] text-[12px] font-black transition",
+                            selected ? "nexa-calendar-endpoint" : inRange ? "nexa-calendar-between" : "",
                             selected
                               ? "bg-black text-white shadow-[0_12px_30px_rgba(0,0,0,0.22)]"
                               : inRange
@@ -4837,7 +4930,7 @@ function CalendarModal({
               type="button"
               disabled={!canConfirmFullRange}
               onClick={onConfirmDates}
-              className="w-full rounded-[18px] bg-black px-5 py-4 text-[12px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#222] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-black/32"
+              className="nexa-calendar-confirm w-full rounded-[18px] bg-black px-5 py-4 text-[12px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#222] active:scale-[0.98] disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-black/32"
             >
               {tt.selectDates}
             </button>
@@ -4845,6 +4938,70 @@ function CalendarModal({
         ) : null}
       </div>
     </dialog>
+  );
+}
+
+
+// The same visual booking-stage indicator is kept local to each replacement file.
+const NEXA_PROGRESS_LABELS: Record<string, string[]> = {
+  "en": ["Select dates", "Scan documents", "Details & payment"],
+  "es": ["Elegir fechas", "Escanear documentos", "Datos y pago"],
+  "de": ["Daten wählen", "Dokumente scannen", "Daten & Zahlung"],
+  "fr": ["Choisir les dates", "Scanner documents", "Infos et paiement"],
+  "it": ["Scegli le date", "Scansiona documenti", "Dati e pagamento"],
+  "nl": ["Datums kiezen", "Documenten scannen", "Gegevens & betaling"],
+  "pl": ["Wybierz daty", "Skanuj dokumenty", "Dane i płatność"],
+  "pt": ["Escolher datas", "Digitalizar documentos", "Dados e pagamento"],
+  "sv": ["Välj datum", "Skanna dokument", "Uppgifter & betalning"],
+  "da": ["Vælg datoer", "Scan dokumenter", "Info og betaling"],
+  "no": ["Velg datoer", "Skann dokumenter", "Info og betaling"],
+  "cs": ["Vybrat termín", "Skenovat doklady", "Údaje a platba"],
+  "sr": ["Izaberite datume", "Skenirajte dokumenta", "Podaci i plaćanje"],
+  "uk": ["Вибір дат", "Сканування документів", "Дані та оплата"]
+};
+
+function NexaBookingProgress({ step, locale }: { step: 1 | 2 | 3; locale: string }) {
+  const labels = NEXA_PROGRESS_LABELS[locale] || NEXA_PROGRESS_LABELS.en;
+  return (
+    <div className="nexa-journey-progress" aria-label={`Booking step ${step} of 3`}>
+      <style jsx global>{`
+        .nexa-journey-progress { width: 100%; min-width: 0; margin: 0 0 22px; padding: 3px 1px 0; font-family: Montserrat, 'Open Sans', Arial, sans-serif; }
+        .nexa-journey-progress__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
+        .nexa-journey-progress__brand { color: #202020; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+        .nexa-journey-progress__count { color: #888; font-size: 10px; font-weight: 700; letter-spacing: .09em; white-space: nowrap; }
+        .nexa-journey-progress__track { position: relative; height: 22px; margin: 0 10px; }
+        .nexa-journey-progress__rail { position: absolute; left: 0; right: 0; top: 9px; height: 4px; border-radius: 100px; background: #e4e4e4; }
+        .nexa-journey-progress__fill { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 100px; background: linear-gradient(90deg, #ffbd47 0%, #ff931d 50%, #f66b10 100%); overflow: hidden; transition: width .45s ease; }
+        .nexa-journey-progress__fill::after { content: ''; position: absolute; inset: 0; width: 38%; background: linear-gradient(90deg, transparent, rgba(255,249,187,.95), transparent); filter: blur(2px); animation: nexaJourneyShimmer 2.8s ease-in-out infinite; }
+        .nexa-journey-progress__dot { position: absolute; top: 2px; width: 18px; height: 18px; transform: translateX(-50%); border-radius: 50%; border: 2px solid #c9c9c9; background: #f5f5f5; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 0 3px #fff; }
+        .nexa-journey-progress__dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #bfbfbf; }
+        .nexa-journey-progress__dot.is-active { border-color: #ff931d; background: #ff931d; box-shadow: 0 0 0 3px #fff, 0 0 13px rgba(255,154,38,.22); }
+        .nexa-journey-progress__dot.is-active::after { background: #fff; }
+        .nexa-journey-progress__labels { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 3px; margin-top: 9px; }
+        .nexa-journey-progress__label { color: #999; font-size: clamp(9px, 2.4vw, 11px); font-weight: 650; line-height: 1.35; }
+        .nexa-journey-progress__label.is-current { color: #202020; font-weight: 800; }
+        .nexa-journey-progress__label:nth-child(2) { text-align: center; }
+        .nexa-journey-progress__label:nth-child(3) { text-align: right; }
+        @keyframes nexaJourneyShimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(370%); } }
+        @media (prefers-reduced-motion: reduce) { .nexa-journey-progress__fill::after { animation: none; } .nexa-journey-progress__fill { transition: none; } }
+      `}</style>
+      <div className="nexa-journey-progress__head">
+        <span className="nexa-journey-progress__brand">NEXA RENTALS</span>
+        <span className="nexa-journey-progress__count">{step} / 3</span>
+      </div>
+      <div className="nexa-journey-progress__track" aria-hidden="true">
+        <div className="nexa-journey-progress__rail" />
+        <div className="nexa-journey-progress__fill" style={{ width: `${(step - 1) * 50}%` }} />
+        {[0, 1, 2].map((index) => (
+          <span key={index} className={`nexa-journey-progress__dot ${index < step ? 'is-active' : ''}`} style={{ left: `${index * 50}%` }} />
+        ))}
+      </div>
+      <div className="nexa-journey-progress__labels">
+        {labels.map((label, index) => (
+          <span key={index} className={`nexa-journey-progress__label ${index + 1 === step ? 'is-current' : ''}`} aria-current={index + 1 === step ? 'step' : undefined}>{label}</span>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -4862,6 +5019,16 @@ export default function BookingPanelV3({
     useMemo(() => getVehicleConfig(vehicleName), [vehicleName]);
 
   const minBookableDate = useMemo(() => startOfDay(new Date()), []);
+
+  const [mobileBooking, setMobileBooking] = useState(false);
+  const [mobileDeliveryPlanReady, setMobileDeliveryPlanReady] = useState(false);
+  useLayoutEffect(() => {
+    const query = window.matchMedia("(max-width: 767px)");
+    const sync = () => setMobileBooking(query.matches);
+    sync();
+    query.addEventListener("change", sync);
+    return () => query.removeEventListener("change", sync);
+  }, []);
 
   const [serviceMethod, setServiceMethod] = useState<ServiceMethod | null>(null);
   const [plan, setPlan] = useState<RentalPlan>(null);
@@ -4980,10 +5147,15 @@ export default function BookingPanelV3({
 
   const sameDayDynamicPrice = useMemo(() => {
     return (
-      getSameDayHourlyRate(
-        pickupTime,
-        halfReturnTime,
-        baseActivePricing.halfDayPrice
+      Math.min(
+        getSameDayHourlyRate(
+          pickupTime,
+          halfReturnTime,
+          baseActivePricing.halfDayPrice
+        ),
+        baseActivePricing.seasonName === "Winter Promotion"
+          ? baseActivePricing.halfDayPrice
+          : Number.POSITIVE_INFINITY
       ) + kymcoSkyTownPriceIncrease
     );
   }, [
@@ -5268,9 +5440,11 @@ export default function BookingPanelV3({
     }
 
     let cancelled = false;
+    const controller = new AbortController();
 
     async function checkAvailability() {
       setIsCheckingAvailability(true);
+      const requestTimeout = window.setTimeout(() => controller.abort(), 12000);
 
       try {
         if (!pickupDate || !returnDate || !plan) {
@@ -5303,6 +5477,7 @@ export default function BookingPanelV3({
           {
             method: "GET",
             cache: "no-store",
+            signal: controller.signal,
           }
         );
 
@@ -5331,6 +5506,7 @@ export default function BookingPanelV3({
           });
         }
       } finally {
+        window.clearTimeout(requestTimeout);
         if (!cancelled) {
           setIsCheckingAvailability(false);
         }
@@ -5341,6 +5517,7 @@ export default function BookingPanelV3({
 
     return () => {
       cancelled = true;
+      controller.abort();
       window.clearTimeout(timeout);
     };
   }, [
@@ -5477,6 +5654,7 @@ export default function BookingPanelV3({
     clearPlanAttentionTimers();
     setPlanAttention(false);
     setServiceMethod(nextMethod);
+    setMobileDeliveryPlanReady(false);
     setPickupDate(undefined);
     setDropoffDate(undefined);
     setPickupTime(nextMethod === "office" ? "09:30" : "11:30");
@@ -5500,8 +5678,20 @@ export default function BookingPanelV3({
     setActiveDateField("pickup");
 
     if (nextMethod === "office") {
-      setPlan(null);
-      setViewMonth(startOfMonth(minBookableDate));
+      if (mobileBooking) {
+        const defaultDate = getMobileOfficeDefaultDate();
+        const slots = filterTimesForDate(buildOfficeTimeOptions(defaultDate), defaultDate);
+        const defaultPickupTime = slots[0] || "09:30";
+        const resolvedDate = slots.length ? defaultDate : addDays(defaultDate, 1);
+        setPlan("half");
+        setPickupDate(resolvedDate);
+        setDropoffDate(undefined);
+        setPickupTime(slots.length ? defaultPickupTime : "09:30");
+        setViewMonth(startOfMonth(resolvedDate));
+      } else {
+        setPlan(null);
+        setViewMonth(startOfMonth(minBookableDate));
+      }
       setCalendarOpen(false);
       return;
     }
@@ -5510,13 +5700,16 @@ export default function BookingPanelV3({
     setPlan("full");
     setViewMonth(startOfMonth(firstDeliveryDate));
     setNotice("");
-    setCalendarOpen(true);
+    // Desktop keeps its existing automatic calendar flow.
+    // Mobile reveals the plan first, and opens the calendar on confirmation.
+    setCalendarOpen(!mobileBooking);
   }
 
   function handleChangeServiceMethod() {
     clearPlanAttentionTimers();
     setPlanAttention(false);
     setServiceMethod(null);
+    setMobileDeliveryPlanReady(false);
     setPlan(null);
     setPickupDate(undefined);
     setDropoffDate(undefined);
@@ -5555,6 +5748,36 @@ export default function BookingPanelV3({
   }
 
   function handlePlanSelect(nextPlan: Exclude<RentalPlan, null>) {
+    // Reopening the already-selected plan is an edit, not a new booking.
+    // Keep the confirmed dates, times and availability if the modal is dismissed.
+    if (nextPlan === plan && pickupDate) {
+      setNotice("");
+      setActiveTimeField(null);
+      setActiveDateField("pickup");
+      setViewMonth(startOfMonth(pickupDate));
+      setCalendarOpen(true);
+      return;
+    }
+    if (mobileBooking && serviceMethod === "office") {
+      clearPlanAttentionTimers();
+      setPlanAttention(false);
+      setPlan(nextPlan);
+      const selectedDate = pickupDate || getMobileOfficeDefaultDate();
+      const slots = filterTimesForDate(buildOfficeTimeOptions(selectedDate), selectedDate);
+      const resolvedDate = slots.length ? selectedDate : addDays(selectedDate, 1);
+      setPickupDate(resolvedDate);
+      setPickupTime(slots[0] || "09:30");
+      setDropoffDate(undefined);
+      setHalfReturnTime("20:00");
+      setAvailability(null);
+      setNotice("");
+      setIsCheckingAvailability(false);
+      setActiveTimeField(null);
+      setActiveDateField("pickup");
+      setViewMonth(startOfMonth(resolvedDate));
+      setCalendarOpen(true);
+      return;
+    }
     clearPlanAttentionTimers();
     setPlanAttention(false);
     setPlan(nextPlan);
@@ -5645,6 +5868,7 @@ export default function BookingPanelV3({
   }
 
   function handleConfirmCalendarDates() {
+    if (mobileBooking && serviceMethod === "hotel_delivery") setMobileDeliveryPlanReady(true);
     if (plan !== "full") return;
 
     if (!pickupDate) {
@@ -5847,7 +6071,7 @@ export default function BookingPanelV3({
     notice === tt.noTimesToday;
 
   return (
-    <div className="nexa-booking-panel-v3 relative z-20 w-full rounded-[20px] border border-black/10 bg-white p-4 text-black shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+    <div data-mobile-ready={mobileBooking ? "true" : "false"} className="nexa-booking-panel-v3 relative z-20 w-full rounded-[20px] border border-black/10 bg-white p-4 text-black shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
       <style jsx global>{`
         .nexa-booking-panel-v3 {
           max-width: 410px;
@@ -5860,6 +6084,14 @@ export default function BookingPanelV3({
           border-radius: 8px !important;
         }
 
+        @media (max-width: 767px) {
+          .nexa-booking-panel-v3 { border-radius: 20px; padding: 14px; box-shadow: none; }
+          .nexa-booking-panel-v3 .mobile-booking-vehicle { background: #fff; border-radius: 16px; padding: 15px; }
+          .nexa-booking-panel-v3 .mobile-booking-plans { gap: 10px; }
+          .nexa-booking-panel-v3 .mobile-booking-plans > * { min-width: 0; border-radius: 16px; }
+          .nexa-booking-panel-v3 .nexa-calendar-dialog { border-radius: 22px; }
+
+        }
         .nexa-calendar-dialog[open],
         .nexa-area-dialog[open],
         .nexa-accommodation-dialog[open],
@@ -6167,7 +6399,7 @@ export default function BookingPanelV3({
         .calendar-months-scroll {
           scrollbar-width: thin;
           scrollbar-color: rgba(0, 0, 0, 0.24) transparent;
-          scroll-behavior: smooth;
+          scroll-behavior: auto;
         }
 
         .calendar-months-scroll::-webkit-scrollbar {
@@ -6319,8 +6551,253 @@ export default function BookingPanelV3({
           }
         }
 
+        /* Mobile-only: one-page, quiet white booking experience. Desktop untouched. */
+        @media (max-width: 767px) {
+          .nexa-booking-panel-v3 {
+            width: 100%;
+            max-width: 100%;
+            border: 0;
+            border-radius: 0;
+            background: #fff;
+            padding: 16px 15px 24px;
+            box-shadow: none;
+          }
+          .nexa-booking-panel-v3 .mobile-booking-vehicle {
+            background: #fff;
+            border: 1px solid #e9e9e9;
+            border-radius: 14px;
+            padding: 14px 16px;
+          }
+          .nexa-booking-panel-v3 .service-method-button {
+            min-height: 86px;
+            border-radius: 14px;
+            padding: 14px 16px;
+            animation: none;
+          }
+          .nexa-booking-panel-v3 .service-method-icon {
+            width: 46px;
+            height: 46px;
+            border-radius: 10px;
+          }
+          .nexa-booking-panel-v3 .service-method-icon svg { width: 26px; height: 26px; }
+          .nexa-booking-panel-v3 .service-method-arrow {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+          }
+          .nexa-booking-panel-v3 .mobile-booking-plans {
+            grid-template-columns: minmax(0, 1fr);
+            gap: 12px;
+          }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button {
+            min-height: 104px;
+            width: 100%;
+            border-radius: 14px;
+            padding: 18px 16px 13px;
+          }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button + .plan-choice-button {
+            margin-top: 3px;
+          }
+          .nexa-booking-panel-v3 .nexa-calendar-dialog {
+            width: min(100vw - 20px, 480px);
+            max-height: min(90dvh, 820px);
+            border-radius: 20px;
+          }
+          .nexa-booking-panel-v3 .calendar-months-scroll {
+            max-height: min(58dvh, 540px);
+            overscroll-behavior: contain;
+          }
+          .nexa-booking-panel-v3 .mobile-details-hidden { display: none !important; }
+          .nexa-booking-panel-v3 .mobile-booking-vehicle { border: 0; padding: 4px 0 10px; background: transparent; }
+          .nexa-booking-panel-v3 .mobile-booking-vehicle > div:first-child { font-size: 10px; letter-spacing: .18em; }
+          .nexa-booking-panel-v3 .mobile-booking-vehicle > div:nth-child(2) { font-size: clamp(21px, 5.5vw, 30px); white-space: normal; line-height: 1.08; margin-top: 7px; }
+          .nexa-booking-panel-v3 .mobile-service-choices .service-method-button { min-height: 94px; background: #fff; color: #151515; border: 1px solid #e5e5e5; box-shadow: 0 5px 16px rgba(0,0,0,.045); animation: serviceMethodHeartbeat 3.2s ease-in-out infinite; }
+          .nexa-booking-panel-v3 .mobile-service-choices .service-method-button:nth-child(2) { animation-delay: 1.6s; }
+          .nexa-booking-panel-v3 .mobile-service-choices .service-method-button:hover { transform: none; background: #fff; color: #151515; }
+          .nexa-booking-panel-v3 .mobile-service-choices .service-method-button .service-method-icon { background: #fff5ec; border-color: #ffd8b9; color: #ed721a; }
+          .nexa-booking-panel-v3 .mobile-service-choices .service-method-button .service-method-arrow { color: #e87523; }
+          .nexa-booking-panel-v3 .mobile-office-location { color: #fff; text-decoration: underline; text-underline-offset: 3px; font-weight: 800; font-size: 11px; letter-spacing: .07em; }
+          .nexa-booking-panel-v3 .mobile-service-selected { background: linear-gradient(110deg,#ef6819,#ff973e); color: white; box-shadow: 0 8px 22px rgba(241,113,30,.23); }
+          .nexa-booking-panel-v3 .mobile-service-change { background: rgba(255,255,255,.2); border: 1px solid rgba(255,255,255,.55); color: #fff; border-radius: 8px; }
+          .nexa-booking-panel-v3 .mobile-booking-plans { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button { min-width: 0; width: 100%; min-height: 114px; padding: 18px 11px 12px; border-radius: 13px; box-shadow: 0 3px 14px rgba(0,0,0,.05); animation: none; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button + .plan-choice-button { margin-top: 0; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button > div:first-of-type { font-size: 10px; line-height: 1.3; letter-spacing: .035em; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button > div:nth-of-type(2) { margin-top: 12px; gap: 5px; flex-wrap: wrap; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button > div:nth-of-type(2) span:last-child { font-size: 27px; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected { color: #fff; border-color: #f67b22; background: linear-gradient(120deg,#f16b1c,#ff9b3c); box-shadow: 0 8px 22px rgba(241,113,30,.24); }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button > span:first-child { display: none; }
+          /* Compact, conversion-first mobile plan cards. Desktop is unchanged. */
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button { min-height: 88px; padding: 13px 10px 11px; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button > div:nth-of-type(2) { margin-top: 9px; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button > div:nth-of-type(2) span:first-child { display: none; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button > div:nth-of-type(2) span:last-child { font-size: 25px; }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected { color: #111; background: #fff7f0; border: 2px solid #f58220; box-shadow: 0 4px 12px rgba(245,130,32,.10); }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected > div:first-of-type { color: #b9530b; }
+          .nexa-booking-panel-v3 .mobile-service-selected { background: linear-gradient(110deg,#fff,#fff9f3); border: 1.5px solid #f58220; color: #161616; box-shadow: 0 3px 12px rgba(245,130,32,.08); }
+          .nexa-booking-panel-v3 .mobile-selected-shop { background: #fff2e7; color: #ee751c; border: 1px solid #ffd9b8; }
+          .nexa-booking-panel-v3 .mobile-office-location { color: #d8620d; text-decoration: none; font-size: 12px; letter-spacing: .025em; }
+          .nexa-booking-panel-v3 .mobile-service-change { color: #d8620d; background: #fff; border: 1px solid #ffd7b4; border-radius: 8px; }
+
+
+        }
+
+        /* Center the native modal in the visual viewport, independent of page scroll. */
+        .nexa-calendar-dialog[open] {
+          display: flex !important;
+          position: fixed !important;
+          inset: 0 !important;
+          width: 100vw !important;
+          height: 100dvh !important;
+          max-width: none !important;
+          max-height: none !important;
+          margin: 0 !important;
+          padding: max(10px, env(safe-area-inset-top)) 10px max(10px, env(safe-area-inset-bottom)) !important;
+          box-sizing: border-box !important;
+          align-items: center !important;
+          justify-content: center !important;
+          overflow: hidden !important;
+          background: transparent !important;
+          z-index: 2147483647 !important;
+        }
+        .nexa-calendar-dialog::backdrop { background: rgba(0,0,0,.55); backdrop-filter: blur(4px); }
+        /* Give both single-day and multi-day calendars the same bounded scroll area. */
+        @media (max-width: 767px) {
+          .nexa-calendar-dialog[open] .nexa-calendar-card {
+            height: min(690px, calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))) !important;
+          }
+          .nexa-calendar-dialog[open] .calendar-months-scroll {
+            position: relative !important;
+            height: 0 !important;
+            flex: 1 1 0% !important;
+            min-height: 0 !important;
+            overscroll-behavior-y: contain !important;
+            -webkit-overflow-scrolling: touch !important;
+            scroll-behavior: auto !important;
+            overflow-y: scroll !important;
+            touch-action: pan-y !important;
+            scrollbar-width: thin !important;
+            scrollbar-color: #f58220 #fff2e6 !important;
+          }
+          .nexa-calendar-dialog[open] .calendar-months-scroll::-webkit-scrollbar-thumb {
+            background: #f58220 !important;
+          }
+        }
+        .nexa-calendar-dialog .nexa-calendar-card {
+          width: min(760px, 100%) !important;
+          max-width: 100% !important;
+          max-height: 100% !important;
+          min-height: 0 !important;
+          margin: 0 auto !important;
+          display: flex !important;
+          flex-direction: column !important;
+          overflow: hidden !important;
+        }
+        .nexa-calendar-dialog .calendar-months-scroll {
+          flex: 1 1 auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          overflow-y: auto !important;
+          overscroll-behavior: contain;
+          -webkit-overflow-scrolling: touch;
+        }
+        .nexa-calendar-dialog .nexa-calendar-card > div:last-child {
+          flex-shrink: 0 !important;
+          padding-bottom: max(12px, env(safe-area-inset-bottom)) !important;
+        }
+        @media (max-width: 767px) {
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-popular > span:first-child {
+            display: block !important;
+            top: -9px !important;
+            padding: 5px 10px !important;
+            white-space: nowrap !important;
+            background: linear-gradient(110deg,#f47719,#ff9c42) !important;
+            color: white !important;
+            font-size: 8px !important;
+            box-shadow: 0 3px 12px rgba(245,130,32,.2) !important;
+          }
+          .nexa-calendar-dialog .nexa-calendar-card { border-radius: 18px !important; }
+          .nexa-calendar-dialog .calendar-months-scroll { padding: 10px 12px !important; }
+        }
+        @media (max-height: 620px) {
+          .nexa-calendar-dialog[open] { padding: 6px !important; }
+          .nexa-calendar-dialog .nexa-calendar-card { border-radius: 14px !important; }
+        }
+
+        /* Mobile live availability: calm green confirmation, not black. */
+        @media (max-width: 767px) {
+          .nexa-booking-panel-v3 .nexa-availability-success {
+            background: linear-gradient(115deg, #f0fdf4, #e4f9ed) !important;
+            border: 1.5px solid #56b881 !important;
+            color: #167346 !important;
+            box-shadow: 0 4px 14px rgba(22, 115, 70, .07) !important;
+          }
+        }
+
+        /* NEXA mobile: selected plans share the same warm white/orange treatment. */
+        @media (max-width: 767px) {
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected,
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-popular.plan-selected,
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-secondary.plan-selected {
+            background: linear-gradient(135deg, #fffaf5 0%, #fff1e4 100%) padding-box !important;
+            background-color: #fff7ef !important;
+            border: 2px solid #f58220 !important;
+            color: #141414 !important;
+            box-shadow: 0 5px 18px rgba(245, 130, 32, .13) !important;
+          }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected > div,
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected > div:first-of-type,
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected > div:nth-of-type(2),
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected > div:nth-of-type(2) span:last-child {
+            color: #171717 !important;
+          }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected > div:first-of-type {
+            color: #bb580d !important;
+          }
+          .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-selected > div:nth-of-type(2) span:first-child {
+            color: #9a9a9a !important;
+          }
+          /* Calendar endpoint dates, range fill and confirm button. */
+          .nexa-booking-panel-v3 .nexa-calendar-dialog .nexa-calendar-endpoint {
+            background: linear-gradient(135deg, #f47719, #ff9b41) !important;
+            color: #fff !important;
+            box-shadow: 0 7px 20px rgba(245, 130, 32, .27) !important;
+          }
+          .nexa-booking-panel-v3 .nexa-calendar-dialog .nexa-calendar-between {
+            background: #ffead7 !important;
+            color: #a74a09 !important;
+          }
+          .nexa-booking-panel-v3 .nexa-calendar-dialog .nexa-calendar-confirm:not(:disabled) {
+            background: linear-gradient(110deg, #ef6818, #ff9b3c) !important;
+            color: #fff !important;
+            box-shadow: 0 9px 23px rgba(245, 130, 32, .22) !important;
+          }
+          /* Checkout shine sweeps across continuously while checkout is enabled. */
+          .nexa-booking-panel-v3 .checkout-button-pulse:not(:disabled) {
+            background: linear-gradient(110deg, #ed6415, #ff9b3c) !important;
+            border-color: #f58220 !important;
+            box-shadow: 0 12px 28px rgba(245, 130, 32, .29) !important;
+            animation: nexaMobileCheckoutBreathe 3.2s ease-in-out infinite !important;
+          }
+          .nexa-booking-panel-v3 .checkout-button-pulse:not(:disabled) .checkout-button-shine {
+            opacity: 1 !important;
+            animation: nexaMobileCheckoutSweep 3.1s ease-in-out infinite !important;
+          }
+        }
+        @keyframes nexaMobileCheckoutSweep {
+          0%, 13% { transform: translateX(0) skewX(-12deg); opacity: 0; }
+          23% { opacity: .8; }
+          62% { transform: translateX(560%) skewX(-12deg); opacity: .8; }
+          73%, 100% { transform: translateX(560%) skewX(-12deg); opacity: 0; }
+        }
+        @keyframes nexaMobileCheckoutBreathe {
+          0%, 100% { box-shadow: 0 10px 25px rgba(245,130,32,.22); }
+          50% { box-shadow: 0 14px 34px rgba(245,130,32,.40); }
+        }
+
         @media (prefers-reduced-motion: reduce) {
           .checkout-button-pulse,
+          .checkout-button-pulse .checkout-button-shine,
           .service-method-button,
           .service-method-button:hover .service-method-shine,
           .delivery-area-trigger,
@@ -6335,7 +6812,10 @@ export default function BookingPanelV3({
         }
       `}</style>
 
-      <div className="rounded-[12px] border border-black/10 bg-black/[0.03] px-3 py-3">
+      <div className="relative z-10 w-full" data-nexa-booking-step="1">
+        <NexaBookingProgress step={1} locale={locale} />
+      </div>
+      <div className="rounded-[12px] border border-black/10 bg-black/[0.03] px-3 py-3 mobile-booking-vehicle">
         <div className="text-[9px] font-black uppercase tracking-[0.16em] text-black/46">
           {tt.vehicle}
         </div>
@@ -6343,7 +6823,7 @@ export default function BookingPanelV3({
           {vehicleName}
         </div>
 
-        {serviceMethod ? (
+        {serviceMethod && !mobileBooking ? (
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-black/10 pt-2">
             <div className="flex min-w-0 items-center gap-2">
               <span
@@ -6370,8 +6850,8 @@ export default function BookingPanelV3({
         ) : null}
       </div>
 
-      {!serviceMethod ? (
-      <div className="mt-3">
+      {(!serviceMethod || !mobileBooking) ? (
+      <div className="mt-3 mobile-service-choices">
         <div className="mb-2 text-[9px] font-black uppercase tracking-[0.16em] text-black/46">
           {tt.serviceQuestion}
         </div>
@@ -6379,6 +6859,7 @@ export default function BookingPanelV3({
           <ServiceMethodButton
             selected={serviceMethod === "office"}
             title={tt.officePickup}
+            officeMapsLink
             icon={
               <svg
                 viewBox="0 0 24 24"
@@ -6420,10 +6901,41 @@ export default function BookingPanelV3({
       </div>
       ) : null}
 
+      {mobileBooking && serviceMethod ? (
+        <div className="mobile-service-selected mt-3 flex items-center justify-between gap-2 rounded-xl px-3 py-2.5">
+          <div className="flex min-w-0 items-center gap-2.5">
+            <span aria-hidden="true" className="mobile-selected-shop flex h-10 w-10 shrink-0 items-center justify-center rounded-lg">
+              {serviceMethod === "office" ? (
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 10h18M5 10v10h14V10M4 4h16l1 6H3l1-6Z" /><path d="M9 20v-5h6v5" />
+                </svg>
+              ) : (
+                <svg viewBox="0 0 24 24" className="h-6 w-6" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M3 6h11v11H3zM14 10h3.5L21 14v3h-7z"/><circle cx="7" cy="18" r="2"/><circle cx="17" cy="18" r="2"/>
+                </svg>
+              )}
+            </span>
+            <div className="min-w-0">
+              <div className="text-[12px] font-black uppercase tracking-[0.025em] text-[#171717]">{selectedServiceLabel}</div>
+              {serviceMethod === "office" ? (
+                <a href="https://www.google.com/maps/search/?api=1&query=Nexa%20Rentals%20Magaluf"
+                  target="_blank" rel="noopener noreferrer"
+                  className="mobile-office-location mt-0.5 inline-flex items-center gap-1 text-[12px] font-extrabold"
+                  aria-label="Find Nexa Rentals in Magaluf on Google Maps">
+                  <svg viewBox="0 0 24 24" className="h-4 w-4" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M20 10c0 5-8 12-8 12S4 15 4 10a8 8 0 1 1 16 0Z"/><circle cx="12" cy="10" r="2.5"/></svg>
+                  MAGALUF <span aria-hidden="true">↗</span>
+                </a>
+              ) : null}
+            </div>
+          </div>
+          <button type="button" onClick={handleChangeServiceMethod} className="mobile-service-change shrink-0 px-2.5 py-1.5 text-[10px] font-extrabold">{tt.change}</button>
+        </div>
+      ) : null}
+
       {serviceMethod ? (
         <>
       {serviceMethod === "office" ? (
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className="mt-3 grid grid-cols-2 gap-2 mobile-booking-plans">
         <PlanButton
           selected={plan === "half"}
           title={tt.sameDayRental}
@@ -6439,17 +6951,34 @@ export default function BookingPanelV3({
 
         <PlanButton
           selected={plan === "full"}
-          title={tt.fullDay}
+          title={mobileBooking ? "Full Day / Multi-Day" : tt.fullDay}
           oldPrice={activePricing.fullDayOldPrice}
           price={activePricing.fullDayPricing[1]}
-          subtitle={tt.multiDayDiscount}
+          subtitle={mobileBooking ? undefined : tt.multiDayDiscount}
           needsChoice={needsPlanChoice}
           onClick={() => handlePlanSelect("full")}
         />
       </div>
+      ) : mobileBooking && serviceMethod === "hotel_delivery" ? (
+        <div className="mt-3 mobile-booking-plans">
+          <button
+            type="button"
+            onClick={() => {
+              setMobileDeliveryPlanReady(true);
+              setActiveDateField("pickup");
+              setViewMonth(startOfMonth(getNextDeliveryDate(minBookableDate)));
+              setCalendarOpen(true);
+            }}
+            className="w-full rounded-2xl border-2 border-[#ff6b23] bg-[#fff6f0] px-4 py-4 text-left shadow-sm active:scale-[0.99]"
+          >
+            <span className="block text-[14px] font-black text-[#171717]">{tt.fullDay} / {tt.multiDayDiscount}</span>
+            <span className="mt-1 block text-[12px] font-bold text-black/60">{tt.selectDates} · €{activePricing.fullDayPricing[1]}</span>
+          </button>
+        </div>
       ) : null}
 
-      <div className="mt-3 rounded-[12px] border border-black/10 bg-black/[0.03] px-3 py-3">
+      <div className={mobileBooking && !plan ? "mobile-details-hidden" : ""}>
+      <div className={`mt-3 rounded-[12px] border border-black/10 bg-black/[0.03] px-3 py-3 ${mobileBooking && (!plan || (serviceMethod === "hotel_delivery" && !mobileDeliveryPlanReady)) ? "max-md:hidden" : ""}`}>
         <div className="mb-2 text-[10px] font-black uppercase tracking-[0.14em] text-black/60">
           {tt.chooseQuantity}
         </div>
@@ -6471,7 +7000,7 @@ export default function BookingPanelV3({
         </select>
       </div>
 
-      <div className="mt-3 grid grid-cols-2 gap-2">
+      <div className={`mt-3 grid grid-cols-2 gap-2 ${mobileBooking && (!plan || (serviceMethod === "hotel_delivery" && !mobileDeliveryPlanReady)) ? "max-md:hidden" : ""}`}>
         <FieldButton
           label={tt.pickupDate}
           value={fmtDate(pickupDate, locale, tt.selectDate)}
@@ -6563,7 +7092,7 @@ export default function BookingPanelV3({
       ) : null}
 
       {isDeliveryService && pickupDate && dropoffDate ? (
-        <div className="mt-3 rounded-[12px] border border-black/10 bg-black/[0.03] p-3">
+        <div className={`mt-3 rounded-[12px] border border-black/10 bg-black/[0.03] p-3 ${mobileBooking && !pickupDate ? "mobile-details-hidden" : ""}`}>
           {serviceMethod === "airport_delivery" ? (
             <div className="mb-3 rounded-[14px] border border-black/10 bg-white px-3 py-2.5">
               <div className="text-[8px] font-black uppercase tracking-[0.16em] text-black/42">
@@ -6804,7 +7333,7 @@ export default function BookingPanelV3({
               : isCheckingAvailability
                 ? "border-black/10 bg-black/[0.03] text-black/60"
                 : availabilityConfirmed
-                  ? "border-black/10 bg-black text-white"
+                  ? "nexa-availability-success border-emerald-400/70 bg-emerald-50 text-emerald-800"
                   : "border-black/10 bg-black/[0.03] text-black/60",
           ].join(" ")}
         >
@@ -6878,6 +7407,7 @@ export default function BookingPanelV3({
         disabled={!canCheckout}
         className={[
           "group relative mt-3 w-full overflow-hidden rounded-[9px] border border-transparent bg-black px-5 py-3.5 text-[13px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#222] active:scale-[0.98] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-black/20 disabled:text-black/34",
+          mobileBooking && !pickupDate ? "mobile-details-hidden" : "",
           canCheckout ? "checkout-button-pulse" : "",
         ].join(" ")}
       >
@@ -6895,6 +7425,8 @@ export default function BookingPanelV3({
                 : tt.confirmingAvailability}
         </span>
       </button>
+
+      </div>
 
       {selectedDeliveryArea ? (
         <>

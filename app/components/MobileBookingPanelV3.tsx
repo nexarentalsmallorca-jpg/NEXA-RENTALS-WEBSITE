@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Suspense, useEffect, useMemo, useState } from "react";
+import { Suspense, useEffect, useMemo, useState, type CSSProperties } from "react";
 import { useLocale } from "next-intl";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Inter, Poppins } from "next/font/google";
@@ -322,6 +322,61 @@ function MobileLanguageSelector({
   );
 }
 
+// MOBILE BOOKING SPACING CONTROLS (pixels).
+// Smaller numbers tighten spacing; larger numbers add space.
+// Progress move: negative moves the bar UP; positive moves it DOWN.
+// Values are clamped for safe layouts on narrow mobile screens.
+const MOBILE_BOOKING_SPACING = {
+  progressMoveY: -3,
+  topbarBottomGap: 3,
+  progressHeaderGap: 5,
+  progressLabelsGap: 5,
+  progressToVehicleGap: 9,
+  vehicleLabelToNameGap: 5,
+  vehicleToOptionsGap: 11,
+} as const;
+
+const mobileSpacingPx = (value: number, min = 0, max = 48) =>
+  `${Math.max(min, Math.min(max, value))}px`;
+
+const MOBILE_PROGRESS_LABELS: Record<Locale, [string, string, string]> = {
+  en: ["Select dates", "Scan documents", "Details & payment"],
+  es: ["Elegir fechas", "Escanear documentos", "Datos y pago"],
+  de: ["Daten wählen", "Dokumente scannen", "Daten & Zahlung"],
+  fr: ["Choisir les dates", "Scanner les documents", "Infos et paiement"],
+  sv: ["Välj datum", "Skanna dokument", "Uppgifter & betalning"],
+  it: ["Scegli le date", "Scansiona documenti", "Dati e pagamento"],
+  pt: ["Escolher datas", "Digitalizar documentos", "Dados e pagamento"],
+  nl: ["Datums kiezen", "Documenten scannen", "Gegevens & betaling"],
+  pl: ["Wybierz daty", "Skanuj dokumenty", "Dane i płatność"],
+  da: ["Vælg datoer", "Scan dokumenter", "Oplysninger & betaling"],
+  no: ["Velg datoer", "Skann dokumenter", "Detaljer og betaling"],
+  cs: ["Vybrat termín", "Skenovat doklady", "Údaje a platba"],
+  uk: ["Вибір дат", "Сканування документів", "Дані та оплата"],
+};
+
+function MobileBookingJourneyProgress({ locale }: { locale: Locale }) {
+  const labels = MOBILE_PROGRESS_LABELS[locale];
+  return (
+    <div className="nexa-mobile-journey" aria-label="Booking step 1 of 3">
+      <div className="nexa-mobile-journey-head">
+        <span aria-hidden="true" /><span>1 / 3</span>
+      </div>
+      <div className="nexa-mobile-journey-track" aria-hidden="true">
+        <div className="nexa-mobile-journey-rail" />
+        {[0, 1, 2].map((index) => (
+          <span key={index} className={`nexa-mobile-journey-dot ${index === 0 ? "is-active" : ""}`} style={{ left: `${index * 50}%` }} />
+        ))}
+      </div>
+      <div className="nexa-mobile-journey-labels">
+        {labels.map((label, index) => (
+          <span key={index} className={index === 0 ? "is-current" : ""} aria-current={index === 0 ? "step" : undefined}>{label}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function MobileBookingContent() {
   const providerLocale = useLocale();
   const pathname = usePathname() || "/";
@@ -371,10 +426,19 @@ function MobileBookingContent() {
     <main
       className={[
         inter.className,
-        "mobile-booking-v3-page min-h-[100svh] overflow-x-hidden bg-white text-black",
+        "mobile-booking-v3-page min-h-[100svh] overflow-x-clip bg-white text-black",
       ].join(" ")}
+      style={{
+        ["--mb-progress-shift" as string]: mobileSpacingPx(MOBILE_BOOKING_SPACING.progressMoveY, -24, 24),
+        ["--mb-topbar-gap" as string]: mobileSpacingPx(MOBILE_BOOKING_SPACING.topbarBottomGap),
+        ["--mb-progress-head-gap" as string]: mobileSpacingPx(MOBILE_BOOKING_SPACING.progressHeaderGap),
+        ["--mb-progress-label-gap" as string]: mobileSpacingPx(MOBILE_BOOKING_SPACING.progressLabelsGap),
+        ["--mb-progress-vehicle-gap" as string]: mobileSpacingPx(MOBILE_BOOKING_SPACING.progressToVehicleGap),
+        ["--mb-vehicle-title-gap" as string]: mobileSpacingPx(MOBILE_BOOKING_SPACING.vehicleLabelToNameGap),
+        ["--mb-vehicle-options-gap" as string]: mobileSpacingPx(MOBILE_BOOKING_SPACING.vehicleToOptionsGap),
+      } as CSSProperties}
     >
-      <div className="sticky top-0 z-[120] bg-white px-4 pb-3 pt-[calc(env(safe-area-inset-top)+12px)]">
+      <div className="mobile-booking-topbar sticky top-0 z-[2147483646] bg-white px-4 pb-3 pt-[calc(env(safe-area-inset-top)+12px)]">
         <div className="mx-auto flex w-full max-w-[430px] items-center justify-between gap-3">
           <button
             type="button"
@@ -409,7 +473,11 @@ function MobileBookingContent() {
 
       <div className="mobile-booking-content-wrap px-4 pb-[calc(env(safe-area-inset-bottom)+30px)] pt-2">
         <div className="mx-auto w-full max-w-[430px]">
-          <section className="mobile-booking-title-section mb-5 bg-white">
+          {selectedVehicle.type === "scooter" && (
+            <MobileBookingJourneyProgress locale={locale} />
+          )}
+
+          <section className="mobile-booking-title-section mb-4 bg-white">
             <div className="text-[9px] font-black uppercase tracking-[0.24em] text-black/38">
               Selected Vehicle
             </div>
@@ -423,13 +491,11 @@ function MobileBookingContent() {
               {selectedVehicle.displayName}
             </h1>
 
-            <p className="mt-2 text-[13px] font-bold leading-5 text-black/54">
-              {selectedVehicle.type === "ebike"
-                ? "Fast electric bike rental in Magaluf. Contact us for live availability."
-                : selectedVehicle.id === "kymco-sky-town"
-                  ? "Get up to €53 per day, All Inclusive when renting for 6 days."
-                  : "Get up to €43 per day, All Inclusive when renting for 6 days."}
-            </p>
+            {selectedVehicle.type === "ebike" && (
+              <p className="mt-2 text-[13px] font-bold leading-5 text-black/54">
+                Fast electric bike rental in Magaluf. Contact us for live availability.
+              </p>
+            )}
           </section>
 
           {selectedVehicle.type === "ebike" ? (
@@ -445,6 +511,28 @@ function MobileBookingContent() {
       </div>
 
       <style jsx global>{`
+        .nexa-mobile-journey { width: 100%; min-width: 0; margin: 0 0 var(--mb-progress-vehicle-gap); padding: 0 1px; transform: translateY(var(--mb-progress-shift)); font-family: Montserrat, 'Open Sans', Arial, sans-serif; }
+        .nexa-mobile-journey-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--mb-progress-head-gap); gap: 12px; font-size: 10px; font-weight: 800; letter-spacing: .13em; color: #202020; }
+        .nexa-mobile-journey-head span:last-child { color: #888; letter-spacing: .09em; white-space: nowrap; }
+        .nexa-mobile-journey-track { position: relative; height: 22px; margin: 0 10px; }
+        .nexa-mobile-journey-rail { position: absolute; left: 0; right: 0; top: 9px; height: 4px; border-radius: 100px; background: #e4e4e4; }
+        .nexa-mobile-journey-dot { position: absolute; top: 2px; width: 18px; height: 18px; transform: translateX(-50%); border-radius: 50%; border: 2px solid #c9c9c9; background: #f5f5f5; display: flex; align-items: center; justify-content: center; box-shadow: 0 0 0 3px #fff; }
+        .nexa-mobile-journey-dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #bfbfbf; }
+        .nexa-mobile-journey-dot.is-active { border-color: #ff931d; background: linear-gradient(135deg,#ffbd47,#ff7817); box-shadow: 0 0 0 3px #fff, 0 0 13px rgba(255,154,38,.22); }
+        .nexa-mobile-journey-dot.is-active::after { background: #fff; }
+        .nexa-mobile-journey-dot.is-active::before { content: ''; position: absolute; inset: -2px; border-radius: 50%; background: linear-gradient(110deg,transparent 25%,rgba(255,248,177,.85) 48%,transparent 70%); animation: nexaMobileJourneyShine 2.8s ease-in-out infinite; }
+        .nexa-mobile-journey-labels { display: grid; grid-template-columns: repeat(3,minmax(0,1fr)); gap: 3px; margin-top: var(--mb-progress-label-gap); }
+        .nexa-mobile-journey-labels span { color: #999; font-size: clamp(9px,2.4vw,11px); font-weight: 650; line-height: 1.35; }
+        .nexa-mobile-journey-labels span.is-current { color: #202020; font-weight: 800; }
+        .nexa-mobile-journey-labels span:nth-child(2) { text-align: center; }
+        .nexa-mobile-journey-labels span:nth-child(3) { text-align: right; }
+        @keyframes nexaMobileJourneyShine { 0% { transform: translateX(-20%); opacity: .2; } 50% { transform: translateX(20%); opacity: 1; } 100% { transform: translateX(-20%); opacity: .2; } }
+        @media (prefers-reduced-motion: reduce) { .nexa-mobile-journey-dot.is-active::before { animation: none; } }
+        /* The mobile wrapper owns step 1: suppress the inner panel's duplicate indicator. */
+        .mobile-booking-v3-page .nexa-booking-panel-v3 .nexa-journey-progress { display: none !important; }
+        /* The wrapper already displays the selected scooter; hide the panel's repeat. */
+        .mobile-booking-v3-page .nexa-booking-panel-v3 .mobile-booking-vehicle { display: none !important; }
+
         html,
         body {
           width: 100%;
@@ -471,6 +559,49 @@ function MobileBookingContent() {
           opacity: 0 !important;
           visibility: hidden !important;
           pointer-events: none !important;
+        }
+
+        /* The mobile service state is resolved in a layout effect before paint.
+           Do not show the desktop-first SSR layout during hydration. */
+        /* Native calendar is a top-layer dialog: keep its footer visible on every phone. */
+        .mobile-booking-v3-page .nexa-calendar-dialog[open] {
+          display: flex !important;
+          align-items: center !important;
+          justify-content: center !important;
+          width: 100vw !important;
+          height: 100dvh !important;
+          max-height: none !important;
+          margin: 0 !important;
+        }
+        .mobile-booking-v3-page .nexa-calendar-dialog .nexa-calendar-card {
+          height: min(690px, calc(100dvh - 24px - env(safe-area-inset-top) - env(safe-area-inset-bottom))) !important;
+          max-height: 100% !important;
+          min-height: 0 !important;
+        }
+        .mobile-booking-v3-page .nexa-calendar-dialog .calendar-months-scroll {
+          flex: 1 1 auto !important;
+          min-height: 0 !important;
+          max-height: none !important;
+          overflow-y: scroll !important;
+          touch-action: pan-y !important;
+          scrollbar-width: thin !important;
+          scrollbar-color: #f58220 #fff2e6 !important;
+        }
+
+        @media (max-width: 767px) {
+          .mobile-booking-v3-page .nexa-booking-panel-v3[data-mobile-ready="false"] {
+            visibility: hidden !important;
+          }
+          .mobile-booking-v3-page .nexa-booking-panel-v3[data-mobile-ready="true"] {
+            visibility: visible !important;
+          }
+          .mobile-booking-v3-page .mobile-booking-topbar {
+            z-index: 2147483646 !important;
+            overflow: visible !important;
+          }
+          .mobile-booking-v3-page .mobile-booking-topbar > div {
+            overflow: visible !important;
+          }
         }
 
         .mobile-booking-v3-page {
@@ -674,6 +805,25 @@ function MobileBookingContent() {
             > div.fixed
             .calendar-months-scroll {
             max-height: min(50vh, calc(100svh - 215px)) !important;
+          }
+        }
+        /* Compact spacing: these overrides intentionally come after phone breakpoints. */
+        .mobile-booking-v3-page .mobile-booking-topbar {
+          padding-bottom: var(--mb-topbar-gap) !important;
+        }
+        .mobile-booking-v3-page .mobile-booking-content-wrap {
+          padding-top: 0 !important;
+        }
+        .mobile-booking-v3-page .mobile-booking-title-section {
+          margin-bottom: var(--mb-vehicle-options-gap) !important;
+        }
+        .mobile-booking-v3-page .mobile-booking-title-section h1 {
+          margin-top: var(--mb-vehicle-title-gap) !important;
+        }
+        @media (max-width: 360px) {
+          .nexa-mobile-journey-labels span {
+            font-size: clamp(8px, 2.35vw, 10px);
+            overflow-wrap: anywhere;
           }
         }
       `}</style>

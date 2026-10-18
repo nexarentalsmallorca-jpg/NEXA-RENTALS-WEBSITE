@@ -1,1355 +1,1859 @@
 "use client";
 
-import Link from "next/link";
 import Image from "next/image";
-import { useEffect, useMemo, useRef, useState } from "react";
-import type { MouseEvent as ReactMouseEvent } from "react";
-import { usePathname, useRouter, useSearchParams } from "next/navigation";
-import { useLocale, useTranslations } from "next-intl";
-import { replaceLocaleInPathWithBlog } from "@/lib/blog-locale-path";
+import Link from "next/link";
+import { Poppins } from "next/font/google";
+import { useLocale } from "next-intl";
+import { usePathname, useRouter } from "next/navigation";
+import { useEffect, useMemo, useState } from "react";
 
-type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
+const navFont = Poppins({
+  subsets: ["latin"],
+  weight: ["400", "500", "600", "700", "800", "900"],
+  display: "swap",
+});
+
+type Locale =
+  | "en"
+  | "es"
+  | "de"
+  | "fr"
+  | "sv"
+  | "it"
+  | "pt"
+  | "nl"
+  | "pl"
+  | "da"
+  | "no"
+  | "cs"
+  | "uk";
+
+type NavbarTone = "dark" | "light" | "auto";
+
+type NavbarV3Props = {
+  fixed?: boolean;
+  onBookClick?: () => void;
+  tone?: NavbarTone;
+};
+
+declare global {
+  interface Window {
+    __nexaBookNowClicked?: boolean;
+    __nexaTriggerBookingPanelAttention?: boolean;
+  }
+}
 
 const LANGUAGES: {
   code: Locale;
   label: string;
-  flagSrc: string;
   short: string;
+  flagSrc: string;
 }[] = [
-  { code: "en", label: "English", flagSrc: "/images/en.png", short: "EN" },
-  { code: "es", label: "Español", flagSrc: "/images/es.png", short: "ES" },
-  { code: "de", label: "Deutsch", flagSrc: "/images/de.png", short: "DE" },
-  { code: "fr", label: "Français", flagSrc: "/images/fr.png", short: "FR" },
-  { code: "it", label: "Italiano", flagSrc: "/images/it.png", short: "IT" },
-  { code: "pt", label: "Português", flagSrc: "/images/pt.png", short: "PT" },
-  { code: "sv", label: "Svenska", flagSrc: "/images/sv.png", short: "SV" },
+  {
+    code: "en",
+    label: "English",
+    short: "EN",
+    flagSrc: "/images/en.png",
+  },
+  {
+    code: "es",
+    label: "Español",
+    short: "ES",
+    flagSrc: "/images/es.png",
+  },
+  {
+    code: "de",
+    label: "Deutsch",
+    short: "DE",
+    flagSrc: "/images/de.png",
+  },
+  {
+    code: "fr",
+    label: "Français",
+    short: "FR",
+    flagSrc: "/images/fr.png",
+  },
+  {
+    code: "it",
+    label: "Italiano",
+    short: "IT",
+    flagSrc: "/images/it.png",
+  },
+  {
+    code: "nl",
+    label: "Nederlands",
+    short: "NL",
+    flagSrc: "/images/NL.png",
+  },
+  {
+    code: "pl",
+    label: "Polski",
+    short: "PL",
+    flagSrc: "/images/PL.png",
+  },
+  {
+    code: "sv",
+    label: "Svenska",
+    short: "SV",
+    flagSrc: "/images/sv.png",
+  },
+  {
+    code: "da",
+    label: "Dansk",
+    short: "DA",
+    flagSrc: "/images/DA.png",
+  },
+  {
+    code: "no",
+    label: "Norsk",
+    short: "NO",
+    flagSrc: "/images/NO.png",
+  },
+  {
+    code: "pt",
+    label: "Português",
+    short: "PT",
+    flagSrc: "/images/pt.png",
+  },
+  {
+    code: "cs",
+    label: "Čeština",
+    short: "CS",
+    flagSrc: "/images/CS.png",
+  },
+  {
+    code: "uk",
+    label: "Українська",
+    short: "UK",
+    flagSrc: "/images/UK.png",
+  },
 ];
 
-const SALES_BAR_COPY: Record<
+/*
+  DESKTOP ONLY:
+  Change this value if you want the desktop logo bigger/smaller.
+  Mobile logo is NOT controlled by this.
+*/
+const DESKTOP_LOGO_HEIGHT_PX = 72;
+
+/*
+  MOBILE ONLY:
+  This controls how much the page starts lower under the mobile navbar.
+*/
+const MOBILE_PAGE_TOP_OFFSET_PX = 0;
+
+/*
+  MOBILE ONLY:
+  This controls when the mobile navbar becomes fully black.
+*/
+const MOBILE_NAV_BLACK_SCROLL_TRIGGER_PX = 1;
+
+const NAV_COPY: Record<
   Locale,
   {
-    badge: string;
-    saveLabel: string;
-    priceValue: string;
-    endsIn: string;
-    cta: string;
-    days: string;
-    hours: string;
-    minutes: string;
-    seconds: string;
+    home: string;
+    fleet: string;
+    blog: string;
+    about: string;
+    contact: string;
+    book: string;
+    menu: string;
+    close: string;
     selectLanguage: string;
     active: string;
-    menu: string;
   }
 > = {
   en: {
-    badge: "June Special",
-    saveLabel: "Online deal from",
-    priceValue: "€39",
-    endsIn: "Ends in",
-    cta: "Book online",
-    days: "Days",
-    hours: "Hrs",
-    minutes: "Mins",
-    seconds: "Secs",
+    home: "Home",
+    fleet: "Our Fleet",
+    blog: "Blog",
+    about: "About NEXA",
+    contact: "Contact",
+    book: "Book Now",
+    menu: "Menu",
+    close: "Close",
     selectLanguage: "Select language",
     active: "Active",
-    menu: "Menu",
   },
+
   es: {
-    badge: "Especial junio",
-    saveLabel: "Oferta online desde",
-    priceValue: "39€",
-    endsIn: "Termina en",
-    cta: "Reservar online",
-    days: "Días",
-    hours: "Hrs",
-    minutes: "Mins",
-    seconds: "Segs",
+    home: "Inicio",
+    fleet: "Flota",
+    blog: "Blog",
+    about: "Sobre NEXA",
+    contact: "Contacto",
+    book: "Reservar",
+    menu: "Menú",
+    close: "Cerrar",
     selectLanguage: "Seleccionar idioma",
     active: "Activo",
-    menu: "Menú",
   },
+
   de: {
-    badge: "Juni Special",
-    saveLabel: "Online-Angebot ab",
-    priceValue: "39€",
-    endsIn: "Endet in",
-    cta: "Online buchen",
-    days: "Tage",
-    hours: "Std",
-    minutes: "Min",
-    seconds: "Sek",
+    home: "Home",
+    fleet: "Flotte",
+    blog: "Blog",
+    about: "Über NEXA",
+    contact: "Kontakt",
+    book: "Buchen",
+    menu: "Menü",
+    close: "Schließen",
     selectLanguage: "Sprache wählen",
     active: "Aktiv",
-    menu: "Menü",
   },
+
   fr: {
-    badge: "Offre juin",
-    saveLabel: "Offre en ligne dès",
-    priceValue: "39€",
-    endsIn: "Fin dans",
-    cta: "Réserver",
-    days: "Jours",
-    hours: "Hrs",
-    minutes: "Mins",
-    seconds: "Secs",
+    home: "Accueil",
+    fleet: "Flotte",
+    blog: "Blog",
+    about: "À propos",
+    contact: "Contact",
+    book: "Réserver",
+    menu: "Menu",
+    close: "Fermer",
     selectLanguage: "Choisir la langue",
     active: "Actif",
-    menu: "Menu",
   },
-  it: {
-    badge: "Speciale giugno",
-    saveLabel: "Offerta online da",
-    priceValue: "39€",
-    endsIn: "Termina tra",
-    cta: "Prenota online",
-    days: "Giorni",
-    hours: "Ore",
-    minutes: "Min",
-    seconds: "Sec",
-    selectLanguage: "Seleziona lingua",
-    active: "Attivo",
-    menu: "Menu",
-  },
-  pt: {
-    badge: "Especial junho",
-    saveLabel: "Oferta online desde",
-    priceValue: "39€",
-    endsIn: "Termina em",
-    cta: "Reservar online",
-    days: "Dias",
-    hours: "Hrs",
-    minutes: "Mins",
-    seconds: "Segs",
-    selectLanguage: "Selecionar idioma",
-    active: "Ativo",
-    menu: "Menu",
-  },
+
   sv: {
-    badge: "Junierbjudande",
-    saveLabel: "Onlinepris från",
-    priceValue: "39€",
-    endsIn: "Slutar om",
-    cta: "Boka online",
-    days: "Dagar",
-    hours: "Tim",
-    minutes: "Min",
-    seconds: "Sek",
+    home: "Hem",
+    fleet: "Vår flotta",
+    blog: "Blogg",
+    about: "Om NEXA",
+    contact: "Kontakt",
+    book: "Boka nu",
+    menu: "Meny",
+    close: "Stäng",
     selectLanguage: "Välj språk",
     active: "Aktiv",
+  },
+
+  it: {
+    home: "Home",
+    fleet: "Flotta",
+    blog: "Blog",
+    about: "Chi siamo",
+    contact: "Contatto",
+    book: "Prenota",
+    menu: "Menu",
+    close: "Chiudi",
+    selectLanguage: "Seleziona lingua",
+    active: "Attiva",
+  },
+
+  pt: {
+    home: "Início",
+    fleet: "Frota",
+    blog: "Blog",
+    about: "Sobre NEXA",
+    contact: "Contacto",
+    book: "Reservar",
+    menu: "Menu",
+    close: "Fechar",
+    selectLanguage: "Selecionar idioma",
+    active: "Ativo",
+  },
+
+  nl: {
+    home: "Home",
+    fleet: "Onze vloot",
+    blog: "Blog",
+    about: "Over NEXA",
+    contact: "Contact",
+    book: "Boek nu",
+    menu: "Menu",
+    close: "Sluiten",
+    selectLanguage: "Taal kiezen",
+    active: "Actief",
+  },
+
+  pl: {
+    home: "Strona główna",
+    fleet: "Nasza flota",
+    blog: "Blog",
+    about: "O NEXA",
+    contact: "Kontakt",
+    book: "Rezerwuj",
+    menu: "Menu",
+    close: "Zamknij",
+    selectLanguage: "Wybierz język",
+    active: "Aktywny",
+  },
+
+  da: {
+    home: "Hjem",
+    fleet: "Vores flåde",
+    blog: "Blog",
+    about: "Om NEXA",
+    contact: "Kontakt",
+    book: "Book nu",
+    menu: "Menu",
+    close: "Luk",
+    selectLanguage: "Vælg sprog",
+    active: "Aktiv",
+  },
+
+  no: {
+    home: "Hjem",
+    fleet: "Vår flåte",
+    blog: "Blogg",
+    about: "Om NEXA",
+    contact: "Kontakt",
+    book: "Book nå",
     menu: "Meny",
+    close: "Lukk",
+    selectLanguage: "Velg språk",
+    active: "Aktiv",
+  },
+
+  cs: {
+    home: "Domů",
+    fleet: "Naše flotila",
+    blog: "Blog",
+    about: "O NEXA",
+    contact: "Kontakt",
+    book: "Rezervovat",
+    menu: "Menu",
+    close: "Zavřít",
+    selectLanguage: "Vybrat jazyk",
+    active: "Aktivní",
+  },
+
+  uk: {
+    home: "Головна",
+    fleet: "Наш парк",
+    blog: "Блог",
+    about: "Про NEXA",
+    contact: "Контакти",
+    book: "Забронювати",
+    menu: "Меню",
+    close: "Закрити",
+    selectLanguage: "Вибрати мову",
+    active: "Активна",
   },
 };
 
-function isLocale(value: string | undefined): value is Locale {
-  return Boolean(value && LANGUAGES.some((language) => language.code === value));
+function isLocale(
+  value: string | undefined
+): value is Locale {
+  return Boolean(
+    value &&
+      LANGUAGES.some(
+        (language) =>
+          language.code === value
+      )
+  );
 }
 
-function safeGetLocaleFromPath(pathname: string): Locale {
-  const parts = pathname.split("/").filter(Boolean);
-  const first = parts[0];
+function getLocaleFromPath(
+  pathname: string
+): Locale {
+  const firstPart =
+    pathname
+      .split("/")
+      .filter(Boolean)[0];
 
-  if (isLocale(first)) return first;
+  if (
+    isLocale(firstPart)
+  ) {
+    return firstPart;
+  }
 
   return "en";
 }
 
-function getOfferEndDate() {
-  const now = new Date();
+export default function NavbarV3({
+  fixed = false,
+  onBookClick,
+  tone = "auto",
+}: NavbarV3Props) {
+  const providerLocale =
+    useLocale();
 
-  // June offer ends on 30 June at 23:59:59.
-  // Month index 5 = June.
-  return new Date(now.getFullYear(), 5, 30, 23, 59, 59, 999);
-}
+  const pathname =
+    usePathname() || "/";
 
-function getTimeLeft() {
-  const now = new Date();
-  const endDate = getOfferEndDate();
-  const diff = Math.max(0, endDate.getTime() - now.getTime());
+  const router =
+    useRouter();
 
-  const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-  const hours = Math.floor((diff / (1000 * 60 * 60)) % 24);
-  const minutes = Math.floor((diff / (1000 * 60)) % 60);
-  const seconds = Math.floor((diff / 1000) % 60);
+  const pathLocale =
+    getLocaleFromPath(
+      pathname
+    );
 
-  return { days, hours, minutes, seconds };
-}
+  const locale: Locale =
+    isLocale(providerLocale)
+      ? providerLocale
+      : pathLocale;
 
-function pad(value: number) {
-  return String(value).padStart(2, "0");
-}
+  const normalizedPathname =
+    pathname.replace(
+      /\/+$/,
+      ""
+    ) || "/";
 
-export default function Navbar() {
-  const t = useTranslations("nav");
-  const activeLocaleFromProvider = useLocale() as Locale;
+  const isMainLandingPage =
+    normalizedPathname === "/" ||
+    normalizedPathname ===
+      `/${locale}`;
 
-  const navRef = useRef<HTMLElement | null>(null);
-  const salesBarRef = useRef<HTMLDivElement | null>(null);
+  const showAngledLogoPanel =
+    !isMainLandingPage;
 
-  const [hidden, setHidden] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
-  const [langOpen, setLangOpen] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(getTimeLeft());
+  const copy =
+    NAV_COPY[locale] ||
+    NAV_COPY.en;
 
-  const pathname = usePathname() || "/";
-  const router = useRouter();
-  const searchParams = useSearchParams();
+  const currentLanguage =
+    useMemo(() => {
+      return (
+        LANGUAGES.find(
+          (language) =>
+            language.code === locale
+        ) ||
+        LANGUAGES[0]
+      );
+    }, [
+      locale,
+    ]);
 
-  const detectedLocale: Locale = safeGetLocaleFromPath(pathname);
-  const currentLocale: Locale = isLocale(activeLocaleFromProvider)
-    ? activeLocaleFromProvider
-    : detectedLocale;
+  const [
+    langOpen,
+    setLangOpen,
+  ] =
+    useState(false);
 
-  const copy = SALES_BAR_COPY[currentLocale] || SALES_BAR_COPY.en;
+  const [
+    mobileMenuOpen,
+    setMobileMenuOpen,
+  ] =
+    useState(false);
 
-  const currentLang =
-    LANGUAGES.find((language) => language.code === currentLocale) ||
-    LANGUAGES[0];
+  const [
+    autoLightTone,
+    setAutoLightTone,
+  ] =
+    useState(false);
 
-  const homeHref = `/${currentLocale}`;
-  const fleetHref = `/${currentLocale}/fleet`;
-  const blogsHref = `/${currentLocale}/blog`;
-  const contactHref = `/${currentLocale}/contact`;
-  const aboutHref = `/${currentLocale}/about`;
+  const [
+    bookNowClicked,
+    setBookNowClicked,
+  ] =
+    useState(false);
 
-  const bookingHref = useMemo(() => {
-    return pathname === `/${currentLocale}`
-      ? "#booking"
-      : `/${currentLocale}#booking`;
-  }, [pathname, currentLocale]);
+  const [
+    mobileScrolled,
+    setMobileScrolled,
+  ] =
+    useState(false);
 
-  function scrollToBooking() {
-    const target =
-      document.getElementById("booking") ||
-      document.querySelector("[data-nexa-booking]") ||
-      document.querySelector(".nexa-booking-panel");
+  const homeHref =
+    `/${locale}/home`;
 
-    if (!target) return false;
+  const blogHref =
+    `/${locale}/blog`;
 
-    const navSpace =
-      Number.parseInt(
-        getComputedStyle(document.documentElement).getPropertyValue(
-          "--total-nav-space"
-        ),
-        10
-      ) || 130;
+  const aboutHref =
+    `/${locale}/about`;
 
-    const top =
-      target.getBoundingClientRect().top + window.scrollY - navSpace - 18;
+  const contactHref =
+    `/${locale}/contact`;
 
-    window.scrollTo({
-      top: Math.max(0, top),
-      behavior: "smooth",
-    });
+  const navItems = [
+    {
+      label:
+        copy.home,
 
-    return true;
-  }
+      href:
+        homeHref,
+    },
 
-  function handleBookingClick(e: ReactMouseEvent<HTMLAnchorElement>) {
-    const isHomePage = pathname === `/${currentLocale}`;
+    {
+      label:
+        copy.blog,
 
-    if (isHomePage) {
-      const didScroll = scrollToBooking();
+      href:
+        blogHref,
+    },
 
-      if (didScroll) {
-        e.preventDefault();
-        window.history.replaceState(null, "", "#booking");
+    {
+      label:
+        copy.about,
+
+      href:
+        aboutHref,
+    },
+
+    {
+      label:
+        copy.contact,
+
+      href:
+        contactHref,
+    },
+  ];
+
+  useEffect(() => {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return;
+    }
+
+    setBookNowClicked(
+      Boolean(
+        window.__nexaBookNowClicked
+      )
+    );
+  }, []);
+
+  useEffect(() => {
+    if (
+      typeof window ===
+      "undefined"
+    ) {
+      return;
+    }
+
+    function getScrollTop() {
+      return Math.max(
+        window.scrollY || 0,
+        document.documentElement
+          .scrollTop || 0,
+        document.body
+          .scrollTop || 0
+      );
+    }
+
+    function updateMobileScrolled() {
+      setMobileScrolled(
+        getScrollTop() >
+          MOBILE_NAV_BLACK_SCROLL_TRIGGER_PX
+      );
+    }
+
+    updateMobileScrolled();
+
+    window.addEventListener(
+      "scroll",
+      updateMobileScrolled,
+      {
+        passive: true,
+      }
+    );
+
+    window.addEventListener(
+      "resize",
+      updateMobileScrolled
+    );
+
+    document.addEventListener(
+      "scroll",
+      updateMobileScrolled,
+      {
+        passive: true,
+        capture: true,
+      }
+    );
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        updateMobileScrolled
+      );
+
+      window.removeEventListener(
+        "resize",
+        updateMobileScrolled
+      );
+
+      document.removeEventListener(
+        "scroll",
+        updateMobileScrolled,
+        {
+          capture: true,
+        } as AddEventListenerOptions
+      );
+    };
+  }, [
+    pathname,
+  ]);
+
+  useEffect(() => {
+    if (
+      tone !== "auto"
+    ) {
+      return;
+    }
+
+    function updateToneFromBookingSection() {
+      const bookingElement =
+        document.getElementById(
+          "booking"
+        );
+
+      if (
+        !bookingElement
+      ) {
+        setAutoLightTone(
+          false
+        );
+
+        return;
+      }
+
+      const rect =
+        bookingElement.getBoundingClientRect();
+
+      const viewportHeight =
+        window.innerHeight ||
+        document.documentElement
+          .clientHeight;
+
+      const sectionCenter =
+        rect.top +
+        rect.height / 2;
+
+      const isBookingVisible =
+        rect.top <
+          viewportHeight *
+            0.58 &&
+        rect.bottom >
+          viewportHeight *
+            0.28 &&
+        sectionCenter > 0;
+
+      setAutoLightTone(
+        isBookingVisible
+      );
+    }
+
+    updateToneFromBookingSection();
+
+    window.addEventListener(
+      "scroll",
+      updateToneFromBookingSection,
+      {
+        passive: true,
+      }
+    );
+
+    window.addEventListener(
+      "resize",
+      updateToneFromBookingSection
+    );
+
+    return () => {
+      window.removeEventListener(
+        "scroll",
+        updateToneFromBookingSection
+      );
+
+      window.removeEventListener(
+        "resize",
+        updateToneFromBookingSection
+      );
+    };
+  }, [
+    tone,
+    pathname,
+  ]);
+
+  useEffect(() => {
+    setLangOpen(
+      false
+    );
+
+    setMobileMenuOpen(
+      false
+    );
+  }, [
+    pathname,
+  ]);
+
+  useEffect(() => {
+    function closeOnEscape(
+      event: KeyboardEvent
+    ) {
+      if (
+        event.key ===
+        "Escape"
+      ) {
+        setLangOpen(
+          false
+        );
+
+        setMobileMenuOpen(
+          false
+        );
       }
     }
+
+    window.addEventListener(
+      "keydown",
+      closeOnEscape
+    );
+
+    return () =>
+      window.removeEventListener(
+        "keydown",
+        closeOnEscape
+      );
+  }, []);
+
+  const isLightTone =
+    tone === "light" ||
+    (
+      tone === "auto" &&
+      autoLightTone
+    );
+
+  const navTextClass =
+    isLightTone
+      ? "text-[#202226] drop-shadow-[0_1px_14px_rgba(255,255,255,0.58)] hover:text-black"
+      : "text-white/86 drop-shadow-[0_16px_36px_rgba(0,0,0,0.86)] hover:text-white";
+
+  const navUnderlineClass =
+    isLightTone
+      ? "bg-[linear-gradient(90deg,transparent,rgba(32,34,38,0.95),rgba(255,157,61,1),rgba(32,34,38,0.95),transparent)] shadow-[0_0_14px_rgba(255,157,61,0.72)]"
+      : "bg-[linear-gradient(90deg,transparent,rgba(255,157,61,1),rgba(255,255,255,0.86),rgba(255,157,61,1),transparent)] shadow-[0_0_14px_rgba(255,157,61,0.75)]";
+
+  const navHoverTextShadowClass =
+    isLightTone
+      ? "group-hover:[text-shadow:0_0_12px_rgba(255,255,255,0.56),0_10px_26px_rgba(0,0,0,0.16)]"
+      : "group-hover:[text-shadow:0_0_14px_rgba(255,157,61,0.24),0_0_10px_rgba(255,255,255,0.14),0_16px_36px_rgba(0,0,0,0.84)]";
+
+  const languageButtonClass =
+    isLightTone
+      ? "border border-[#202226]/14 bg-white/12 text-[#202226] shadow-[0_16px_44px_rgba(255,255,255,0.18)] hover:border-[#202226]/26 hover:bg-white/20 hover:text-black"
+      : "border border-white/14 bg-black/10 text-white/88 shadow-[0_16px_44px_rgba(0,0,0,0.36)] hover:border-white/30 hover:bg-white/[0.08] hover:text-white";
+
+  const languageArrowClass =
+    isLightTone
+      ? "text-[#202226]/55 group-hover:text-black/80"
+      : "text-white/50 group-hover:text-white/80";
+
+  const desktopBookButtonClass =
+    isLightTone
+      ? "bg-[#24262b] text-white shadow-[0_22px_62px_rgba(24,25,30,0.30)] hover:bg-[#2b2e34] hover:shadow-[0_28px_80px_rgba(24,25,30,0.40)]"
+      : "bg-white text-black shadow-[0_22px_62px_rgba(0,0,0,0.42)] hover:shadow-[0_28px_80px_rgba(255,255,255,0.20)]";
+
+  const mobileNavShellClass =
+    "bg-black shadow-[0_18px_46px_rgba(0,0,0,0.58)] backdrop-blur-none";
+
+  const mobileLanguageButtonClass =
+    mobileScrolled
+      ? "border border-white/16 bg-white/[0.09] text-white shadow-[0_14px_34px_rgba(0,0,0,0.44)] hover:bg-white/[0.13]"
+      : "border border-white/[0.16] bg-black/[0.28] text-white/94 shadow-[0_14px_34px_rgba(0,0,0,0.28)] hover:bg-black/[0.34]";
+
+  const mobileLanguageDropdownClass =
+    mobileScrolled
+      ? "border-white/10 bg-black/94 text-white shadow-[0_26px_90px_rgba(0,0,0,0.72)]"
+      : "border-white/10 bg-black/86 text-white shadow-[0_26px_90px_rgba(0,0,0,0.62)]";
+
+  const mobilePanelClass =
+    "border border-white/10 bg-black/94 text-white/82 shadow-[0_26px_90px_rgba(0,0,0,0.72)]";
+
+  function closeMenus() {
+    setLangOpen(
+      false
+    );
+
+    setMobileMenuOpen(
+      false
+    );
   }
 
-  function toggleLanguageDropdown() {
-    setLangOpen((current) => !current);
+  function handleLanguageChange(
+    nextLocale: Locale
+  ) {
+    closeMenus();
+
+    const pathParts =
+      pathname
+        .split("/")
+        .filter(Boolean);
+
+    if (
+      pathParts.length === 0
+    ) {
+      router.push(
+        `/${nextLocale}`
+      );
+
+      return;
+    }
+
+    if (
+      isLocale(
+        pathParts[0]
+      )
+    ) {
+      pathParts[0] =
+        nextLocale;
+
+      router.push(
+        `/${pathParts.join("/")}`
+      );
+
+      return;
+    }
+
+    router.push(
+      `/${nextLocale}`
+    );
   }
 
-  const onSelectLocale = (nextLocale: Locale) => {
-    setLangOpen(false);
-    setMobileOpen(false);
+  function handleBookClick() {
+    closeMenus();
 
-    const nextPath = replaceLocaleInPathWithBlog(pathname, nextLocale);
-    const qs = searchParams?.toString() || "";
-    const finalPath = qs ? `${nextPath}?${qs}` : nextPath;
+    if (
+      typeof window !==
+      "undefined"
+    ) {
+      window.__nexaBookNowClicked =
+        true;
 
-    router.push(finalPath);
+      window.__nexaTriggerBookingPanelAttention =
+        true;
 
-    setTimeout(() => {
-      router.refresh();
-    }, 50);
-  };
-
-  useEffect(() => {
-    setTimeLeft(getTimeLeft());
-
-    const timer = window.setInterval(() => {
-      setTimeLeft(getTimeLeft());
-    }, 1000);
-
-    return () => window.clearInterval(timer);
-  }, []);
-
-  useEffect(() => {
-    const setNavHeight = () => {
-      const navHeight = navRef.current?.offsetHeight || 0;
-      const salesBarHeight = salesBarRef.current?.offsetHeight || 46;
-
-      document.documentElement.style.setProperty(
-        "--nav-height",
-        `${navHeight}px`
+      window.dispatchEvent(
+        new CustomEvent(
+          "nexa:book-now-clicked"
+        )
       );
-      document.documentElement.style.setProperty(
-        "--announcement-height",
-        `${salesBarHeight}px`
+    }
+
+    setBookNowClicked(
+      true
+    );
+
+    if (
+      onBookClick
+    ) {
+      onBookClick();
+
+      return;
+    }
+
+    const bookingElement =
+      document.getElementById(
+        "booking"
       );
-      document.documentElement.style.setProperty(
-        "--sales-bar-height",
-        `${salesBarHeight}px`
-      );
-      document.documentElement.style.setProperty(
-        "--total-nav-space",
-        `${navHeight + salesBarHeight}px`
-      );
-    };
 
-    setNavHeight();
+    if (
+      bookingElement
+    ) {
+      bookingElement.scrollIntoView({
+        behavior:
+          "smooth",
 
-    const resizeObserver = new ResizeObserver(setNavHeight);
+        block:
+          "start",
+      });
 
-    if (navRef.current) resizeObserver.observe(navRef.current);
-    if (salesBarRef.current) resizeObserver.observe(salesBarRef.current);
+      return;
+    }
 
-    window.addEventListener("resize", setNavHeight);
+    router.push(
+      `/${locale}/home#booking`
+    );
+  }
 
-    const onScroll = () => {
-      const y = window.scrollY;
-      setHidden(y > 1);
-
-      if (y > 1) {
-        setMobileOpen(false);
-        setLangOpen(false);
-      }
-    };
-
-    window.addEventListener("scroll", onScroll, { passive: true });
-    onScroll();
-
-    return () => {
-      resizeObserver.disconnect();
-      window.removeEventListener("resize", setNavHeight);
-      window.removeEventListener("scroll", onScroll);
-    };
-  }, []);
-
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        setMobileOpen(false);
-        setLangOpen(false);
-      }
-    };
-
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, []);
-
-  useEffect(() => {
-    if (!mobileOpen) return;
-
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [mobileOpen]);
+  const headerPositionClass =
+    fixed
+      ? "fixed"
+      : "fixed lg:absolute";
 
   return (
-    <>
-      <div ref={salesBarRef} className="fixed inset-x-0 top-0 z-[10000]">
-        <div className="sales-bar relative overflow-hidden border-b border-black/10 shadow-[0_10px_26px_rgba(0,0,0,0.22)]">
-          <div className="sales-bar-waves sales-bar-waves-one" />
-<div className="sales-bar-waves sales-bar-waves-two" />
-<div className="sales-bar-waves sales-bar-waves-three" />
-<div className="sales-bar-premium-shine" />
-<div className="sales-bar-premium-shine sales-bar-premium-shine-second" />
-<div className="sales-bar-overlay" />
+    <header
+      data-mobile-scrolled={
+        mobileScrolled
+          ? "true"
+          : "false"
+      }
+      className={`${navFont.className} ${headerPositionClass} nexa-navbar-shell pointer-events-none left-0 right-0 top-0 z-[2147483000] bg-transparent lg:z-[90]`}
+    >
+      {showAngledLogoPanel ? (
+        <div className="nexa-angled-logo-panel pointer-events-none absolute left-0 top-0 hidden lg:block" />
+      ) : null}
 
-          <div className="relative mx-auto flex min-h-[44px] max-w-[1480px] items-center justify-between gap-2 px-[clamp(8px,2vw,32px)] py-1.5 md:min-h-[50px]">
-            <Link
-              href={bookingHref}
-              onClick={handleBookingClick}
-              className="announcement-main flex min-w-0 flex-1 items-center justify-between gap-2"
-            >
-              <div className="offer-left flex min-w-0 items-center gap-2 md:gap-3">
-                <span className="offer-month shrink-0 text-[10px] font-black uppercase tracking-[0.16em] text-black sm:text-[12px] md:text-[14px]">
-  {copy.badge}
-</span>
+      <div className="nexa-desktop-nav pointer-events-auto mx-auto hidden h-[96px] max-w-[1510px] items-center justify-between bg-transparent px-[clamp(28px,4vw,66px)] transition-all duration-300 lg:flex">
+        <Link
+          href={
+            homeHref
+          }
+          aria-label="NEXA Rentals home"
+          onClick={
+            closeMenus
+          }
+          className="group relative z-10 flex items-center"
+        >
+          <Image
+            src="/images/reallogo.png"
+            alt="NEXA Rentals"
+            width={340}
+            height={116}
+            priority
+            style={{
+              height:
+                DESKTOP_LOGO_HEIGHT_PX,
 
-<span className="h-1 w-1 shrink-0 rounded-full bg-black/45" />
+              width:
+                "auto",
+            }}
+            className={[
+              "nexa-desktop-logo object-contain transition duration-300 group-hover:scale-[1.03]",
 
-<div className="discount-line min-w-0">
-  <span className="discount-main hidden text-[11px] font-black uppercase tracking-[0.025em] text-black sm:inline sm:text-[14px] md:text-[19px]">
-    {copy.saveLabel}{" "}
-    <span className="discount-price">{copy.priceValue}</span>
-  </span>
+              showAngledLogoPanel ||
+              isLightTone
+                ? "drop-shadow-[0_14px_28px_rgba(0,0,0,0.55)]"
+                : "drop-shadow-[0_18px_34px_rgba(0,0,0,0.72)]",
+            ].join(" ")}
+          />
+        </Link>
 
-  <span className="discount-main-mobile text-[10px] font-black uppercase tracking-[0.035em] text-black sm:hidden">
-    From <span className="discount-price">{copy.priceValue}</span>
-  </span>
-</div>
-
-                <span className="hidden h-1 w-1 shrink-0 rounded-full bg-black/45 md:block" />
-
-                <span className="ends-label hidden shrink-0 text-[8px] font-black uppercase tracking-[0.16em] text-black/70 lg:inline-block">
-                  {copy.endsIn}
+        <nav className="ml-auto mr-9 flex items-center gap-7">
+          {navItems.map(
+            (item) => (
+              <Link
+                key={
+                  item.href
+                }
+                href={
+                  item.href
+                }
+                onClick={
+                  closeMenus
+                }
+                className={[
+                  "group relative px-1 py-3 text-[11.5px] font-black uppercase tracking-[0.17em] transition-all duration-300 hover:-translate-y-0.5 hover:tracking-[0.19em]",
+                  navTextClass,
+                  navHoverTextShadowClass,
+                ].join(" ")}
+              >
+                <span>
+                  {
+                    item.label
+                  }
                 </span>
-              </div>
 
-              <div className="timer-row ml-auto flex shrink-0 items-center gap-[3px] sm:gap-1">
-                <TimeBox value={pad(timeLeft.days)} label={copy.days} />
-                <Colon />
-                <TimeBox value={pad(timeLeft.hours)} label={copy.hours} />
-                <Colon />
-                <TimeBox value={pad(timeLeft.minutes)} label={copy.minutes} />
-                <Colon />
-                <TimeBox
-                  value={pad(timeLeft.seconds)}
-                  label={copy.seconds}
-                  live
+                <span
+                  className={[
+                    "pointer-events-none absolute bottom-1 left-1/2 h-px w-0 -translate-x-1/2 opacity-0 transition-all duration-300 group-hover:w-full group-hover:opacity-100",
+                    navUnderlineClass,
+                  ].join(" ")}
                 />
-              </div>
-            </Link>
+              </Link>
+            )
+          )}
+        </nav>
 
-            <Link
-              href={bookingHref}
-              onClick={handleBookingClick}
-              className="sales-cta-button hidden shrink-0 rounded-full px-4 py-2.5 text-[10px] font-black uppercase tracking-[0.11em] text-white transition hover:-translate-y-[1px] hover:bg-[#161616] active:scale-[0.97] sm:inline-flex md:px-5 md:text-[11px]"
+        <div className="flex items-center gap-6">
+          <div className="relative">
+            <button
+              type="button"
+              onClick={() => {
+                setLangOpen(
+                  (
+                    current
+                  ) =>
+                    !current
+                );
+
+                setMobileMenuOpen(
+                  false
+                );
+              }}
+              className={[
+                "group flex h-10 min-w-[92px] items-center justify-center gap-2 rounded-full px-4 text-[11px] font-black uppercase tracking-[0.16em] backdrop-blur-xl transition-all duration-300 active:scale-95",
+                languageButtonClass,
+              ].join(" ")}
+              aria-label={
+                copy.selectLanguage
+              }
+              aria-expanded={
+                langOpen
+              }
             >
-              {copy.cta}
-            </Link>
-          </div>
-        </div>
-      </div>
+              <Image
+                src={
+                  currentLanguage.flagSrc
+                }
+                alt={
+                  currentLanguage.label
+                }
+                width={18}
+                height={18}
+                className="rounded-full"
+              />
 
-      <header
-        ref={(el) => {
-          navRef.current = el;
-        }}
-        className={[
-          "fixed left-0 right-0 top-[var(--sales-bar-height,44px)] z-[9999]",
-          "transition-transform duration-500 ease-out",
-          hidden ? "-translate-y-[180%]" : "translate-y-0",
-        ].join(" ")}
-      >
-        <div className="border-b border-white/8 bg-[#0f1115]/94 shadow-[0_18px_40px_rgba(0,0,0,0.22)] backdrop-blur-xl">
-          <div className="mx-auto w-full max-w-[1480px] px-[clamp(12px,2vw,32px)]">
-            <div className="py-[4px] md:py-[clamp(4px,0.55vw,8px)]">
-              <div className="grid grid-cols-3 items-center md:hidden">
-                <div className="relative justify-self-start">
-                  <button
-                    type="button"
-                    onClick={toggleLanguageDropdown}
-                    className="inline-flex items-center gap-1.5 rounded-xl border border-white/10 bg-white/5 px-2.5 py-2 text-[11px] font-black text-white/90 backdrop-blur-sm hover:bg-white/10"
-                    aria-expanded={langOpen}
-                    aria-label={copy.selectLanguage}
-                  >
-                    <Image
-                      src={currentLang.flagSrc}
-                      alt={currentLang.label}
-                      width={17}
-                      height={17}
-                      className="rounded-full"
-                    />
-                    <span className="uppercase tracking-[0.14em]">
-                      {currentLang.short}
-                    </span>
-                    <span className="text-white/60">▾</span>
-                  </button>
+              <span>
+                {
+                  currentLanguage.short
+                }
+              </span>
 
-                  <div
-                    className={[
-                      "absolute left-0 mt-2 w-[245px] overflow-hidden rounded-2xl border border-white/10 bg-[#0f1115]/96 shadow-[0_18px_45px_rgba(0,0,0,0.22)] backdrop-blur-xl",
-                      "transition-all duration-200",
-                      langOpen
-                        ? "pointer-events-auto translate-y-0 opacity-100"
-                        : "pointer-events-none -translate-y-2 opacity-0",
-                    ].join(" ")}
-                  >
-                    <div className="border-b border-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">
-                      {copy.selectLanguage}
-                    </div>
+              <span
+                className={[
+                  "text-[10px] transition-transform duration-300",
+                  languageArrowClass,
 
-                    <div className="p-2">
-                      {LANGUAGES.map((language) => {
-                        const active = language.code === currentLocale;
+                  langOpen
+                    ? "rotate-180"
+                    : "rotate-0",
+                ].join(" ")}
+              >
+                ▾
+              </span>
+            </button>
 
-                        return (
-                          <button
-                            key={language.code}
-                            type="button"
-                            onClick={() => onSelectLocale(language.code)}
-                            className={[
-                              "flex w-full items-center justify-between rounded-xl px-3 py-2 transition",
-                              active
-                                ? "bg-white/12 text-white"
-                                : "text-white/78 hover:bg-white/10 hover:text-white",
-                            ].join(" ")}
-                          >
-                            <span className="flex items-center gap-3">
-                              <Image
-                                src={language.flagSrc}
-                                alt={language.label}
-                                width={22}
-                                height={22}
-                                className="rounded-full"
-                              />
-                              <span className="text-sm">{language.label}</span>
-                            </span>
+            <div
+              className={[
+                "absolute right-0 top-[calc(100%+12px)] z-[95] w-[245px] overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-300",
 
-                            <span
-                              className={[
-                                "text-[10px] uppercase tracking-[0.14em]",
-                                active ? "text-orange-300" : "text-white/45",
-                              ].join(" ")}
-                            >
-                              {active ? copy.active : language.short}
-                            </span>
-                          </button>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
+                isLightTone
+                  ? "border-[#202226]/10 bg-white/90 text-[#202226] shadow-[0_26px_90px_rgba(0,0,0,0.22)]"
+                  : "border-white/10 bg-black/78 text-white shadow-[0_26px_90px_rgba(0,0,0,0.58)]",
 
-                <Link href={homeHref} className="justify-self-center select-none">
-                  <Image
-                    src="/images/reallogo.png"
-                    alt="NEXA Rentals"
-                    width={300}
-                    height={100}
-                    className="h-[52px] w-auto object-contain sm:h-[58px]"
-                    priority
-                  />
-                </Link>
+                langOpen
+                  ? "translate-y-0 scale-100 opacity-100"
+                  : "pointer-events-none -translate-y-2 scale-[0.98] opacity-0",
+              ].join(" ")}
+            >
+              <div
+                className={[
+                  "px-4 pb-2 pt-4 text-[10px] font-extrabold uppercase tracking-[0.22em]",
 
-                <button
-                  type="button"
-                  aria-label={mobileOpen ? "Close menu" : "Open menu"}
-                  aria-expanded={mobileOpen}
-                  onClick={() => {
-                    setMobileOpen((v) => !v);
-                    setLangOpen(false);
-                  }}
-                  className="inline-flex h-10 w-10 items-center justify-center justify-self-end rounded-xl border border-white/10 bg-white/5 backdrop-blur-sm"
-                >
-                  <span className="sr-only">{copy.menu}</span>
-                  <div className="relative h-5 w-5">
-                    <span
-                      className={[
-                        "absolute left-0 top-[2px] block h-[2px] w-5 bg-white/90 transition-all duration-200",
-                        mobileOpen ? "top-[9px] rotate-45" : "rotate-0",
-                      ].join(" ")}
-                    />
-                    <span
-                      className={[
-                        "absolute left-0 top-[9px] block h-[2px] w-5 bg-white/90 transition-all duration-200",
-                        mobileOpen ? "opacity-0" : "opacity-100",
-                      ].join(" ")}
-                    />
-                    <span
-                      className={[
-                        "absolute left-0 top-[16px] block h-[2px] w-5 bg-white/90 transition-all duration-200",
-                        mobileOpen ? "top-[9px] -rotate-45" : "rotate-0",
-                      ].join(" ")}
-                    />
-                  </div>
-                </button>
+                  isLightTone
+                    ? "text-[#202226]/44"
+                    : "text-white/42",
+                ].join(" ")}
+              >
+                {
+                  copy.selectLanguage
+                }
               </div>
 
-              <div className="hidden items-center md:flex">
-                <Link
-                  href={homeHref}
-                  className="flex shrink-0 select-none items-center"
-                >
-                  <Image
-                    src="/images/reallogo.png"
-                    alt="NEXA Rentals"
-                    width={300}
-                    height={100}
-                    className="h-[clamp(62px,5.4vw,82px)] w-auto object-contain"
-                    priority
-                  />
-                </Link>
+              <div className="max-h-[430px] overflow-y-auto p-2">
+                {LANGUAGES.map(
+                  (
+                    language
+                  ) => {
+                    const active =
+                      language.code ===
+                      locale;
 
-                <div className="ml-auto flex min-w-0 items-center gap-[clamp(14px,2vw,40px)]">
-                  <nav className="flex min-w-0 items-center gap-[clamp(16px,2.4vw,40px)]">
-                    <Link className="nav-link" href={homeHref}>
-                      {t("home")}
-                    </Link>
+                    return (
+                      <button
+                        key={
+                          language.code
+                        }
+                        type="button"
+                        onClick={() =>
+                          handleLanguageChange(
+                            language.code
+                          )
+                        }
+                        className={[
+                          "group flex w-full cursor-pointer items-center justify-between rounded-[18px] px-3 py-2.5 text-left opacity-100 transition hover:scale-[1.01] active:scale-[0.98]",
 
-                    <Link className="nav-link" href={fleetHref}>
-                      {t("fleet")}
-                    </Link>
+                          isLightTone
+                            ? active
+                              ? "bg-[#202226]/8 text-[#202226]"
+                              : "text-[#202226]/68 hover:bg-[#202226]/[0.055] hover:text-[#202226]"
+                            : active
+                              ? "bg-white/[0.10] text-white"
+                              : "text-white/68 hover:bg-white/[0.065] hover:text-white",
+                        ].join(
+                          " "
+                        )}
+                      >
+                        <span className="flex items-center gap-3">
+                          <Image
+                            src={
+                              language.flagSrc
+                            }
+                            alt={
+                              language.label
+                            }
+                            width={
+                              22
+                            }
+                            height={
+                              22
+                            }
+                            className={[
+                              "rounded-full",
 
-                    <Link className="nav-link" href={blogsHref}>
-                      {t("blogs")}
-                    </Link>
+                              isLightTone
+                                ? "shadow-[0_0_0_1px_rgba(31,33,37,0.14)]"
+                                : "shadow-[0_0_0_1px_rgba(255,255,255,0.16)]",
+                            ].join(
+                              " "
+                            )}
+                          />
 
-                    <Link className="nav-link" href={aboutHref}>
-                      {t("about")}
-                    </Link>
+                          <span className="text-sm font-semibold">
+                            {
+                              language.label
+                            }
+                          </span>
+                        </span>
 
-                    <Link className="nav-link nav-cta" href={contactHref}>
-                      {t("contact")}
-                    </Link>
-                  </nav>
+                        <span
+                          className={[
+                            "text-[10px] font-extrabold uppercase tracking-[0.16em]",
 
-                  <div className="relative shrink-0">
-                    <button
-                      type="button"
-                      onClick={toggleLanguageDropdown}
-                      className="inline-flex items-center gap-2 rounded-xl border border-white/15 bg-[#1b1f27]/75 px-3 py-2 text-xs text-white/90 backdrop-blur-sm hover:border-white/20 hover:bg-[#232a35]/80"
-                      aria-expanded={langOpen}
-                      aria-label={copy.selectLanguage}
-                    >
-                      <Image
-                        src={currentLang.flagSrc}
-                        alt={currentLang.label}
-                        width={18}
-                        height={18}
-                        className="rounded-full"
-                      />
-                      <span className="uppercase tracking-[0.18em] text-white/90">
-                        {currentLang.short}
-                      </span>
-                      <span className="text-white/70">▾</span>
-                    </button>
-
-                    <div
-                      className={[
-                        "absolute right-0 mt-2 w-[250px] overflow-hidden rounded-2xl border border-white/10 bg-[#0f1115]/95 shadow-[0_18px_45px_rgba(0,0,0,0.22)] backdrop-blur-xl",
-                        "transition-all duration-200",
-                        langOpen
-                          ? "pointer-events-auto translate-y-0 opacity-100"
-                          : "pointer-events-none -translate-y-2 opacity-0",
-                      ].join(" ")}
-                    >
-                      <div className="border-b border-white/10 px-3 py-2 text-[10px] font-black uppercase tracking-[0.16em] text-orange-300">
-                        {copy.selectLanguage}
-                      </div>
-
-                      <div className="p-2">
-                        {LANGUAGES.map((language) => {
-                          const active = language.code === currentLocale;
-
-                          return (
-                            <button
-                              key={language.code}
-                              type="button"
-                              onClick={() => onSelectLocale(language.code)}
-                              className={[
-                                "flex w-full items-center justify-between rounded-xl px-3 py-2 transition",
-                                active
-                                  ? "bg-white/12 text-white"
-                                  : "text-white/78 hover:bg-white/10 hover:text-white",
-                              ].join(" ")}
-                            >
-                              <span className="flex items-center gap-3">
-                                <Image
-                                  src={language.flagSrc}
-                                  alt={language.label}
-                                  width={22}
-                                  height={22}
-                                  className="rounded-full"
-                                />
-                                <span className="text-sm">
-                                  {language.label}
-                                </span>
-                              </span>
-
-                              <span
-                                className={[
-                                  "text-[10px] uppercase tracking-[0.14em]",
-                                  active ? "text-orange-300" : "text-white/45",
-                                ].join(" ")}
-                              >
-                                {active ? copy.active : language.short}
-                              </span>
-                            </button>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+                            active
+                              ? "text-[#ff7a00]"
+                              : isLightTone
+                                ? "text-[#202226]/44"
+                                : "text-white/44",
+                          ].join(
+                            " "
+                          )}
+                        >
+                          {active
+                            ? copy.active
+                            : language.short}
+                        </span>
+                      </button>
+                    );
+                  }
+                )}
               </div>
             </div>
           </div>
+
+          <button
+            type="button"
+            onClick={
+              handleBookClick
+            }
+            className={[
+              !bookNowClicked
+                ? "book-now-pulse"
+                : "",
+
+              "group relative inline-flex items-center justify-center overflow-hidden rounded-full px-7 py-3.5 text-[11.5px] font-black uppercase tracking-[0.19em] transition duration-300 hover:-translate-y-0.5 hover:scale-[1.07] active:translate-y-0 active:scale-[0.90]",
+
+              desktopBookButtonClass,
+            ].join(" ")}
+          >
+            <span className="absolute inset-0 translate-x-[-120%] bg-[linear-gradient(90deg,transparent,rgba(255,157,61,0.34),transparent)] transition duration-700 group-hover:translate-x-[120%]" />
+
+            <span
+              className={[
+                "absolute inset-0 rounded-full ring-1 ring-inset",
+
+                isLightTone
+                  ? "ring-white/16"
+                  : "ring-black/10",
+              ].join(" ")}
+            />
+
+            <span className="relative">
+              {
+                copy.book
+              }
+            </span>
+          </button>
         </div>
-      </header>
+      </div>
 
       <div
-        aria-hidden
-        className="h-[calc(var(--total-nav-space,92px)+2px)] md:h-[calc(var(--total-nav-space,130px)+10px)]"
-      />
-
-      <div className="md:hidden">
-        <div
-          onClick={() => setMobileOpen(false)}
-          className={[
-            "fixed inset-0 z-[9998] transition-opacity duration-200",
-            mobileOpen
-              ? "pointer-events-auto opacity-100"
-              : "pointer-events-none opacity-0",
-          ].join(" ")}
-          style={{ background: "rgba(0,0,0,0.55)" }}
-        />
-
-        <aside
-          className={[
-            "fixed right-0 top-0 z-[9999] h-[100svh] w-[78vw] max-w-[320px]",
-            "border-l border-white/10 bg-[#0f1115]/92 backdrop-blur-xl",
-            "transition-transform duration-300 ease-out",
-            mobileOpen ? "translate-x-0" : "translate-x-full",
-          ].join(" ")}
-          aria-hidden={!mobileOpen}
+        style={{ backgroundColor: "#000000", backgroundImage: "none", backdropFilter: "none", WebkitBackdropFilter: "none" }}
+        className={[
+          "nexa-mobile-nav pointer-events-auto flex h-[76px] items-center justify-between px-5 lg:hidden",
+          mobileNavShellClass,
+        ].join(" ")}
+      >
+        <Link
+          href={
+            homeHref
+          }
+          aria-label="NEXA Rentals home"
+          onClick={
+            closeMenus
+          }
+          className="group relative z-10 flex items-center"
         >
-          <div className="flex items-center justify-between border-b border-white/10 px-5 pb-4 pt-5">
-            <span className="text-sm uppercase tracking-[0.22em] text-white/70">
-              {copy.menu}
-            </span>
+          <Image
+            src="/images/reallogo.png"
+            alt="NEXA Rentals"
+            width={300}
+            height={100}
+            priority
+            className={[
+              "relative h-[48px] w-auto object-contain",
+
+              showAngledLogoPanel ||
+              isLightTone
+                ? "drop-shadow-[0_12px_28px_rgba(0,0,0,0.55)]"
+                : "drop-shadow-[0_18px_34px_rgba(0,0,0,0.72)]",
+            ].join(" ")}
+          />
+        </Link>
+
+        <div className="relative z-20 flex items-center gap-4">
+          <div className="relative">
             <button
               type="button"
-              className="inline-flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/5"
-              aria-label="Close menu"
-              onClick={() => setMobileOpen(false)}
+              onClick={() => {
+                setLangOpen(
+                  (
+                    current
+                  ) =>
+                    !current
+                );
+
+                setMobileMenuOpen(
+                  false
+                );
+              }}
+              className={[
+                "inline-flex h-10 items-center justify-center gap-1.5 rounded-[14px] px-3 text-[11px] font-black uppercase tracking-[0.14em] backdrop-blur-xl transition active:scale-95",
+                mobileLanguageButtonClass,
+              ].join(" ")}
+              aria-label={
+                copy.selectLanguage
+              }
+              aria-expanded={
+                langOpen
+              }
             >
-              <span className="text-xl leading-none text-white/90">×</span>
+              <Image
+                src={
+                  currentLanguage.flagSrc
+                }
+                alt={
+                  currentLanguage.label
+                }
+                width={17}
+                height={17}
+                className="rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.16)]"
+              />
+
+              <span>
+                {
+                  currentLanguage.short
+                }
+              </span>
+
+              <span
+                className={[
+                  "text-[10px] text-white/72 transition-transform duration-300",
+
+                  langOpen
+                    ? "rotate-180"
+                    : "rotate-0",
+                ].join(" ")}
+              >
+                ▾
+              </span>
             </button>
+
+            <div
+              className={[
+                "absolute right-0 top-[calc(100%+12px)] z-[110] w-[224px] overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-300",
+
+                mobileLanguageDropdownClass,
+
+                langOpen
+                  ? "translate-y-0 scale-100 opacity-100"
+                  : "pointer-events-none -translate-y-2 scale-[0.98] opacity-0",
+              ].join(" ")}
+            >
+              <div className="px-4 pb-2 pt-4 text-[10px] font-extrabold uppercase tracking-[0.22em] text-white/42">
+                {
+                  copy.selectLanguage
+                }
+              </div>
+
+              <div className="max-h-[360px] overflow-y-auto p-2">
+                {LANGUAGES.map(
+                  (
+                    language
+                  ) => {
+                    const active =
+                      language.code ===
+                      locale;
+
+                    return (
+                      <button
+                        key={
+                          language.code
+                        }
+                        type="button"
+                        onClick={() =>
+                          handleLanguageChange(
+                            language.code
+                          )
+                        }
+                        className={[
+                          "group flex w-full cursor-pointer items-center justify-between rounded-[18px] px-3 py-2.5 text-left opacity-100 transition hover:scale-[1.01] active:scale-[0.98]",
+
+                          active
+                            ? "bg-white/[0.12] text-white"
+                            : "text-white/68 hover:bg-white/[0.065] hover:text-white",
+                        ].join(
+                          " "
+                        )}
+                      >
+                        <span className="flex items-center gap-3">
+                          <Image
+                            src={
+                              language.flagSrc
+                            }
+                            alt={
+                              language.label
+                            }
+                            width={
+                              21
+                            }
+                            height={
+                              21
+                            }
+                            className="rounded-full shadow-[0_0_0_1px_rgba(255,255,255,0.16)]"
+                          />
+
+                          <span className="text-sm font-semibold">
+                            {
+                              language.label
+                            }
+                          </span>
+                        </span>
+
+                        <span
+                          className={[
+                            "text-[10px] font-extrabold uppercase tracking-[0.16em]",
+
+                            active
+                              ? "text-[#ff7a00]"
+                              : "text-white/44",
+                          ].join(
+                            " "
+                          )}
+                        >
+                          {active
+                            ? copy.active
+                            : language.short}
+                        </span>
+                      </button>
+                    );
+                  }
+                )}
+              </div>
+            </div>
           </div>
 
-          <nav className="px-5 py-4">
-            <Link
-              className="flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 transition hover:bg-white/5 hover:text-white"
-              href={homeHref}
-              onClick={() => setMobileOpen(false)}
-            >
-              <Image
-                src="/images/home.png"
-                alt={t("home")}
-                width={22}
-                height={22}
-                className="opacity-90"
-              />
-              <span>{t("home")}</span>
-            </Link>
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(
+                (
+                  current
+                ) =>
+                  !current
+              );
 
-            <Link
-              className="mt-2 flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 transition hover:bg-white/5 hover:text-white"
-              href={fleetHref}
-              onClick={() => setMobileOpen(false)}
-            >
-              <Image
-                src="/images/fleet.png"
-                alt={t("fleet")}
-                width={22}
-                height={22}
-                className="opacity-90"
-              />
-              <span>{t("fleet")}</span>
-            </Link>
+              setLangOpen(
+                false
+              );
+            }}
+            className="nexa-hamburger-button"
+            aria-label={
+              mobileMenuOpen
+                ? copy.close
+                : copy.menu
+            }
+            aria-expanded={
+              mobileMenuOpen
+            }
+          >
+            <span className="nexa-hamburger-lines">
+              <span
+                className={[
+                  "nexa-hamburger-line",
 
-            <Link
-              className="mt-2 flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 transition hover:bg-white/5 hover:text-white"
-              href={blogsHref}
-              onClick={() => setMobileOpen(false)}
-            >
-              <Image
-                src="/images/blogs.png"
-                alt={t("blogs")}
-                width={22}
-                height={22}
-                className="opacity-90"
+                  mobileMenuOpen
+                    ? "top-[10px] rotate-45"
+                    : "top-0 rotate-0",
+                ].join(" ")}
               />
-              <span>{t("blogs")}</span>
-            </Link>
 
-            <Link
-              className="mt-2 flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 transition hover:bg-white/5 hover:text-white"
-              href={contactHref}
-              onClick={() => setMobileOpen(false)}
-            >
-              <Image
-                src="/images/contact.png"
-                alt={t("contact")}
-                width={22}
-                height={22}
-                className="opacity-90"
-              />
-              <span>{t("contact")}</span>
-            </Link>
+              <span
+                className={[
+                  "nexa-hamburger-line top-[10px]",
 
-            <Link
-              className="mt-2 flex items-center gap-3 rounded-xl px-3 py-3 text-white/90 transition hover:bg-white/5 hover:text-white"
-              href={aboutHref}
-              onClick={() => setMobileOpen(false)}
-            >
-              <Image
-                src="/images/icon-nobg.png"
-                alt={t("about")}
-                width={24}
-                height={24}
-                className="h-6 w-6 shrink-0 object-contain opacity-95"
+                  mobileMenuOpen
+                    ? "opacity-0"
+                    : "opacity-100",
+                ].join(" ")}
               />
-              <span>{t("about")}</span>
-            </Link>
-          </nav>
-        </aside>
+
+              <span
+                className={[
+                  "nexa-hamburger-line",
+
+                  mobileMenuOpen
+                    ? "top-[10px] -rotate-45"
+                    : "top-[20px] rotate-0",
+                ].join(" ")}
+              />
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <div
+        className={[
+          "pointer-events-auto fixed inset-x-4 top-[116px] z-[90] overflow-hidden rounded-[30px] backdrop-blur-2xl transition-all duration-300 lg:hidden",
+
+          mobilePanelClass,
+
+          mobileMenuOpen
+            ? "translate-y-0 scale-100 opacity-100"
+            : "pointer-events-none -translate-y-4 scale-[0.98] opacity-0",
+        ].join(" ")}
+      >
+        <nav className="flex flex-col p-3 text-sm font-semibold">
+          {navItems.map(
+            (item) => (
+              <Link
+                key={
+                  item.href
+                }
+                href={
+                  item.href
+                }
+                onClick={
+                  closeMenus
+                }
+                className={[
+                  "rounded-[22px] px-4 py-3 transition active:scale-[0.98]",
+
+                  isLightTone
+                    ? "hover:bg-[#202226]/[0.055] hover:text-black"
+                    : "hover:bg-white/[0.065] hover:text-white",
+                ].join(" ")}
+              >
+                {
+                  item.label
+                }
+              </Link>
+            )
+          )}
+
+          <div
+            className={[
+              "mt-2 border-t pt-3",
+
+              isLightTone
+                ? "border-[#202226]/10"
+                : "border-white/10",
+            ].join(" ")}
+          >
+            <div
+              className={[
+                "px-4 pb-2 text-[10px] font-extrabold uppercase tracking-[0.22em]",
+
+                isLightTone
+                  ? "text-[#202226]/38"
+                  : "text-white/38",
+              ].join(" ")}
+            >
+              {
+                copy.selectLanguage
+              }
+            </div>
+
+            <div className="grid max-h-[260px] grid-cols-2 gap-2 overflow-y-auto px-2 pb-2">
+              {LANGUAGES.map(
+                (
+                  language
+                ) => {
+                  const active =
+                    language.code ===
+                    locale;
+
+                  return (
+                    <button
+                      key={
+                        language.code
+                      }
+                      type="button"
+                      onClick={() =>
+                        handleLanguageChange(
+                          language.code
+                        )
+                      }
+                      className={[
+                        "flex cursor-pointer items-center justify-between gap-2 rounded-[18px] px-3 py-2.5 text-left text-xs opacity-100 transition hover:scale-[1.02] active:scale-[0.98]",
+
+                        isLightTone
+                          ? active
+                            ? "bg-[#202226]/8 text-[#202226]"
+                            : "text-[#202226]/66 hover:bg-[#202226]/[0.055] hover:text-[#202226]"
+                          : active
+                            ? "bg-white/[0.12] text-white"
+                            : "text-white/66 hover:bg-white/[0.065] hover:text-white",
+                      ].join(
+                        " "
+                      )}
+                    >
+                      <Image
+                        src={
+                          language.flagSrc
+                        }
+                        alt={
+                          language.label
+                        }
+                        width={
+                          18
+                        }
+                        height={
+                          18
+                        }
+                        className="rounded-full"
+                      />
+
+                      <span className="font-extrabold uppercase tracking-[0.14em]">
+                        {
+                          language.short
+                        }
+                      </span>
+                    </button>
+                  );
+                }
+              )}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={
+              handleBookClick
+            }
+            className={[
+              !bookNowClicked
+                ? "book-now-pulse"
+                : "",
+
+              "mt-3 rounded-full px-4 py-3.5 text-center text-[11px] font-black uppercase tracking-[0.2em] transition hover:scale-[1.04] active:scale-[0.92]",
+
+              isLightTone
+                ? "bg-[#24262b] text-white shadow-[0_18px_50px_rgba(24,25,30,0.22)] hover:bg-[#2b2e34] hover:shadow-[0_22px_62px_rgba(24,25,30,0.30)]"
+                : "bg-white text-black shadow-[0_18px_50px_rgba(255,255,255,0.12)] hover:shadow-[0_22px_62px_rgba(255,255,255,0.18)]",
+            ].join(" ")}
+          >
+            {
+              copy.book
+            }
+          </button>
+        </nav>
       </div>
 
       <style jsx global>{`
-        .sales-bar {
-          background:
-            linear-gradient(
-              90deg,
-              #de6b00 0%,
-              #ff8308 22%,
-              #ff8a0f 48%,
-              #ff7a00 72%,
-              #e66d00 100%
+        html,
+        body {
+          width: 100%;
+          max-width: 100%;
+          overflow-x: hidden;
+        }
+
+        @media (max-width: 1023px) {
+          body {
+            padding-top: ${MOBILE_PAGE_TOP_OFFSET_PX}px !important;
+          }
+
+          .nexa-navbar-shell {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            right: 0 !important;
+            z-index: 2147483000 !important;
+            isolation: isolate !important;
+            transform: translateZ(0) !important;
+            -webkit-transform: translateZ(0) !important;
+          }
+
+          .nexa-navbar-shell
+            .nexa-mobile-nav {
+            position: relative !important;
+            z-index: 2 !important;
+          }
+        }
+
+        .nexa-navbar-shell[data-mobile-scrolled="true"]
+          .nexa-mobile-nav {
+          background: #000000 !important;
+          box-shadow: 0 18px 46px
+            rgba(
+              0,
+              0,
+              0,
+              0.58
+            ) !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+        }
+
+        .nexa-navbar-shell[data-mobile-scrolled="false"]
+          .nexa-mobile-nav {
+          background: #000000 !important;
+          box-shadow: 0 18px 46px rgba(0, 0, 0, 0.58) !important;
+          backdrop-filter: none !important;
+          -webkit-backdrop-filter: none !important;
+        }
+
+        .nexa-angled-logo-panel {
+          width:
+            min(
+              48vw,
+              760px
+            );
+          min-width: 500px;
+          height: 96px;
+          background: #000000;
+          clip-path:
+            polygon(
+              0 0,
+              100% 0,
+              calc(
+                  100% -
+                    92px
+                )
+                100%,
+              0 100%
+            );
+          box-shadow:
+            0 20px 54px
+            rgba(
+              0,
+              0,
+              0,
+              0.28
             );
         }
 
-        .sales-bar-waves {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          will-change: transform;
+        .nexa-desktop-logo {
+          max-height: 86px;
         }
 
-        .sales-bar-waves-one {
-          opacity: 0.42;
-          background:
-            repeating-radial-gradient(
-              ellipse at 108% 50%,
-              rgba(125, 66, 224, 0.30) 0px,
-              rgba(125, 66, 224, 0.30) 7px,
-              rgba(171, 110, 255, 0.22) 8px,
-              rgba(171, 110, 255, 0.22) 14px,
-              rgba(255, 255, 255, 0) 15px,
-              rgba(255, 255, 255, 0) 44px
-            );
-          mix-blend-mode: soft-light;
-          animation: nexaWaveFlowOne 16s linear infinite;
-        }
-
-        .sales-bar-waves-two {
-          opacity: 0.38;
-          background:
-            repeating-radial-gradient(
-              ellipse at 114% 50%,
-              rgba(83, 30, 172, 0.22) 0px,
-              rgba(83, 30, 172, 0.22) 10px,
-              rgba(138, 72, 224, 0.16) 11px,
-              rgba(138, 72, 224, 0.16) 21px,
-              rgba(255, 255, 255, 0) 22px,
-              rgba(255, 255, 255, 0) 72px
-            );
-          filter: blur(0.4px);
-          mix-blend-mode: overlay;
-          animation: nexaWaveFlowTwo 24s linear infinite;
-        }
-
-        .sales-bar-waves-three {
-          opacity: 0.26;
-          background:
-            linear-gradient(
-              90deg,
-              rgba(255, 255, 255, 0) 0%,
-              rgba(255, 255, 255, 0.08) 20%,
-              rgba(125, 66, 224, 0.18) 50%,
-              rgba(255, 255, 255, 0.06) 72%,
-              rgba(255, 255, 255, 0) 100%
-            ),
-            radial-gradient(
-              60% 140% at 100% 50%,
-              rgba(118, 53, 217, 0.20) 0%,
-              rgba(118, 53, 217, 0.10) 28%,
-              rgba(255, 255, 255, 0) 58%
-            );
-          mix-blend-mode: soft-light;
-          animation: nexaWaveFlowThree 20s linear infinite;
-        }
-
-        .sales-bar-overlay {
-          position: absolute;
-          inset: 0;
-          pointer-events: none;
-          background:
-            linear-gradient(
-              180deg,
-              rgba(255, 255, 255, 0.22) 0%,
-              rgba(255, 255, 255, 0.08) 18%,
-              rgba(255, 255, 255, 0) 40%,
-              rgba(0, 0, 0, 0.08) 100%
-            );
-        }
-
-        .announcement-main {
-          position: relative;
-          z-index: 2;
-        }
-
-        .offer-month {
-          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.16);
-        }
-
-        .discount-main {
-          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.14);
-        }
-
-        .discount-price {
-          color: #ffffff;
-          font-size: 1.18em;
-          text-shadow:
-            0 2px 12px rgba(0, 0, 0, 0.28),
-            0 1px 0 rgba(0, 0, 0, 0.22);
-        }
-
-        .timer-row {
-          perspective: 700px;
-        }
-
-        .timer-card {
-          position: relative;
-          display: inline-flex;
-          min-width: 44px;
-          height: 32px;
-          flex-direction: column;
+        .nexa-hamburger-button {
+          display: flex;
           align-items: center;
           justify-content: center;
-          overflow: hidden;
-          border-radius: 9px;
-          border: 1px solid rgba(0, 0, 0, 0.18);
-          background: rgba(255, 255, 255, 0.96);
-          box-shadow:
-            inset 0 1px 0 rgba(255, 255, 255, 0.9),
-            inset 0 -1px 0 rgba(0, 0, 0, 0.08),
-            0 6px 14px rgba(0, 0, 0, 0.18);
+          width: 34px;
+          height: 34px;
+          padding: 0;
+          margin: 0;
+          border: none !important;
+          outline: none !important;
+          background: none !important;
+          background-color: transparent !important;
+          background-image: none !important;
+          box-shadow: none !important;
+          appearance: none;
+          -webkit-appearance: none;
+          -webkit-tap-highlight-color: transparent;
+          cursor: pointer;
         }
 
-        .timer-card::before {
-          content: "";
+        .nexa-hamburger-button::before,
+        .nexa-hamburger-button::after {
+          display: none !important;
+          content: none !important;
+        }
+
+        .nexa-hamburger-button:hover,
+        .nexa-hamburger-button:focus,
+        .nexa-hamburger-button:active,
+        .nexa-hamburger-button:focus-visible {
+          border: none !important;
+          outline: none !important;
+          background: none !important;
+          background-color: transparent !important;
+          background-image: none !important;
+          box-shadow: none !important;
+        }
+
+        .nexa-hamburger-lines {
+          position: relative;
+          display: block;
+          width: 31px;
+          height: 23px;
+          background: transparent !important;
+          box-shadow: none !important;
+        }
+
+        .nexa-hamburger-line {
           position: absolute;
           left: 0;
-          right: 0;
-          top: 50%;
-          height: 1px;
-          background: rgba(0, 0, 0, 0.08);
-        }
-
-        .timer-value-wrap {
-          position: relative;
-          height: 16px;
-          min-width: 24px;
-          overflow: hidden;
-        }
-
-        .timer-value {
           display: block;
-          color: #111111;
-          font-size: 14px;
-          font-weight: 950;
-          line-height: 16px;
-          letter-spacing: 0.03em;
-          text-align: center;
-          text-shadow: 0 1px 0 rgba(255, 255, 255, 0.75);
-        }
-
-        .timer-card.live .timer-value {
-          animation: timerFlipDown 460ms cubic-bezier(0.22, 1, 0.36, 1);
-        }
-
-        .timer-label {
-          margin-top: 1px;
-          color: rgba(0, 0, 0, 0.58);
-          font-size: 6px;
-          font-weight: 950;
-          line-height: 1;
-          letter-spacing: 0.04em;
-          text-transform: uppercase;
-        }
-
-        .timer-colon {
-          color: #111111;
-          font-size: 16px;
-          font-weight: 950;
-          line-height: 1;
-          animation: colonBlink 1s ease-in-out infinite;
-        }
-
-        .sales-cta-button {
-          position: relative;
-          z-index: 2;
-          background: #111111;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          box-shadow:
-            0 10px 22px rgba(0, 0, 0, 0.24),
-            0 0 0 1px rgba(0, 0, 0, 0.16) inset,
-            inset 0 1px 0 rgba(255, 255, 255, 0.14);
-        }
-
-        @keyframes nexaWaveFlowOne {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-180px);
-          }
-        }
-
-        @keyframes nexaWaveFlowTwo {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-260px);
-          }
-        }
-
-        @keyframes nexaWaveFlowThree {
-          0% {
-            transform: translateX(0);
-          }
-          100% {
-            transform: translateX(-220px);
-          }
-        }
-
-        @keyframes timerFlipDown {
-          0% {
-            opacity: 0;
-            transform: translateY(-115%) rotateX(55deg);
-            filter: blur(3px);
-          }
-          55% {
-            opacity: 1;
-            transform: translateY(5%) rotateX(0deg);
-            filter: blur(0);
-          }
-          100% {
-            opacity: 1;
-            transform: translateY(0) rotateX(0deg);
-            filter: blur(0);
-          }
-        }
-
-        @keyframes colonBlink {
-          0%,
-          100% {
-            opacity: 0.46;
-            transform: scale(0.98);
-          }
-          50% {
-            opacity: 1;
-            transform: scale(1.04);
-          }
-        }
-
-        .nav-link {
-          position: relative;
-          display: inline-flex;
-          align-items: center;
-          white-space: nowrap;
-          padding: 0px 3px;
-          font-family:
-            "Cinzel", "Playfair Display", "Cormorant Garamond", "Didot",
-            "Bodoni MT", serif;
-          font-size: clamp(12px, 0.9vw, 15px);
-          font-weight: 600;
-          letter-spacing: clamp(0.07em, 0.5vw, 0.12em);
-          text-transform: uppercase;
-          color: rgba(255, 255, 255, 0.94);
-          transition:
-            transform 220ms ease,
-            color 220ms ease,
-            text-shadow 220ms ease,
-            opacity 220ms ease,
-            filter 220ms ease,
-            background-color 220ms ease,
-            box-shadow 220ms ease,
-            border-color 220ms ease;
-          will-change: transform;
-          -webkit-tap-highlight-color: transparent;
-        }
-
-        .nav-link::after {
-          content: "";
-          position: absolute;
-          left: 50%;
-          bottom: 1px;
-          width: 0%;
-          height: 2px;
-          transform: translateX(-50%);
-          background: linear-gradient(
-            90deg,
-            rgba(255, 255, 255, 0),
-            rgba(255, 163, 41, 1),
-            rgba(255, 255, 255, 0)
-          );
-          opacity: 0;
-          filter: drop-shadow(0 0 10px rgba(255, 163, 41, 0.55));
-          transition:
-            width 260ms ease,
-            opacity 260ms ease;
-        }
-
-        .nav-link:hover {
-          color: rgba(255, 255, 255, 1);
-          transform: translateY(-1px);
-          text-shadow:
-            0 0 22px rgba(255, 163, 41, 0.32),
-            0 0 10px rgba(255, 255, 255, 0.12);
-          filter: brightness(1.08);
-        }
-
-        .nav-link:hover::after {
-          width: 125%;
-          opacity: 1;
-        }
-
-        .nav-link:active {
-          transform: translateY(0px) scale(0.965);
-          text-shadow: 0 0 14px rgba(255, 163, 41, 0.26);
-          filter: brightness(1.02);
-        }
-
-        .nav-link:focus-visible {
-          outline: none;
-          text-shadow:
-            0 0 22px rgba(255, 163, 41, 0.34),
-            0 0 10px rgba(255, 255, 255, 0.14);
-        }
-
-        .nav-link:focus-visible::after {
-          width: 125%;
-          opacity: 1;
-        }
-
-        .nav-cta {
-          padding: clamp(8px, 0.72vw, 10px) clamp(13px, 1.3vw, 18px);
+          width: 31px;
+          height: 3.2px;
           border-radius: 999px;
-          border: 1px solid rgba(255, 255, 255, 0.18);
-          background: linear-gradient(
-            180deg,
-            rgba(60, 64, 72, 0.85) 0%,
-            rgba(38, 41, 48, 0.9) 55%,
-            rgba(22, 24, 29, 0.95) 100%
-          );
-          color: rgba(255, 255, 255, 0.96);
-          letter-spacing: clamp(0.08em, 0.58vw, 0.16em);
-          backdrop-filter: blur(10px);
+          background: #ffffff;
           box-shadow:
-            0 10px 26px rgba(0, 0, 0, 0.35),
-            inset 0 1px 0 rgba(255, 255, 255, 0.08),
-            inset 0 -1px 0 rgba(0, 0, 0, 0.6);
-          text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+            0 0 10px
+              rgba(
+                255,
+                255,
+                255,
+                0.7
+              ),
+            0 2px 5px
+              rgba(
+                0,
+                0,
+                0,
+                0.35
+              );
+          transform-origin: center;
+          transition:
+            top 260ms ease,
+            transform 260ms ease,
+            opacity 200ms ease;
         }
 
-        .nav-cta::after {
-          display: none;
+        .book-now-pulse {
+          animation:
+            nexa-book-heartbeat
+            1.8s ease-in-out
+            infinite;
+          will-change: transform;
         }
 
-        .nav-cta:hover {
-          transform: translateY(-1px);
-          border-color: rgba(255, 163, 41, 0.62);
-          box-shadow:
-            0 14px 34px rgba(0, 0, 0, 0.22),
-            0 0 26px rgba(255, 163, 41, 0.12),
-            0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-          text-shadow:
-            0 0 18px rgba(255, 163, 41, 0.18),
-            0 0 10px rgba(0, 0, 0, 0.35);
-          filter: none;
-          color: #fff;
+        .book-now-pulse:hover {
+          animation: none;
         }
 
-        .nav-cta:active {
-          transform: translateY(0px) scale(0.985);
-          box-shadow:
-            0 10px 26px rgba(0, 0, 0, 0.18),
-            0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-        }
-
-        .nav-cta:focus-visible {
-          outline: none;
-          box-shadow:
-            0 0 0 3px rgba(255, 163, 41, 0.24),
-            0 14px 34px rgba(0, 0, 0, 0.22),
-            0 0 0 1px rgba(255, 255, 255, 0.08) inset;
-        }
-
-        @media (min-width: 768px) and (max-width: 1120px) {
-          .nav-link {
-            font-size: 11px;
-            letter-spacing: 0.06em;
+        @keyframes nexa-book-heartbeat {
+          0% {
+            transform:
+              scale(1);
           }
 
-          .nav-cta {
-            padding: 8px 12px;
-          }
-        }
-
-        @media (max-width: 767px) {
-          .sales-bar > div:last-child {
-            min-height: 42px !important;
-            padding-left: 7px !important;
-            padding-right: 7px !important;
+          12% {
+            transform:
+              scale(1.055);
           }
 
-          .sales-bar-waves-one {
-            opacity: 0.38;
-            animation-duration: 18s;
+          22% {
+            transform:
+              scale(1);
           }
 
-          .sales-bar-waves-two {
-            opacity: 0.28;
-            animation-duration: 28s;
+          34% {
+            transform:
+              scale(1.035);
           }
 
-          .sales-bar-waves-three {
-            opacity: 0.20;
-            animation-duration: 22s;
+          46% {
+            transform:
+              scale(1);
           }
 
-          .announcement-main {
-            width: 100%;
-            gap: 6px !important;
-          }
-
-          .offer-left {
-            gap: 6px !important;
-          }
-
-          .offer-month {
-            font-size: 8px !important;
-            letter-spacing: 0.08em !important;
-          }
-
-          .discount-main {
-            font-size: 10px !important;
-            letter-spacing: 0.015em !important;
-          }
-
-          .discount-price {
-            font-size: 1.22em;
-          }
-
-          .timer-row {
-            gap: 2px !important;
-          }
-
-          .timer-card {
-            min-width: 30px;
-            height: 28px;
-            border-radius: 7px;
-          }
-
-          .timer-value-wrap {
-            height: 13px;
-            min-width: 18px;
-          }
-
-          .timer-value {
-            font-size: 10px;
-            line-height: 13px;
-          }
-
-          .timer-label {
-            font-size: 5px;
-            letter-spacing: 0.01em;
-          }
-
-          .timer-colon {
-            font-size: 11px;
+          100% {
+            transform:
+              scale(1);
           }
         }
 
-        @media (max-width: 520px) {
-          .sales-cta-button {
-            display: none !important;
+        @media (max-width: 1023px) {
+          .nexa-mobile-nav {
+            margin-top: 0 !important;
+            border-top: 0 !important;
           }
 
-          .announcement-main {
-            width: 100%;
+        }
+
+        @media (min-width: 1024px) and (max-height: 700px) {
+          .nexa-desktop-nav {
+            height: 78px;
           }
 
-          .discount-line {
-            max-width: 118px;
+          .nexa-desktop-logo {
+            height: 52px !important;
+          }
+
+          .nexa-angled-logo-panel {
+            height: 78px;
+            width:
+              min(
+                47vw,
+                680px
+              );
+            min-width: 430px;
+            clip-path:
+              polygon(
+                0 0,
+                100% 0,
+                calc(
+                    100% -
+                      74px
+                  )
+                  100%,
+                0 100%
+              );
           }
         }
 
-        @media (max-width: 390px) {
-          .sales-bar > div:last-child {
-            padding-left: 5px !important;
-            padding-right: 5px !important;
+        @media (min-width: 1024px) and (max-width: 1220px) {
+          .nexa-desktop-nav
+            nav {
+            gap: 16px;
           }
 
-          .discount-line {
-            max-width: 94px;
+          .nexa-desktop-nav
+            nav
+            a {
+            font-size:
+              10.5px;
+            letter-spacing:
+              0.145em;
           }
 
-          .discount-main {
-            font-size: 9px !important;
+          .nexa-desktop-nav
+            nav
+            a:hover {
+            letter-spacing:
+              0.155em;
           }
 
-          .timer-card {
-            min-width: 27px;
-            height: 26px;
+          .nexa-angled-logo-panel {
+            width:
+              min(
+                50vw,
+                650px
+              );
+            min-width:
+              420px;
+            clip-path:
+              polygon(
+                0 0,
+                100% 0,
+                calc(
+                    100% -
+                      72px
+                  )
+                  100%,
+                0 100%
+              );
+          }
+        }
+
+        @media (prefers-reduced-motion: reduce) {
+          .book-now-pulse {
+            animation: none;
           }
 
-          .timer-value {
-            font-size: 9px;
-          }
-
-          .timer-label {
-            font-size: 4.5px;
-          }
-
-          .timer-colon {
-            font-size: 9px;
-          }
         }
       `}</style>
-    </>
-  );
-}
-
-function Colon() {
-  return <span className="timer-colon">:</span>;
-}
-
-function TimeBox({
-  value,
-  label,
-  live = false,
-}: {
-  value: string;
-  label: string;
-  live?: boolean;
-}) {
-  return (
-    <span className={`timer-card ${live ? "live" : ""}`}>
-      <span className="timer-value-wrap">
-        {live ? (
-          <span key={value} className="timer-value">
-            {value}
-          </span>
-        ) : (
-          <span className="timer-value">{value}</span>
-        )}
-      </span>
-      <span className="timer-label">{label}</span>
-    </span>
+    </header>
   );
 }

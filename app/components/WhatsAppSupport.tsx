@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
 import { useLocale } from "next-intl";
 
@@ -159,10 +159,6 @@ function isMobileLikeNow() {
 export default function WhatsAppSupport({
   phone = "34971482342",
   message,
-  messages,
-  firstDelayMs = 3000,
-  visibleMs = 4200,
-  gapMs = 1600,
 }: Props) {
   const locale = getSafeLocale(useLocale());
   const copy = COPY[locale];
@@ -170,18 +166,8 @@ export default function WhatsAppSupport({
   const finalMessage =
     !message || message.trim() === DEFAULT_EN_MESSAGE ? copy.message : message;
 
-  const finalMessages = useMemo(() => {
-    if (isDefaultEnglishBubbles(messages)) return copy.bubbles;
-    return messages?.slice(0, 4) || copy.bubbles;
-  }, [messages, copy.bubbles]);
-
   const [mounted, setMounted] = useState(false);
   const [isMobileLike, setIsMobileLike] = useState(false);
-  const [showBubble, setShowBubble] = useState(false);
-  const [bubbleText, setBubbleText] = useState(finalMessages[0] ?? "");
-
-  const timers = useRef<number[]>([]);
-
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -202,55 +188,17 @@ export default function WhatsAppSupport({
     };
   }, []);
 
-  useEffect(() => {
-    setBubbleText(finalMessages[0] ?? "");
-  }, [finalMessages]);
-
-  useEffect(() => {
-    if (!mounted) return;
-
-    timers.current.forEach((timer) => window.clearTimeout(timer));
-    timers.current = [];
-
-    const bubbles = finalMessages.slice(0, 4);
-    if (bubbles.length === 0) return;
-
-    let delay = firstDelayMs;
-
-    bubbles.forEach((text) => {
-      timers.current.push(
-        window.setTimeout(() => {
-          setBubbleText(text);
-          setShowBubble(true);
-        }, delay)
-      );
-
-      timers.current.push(
-        window.setTimeout(() => {
-          setShowBubble(false);
-        }, delay + visibleMs)
-      );
-
-      delay += visibleMs + gapMs;
-    });
-
-    return () => {
-      timers.current.forEach((timer) => window.clearTimeout(timer));
-      timers.current = [];
-    };
-  }, [mounted, finalMessages, firstDelayMs, visibleMs, gapMs]);
-
   const href = `https://wa.me/${phone}?text=${encodeURIComponent(finalMessage)}`;
 
-  const buttonSize = isMobileLike ? 58 : 72;
+  const buttonSize = isMobileLike ? "clamp(64px, 13vw, 54px)" : 72;
 
   const ui = (
     <div
       style={{
         position: "fixed",
-        left: isMobileLike ? 22 : "auto",
+        left: isMobileLike ? "max(12px, env(safe-area-inset-left, 0px))" : "auto",
         right: isMobileLike ? "auto" : 22,
-        bottom: 22,
+        bottom: isMobileLike ? "max(4px, env(safe-area-inset-bottom, 0px))" : 22,
         zIndex: 2147483400,
         display: "flex",
         flexDirection: "row",
@@ -288,41 +236,6 @@ export default function WhatsAppSupport({
           />
         </a>
       )}
-
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label={copy.openChat}
-        style={{
-          pointerEvents: showBubble ? "auto" : "none",
-          transform: showBubble
-            ? "translateX(0px)"
-            : isMobileLike
-              ? "translateX(-18px)"
-              : "translateX(18px)",
-          opacity: showBubble ? 1 : 0,
-          transition: "all 320ms ease",
-          background: "rgba(15,17,21,0.94)",
-          color: "white",
-          border: "1px solid rgba(255,255,255,0.10)",
-          borderRadius: 14,
-          padding: "10px 14px",
-          maxWidth: 260,
-          fontSize: 13,
-          fontWeight: 600,
-          lineHeight: 1.25,
-          textDecoration: "none",
-          boxShadow: "0 10px 25px rgba(0,0,0,0.22)",
-          backdropFilter: "blur(10px)",
-          WebkitBackdropFilter: "blur(10px)",
-          whiteSpace: "nowrap",
-          overflow: "hidden",
-          textOverflow: "ellipsis",
-        }}
-      >
-        {bubbleText}
-      </a>
 
       {!isMobileLike && (
         <a

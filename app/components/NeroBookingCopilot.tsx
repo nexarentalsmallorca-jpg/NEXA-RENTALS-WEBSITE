@@ -828,8 +828,8 @@ export default function NeroBookingCopilot() {
       style={{
         position: "fixed",
         left: isMobileLike ? "auto" : "auto",
-        right: isMobileLike ? "18px" : "clamp(14px, 1.6vw, 24px)",
-        bottom: isMobileLike ? "84px" : "104px",
+        right: isMobileLike ? "max(16px, env(safe-area-inset-right))" : "clamp(14px, 1.6vw, 24px)",
+        bottom: isMobileLike ? "max(16px, env(safe-area-inset-bottom))" : "104px",
         zIndex: 2147483647,
         display: "flex",
         flexDirection: "column",
@@ -906,7 +906,7 @@ export default function NeroBookingCopilot() {
         className={[
   "group relative overflow-hidden rounded-full border border-white/12 bg-[#06070c] shadow-[0_0_24px_rgba(59,130,246,0.22),0_0_44px_rgba(124,58,237,0.24),0_0_60px_rgba(249,115,22,0.18)] transition duration-300",
   isMobileLike
-    ? "h-[62px] w-[62px] origin-bottom-right scale-[0.90] active:scale-[0.86]"
+    ? "h-[62px] w-[62px] origin-bottom-right scale-[0.77] active:scale-[0.73]"
     : "h-[clamp(64px,5vw,72px)] w-[clamp(64px,5vw,72px)] hover:scale-110 active:scale-95",
 ].join(" ")}
         aria-label={copy.chatWithNeroAria}
@@ -1001,8 +1001,8 @@ export default function NeroBookingCopilot() {
         @media (max-width: 768px) {
           .nero-copilot-wrap {
             left: auto !important;
-            right: 18px !important;
-            bottom: 84px !important;
+            right: max(16px, env(safe-area-inset-right)) !important;
+            bottom: max(16px, env(safe-area-inset-bottom)) !important;
             align-items: flex-end !important;
           }
 

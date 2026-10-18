@@ -818,71 +818,52 @@ const VEHICLE_SLIDES: VehicleSlide[] = [
 
 const MOBILE_DIRECT_HERO_SLIDES: MobileDirectHeroSlide[] = [
   {
-  id: "mobile-piaggio-liberty",
-  vehicleId: "piaggio-liberty",
-  name: "Piaggio Liberty 125",
-  image: "/images/piaggiomobile1.png",
-  alt: "Piaggio Liberty 125 scooter rental NEXA Rentals Magaluf",
-  specs: [
-    { image: "/images/engine.png", label: "125CC" },
-    { image: "/images/people.png", label: "2 Riders" },
-    { image: "/images/speed.png", label: "100 KM/H" },
-    { image: "/images/1111.png", label: "All Inclusive" },
-  ],
-},
-{
-  id: "mobile-kymco-sky-town",
-  vehicleId: "kymco-sky-town",
-  name: "Kymco Sky Town 125",
-  image: "/images/kymcomobile.png",
-  alt: "Kymco Sky Town 125 scooter rental NEXA Rentals Magaluf",
-  specs: [
-    { image: "/images/engine.png", label: "125CC" },
-    { image: "/images/people.png", label: "2 Riders" },
-    { image: "/images/speed.png", label: "Automatic" },
-    { image: "/images/1111.png", label: "All Inclusive" },
-  ],
-},
-{
-  id: "mobile-sym-symphony",
-  vehicleId: "sym-symphony",
-  name: "SYM Symphony 125",
-  image: "/images/symmobile1.png",
-  alt: "SYM Symphony 125 scooter rental NEXA Rentals Magaluf",
-  specs: [
-    { image: "/images/engine.png", label: "125CC" },
-    { image: "/images/people.png", label: "2 Riders" },
-    { image: "/images/speed.png", label: "110 KM/H" },
-    { image: "/images/1111.png", label: "All Inclusive" },
-  ],
-},
-  {
-    id: "mobile-ebike-one",
-    vehicleId: "ebike-one",
-    name: "MOMA CITY E-Bike",
-    image: "/images/ebikemobile1.png",
-    alt: "E Bike rental NEXA Rentals Magaluf",
+    id: "mobile-piaggio-liberty",
+    vehicleId: "piaggio-liberty",
+    name: "Piaggio Liberty 125",
+    image: "/images/nexapiaggio.png",
+    alt: "Piaggio Liberty 125 scooter rental NEXA Rentals Magaluf",
     specs: [
-      { image: "/images/people.png", label: "1 Rider" },
-      { image: "/images/speed.png", label: "25 KM/H" },
-      { image: "/images/1111.png", label: "100KM Range" },
-      { image: "/images/lock.png", label: "Lock Included" },
+      { image: "/images/engine.png", label: "125CC" },
+      { image: "/images/people.png", label: "2 Riders" },
+      { image: "/images/speed.png", label: "100 KM/H" },
+      { image: "/images/1111.png", label: "All Inclusive" },
     ],
   },
   {
-    id: "mobile-ebike-two",
-    vehicleId: "ebike-two",
-    name: "CECOTEC light MTB E-Bike",
-    image: "/images/ebikemobile2.png",
-    alt: "E Bike rental NEXA Rentals Magaluf",
+    id: "mobile-kymco-sky-town",
+    vehicleId: "kymco-sky-town",
+    name: "SkyTown 125 CC",
+    image: "/images/realkymco.png",
+    alt: "Kymco SkyTown 125 scooter rental NEXA Rentals Magaluf",
     specs: [
-      { image: "/images/people.png", label: "1 Rider" },
-      { image: "/images/speed.png", label: "25 KM/H" },
-      { image: "/images/1111.png", label: "60KM Range" },
-      { image: "/images/lock.png", label: "Lock Included" },
+      { image: "/images/engine.png", label: "125CC" },
+      { image: "/images/people.png", label: "2 Riders" },
+      { image: "/images/speed.png", label: "Automatic" },
+      { image: "/images/1111.png", label: "All Inclusive" },
+    ],
+  },
+  {
+    id: "mobile-sym-symphony",
+    vehicleId: "sym-symphony",
+    name: "Symphony 125 CC",
+    image: "/images/symreal.png",
+    alt: "SYM Symphony 125 scooter rental NEXA Rentals Magaluf",
+    specs: [
+      { image: "/images/engine.png", label: "125CC" },
+      { image: "/images/people.png", label: "2 Riders" },
+      { image: "/images/speed.png", label: "110 KM/H" },
+      { image: "/images/1111.png", label: "All Inclusive" },
     ],
   },
 ];
+
+// Only mobile hero prices; the desktop booking/pricing logic is untouched.
+const MOBILE_SCOOTER_PRICES: Record<string, string> = {
+  "piaggio-liberty": "34€",
+  "kymco-sky-town": "44€",
+  "sym-symphony": "34€",
+};
 
 const EBIKE_PRICES = [
   { label: "1 Hour", price: "€9" },
@@ -1412,7 +1393,7 @@ function LocationV3({ locale }: { locale: ShowroomLocale }) {
         </div>
       )}
 
-      <style jsx>{`
+      <style>{`
         .nexa-location-cursor-active .nexa-location-reveal {
           opacity: 1;
         }
@@ -1642,7 +1623,7 @@ function EbikeWhatsAppPanel({
         {copy.whatsappButton}
       </a>
 
-      <style jsx>{`
+      <style>{`
         .nexa-ebike-panel {
           max-width: 410px;
         }
@@ -1699,14 +1680,198 @@ function EbikeWhatsAppPanel({
   );
 }
 
+// ================================================================
+// MOBILE SCOOTER IMAGE CONTROLS - EDIT THESE VALUES YOURSELF
+// This affects MOBILE ONLY. Desktop is completely unchanged.
+// Positive moveRightPx = right; negative = left.
+// Positive moveDownPx = down; negative = up.
+// Increase widthPx to make scooter bigger; decrease to shrink it.
+// topPercent and leftPercent set the starting position on screen.
+// ================================================================
+const MOBILE_SCOOTER_IMAGE = {
+  widthPx: 390,
+  topPercent: 53,
+  leftPercent: 50,
+  moveRightPx: 0,
+  moveDownPx: 0,
+} as const;
+
+// MOBILE ONLY: independent scooter image adjustments (384 x 694 canvas).
+// Liberty stays at its original 390px size and original position.
+// widthPx: bigger/smaller; moveRightPx: +right/-left; moveDownPx: +down/-up.
+// These settings change the scooter picture ONLY, never the other UI elements.
+const MOBILE_SCOOTER_PER_VEHICLE: Record<string, { widthPx: number; moveRightPx: number; moveDownPx: number }> = {
+  "piaggio-liberty": { widthPx: 390, moveRightPx: 0, moveDownPx: 0 },
+  "kymco-sky-town": { widthPx: 320, moveRightPx: 0, moveDownPx: -15 },
+  "sym-symphony": { widthPx: 335, moveRightPx: 0, moveDownPx: -18 },
+};
+
+// MOBILE ONLY: brand/model heading adjustments for Kymco and SYM.
+// Piaggio's original heading remains completely untouched.
+const MOBILE_ALTERNATE_HEADING = {
+  topPx: 95,
+  moveRightPx: 0,
+  moveDownPx: 0,
+  logoWidthPx: 90,
+  gapPx: 7,
+  modelFontSizePx: 20,
+  ccFontSizePx: 13,
+  ccGapPx: 5,
+} as const;
+
+// MOBILE ONLY: independent manual left/right and up/down offsets per scooter.
+// Negative moveRightPx = left. These are additive to the existing positions.
+// Image and video positioning are intentionally NOT connected to these controls.
+const MOBILE_TEXT_PER_VEHICLE: Record<string, {
+  logo: { moveRightPx: number; moveDownPx: number };
+  model: { moveRightPx: number; moveDownPx: number };
+  from: { moveRightPx: number; moveDownPx: number };
+  amount: { moveRightPx: number; moveDownPx: number };
+  inclusive: { moveRightPx: number; moveDownPx: number };
+}> = {
+  "piaggio-liberty": {
+    logo: { moveRightPx: 0, moveDownPx: 0 },
+    model: { moveRightPx: 0, moveDownPx: 0 },
+    from: { moveRightPx: 0, moveDownPx: 0 },
+    amount: { moveRightPx: 0, moveDownPx: 0 },
+    inclusive: { moveRightPx: 0, moveDownPx: 0 },
+  },
+  "kymco-sky-town": {
+    logo: { moveRightPx: -20, moveDownPx: 0 },
+    model: { moveRightPx: -20, moveDownPx: 0 },
+    from: { moveRightPx: -12, moveDownPx: -10 },
+    amount: { moveRightPx: -12, moveDownPx: -5 },
+    inclusive: { moveRightPx: -12, moveDownPx: -11 },
+  },
+  "sym-symphony": {
+    logo: { moveRightPx: -12, moveDownPx: 0 },
+    model: { moveRightPx: -12, moveDownPx: 0 },
+    from: { moveRightPx: -12, moveDownPx: 0 },
+    amount: { moveRightPx: -12, moveDownPx: 0 },
+    inclusive: { moveRightPx: -12, moveDownPx: 0 },
+  },
+};
+
+// The heading and three price lines enter together on each mobile scooter change.
+const MOBILE_TEXT_ENTRANCE = { durationMs: 560, easing: "cubic-bezier(0.22, 1, 0.36, 1)" } as const;
+
+// Horizontal slide travel and easing; changing durationMs changes animation speed.
+const MOBILE_SCOOTER_SLIDE_ANIMATION = { durationMs: 680, easing: "cubic-bezier(0.22, 1, 0.36, 1)" } as const;
+
+// MOBILE ONLY: adjust each component independently. Positive X = right,
+// negative X = left; positive Y = down, negative Y = up.
+const MOBILE_SHOWROOM_CONTROLS = {
+  logo: { widthPx: 90, topPx: 96, moveRightPx: -100, moveDownPx: 0 },
+  model: { fontSizePx: 20, ccFontSizePx: 13, topPx: 95, moveRightPx: 20, moveDownPx: 0, fontWeight: 700, letterSpacingEm: -0.025, ccGapPx: 6 },
+  // Mobile-only pricing. Each line has its own independent position and typography.
+  price: {
+    moveRightPx: -105,
+    moveDownPx: 0,
+    topPx: 158,
+    from: { text: "From", moveRightPx: 10, moveDownPx: -30, fontSizePx: 14, fontWeight: 500, color: "#F47719", letterSpacingEm: 0.01 },
+    amount: { text: "34€", moveRightPx: 55, moveDownPx: -50, fontSizePx: 58, fontWeight: 800, color: "#111111", letterSpacingEm: -0.075 },
+    inclusive: { text: "all-inclusive", moveRightPx: 55, moveDownPx: -50, fontSizePx: 14, fontWeight: 400, color: "#333333", letterSpacingEm: 0.025 },
+    fromToAmountGapPx: 0,
+    amountToInclusiveGapPx: 1,
+  },
+  indicators: { bottomPx: 163, moveRightPx: 0, moveDownPx: -15, activeWidthPx: 28, dotSizePx: 8, gapPx: 10,
+    arrowSizePx: 26, arrowIconSizePx: 17, arrowGapPx: 17, arrowColor: "#44474D" },
+  // Five included-extras images: all values use the 384 x 694 reference canvas.
+  // Increase imageSizePx to enlarge ALL five; gapPx sets the space BETWEEN images.
+  // Positive moveRightPx moves the whole row right; positive moveDownPx moves it down.
+  // Increase bottomPx to move the row UP; decrease it to move the row DOWN.
+  extras: {
+    imageSizePx: 52,
+    gapPx: 15,
+    bottomPx: 117,
+    moveRightPx: 0,
+    moveDownPx: 0,
+    checkSizePx: 16,
+    checkTopPx: -3,
+    checkRightPx: -4,
+    checkIconSizePx: 10,
+  },
+  button: { widthPx: 255, heightPx: 48, bottomPx: 55, moveRightPx: 0, moveDownPx: 0, fontSizePx: 14, fontWeight: 700, letterSpacingEm: 0.065, borderRadiusPx: 28, shineEnabled: true, shineDurationSeconds: 2, shineDelaySeconds: 0 },
+} as const;
+
+// Mobile-only translated CTA. Model names, prices and measurements remain unchanged.
+const MOBILE_SELECT_SCOOTER_LABEL: Record<ShowroomLocale, string> = {
+  en: "Select This Scooter",
+  es: "Seleccionar esta moto",
+  de: "Diesen Roller auswählen",
+  fr: "Choisir ce scooter",
+  it: "Seleziona questo scooter",
+  nl: "Selecteer deze scooter",
+  pl: "Wybierz ten skuter",
+  sv: "Välj denna skoter",
+  da: "Vælg denne scooter",
+  no: "Velg denne scooteren",
+  pt: "Selecionar esta scooter",
+  sr: "Izaberite ovaj skuter",
+  uk: "Обрати цей скутер",
+};
+
+// Reference layout measured on the Galaxy S25 Ultra in Chrome.
+// Every mobile showroom element is laid out on this single fixed-size stage.
+// Only the whole stage is scaled, so its internal proportions never change.
+const MOBILE_SHOWROOM_REFERENCE = { width: 384, height: 694 } as const;
+
+// Brand logos for the three mobile scooter slides.
+const MOBILE_BRAND_LOGOS: Record<string, string | null> = {
+  "piaggio-liberty": "/images/piaggiologo.png",
+  "kymco-sky-town": "/images/logokymco.png",
+  "sym-symphony": "/images/logosym.png",
+  "ebike-one": null,
+  "ebike-two": null,
+};
+const MOBILE_BRAND_NAMES: Record<string, string> = {
+  "piaggio-liberty": "PIAGGIO",
+  "kymco-sky-town": "KYMCO",
+  "sym-symphony": "SYM",
+  "ebike-one": "MOMA",
+  "ebike-two": "CECOTEC",
+};
+
 export default function NexaBookingShowroomV3() {
   const activeLocale = useLocale();
   const showroomLocale = normalizeShowroomLocale(activeLocale);
   const copy = SHOWROOM_COPY[showroomLocale];
   const [activeIndex, setActiveIndex] = useState(0);
   const [mobileHeroIndex, setMobileHeroIndex] = useState(0);
+  const mobileTextOffsets = MOBILE_TEXT_PER_VEHICLE[MOBILE_DIRECT_HERO_SLIDES[mobileHeroIndex]?.vehicleId ?? "piaggio-liberty"] ?? MOBILE_TEXT_PER_VEHICLE["piaggio-liberty"];
   const [bookingPanelAttention, setBookingPanelAttention] = useState(false);
   const bookingAttentionTimeoutRef = useRef<number | null>(null);
+  const mobileSwipeStartX = useRef<number | null>(null);
+  const mobileSwipeStartY = useRef<number | null>(null);
+  const mobileShowroomViewportRef = useRef<HTMLDivElement | null>(null);
+  const [mobileShowroomScale, setMobileShowroomScale] = useState(1);
+
+  useEffect(() => {
+    const viewport = mobileShowroomViewportRef.current;
+    if (!viewport) return;
+
+    const updateScale = () => {
+      const { width, height } = viewport.getBoundingClientRect();
+      if (width <= 0 || height <= 0) return;
+      // Fit both dimensions; do not distort or independently resize elements.
+      setMobileShowroomScale(
+        Math.min(
+          width / MOBILE_SHOWROOM_REFERENCE.width,
+          height / MOBILE_SHOWROOM_REFERENCE.height
+        )
+      );
+    };
+
+    updateScale();
+    const observer = new ResizeObserver(updateScale);
+    observer.observe(viewport);
+    window.addEventListener("resize", updateScale, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updateScale);
+    };
+  }, []);
+
 
   const slideCount = VEHICLE_SLIDES.length;
   const mobileHeroSlideCount = MOBILE_DIRECT_HERO_SLIDES.length;
@@ -1976,9 +2141,10 @@ useEffect(() => {
 
  return (
   <div id="nexa-showroom-v3" className="bg-black">
-      <div className="nexa-showroom-mobile-fixed-nav lg:hidden">
-        <NavbarV3 onBookClick={handleBookNowClick} />
-      </div>
+    {/* Mobile navbar restored: outside the clipped hero so it stays visible on scroll. */}
+    <div className="nexa-showroom-mobile-fixed-nav lg:hidden">
+      <NavbarV3 onBookClick={handleBookNowClick} />
+    </div>
 
       <section
         id="booking"
@@ -2010,131 +2176,334 @@ useEffect(() => {
           })}
         </div>
 
-        <div className="mobile-direct-hero-stage absolute inset-0 z-0 overflow-hidden bg-black lg:hidden">
-          {MOBILE_DIRECT_HERO_SLIDES.map((vehicle, index) => {
-            const isActive = index === mobileHeroIndex;
-
-            return (
-              <Image
-                key={vehicle.id}
-                src={vehicle.image}
-                alt={vehicle.alt}
-                fill
-                priority={index === 0}
-                sizes="100vw"
-                draggable={false}
-                className={[
-                  "mobile-direct-hero-image select-none object-contain object-center transition-opacity duration-200 ease-out",
-                  isActive ? "opacity-100" : "opacity-0",
-                ].join(" ")}
-              />
-            );
-          })}
+        {/* Mobile hero video background; mobile showroom overlay follows. */}
+        <div className="absolute inset-0 z-0 overflow-hidden bg-black lg:hidden">
+          <video
+            autoPlay
+            muted
+            loop
+            playsInline
+            preload="auto"
+            aria-label="NEXA Rentals hero video"
+            className="absolute inset-0 h-full w-full object-cover"
+          >
+            <source src="/videos/herovideo.mp4" type="video/mp4" />
+          </video>
         </div>
 
+        {/* MOBILE ONLY: brand, model, swipeable scooter, indicators and booking CTA. */}
         <div
-  key={activeMobileHeroSlide.id}
-  className={[
-    inter.className,
-    "mobile-scooter-selector pointer-events-none absolute inset-x-0 top-[92px] z-40 px-5 text-center text-white lg:hidden",
-  ].join(" ")}
->
-  <div className="mobile-selector-kicker mx-auto block text-[9px] font-extrabold uppercase tracking-[0.36em] text-white/64 drop-shadow-[0_8px_22px_rgba(0,0,0,0.88)]">
-    {copy.chooseYourRide}
-  </div>
-
-    <h1
-    className="mobile-selector-title mx-auto mt-2 max-w-[350px] text-[23px] font-extrabold uppercase leading-[0.98] tracking-[-0.01em] text-white drop-shadow-[0_10px_28px_rgba(0,0,0,0.92)]"
-    style={{
-      fontFamily: `${inter.style.fontFamily}, "SF Pro Display", "Helvetica Neue", Arial, sans-serif`,
-      fontWeight: 800,
-      letterSpacing: "-0.01em",
-    }}
-  >
-    {activeMobileHeroSlide.name}
-  </h1>
-
-  <div className="mobile-price-line pointer-events-none mx-auto mt-1.5 flex w-full max-w-[350px] items-center justify-center gap-1.5 text-center lg:hidden">
-  <span className="text-[8px] font-black uppercase leading-none tracking-[0.24em] text-white/62 drop-shadow-[0_8px_20px_rgba(0,0,0,0.9)]">
-    {copy.from}
-  </span>
-
-  <span className="bg-[linear-gradient(180deg,#fff6c8_0%,#ffd166_38%,#ff9d2e_72%,#ff7a00_100%)] bg-clip-text text-[30px] font-black leading-none tracking-[-0.065em] text-transparent drop-shadow-[0_8px_18px_rgba(0,0,0,0.85)]">
-    {activeMobileHeroSlide.vehicleId === "ebike-one" ||
-    activeMobileHeroSlide.vehicleId === "ebike-two"
-      ? "9€"
-      : activeMobileHeroSlide.vehicleId === "kymco-sky-town"
-        ? "46€"
-        : "36€"}
-  </span>
-
-  <span className="text-[8.5px] font-black uppercase leading-none tracking-[0.14em] text-white/78 drop-shadow-[0_8px_20px_rgba(0,0,0,0.9)]">
-    {copy.allInclusive}
-  </span>
-</div>
-</div>
-
-<div
-  className="mobile-scooter-bottom-panel absolute inset-x-0 z-40 pl-5 pr-[88px] lg:hidden"
-  style={{ bottom: "clamp(96px, 13svh, 136px)" }}
->
-  <div className="ml-1 flex max-w-[300px] flex-col items-start">
-    <div className="mobile-select-button-position flex w-full justify-center">
-  <button
-    type="button"
-    onClick={handleBookNowClick}
-    className={[
-      inter.className,
-      "mobile-select-button relative flex h-[52px] min-w-[196px] items-center justify-center overflow-hidden rounded-full border border-[#ff7a00]/70 bg-[linear-gradient(135deg,#050505_0%,#171717_48%,#000000_100%)] px-10 text-[15px] font-black uppercase tracking-[0.3em] text-white transition duration-300 active:scale-[0.96]",
-    ].join(" ")}
-    style={{
-      fontFamily: `${inter.style.fontFamily}, "SF Pro Display", "Helvetica Neue", Arial, sans-serif`,
-      fontWeight: 900,
-    }}
-  >
-    <span className="relative z-10">{copy.select}</span>
-  </button>
-</div>
-
-    <div className="mobile-spec-grid mt-5 grid w-full grid-cols-2 gap-x-4 gap-y-3 pr-1">
-      {activeMobileHeroSlide.specs.map((spec) => (
-        <div
-          key={`${activeMobileHeroSlide.id}-${spec.label}`}
-          className="mobile-spec-card flex items-center justify-start gap-2 px-0 py-1"
+          ref={mobileShowroomViewportRef}
+          className="pointer-events-none absolute inset-0 z-[5] overflow-hidden lg:hidden"
+          aria-label="Choose your rental scooter"
         >
-          <span className="relative flex h-6 w-6 shrink-0 items-center justify-center">
-            <Image
-              src={spec.image}
-              alt=""
-              width={24}
-              height={24}
-              className="h-6 w-6 object-contain drop-shadow-[0_8px_18px_rgba(0,0,0,0.65)]"
-            />
-          </span>
-
-          <span
-            className={[
-              inter.className,
-              "text-left text-[9.5px] font-black uppercase leading-[1.1] tracking-[0.045em] text-white/90 drop-shadow-[0_7px_18px_rgba(0,0,0,0.88)]",
-            ].join(" ")}
+          <div
+            className="pointer-events-auto absolute"
             style={{
-              fontFamily: `${inter.style.fontFamily}, "SF Pro Display", "Helvetica Neue", Arial, sans-serif`,
-              fontWeight: 900,
+              width: MOBILE_SHOWROOM_REFERENCE.width,
+              height: MOBILE_SHOWROOM_REFERENCE.height,
+              top: "50%",
+              left: "50%",
+              transform: `translate(-50%, -50%) scale(${mobileShowroomScale})`,
+              transformOrigin: "center center",
             }}
           >
-            {translateVehicleLabel(spec.label, copy)}
-          </span>
+          <style>{`@keyframes nexaMobileTextEnter { from { opacity: 0; transform: translate3d(-110%, 0, 0); } to { opacity: 1; transform: translate3d(0, 0, 0); } } @media (prefers-reduced-motion: reduce) { .nexa-mobile-text-entrance { animation: none !important; } }`}</style>
+          <div
+            key={`mobile-text-${activeMobileHeroSlide.vehicleId}`}
+            className="nexa-mobile-text-entrance pointer-events-none absolute inset-0 z-20"
+            style={{ animation: `nexaMobileTextEnter ${MOBILE_TEXT_ENTRANCE.durationMs}ms ${MOBILE_TEXT_ENTRANCE.easing} both` }}
+          >
+          {activeMobileHeroSlide.vehicleId === "piaggio-liberty" ? (
+            <>
+          <div
+            className="pointer-events-none absolute z-20 flex items-center justify-center"
+            style={{ top: MOBILE_SHOWROOM_CONTROLS.logo.topPx + MOBILE_SHOWROOM_CONTROLS.logo.moveDownPx,
+              left: `calc(50% + ${MOBILE_SHOWROOM_CONTROLS.logo.moveRightPx}px)`,
+              width: MOBILE_SHOWROOM_CONTROLS.logo.widthPx, transform: "translateX(-50%)" }}
+          >
+            {MOBILE_BRAND_LOGOS[activeMobileHeroSlide.vehicleId] ? (
+              <Image src={MOBILE_BRAND_LOGOS[activeMobileHeroSlide.vehicleId]!}
+                alt={`${MOBILE_BRAND_NAMES[activeMobileHeroSlide.vehicleId]} logo`}
+                width={600} height={260} priority={mobileHeroIndex === 0}
+                className="h-auto w-full object-contain" />
+            ) : (
+              <span className="text-center text-3xl font-black tracking-[0.18em] text-white">
+                {MOBILE_BRAND_NAMES[activeMobileHeroSlide.vehicleId]}
+              </span>
+            )}
+          </div>
+          <h2 className="pointer-events-none absolute z-20 w-full px-4 text-center font-bold tracking-[-0.025em] text-black"
+            style={{ top: MOBILE_SHOWROOM_CONTROLS.model.topPx + MOBILE_SHOWROOM_CONTROLS.model.moveDownPx,
+              left: MOBILE_SHOWROOM_CONTROLS.model.moveRightPx,
+              fontSize: MOBILE_SHOWROOM_CONTROLS.model.fontSizePx, fontFamily: montserrat.style.fontFamily, fontWeight: MOBILE_SHOWROOM_CONTROLS.model.fontWeight, letterSpacing: `${MOBILE_SHOWROOM_CONTROLS.model.letterSpacingEm}em` }}>
+            {activeMobileHeroSlide.vehicleId === "piaggio-liberty" ? (
+              <span className="inline-flex items-baseline justify-center">
+                <span>Liberty 125</span>
+                <span style={{ fontSize: MOBILE_SHOWROOM_CONTROLS.model.ccFontSizePx, marginLeft: MOBILE_SHOWROOM_CONTROLS.model.ccGapPx, letterSpacing: "0.01em", fontWeight: 700 }}>CC</span>
+              </span>
+            ) : activeMobileHeroSlide.name}
+          </h2>
+
+            </>
+          ) : (
+            <div className="pointer-events-none absolute z-20 flex items-center justify-center"
+              style={{
+                top: MOBILE_ALTERNATE_HEADING.topPx + MOBILE_ALTERNATE_HEADING.moveDownPx,
+                left: `calc(50% + ${MOBILE_ALTERNATE_HEADING.moveRightPx}px)`,
+                transform: "translateX(-50%)",
+                gap: MOBILE_ALTERNATE_HEADING.gapPx,
+                whiteSpace: "nowrap",
+              }}>
+              <Image
+                src={MOBILE_BRAND_LOGOS[activeMobileHeroSlide.vehicleId]!}
+                alt={`${MOBILE_BRAND_NAMES[activeMobileHeroSlide.vehicleId]} logo`}
+                width={600} height={260}
+                className="h-auto shrink-0 object-contain"
+                style={{ width: MOBILE_ALTERNATE_HEADING.logoWidthPx, transform: `translate(${mobileTextOffsets.logo.moveRightPx}px, ${mobileTextOffsets.logo.moveDownPx}px)` }}
+              />
+              <span className="inline-flex shrink-0 items-baseline text-black"
+                style={{ fontFamily: montserrat.style.fontFamily, fontSize: MOBILE_ALTERNATE_HEADING.modelFontSizePx, fontWeight: 700, letterSpacing: "-0.025em", transform: `translate(${mobileTextOffsets.model.moveRightPx}px, ${mobileTextOffsets.model.moveDownPx}px)` }}>
+                <span>{activeMobileHeroSlide.vehicleId === "kymco-sky-town" ? "SkyTown 125" : "Symphony 125"}</span>
+                <span style={{ fontSize: MOBILE_ALTERNATE_HEADING.ccFontSizePx, marginLeft: MOBILE_ALTERNATE_HEADING.ccGapPx, fontWeight: 700 }}>CC</span>
+              </span>
+            </div>
+          )}
+
+          {/* MOBILE ONLY: independently adjustable premium rental price. */}
+          <div
+            className="pointer-events-none absolute z-20 flex flex-col items-start"
+            style={{
+              top: MOBILE_SHOWROOM_CONTROLS.price.topPx + MOBILE_SHOWROOM_CONTROLS.price.moveDownPx,
+              left: `calc(50% + ${MOBILE_SHOWROOM_CONTROLS.price.moveRightPx}px)`,
+              fontFamily: montserrat.style.fontFamily,
+            }}
+          >
+            <span style={{
+              display: "block",
+              transform: `translate(${MOBILE_SHOWROOM_CONTROLS.price.from.moveRightPx + mobileTextOffsets.from.moveRightPx - (copy.from.length > 5 ? Math.max(0, (copy.from.length - 4) * 9) : 0)}px, ${MOBILE_SHOWROOM_CONTROLS.price.from.moveDownPx + mobileTextOffsets.from.moveDownPx}px)`,
+              fontSize: MOBILE_SHOWROOM_CONTROLS.price.from.fontSizePx,
+              fontWeight: MOBILE_SHOWROOM_CONTROLS.price.from.fontWeight,
+              color: MOBILE_SHOWROOM_CONTROLS.price.from.color,
+              letterSpacing: `${MOBILE_SHOWROOM_CONTROLS.price.from.letterSpacingEm}em`,
+              lineHeight: 1.25,
+              whiteSpace: "nowrap",
+            }}>{copy.from}</span>
+            <span style={{
+              display: "block",
+              marginTop: MOBILE_SHOWROOM_CONTROLS.price.fromToAmountGapPx,
+              transform: `translate(${MOBILE_SHOWROOM_CONTROLS.price.amount.moveRightPx + mobileTextOffsets.amount.moveRightPx}px, ${MOBILE_SHOWROOM_CONTROLS.price.amount.moveDownPx + mobileTextOffsets.amount.moveDownPx}px)`,
+              fontSize: MOBILE_SHOWROOM_CONTROLS.price.amount.fontSizePx,
+              fontWeight: MOBILE_SHOWROOM_CONTROLS.price.amount.fontWeight,
+              backgroundImage: "linear-gradient(105deg, #FFB24A 0%, #FF8A24 45%, #E85B0C 100%)",
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              letterSpacing: `${MOBILE_SHOWROOM_CONTROLS.price.amount.letterSpacingEm}em`,
+              lineHeight: 1.04,
+              whiteSpace: "nowrap",
+            }}>{MOBILE_SCOOTER_PRICES[activeMobileHeroSlide.vehicleId] ?? MOBILE_SHOWROOM_CONTROLS.price.amount.text}</span>
+            <span style={{
+              display: "block",
+              marginTop: MOBILE_SHOWROOM_CONTROLS.price.amountToInclusiveGapPx,
+              transform: `translate(${MOBILE_SHOWROOM_CONTROLS.price.inclusive.moveRightPx + mobileTextOffsets.inclusive.moveRightPx}px, ${MOBILE_SHOWROOM_CONTROLS.price.inclusive.moveDownPx + mobileTextOffsets.inclusive.moveDownPx}px)`,
+              fontSize: MOBILE_SHOWROOM_CONTROLS.price.inclusive.fontSizePx,
+              fontWeight: MOBILE_SHOWROOM_CONTROLS.price.inclusive.fontWeight,
+              color: MOBILE_SHOWROOM_CONTROLS.price.inclusive.color,
+              letterSpacing: `${MOBILE_SHOWROOM_CONTROLS.price.inclusive.letterSpacingEm}em`,
+              lineHeight: 1.3,
+              whiteSpace: "nowrap",
+            }}>{copy.allInclusive.toLowerCase()}</span>
+          </div>
+
+          </div>
+
+          {/* Swipe gestures are handled ONLY on the scooter image region. */}
+          <div role="group" aria-label={`Scooter ${mobileHeroIndex + 1} of ${mobileHeroSlideCount}: ${activeMobileHeroSlide.name}. Swipe horizontally to change scooter.`}
+            className="absolute z-10 select-none"
+            style={{ width: MOBILE_SCOOTER_IMAGE.widthPx,
+              top: `${MOBILE_SCOOTER_IMAGE.topPercent}%`,
+              left: `${MOBILE_SCOOTER_IMAGE.leftPercent}%`,
+              transform: `translate(calc(-50% + ${MOBILE_SCOOTER_IMAGE.moveRightPx}px), calc(-50% + ${MOBILE_SCOOTER_IMAGE.moveDownPx}px))`,
+              touchAction: "pan-y" }}
+            onTouchStart={(event) => {
+              mobileSwipeStartX.current = event.touches[0]?.clientX ?? null;
+              mobileSwipeStartY.current = event.touches[0]?.clientY ?? null;
+            }}
+            onTouchEnd={(event) => {
+              const startX = mobileSwipeStartX.current;
+              const startY = mobileSwipeStartY.current;
+              mobileSwipeStartX.current = null;
+              mobileSwipeStartY.current = null;
+              if (startX === null || startY === null) return;
+              const dx = (event.changedTouches[0]?.clientX ?? startX) - startX;
+              const dy = (event.changedTouches[0]?.clientY ?? startY) - startY;
+              if (mobileHeroSlideCount > 1 && Math.abs(dx) > 45 && Math.abs(dx) > Math.abs(dy) * 1.2) {
+                if (dx < 0) goToNextMobileHero();
+                else goToPreviousMobileHero();
+              }
+            }}>
+            <div className="relative w-full" style={{ aspectRatio: "1 / 1", overflow: "visible" }}>
+              {MOBILE_DIRECT_HERO_SLIDES.map((slide, index) => {
+                const imageControls = MOBILE_SCOOTER_PER_VEHICLE[slide.vehicleId];
+                // Stable, mounted slides allow real horizontal movement instead of popping into place.
+                const relativePosition = index - mobileHeroIndex;
+                return (
+                  <div key={slide.id} className="absolute inset-0 flex items-center justify-center"
+                    aria-hidden={index !== mobileHeroIndex}
+                    style={{
+                      transform: `translate3d(${relativePosition * 110}%, 0, 0)`,
+                      opacity: Math.abs(relativePosition) > 1 ? 0 : 1,
+                      transition: `transform ${MOBILE_SCOOTER_SLIDE_ANIMATION.durationMs}ms ${MOBILE_SCOOTER_SLIDE_ANIMATION.easing}, opacity ${MOBILE_SCOOTER_SLIDE_ANIMATION.durationMs}ms ease`,
+                      pointerEvents: index === mobileHeroIndex ? "auto" : "none",
+                      willChange: "transform",
+                    }}>
+                    <Image src={slide.image} alt={slide.alt} width={1200} height={1200}
+                      priority={index === 0} draggable={false}
+                      className="h-auto max-w-none select-none object-contain"
+                      style={{
+                        width: imageControls.widthPx,
+                        transform: `translate(${imageControls.moveRightPx}px, ${imageControls.moveDownPx}px)`,
+                      }} />
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* MOBILE ONLY: extras in the clear space BETWEEN the carousel dots and CTA. */}
+          <div
+            className="pointer-events-none absolute z-20 flex items-center justify-center"
+            aria-label="Included rental extras: top case, phone holder, lock, helmets and protection"
+            style={{
+              bottom: MOBILE_SHOWROOM_CONTROLS.extras.bottomPx - MOBILE_SHOWROOM_CONTROLS.extras.moveDownPx,
+              left: `calc(50% + ${MOBILE_SHOWROOM_CONTROLS.extras.moveRightPx}px)`,
+              transform: "translateX(-50%)",
+              gap: MOBILE_SHOWROOM_CONTROLS.extras.gapPx,
+              whiteSpace: "nowrap",
+            }}
+          >
+            {[
+              { src: "/images/extra1.png", alt: "Top case included" },
+              { src: "/images/extra2.png", alt: "Phone holder included" },
+              { src: "/images/extra3.png", alt: "Scooter lock included" },
+              { src: "/images/extra4.png", alt: "Helmets included" },
+              { src: "/images/extra5.png", alt: "Protection included" },
+            ].map((extra) => (
+              <div
+                key={extra.src}
+                className="relative flex shrink-0 items-center justify-center"
+                style={{ width: MOBILE_SHOWROOM_CONTROLS.extras.imageSizePx, height: MOBILE_SHOWROOM_CONTROLS.extras.imageSizePx }}
+                title={extra.alt}
+              >
+                <Image
+                  src={extra.src}
+                  alt={extra.alt}
+                  width={MOBILE_SHOWROOM_CONTROLS.extras.imageSizePx}
+                  height={MOBILE_SHOWROOM_CONTROLS.extras.imageSizePx}
+                  unoptimized
+                  className="h-full w-full object-contain"
+                />
+                <span
+                  aria-hidden="true"
+                  className="absolute flex items-center justify-center rounded-full text-white"
+                  style={{
+                    top: MOBILE_SHOWROOM_CONTROLS.extras.checkTopPx,
+                    right: MOBILE_SHOWROOM_CONTROLS.extras.checkRightPx,
+                    width: MOBILE_SHOWROOM_CONTROLS.extras.checkSizePx,
+                    height: MOBILE_SHOWROOM_CONTROLS.extras.checkSizePx,
+                    background: "linear-gradient(135deg, #FFB24A, #F47719)",
+                    boxShadow: "0 1px 5px rgba(0,0,0,0.22)",
+                    border: "1.5px solid white",
+                  }}
+                >
+                  <svg width={MOBILE_SHOWROOM_CONTROLS.extras.checkIconSizePx} height={MOBILE_SHOWROOM_CONTROLS.extras.checkIconSizePx} viewBox="0 0 12 12" fill="none" aria-hidden="true">
+                    <path d="M2.3 6.1 4.8 8.5 9.8 3.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                  </svg>
+                </span>
+              </div>
+            ))}
+          </div>
+
+          {/* Slider arrows and indicators. Navigation becomes active when more scooter slides exist. */}
+          <div className="absolute z-20 flex items-center justify-center"
+            aria-label={`${activeMobileHeroSlide.name}: ${mobileHeroIndex + 1} / ${mobileHeroSlideCount}`}
+            style={{ bottom: MOBILE_SHOWROOM_CONTROLS.indicators.bottomPx - MOBILE_SHOWROOM_CONTROLS.indicators.moveDownPx,
+              left: `calc(50% + ${MOBILE_SHOWROOM_CONTROLS.indicators.moveRightPx}px)`,
+              gap: MOBILE_SHOWROOM_CONTROLS.indicators.arrowGapPx,
+              transform: "translateX(-50%)" }}>
+            <button type="button" onClick={goToPreviousMobileHero}
+              disabled={mobileHeroSlideCount <= 1} aria-label={copy.previousVehicle}
+              className="flex shrink-0 items-center justify-center rounded-full transition-opacity active:opacity-70"
+              style={{ width: MOBILE_SHOWROOM_CONTROLS.indicators.arrowSizePx,
+                height: MOBILE_SHOWROOM_CONTROLS.indicators.arrowSizePx,
+                color: MOBILE_SHOWROOM_CONTROLS.indicators.arrowColor,
+                opacity: mobileHeroSlideCount > 1 ? 1 : 0.45,
+                cursor: mobileHeroSlideCount > 1 ? "pointer" : "default" }}>
+              <svg width={MOBILE_SHOWROOM_CONTROLS.indicators.arrowIconSizePx} height={MOBILE_SHOWROOM_CONTROLS.indicators.arrowIconSizePx}
+                viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M15 18 9 12l6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            <div className="flex items-center justify-center"
+              style={{ gap: MOBILE_SHOWROOM_CONTROLS.indicators.gapPx }}>
+              {[0, 1, 2].map((index) => (
+                <span key={index} aria-hidden="true" className="rounded-full"
+                  style={{ height: MOBILE_SHOWROOM_CONTROLS.indicators.dotSizePx,
+                    width: index === mobileHeroIndex ? MOBILE_SHOWROOM_CONTROLS.indicators.activeWidthPx : MOBILE_SHOWROOM_CONTROLS.indicators.dotSizePx,
+                    background: index === mobileHeroIndex ? "linear-gradient(100deg,#FFB15B,#F47719)" : "#44474D",
+                    boxShadow: index === mobileHeroIndex ? "0 0 10px rgba(255,139,41,0.28)" : "none" }} />
+              ))}
+            </div>
+            <button type="button" onClick={goToNextMobileHero}
+              disabled={mobileHeroSlideCount <= 1} aria-label={copy.nextVehicle}
+              className="flex shrink-0 items-center justify-center rounded-full transition-opacity active:opacity-70"
+              style={{ width: MOBILE_SHOWROOM_CONTROLS.indicators.arrowSizePx,
+                height: MOBILE_SHOWROOM_CONTROLS.indicators.arrowSizePx,
+                color: MOBILE_SHOWROOM_CONTROLS.indicators.arrowColor,
+                opacity: mobileHeroSlideCount > 1 ? 1 : 0.45,
+                cursor: mobileHeroSlideCount > 1 ? "pointer" : "default" }}>
+              <svg width={MOBILE_SHOWROOM_CONTROLS.indicators.arrowIconSizePx} height={MOBILE_SHOWROOM_CONTROLS.indicators.arrowIconSizePx}
+                viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="m9 18 6-6-6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+          </div>
+
+          <button type="button" onClick={handleBookNowClick}
+            className="nexa-mobile-scooter-cta absolute z-20 flex items-center justify-center overflow-hidden uppercase text-white shadow-[0_12px_32px_rgba(240,103,20,0.3)] transition-transform active:scale-[0.98]"
+            style={{ width: MOBILE_SHOWROOM_CONTROLS.button.widthPx,
+              height: MOBILE_SHOWROOM_CONTROLS.button.heightPx,
+              bottom: MOBILE_SHOWROOM_CONTROLS.button.bottomPx - MOBILE_SHOWROOM_CONTROLS.button.moveDownPx,
+              left: `calc(50% + ${MOBILE_SHOWROOM_CONTROLS.button.moveRightPx}px)`,
+              transform: "translateX(-50%)", fontSize: MOBILE_SHOWROOM_CONTROLS.button.fontSizePx,
+              borderRadius: MOBILE_SHOWROOM_CONTROLS.button.borderRadiusPx, fontFamily: montserrat.style.fontFamily, fontWeight: MOBILE_SHOWROOM_CONTROLS.button.fontWeight, letterSpacing: `${MOBILE_SHOWROOM_CONTROLS.button.letterSpacingEm}em`,
+              background: "linear-gradient(110deg,#FFAC48 0%,#FF8B26 48%,#ED6517 100%)" }}>
+            <span className="relative z-10" style={{ isolation: "isolate", transform: "translateZ(0)" }}>{MOBILE_SELECT_SCOOTER_LABEL[showroomLocale]}</span>
+            {MOBILE_SHOWROOM_CONTROLS.button.shineEnabled && (
+              <span aria-hidden="true" className="nexa-mobile-scooter-cta-shine pointer-events-none absolute inset-y-0 left-0 w-[38%] bg-gradient-to-r from-transparent via-white/50 to-transparent"
+                style={{ animationDuration: `${MOBILE_SHOWROOM_CONTROLS.button.shineDurationSeconds}s`, animationDelay: `${MOBILE_SHOWROOM_CONTROLS.button.shineDelaySeconds}s` }} />
+            )}
+          </button>
+          <style>{`
+            @keyframes nexa-mobile-cta-sheen {
+              0% { transform: translate3d(-130%, 0, 0) skewX(-24deg); opacity: 0; }
+              8% { opacity: 0.8; }
+              65% { opacity: 0.8; }
+              82% { transform: translate3d(380%, 0, 0) skewX(-24deg); opacity: 0; }
+              100% { transform: translate3d(380%, 0, 0) skewX(-24deg); opacity: 0; }
+            }
+            .nexa-mobile-scooter-cta-shine { animation-name: nexa-mobile-cta-sheen; animation-timing-function: linear; animation-iteration-count: infinite; will-change: transform, opacity; backface-visibility: hidden; }
+            @media (prefers-reduced-motion: reduce) { .nexa-mobile-scooter-cta-shine { animation: none; opacity: 0; } }
+          `}</style>
+          </div>
         </div>
-      ))}
-    </div>
-  </div>
-</div>
 
         <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block bg-[linear-gradient(180deg,rgba(0,0,0,0.16)_0%,rgba(0,0,0,0.00)_22%,rgba(0,0,0,0.02)_70%,rgba(0,0,0,0.24)_100%)]" />
         <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block bg-[linear-gradient(90deg,rgba(0,0,0,0.20)_0%,rgba(0,0,0,0.00)_26%,rgba(0,0,0,0.00)_58%,rgba(0,0,0,0.50)_100%)]" />
 
         <div
-          className="pointer-events-none absolute inset-0 z-20"
+          className="pointer-events-none absolute inset-0 z-20 hidden lg:block"
           aria-hidden="true"
         >
           <div className="light-smoke smoke-one absolute bottom-[-18%] left-[-12%] h-[48%] w-[62%] rounded-full bg-white/[0.055] blur-[90px]" />
@@ -2142,51 +2511,7 @@ useEffect(() => {
           <div className="light-smoke smoke-three absolute bottom-[-22%] left-1/2 h-[42%] w-[72%] -translate-x-1/2 rounded-full bg-white/[0.035] blur-[95px]" />
         </div>
 
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 h-[34%] bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,rgba(0,0,0,0.18)_58%,rgba(0,0,0,0.46)_100%)]" />
-
-        <button
-          type="button"
-          onClick={goToPreviousMobileHero}
-          aria-label={copy.previousVehicle}
-          className="mobile-direct-arrow mobile-direct-arrow-left group absolute left-2 top-1/2 z-40 flex h-20 w-12 -translate-y-1/2 items-center justify-center text-white/82 transition duration-300 hover:text-white active:scale-95 sm:left-5 lg:hidden"
-        >
-          <svg
-            viewBox="0 0 34 64"
-            aria-hidden="true"
-            className="h-14 w-8 drop-shadow-[0_10px_30px_rgba(0,0,0,0.72)] transition-transform duration-300 group-hover:-translate-x-1"
-            fill="none"
-          >
-            <path
-              d="M25 7L8 32L25 57"
-              stroke="currentColor"
-              strokeWidth="3.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-
-        <button
-          type="button"
-          onClick={goToNextMobileHero}
-          aria-label={copy.nextVehicle}
-          className="mobile-direct-arrow mobile-direct-arrow-right group absolute right-2 top-1/2 z-40 flex h-20 w-12 -translate-y-1/2 items-center justify-center text-white/82 transition duration-300 hover:text-white active:scale-95 sm:right-5 lg:hidden"
-        >
-          <svg
-            viewBox="0 0 34 64"
-            aria-hidden="true"
-            className="h-14 w-8 drop-shadow-[0_10px_30px_rgba(0,0,0,0.72)] transition-transform duration-300 group-hover:translate-x-1"
-            fill="none"
-          >
-            <path
-              d="M9 7L26 32L9 57"
-              stroke="currentColor"
-              strokeWidth="3.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
+        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 hidden lg:block h-[34%] bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,rgba(0,0,0,0.18)_58%,rgba(0,0,0,0.46)_100%)]" />
 
         <div
           key={activeVehicle.id}
@@ -2370,7 +2695,7 @@ useEffect(() => {
           </svg>
         </button>
 
-        <style jsx>{`
+        <style>{`
 
                   .nexa-showroom-mobile-fixed-nav {
             display: none;
@@ -2405,6 +2730,15 @@ useEffect(() => {
               transform: translateZ(0) !important;
               -webkit-transform: translateZ(0) !important;
               --nexa-mobile-nav-icon: #ffffff;
+            }
+
+            .nexa-showroom-mobile-fixed-nav :global(.nexa-mobile-nav) {
+              background: #000000 !important;
+              background-color: #000000 !important;
+              background-image: none !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
+              transition: none !important;
             }
 
             .nexa-showroom-mobile-fixed-nav :global(a),
@@ -2971,10 +3305,12 @@ useEffect(() => {
               animation: none !important;
               transition: none !important;
               opacity: 1 !important;
+              
               transform: none !important;
               clip-path: none !important;
             }
           }
+
         `}</style>
       </section>
 

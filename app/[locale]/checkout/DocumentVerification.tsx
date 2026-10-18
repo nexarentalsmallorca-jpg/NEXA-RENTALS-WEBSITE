@@ -1388,6 +1388,70 @@ function resultName(
 
 
 
+
+// The same visual booking-stage indicator is kept local to each replacement file.
+const NEXA_PROGRESS_LABELS: Record<string, string[]> = {
+  "en": ["Select dates", "Scan documents", "Details & payment"],
+  "es": ["Elegir fechas", "Escanear documentos", "Datos y pago"],
+  "de": ["Daten wählen", "Dokumente scannen", "Daten & Zahlung"],
+  "fr": ["Choisir les dates", "Scanner documents", "Infos et paiement"],
+  "it": ["Scegli le date", "Scansiona documenti", "Dati e pagamento"],
+  "nl": ["Datums kiezen", "Documenten scannen", "Gegevens & betaling"],
+  "pl": ["Wybierz daty", "Skanuj dokumenty", "Dane i płatność"],
+  "pt": ["Escolher datas", "Digitalizar documentos", "Dados e pagamento"],
+  "sv": ["Välj datum", "Skanna dokument", "Uppgifter & betalning"],
+  "da": ["Vælg datoer", "Scan dokumenter", "Info og betaling"],
+  "no": ["Velg datoer", "Skann dokumenter", "Info og betaling"],
+  "cs": ["Vybrat termín", "Skenovat doklady", "Údaje a platba"],
+  "sr": ["Izaberite datume", "Skenirajte dokumenta", "Podaci i plaćanje"],
+  "uk": ["Вибір дат", "Сканування документів", "Дані та оплата"]
+};
+
+function NexaBookingProgress({ step, locale }: { step: 1 | 2 | 3; locale: string }) {
+  const labels = NEXA_PROGRESS_LABELS[locale] || NEXA_PROGRESS_LABELS.en;
+  return (
+    <div className="nexa-journey-progress" aria-label={`Booking step ${step} of 3`}>
+      <style jsx global>{`
+        .nexa-journey-progress { width: 100%; min-width: 0; margin: 0 0 22px; padding: 3px 1px 0; font-family: Montserrat, 'Open Sans', Arial, sans-serif; }
+        .nexa-journey-progress__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
+        .nexa-journey-progress__brand { color: #202020; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+        .nexa-journey-progress__count { color: #888; font-size: 10px; font-weight: 700; letter-spacing: .09em; white-space: nowrap; }
+        .nexa-journey-progress__track { position: relative; height: 22px; margin: 0 10px; }
+        .nexa-journey-progress__rail { position: absolute; left: 0; right: 0; top: 9px; height: 4px; border-radius: 100px; background: #e4e4e4; }
+        .nexa-journey-progress__fill { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 100px; background: linear-gradient(90deg, #ffbd47 0%, #ff931d 50%, #f66b10 100%); overflow: hidden; transition: width .45s ease; }
+        .nexa-journey-progress__fill::after { content: ''; position: absolute; inset: 0; width: 38%; background: linear-gradient(90deg, transparent, rgba(255,249,187,.95), transparent); filter: blur(2px); animation: nexaJourneyShimmer 2.8s ease-in-out infinite; }
+        .nexa-journey-progress__dot { position: absolute; top: 2px; width: 18px; height: 18px; transform: translateX(-50%); border-radius: 50%; border: 2px solid #c9c9c9; background: #f5f5f5; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 0 3px #fff; }
+        .nexa-journey-progress__dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #bfbfbf; }
+        .nexa-journey-progress__dot.is-active { border-color: #ff931d; background: #ff931d; box-shadow: 0 0 0 3px #fff, 0 0 13px rgba(255,154,38,.22); }
+        .nexa-journey-progress__dot.is-active::after { background: #fff; }
+        .nexa-journey-progress__labels { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 3px; margin-top: 9px; }
+        .nexa-journey-progress__label { color: #999; font-size: clamp(9px, 2.4vw, 11px); font-weight: 650; line-height: 1.35; }
+        .nexa-journey-progress__label.is-current { color: #202020; font-weight: 800; }
+        .nexa-journey-progress__label:nth-child(2) { text-align: center; }
+        .nexa-journey-progress__label:nth-child(3) { text-align: right; }
+        @keyframes nexaJourneyShimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(370%); } }
+        @media (prefers-reduced-motion: reduce) { .nexa-journey-progress__fill::after { animation: none; } .nexa-journey-progress__fill { transition: none; } }
+      `}</style>
+      <div className="nexa-journey-progress__head">
+        <span className="nexa-journey-progress__brand">NEXA RENTALS</span>
+        <span className="nexa-journey-progress__count">{step} / 3</span>
+      </div>
+      <div className="nexa-journey-progress__track" aria-hidden="true">
+        <div className="nexa-journey-progress__rail" />
+        <div className="nexa-journey-progress__fill" style={{ width: `${(step - 1) * 50}%` }} />
+        {[0, 1, 2].map((index) => (
+          <span key={index} className={`nexa-journey-progress__dot ${index < step ? 'is-active' : ''}`} style={{ left: `${index * 50}%` }} />
+        ))}
+      </div>
+      <div className="nexa-journey-progress__labels">
+        {labels.map((label, index) => (
+          <span key={index} className={`nexa-journey-progress__label ${index + 1 === step ? 'is-current' : ''}`} aria-current={index + 1 === step ? 'step' : undefined}>{label}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function DocumentVerification({
 
   autoStart = true,
@@ -1749,6 +1813,12 @@ export default function DocumentVerification({
     );
 
 
+
+  // Remember automatic recovery attempts so a failed API call cannot loop.
+  const autoRecoveryAttemptedRef = useRef<Set<string>>(new Set());
+
+  const groupResetAttemptedRef = useRef(false);
+  const [groupRecoveryVersion, setGroupRecoveryVersion] = useState(0);
 
   const completionSentRef =
 
@@ -2874,13 +2944,20 @@ export default function DocumentVerification({
 
         ) {
 
-          setError(
-
-            caught?.message ||
-
-            copy.scannerPrepareError
-
-          );
+          const message = String(caught?.message || copy.scannerPrepareError);
+          if (/group verification session expired|group.*session.*expired/i.test(message) && !groupResetAttemptedRef.current && resultsRef.current.length === 0) {
+            groupResetAttemptedRef.current = true;
+            rootTokenRef.current = "";
+            sessionsRef.current = [];
+            setRootSessionToken("");
+            setBookingId("");
+            setSessions([]);
+            setError("");
+            setGroupRecoveryVersion((version) => version + 1);
+            // Release the creation guard in finally; a new render starts a clean group.
+          } else {
+            setError(message);
+          }
 
         } finally {
 
@@ -2985,6 +3062,8 @@ export default function DocumentVerification({
       returnedToken,
 
       sessions.length,
+
+      groupRecoveryVersion,
 
       requestedQuantity,
 
@@ -4064,6 +4143,35 @@ export default function DocumentVerification({
 
 
 
+  // Restore an expired/cancelled scanner automatically when checkout opens.
+  // The existing auto-start only creates MISSING sessions; a stale stored
+  // session otherwise leaves the customer with "CREATE NEW SCANNER".
+  useEffect(() => {
+    if (!restored || !autoStart || preparing || creatingRef.current) return;
+    if (returnedToken && handledReturnTokenRef.current !== returnedToken) return;
+
+    const staleSession = sessions.find((session) =>
+      (session.status === "expired" || session.status === "cancelled") &&
+      !results.some((result) => result.profile.driverIndex === session.driverIndex)
+    );
+    if (!staleSession) return;
+
+    const attemptKey = `${storageKey}:${staleSession.driverIndex}:${staleSession.sessionToken}`;
+    if (autoRecoveryAttemptedRef.current.has(attemptKey)) return;
+    autoRecoveryAttemptedRef.current.add(attemptKey);
+    if (results.length === 0 && !groupResetAttemptedRef.current) {
+      groupResetAttemptedRef.current = true;
+      rootTokenRef.current = "";
+      sessionsRef.current = [];
+      setRootSessionToken("");
+      setBookingId("");
+      setSessions([]);
+      setError("");
+      return;
+    }
+    void rescanDriver(staleSession.driverIndex);
+  }, [restored, autoStart, preparing, returnedToken, sessions, results, storageKey, rescanDriver]);
+
   const openScannerForDriver =
 
     useCallback(
@@ -4458,7 +4566,7 @@ export default function DocumentVerification({
 
             transform: scale(1.012);
 
-            box-shadow: 0 14px 38px rgba(236, 72, 153, 0.22);
+            box-shadow: 0 14px 38px rgba(251, 146, 60, 0.24);
 
           }
 
@@ -4570,11 +4678,12 @@ export default function DocumentVerification({
 
 
 
-      <div className="flex items-start justify-between gap-5">
+      <NexaBookingProgress step={2} locale={locale} />
+      <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-x-3 gap-y-3">
 
-        <div>
+        <div className="contents">
 
-          <p className="text-[10px] font-black uppercase tracking-[0.22em] text-black/40">
+          <p className="min-w-0 text-[10px] font-semibold uppercase tracking-[0.22em] text-black/40">
 
             {copy.secureVerification}
 
@@ -4582,7 +4691,7 @@ export default function DocumentVerification({
 
 
 
-          <h2 className="mt-2 text-[28px] font-black tracking-[-0.045em] text-black">
+          <h2 className="col-span-2 row-start-2 whitespace-nowrap text-[clamp(16px,4.7vw,23px)] font-semibold tracking-[-0.035em] leading-tight text-black" style={{ fontFamily: "Montserrat, Open Sans, Arial, sans-serif" }}>
 
             {requestedQuantity ===
 
@@ -4594,25 +4703,15 @@ export default function DocumentVerification({
 
           </h2>
 
-
-
-          <p className="mt-3 max-w-2xl text-[13px] font-medium leading-6 text-black/58">
-
-            {requestedQuantity ===
-
-            1
-
-              ? copy.scanHelp
-
-              : copy.multiScanHelp}
-
+          <p className="col-span-2 row-start-3 text-[12px] font-normal leading-5 text-black/55" style={{ fontFamily: "Montserrat, Open Sans, Arial, sans-serif" }}>
+            Driver’s licence and ID / passport
           </p>
 
         </div>
 
 
 
-        <div className="shrink-0 border border-black/10 bg-[#fafaf8] px-3 py-2 text-center">
+        <div className="col-start-2 row-start-1 shrink-0 border border-black/10 bg-[#fafaf8] px-3 py-2 text-center">
 
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-black/35">
 
@@ -4844,7 +4943,7 @@ export default function DocumentVerification({
 
 
 
-                    <h3 className="mt-1 text-lg font-black text-black">
+                    <h3 className="mt-1 text-lg font-semibold tracking-[-0.02em] text-black" style={{ fontFamily: "Montserrat, Open Sans, Arial, sans-serif" }}>
 
                       {result
 
@@ -5142,7 +5241,7 @@ export default function DocumentVerification({
 
                         className={[
 
-                          "min-h-[62px] w-full rounded-[14px] px-5 text-[12px] font-black uppercase tracking-[0.12em] text-white",
+                          "min-h-[62px] w-full rounded-[14px] px-5 text-[12px] font-semibold uppercase tracking-[0.10em] text-white",
 
                           "nexa-verification-action",
 
@@ -5154,7 +5253,7 @@ export default function DocumentVerification({
 
                           !expired
 
-                            ? "nexa-verification-heartbeat bg-gradient-to-r from-orange-500 via-rose-500 to-fuchsia-600 shadow-[0_14px_34px_rgba(249,115,22,0.22)]"
+                            ? "nexa-verification-heartbeat bg-gradient-to-r from-orange-600 via-orange-500 to-amber-400 shadow-[0_14px_34px_rgba(249,115,22,0.22)]"
 
                             : "cursor-not-allowed bg-black/10 text-black/30 shadow-none",
 
@@ -5186,19 +5285,15 @@ export default function DocumentVerification({
 
                             )
 
-                          : formatCheckoutText(
-
-                              copy.validateDriver,
-
-                              {
-
-                                driver:
-
-                                  driverIndex,
-
-                              }
-
-                            )}
+                          : locale === "es"
+                            ? "VERIFICAR DOCUMENTOS DEL CONDUCTOR"
+                            : locale === "de"
+                              ? "FAHRERDOKUMENTE PRÜFEN"
+                              : locale === "fr"
+                                ? "VÉRIFIER LES DOCUMENTS"
+                                : locale === "it"
+                                  ? "VERIFICA DOCUMENTI CONDUCENTE"
+                                  : "VERIFY DRIVER DOCUMENTS"}
 
                       </button>
 
@@ -5640,107 +5735,9 @@ export default function DocumentVerification({
 
 
 
-      <div className="mt-6 grid gap-3 border-t border-black/10 pt-5 sm:grid-cols-3">
 
-        <VerificationStep
-
-          number="01"
-
-          title={copy.openScanner}
-
-          description={
-
-            requestedQuantity ===
-
-            1
-
-              ? copy.scanQrHelp
-
-              : copy.openScannerHelp
-
-          }
-
-        />
-
-
-
-        <VerificationStep
-
-          number="02"
-
-          title={copy.scanDocumentsStep}
-
-          description={copy.scanDocumentsStepHelp}
-
-        />
-
-
-
-        <VerificationStep
-
-          number="03"
-
-          title={copy.continueCheckout}
-
-          description={copy.continueCheckoutHelp}
-
-        />
-
-      </div>
 
     </section>
-
-  );
-
-}
-
-
-
-function VerificationStep({
-
-  number,
-
-  title,
-
-  description,
-
-}: {
-
-  number: string;
-
-  title: string;
-
-  description: string;
-
-}) {
-
-  return (
-
-    <div className="border border-black/10 bg-[#fafaf8] p-4">
-
-      <span className="text-[9px] font-black uppercase tracking-[0.16em] text-orange-500">
-
-        {number}
-
-      </span>
-
-
-
-      <p className="mt-2 text-sm font-black text-black">
-
-        {title}
-
-      </p>
-
-
-
-      <p className="mt-1 text-[11px] font-semibold leading-5 text-black/45">
-
-        {description}
-
-      </p>
-
-    </div>
 
   );
 

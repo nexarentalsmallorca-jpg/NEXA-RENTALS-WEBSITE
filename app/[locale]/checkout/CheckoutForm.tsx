@@ -703,6 +703,70 @@ function buildStripeReturnUrl() {
 
 
 
+
+// The same visual booking-stage indicator is kept local to each replacement file.
+const NEXA_PROGRESS_LABELS: Record<string, string[]> = {
+  "en": ["Select dates", "Scan documents", "Details & payment"],
+  "es": ["Elegir fechas", "Escanear documentos", "Datos y pago"],
+  "de": ["Daten wählen", "Dokumente scannen", "Daten & Zahlung"],
+  "fr": ["Choisir les dates", "Scanner documents", "Infos et paiement"],
+  "it": ["Scegli le date", "Scansiona documenti", "Dati e pagamento"],
+  "nl": ["Datums kiezen", "Documenten scannen", "Gegevens & betaling"],
+  "pl": ["Wybierz daty", "Skanuj dokumenty", "Dane i płatność"],
+  "pt": ["Escolher datas", "Digitalizar documentos", "Dados e pagamento"],
+  "sv": ["Välj datum", "Skanna dokument", "Uppgifter & betalning"],
+  "da": ["Vælg datoer", "Scan dokumenter", "Info og betaling"],
+  "no": ["Velg datoer", "Skann dokumenter", "Info og betaling"],
+  "cs": ["Vybrat termín", "Skenovat doklady", "Údaje a platba"],
+  "sr": ["Izaberite datume", "Skenirajte dokumenta", "Podaci i plaćanje"],
+  "uk": ["Вибір дат", "Сканування документів", "Дані та оплата"]
+};
+
+function NexaBookingProgress({ step, locale }: { step: 1 | 2 | 3; locale: string }) {
+  const labels = NEXA_PROGRESS_LABELS[locale] || NEXA_PROGRESS_LABELS.en;
+  return (
+    <div className="nexa-journey-progress" aria-label={`Booking step ${step} of 3`}>
+      <style jsx global>{`
+        .nexa-journey-progress { width: 100%; min-width: 0; margin: 0 0 22px; padding: 3px 1px 0; font-family: Montserrat, 'Open Sans', Arial, sans-serif; }
+        .nexa-journey-progress__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
+        .nexa-journey-progress__brand { color: #202020; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+        .nexa-journey-progress__count { color: #888; font-size: 10px; font-weight: 700; letter-spacing: .09em; white-space: nowrap; }
+        .nexa-journey-progress__track { position: relative; height: 22px; margin: 0 10px; }
+        .nexa-journey-progress__rail { position: absolute; left: 0; right: 0; top: 9px; height: 4px; border-radius: 100px; background: #e4e4e4; }
+        .nexa-journey-progress__fill { position: absolute; left: 0; top: 9px; height: 4px; border-radius: 100px; background: linear-gradient(90deg, #ffbd47 0%, #ff931d 50%, #f66b10 100%); overflow: hidden; transition: width .45s ease; }
+        .nexa-journey-progress__fill::after { content: ''; position: absolute; inset: 0; width: 38%; background: linear-gradient(90deg, transparent, rgba(255,249,187,.95), transparent); filter: blur(2px); animation: nexaJourneyShimmer 2.8s ease-in-out infinite; }
+        .nexa-journey-progress__dot { position: absolute; top: 2px; width: 18px; height: 18px; transform: translateX(-50%); border-radius: 50%; border: 2px solid #c9c9c9; background: #f5f5f5; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 0 3px #fff; }
+        .nexa-journey-progress__dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #bfbfbf; }
+        .nexa-journey-progress__dot.is-active { border-color: #ff931d; background: #ff931d; box-shadow: 0 0 0 3px #fff, 0 0 13px rgba(255,154,38,.22); }
+        .nexa-journey-progress__dot.is-active::after { background: #fff; }
+        .nexa-journey-progress__labels { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 3px; margin-top: 9px; }
+        .nexa-journey-progress__label { color: #999; font-size: clamp(9px, 2.4vw, 11px); font-weight: 650; line-height: 1.35; }
+        .nexa-journey-progress__label.is-current { color: #202020; font-weight: 800; }
+        .nexa-journey-progress__label:nth-child(2) { text-align: center; }
+        .nexa-journey-progress__label:nth-child(3) { text-align: right; }
+        @keyframes nexaJourneyShimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(370%); } }
+        @media (prefers-reduced-motion: reduce) { .nexa-journey-progress__fill::after { animation: none; } .nexa-journey-progress__fill { transition: none; } }
+      `}</style>
+      <div className="nexa-journey-progress__head">
+        <span className="nexa-journey-progress__brand">NEXA RENTALS</span>
+        <span className="nexa-journey-progress__count">{step} / 3</span>
+      </div>
+      <div className="nexa-journey-progress__track" aria-hidden="true">
+        <div className="nexa-journey-progress__rail" />
+        <div className="nexa-journey-progress__fill" style={{ width: `${(step - 1) * 50}%` }} />
+        {[0, 1, 2].map((index) => (
+          <span key={index} className={`nexa-journey-progress__dot ${index < step ? 'is-active' : ''}`} style={{ left: `${index * 50}%` }} />
+        ))}
+      </div>
+      <div className="nexa-journey-progress__labels">
+        {labels.map((label, index) => (
+          <span key={index} className={`nexa-journey-progress__label ${index + 1 === step ? 'is-current' : ''}`} aria-current={index + 1 === step ? 'step' : undefined}>{label}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function CheckoutForm({
 
   customerName = "",
@@ -1393,6 +1457,7 @@ export default function CheckoutForm({
 
       >
 
+        <NexaBookingProgress step={3} locale={locale} />
         <div className="mb-5 border-b border-black/10 pb-4">
 
           <div className="text-[10px] font-black uppercase tracking-[0.22em] text-black/42">

@@ -684,3 +684,17 @@ h3,
   }
 }
 
+/* NEXA SHOWROOM — MOBILE NAVBAR ALWAYS BLACK */
+@media (max-width: 1023px) {
+  #nexa-showroom-v3 .nexa-showroom-mobile-fixed-nav {
+    background-color: #000000 !important;
+    background-image: none !important;
+  }
+
+  #nexa-showroom-v3 .nexa-showroom-mobile-fixed-nav .nexa-mobile-nav {
+    background-color: #000000 !important;
+    background-image: none !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+  }
+}
