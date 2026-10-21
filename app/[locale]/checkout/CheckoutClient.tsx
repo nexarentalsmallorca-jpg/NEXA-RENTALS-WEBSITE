@@ -152,7 +152,7 @@ const VEHICLES: Vehicle[] = [
     pricePerDay: 39,
 
     imageUrl:
-      "/images/checkouts1.png",
+      "/images/nexapiaggio.png",
 
     spec1:
       "125cc · Automatic",
@@ -259,6 +259,11 @@ const INCLUDED_ITEMS = [
   {
     label: "Insurance",
     image: "/images/ex5.png",
+  },
+
+  {
+    label: "Gloves",
+    image: "/images/extra6.png",
   },
 ];
 
@@ -583,7 +588,7 @@ function checkoutImageForVehicle(
       "liberty"
     )
   ) {
-    return "/images/checkouts1.png";
+    return "/images/nexapiaggio.png";
   }
 
   if (
@@ -1363,6 +1368,18 @@ export default function CheckoutClient({
       .every(
         driverDetailsComplete
       );
+
+  // Local UI preview can show a ready button without granting payment access.
+  const isLocalPreview = process.env.NODE_ENV === "development";
+  const detailsFormComplete =
+    firstName.trim().length >= 2 &&
+    surname.trim().length >= 2 &&
+    phoneOk(phone) &&
+    emailOk(email) &&
+    homeAddress.trim().length >= 8 &&
+    additionalDriversComplete &&
+    contractReadyOk &&
+    agreeTerms;
 
   const canPay =
     firstName
@@ -2232,6 +2249,18 @@ export default function CheckoutClient({
 
   const payNowAction =
     async () => {
+      if (isLocalPreview && detailsFormComplete && !documentsCaptured) {
+        // UI-only preview: never create a PaymentIntent or mount Stripe.
+        setPayError(null);
+        setCheckoutSide("payment");
+        window.setTimeout(() => {
+          document.getElementById("nexa-payment-card")?.scrollIntoView({
+            behavior: "smooth",
+            block: "start",
+          });
+        }, 80);
+        return;
+      }
       if (!canPay) {
         return;
       }
@@ -2966,6 +2995,16 @@ export default function CheckoutClient({
                   handleDocumentVerificationComplete
                 }
 
+                onPreviewDetails={
+                  process.env.NODE_ENV === "development"
+                    ? () => {
+                        // UI preview only: documentsCaptured remains false.
+                        setPayError(null);
+                        setCheckoutSide("details");
+                      }
+                    : undefined
+                }
+
                 onCancel={
                   backToVehicles
                 }
@@ -3098,7 +3137,7 @@ export default function CheckoutClient({
                 }
 
                 canPay={
-                  canPay
+                  canPay || (isLocalPreview && detailsFormComplete)
                 }
 
                 payLoading={
@@ -3112,6 +3151,8 @@ export default function CheckoutClient({
                 copy={
                   copy
                 }
+
+                locale={locale}
 
                 onContinue={
                   payNowAction
@@ -3136,6 +3177,8 @@ export default function CheckoutClient({
                 clientSecret={
                   clientSecret
                 }
+
+                localPreview={isLocalPreview && !documentsCaptured}
 
                 customerName={`${firstName.trim()} ${surname.trim()}`.trim()}
 
@@ -3178,6 +3221,59 @@ export default function CheckoutClient({
           border-radius: 0 !important;
         }
 
+        /* Premium, deeper amber CTA. Animates only while the form is ready. */
+        .nexa-checkout-root .nexa-details-pay-ready {
+          position: relative;
+          isolation: isolate;
+          overflow: hidden;
+          border: 1px solid rgba(216, 110, 19, .28);
+          background: linear-gradient(100deg, #f56b12 0%, #fb8121 48%, #ffa13b 100%);
+          box-shadow: 0 9px 22px rgba(211, 108, 22, .19), inset 0 1px 0 rgba(255, 244, 213, .46), inset 0 -2px 0 rgba(163, 75, 8, .11);
+          text-shadow: 0 1px 2px rgba(115, 57, 8, .16);
+          animation: nexaDetailsHeartbeat 3.25s ease-in-out infinite;
+          transition: transform .2s ease, box-shadow .2s ease;
+        }
+        .nexa-checkout-root .nexa-details-pay-ready::before {
+          content: '';
+          position: absolute;
+          z-index: -1;
+          inset: 0;
+          width: 38%;
+          transform: translateX(-160%) skewX(-20deg);
+          background: linear-gradient(90deg, transparent, rgba(255, 246, 214, .05) 20%, rgba(255, 251, 230, .36) 52%, rgba(255, 246, 214, .05) 80%, transparent);
+          animation: nexaDetailsSweep 4.6s ease-in-out infinite;
+          pointer-events: none;
+        }
+        .nexa-checkout-root .nexa-details-pay-ready:hover {
+          box-shadow: 0 14px 29px rgba(211, 108, 22, .26), inset 0 1px 0 rgba(255, 244, 213, .52);
+        }
+        .nexa-checkout-root .nexa-details-pay-ready:active {
+          animation-play-state: paused;
+          transform: scale(.985);
+        }
+        @keyframes nexaDetailsHeartbeat {
+          0%, 72%, 100% { transform: scale(1); }
+          77% { transform: scale(1.018); }
+          82% { transform: scale(1); }
+          87% { transform: scale(1.012); }
+          92% { transform: scale(1); }
+        }
+        @keyframes nexaDetailsSweep {
+          0%, 19% { transform: translateX(-160%) skewX(-20deg); }
+          46%, 100% { transform: translateX(430%) skewX(-20deg); }
+        }
+        .nexa-checkout-root .nexa-details-checkbox:checked {
+          border-color: #e87d18;
+          background-color: #f58b22;
+          background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 18 18'%3E%3Cpath d='m3.5 9 3.6 3.6 7.4-7.4' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E"), linear-gradient(100deg, #f56b12 0%, #fb8121 48%, #ffa13b 100%);
+          background-repeat: no-repeat;
+          background-size: 100% 100%;
+          box-shadow: 0 2px 6px rgba(212, 107, 15, .17);
+        }
+        @media (prefers-reduced-motion: reduce) {
+          .nexa-checkout-root .nexa-details-pay-ready,
+          .nexa-checkout-root .nexa-details-pay-ready::before { animation: none !important; }
+        }
         .nexa-checkout-root input:-webkit-autofill,
         .nexa-checkout-root textarea:-webkit-autofill {
           -webkit-box-shadow: 0 0 0px 1000px #fafaf8 inset !important;
@@ -3410,8 +3506,26 @@ function BookingSummary({
                     item.label
                   }
 
+                  itemKey={item.label}
+
                   label={
-                    item.label === "2 Helmets"
+                    item.label === "Gloves"
+                      ? ({
+                          en: "Gloves",
+                          es: "Guantes",
+                          fr: "Gants",
+                          de: "Handschuhe",
+                          it: "Guanti",
+                          pt: "Luvas",
+                          nl: "Handschoenen",
+                          pl: "Rękawiczki",
+                          ru: "Перчатки",
+                          sv: "Handskar",
+                          da: "Handsker",
+                          no: "Hansker",
+                          fi: "Käsineet",
+                        } as Record<string, string>)[locale.toLowerCase().split("-")[0]] || "Gloves"
+                      : item.label === "2 Helmets"
                       ? copy.twoHelmets
                       : item.label === "Top Case"
                         ? copy.topCase
@@ -3550,25 +3664,26 @@ function BookingSummary({
 }
 
 function IncludedItem({
+  itemKey,
   label,
   image,
 }: {
+  itemKey: string;
   label: string;
   image: string;
 }) {
   const mobileOrderClass =
-    label === "Lock"
+    itemKey === "Lock"
       ? "order-2"
-      : label ===
-          "Top Case"
+      : itemKey === "Top Case"
         ? "order-3"
-        : label ===
-            "Insurance"
+        : itemKey === "Insurance"
           ? "order-4"
-          : label ===
-              "Phone Mount"
-            ? "order-5 col-span-2"
-            : "order-1";
+          : itemKey === "Phone Mount"
+            ? "order-5"
+            : itemKey === "Gloves"
+              ? "order-6"
+              : "order-1";
 
   return (
     <div
@@ -3663,6 +3778,68 @@ function PlainLine({
     </div>
   );
 }
+const NEXA_PROGRESS_LABELS: Record<string, string[]> = {
+  "en": ["Select dates", "Scan documents", "Details & payment"],
+  "es": ["Elegir fechas", "Escanear documentos", "Datos y pago"],
+  "de": ["Daten wählen", "Dokumente scannen", "Daten & Zahlung"],
+  "fr": ["Choisir les dates", "Scanner documents", "Infos et paiement"],
+  "it": ["Scegli le date", "Scansiona documenti", "Dati e pagamento"],
+  "nl": ["Datums kiezen", "Documenten scannen", "Gegevens & betaling"],
+  "pl": ["Wybierz daty", "Skanuj dokumenty", "Dane i płatność"],
+  "pt": ["Escolher datas", "Digitalizar documentos", "Dados e pagamento"],
+  "sv": ["Välj datum", "Skanna dokument", "Uppgifter & betalning"],
+  "da": ["Vælg datoer", "Scan dokumenter", "Info og betaling"],
+  "no": ["Velg datoer", "Skann dokumenter", "Info og betaling"],
+  "cs": ["Vybrat termín", "Skenovat doklady", "Údaje a platba"],
+  "sr": ["Izaberite datume", "Skenirajte dokumenta", "Podaci i plaćanje"],
+  "uk": ["Вибір дат", "Сканування документів", "Дані та оплата"]
+};
+
+function NexaBookingProgress({ step, locale }: { step: 1 | 2 | 3; locale: string }) {
+  const labels = NEXA_PROGRESS_LABELS[locale] || NEXA_PROGRESS_LABELS.en;
+  return (
+    <div className="nexa-journey-progress" aria-label={`Booking step ${step} of 3`}>
+      <style jsx global>{`
+        .nexa-journey-progress { width: 100%; min-width: 0; margin: 0 0 25px; padding: 4px 1px 18px; border-bottom: 1px solid rgba(25,25,25,.09); font-family: Montserrat, 'Open Sans', Arial, sans-serif; }
+        .nexa-journey-progress__head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; gap: 12px; }
+        .nexa-journey-progress__brand { color: #202020; font-size: 10px; font-weight: 800; letter-spacing: .13em; }
+        .nexa-journey-progress__count { color: #888; font-size: 10px; font-weight: 700; letter-spacing: .09em; white-space: nowrap; }
+        .nexa-journey-progress__track { position: relative; height: 22px; margin: 0 10px; }
+        .nexa-journey-progress__rail { position: absolute; left: 0; right: 0; top: 9px; height: 5px; border-radius: 100px; background: #eaeaea; }
+        .nexa-journey-progress__fill { position: absolute; left: 0; top: 9px; height: 5px; border-radius: 100px; background: linear-gradient(90deg, #ffbe55 0%, #ff9d25 45%, #f36b12 100%); box-shadow: 0 2px 9px rgba(244,117,21,.18); overflow: hidden; transition: width .45s ease; }
+        .nexa-journey-progress__fill::after { content: ''; position: absolute; inset: 0; width: 38%; background: linear-gradient(90deg, transparent, rgba(255,249,187,.95), transparent); filter: blur(2px); animation: nexaJourneyShimmer 2.8s ease-in-out infinite; }
+        .nexa-journey-progress__dot { position: absolute; top: 2px; width: 18px; height: 18px; transform: translateX(-50%); border-radius: 50%; border: 2px solid #c9c9c9; background: #f5f5f5; display: flex; justify-content: center; align-items: center; box-shadow: 0 0 0 3px #fff; }
+        .nexa-journey-progress__dot::after { content: ''; width: 6px; height: 6px; border-radius: 50%; background: #bfbfbf; }
+        .nexa-journey-progress__dot.is-active { border-color: #ff931d; background: #ff931d; box-shadow: 0 0 0 3px #fff, 0 0 13px rgba(255,154,38,.22); }
+        .nexa-journey-progress__dot.is-active::after { background: #fff; }
+        .nexa-journey-progress__labels { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 3px; margin-top: 9px; }
+        .nexa-journey-progress__label { color: #999; font-size: clamp(9px, 2.4vw, 11px); font-weight: 650; line-height: 1.35; }
+        .nexa-journey-progress__label.is-current { color: #202020; font-weight: 800; }
+        .nexa-journey-progress__label:nth-child(2) { text-align: center; }
+        .nexa-journey-progress__label:nth-child(3) { text-align: right; }
+        @keyframes nexaJourneyShimmer { 0% { transform: translateX(-120%); } 100% { transform: translateX(370%); } }
+        @media (prefers-reduced-motion: reduce) { .nexa-journey-progress__fill::after { animation: none; } .nexa-journey-progress__fill { transition: none; } }
+      `}</style>
+      <div className="nexa-journey-progress__head">
+        <span className="nexa-journey-progress__brand">NEXA RENTALS</span>
+        <span className="nexa-journey-progress__count">{step} / 3</span>
+      </div>
+      <div className="nexa-journey-progress__track" aria-hidden="true">
+        <div className="nexa-journey-progress__rail" />
+        <div className="nexa-journey-progress__fill" style={{ width: `${(step - 1) * 50}%` }} />
+        {[0, 1, 2].map((index) => (
+          <span key={index} className={`nexa-journey-progress__dot ${index < step ? 'is-active' : ''}`} style={{ left: `${index * 50}%` }} />
+        ))}
+      </div>
+      <div className="nexa-journey-progress__labels">
+        {labels.map((label, index) => (
+          <span key={index} className={`nexa-journey-progress__label ${index + 1 === step ? 'is-current' : ''}`} aria-current={index + 1 === step ? 'step' : undefined}>{label}</span>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function CheckoutDetailsSide({
   firstName,
   setFirstName,
@@ -3718,6 +3895,7 @@ function CheckoutDetailsSide({
   payError,
 
   copy,
+  locale,
 
   onContinue,
 }: {
@@ -3838,6 +4016,8 @@ function CheckoutDetailsSide({
   copy:
     CheckoutCopy;
 
+  locale: CheckoutLocale;
+
   onContinue:
     () => void;
 }) {
@@ -3846,12 +4026,10 @@ function CheckoutDetailsSide({
       id="nexa-customer-details"
       className="flex h-full flex-col"
     >
+      <NexaBookingProgress step={3} locale={locale} />
+
       <div className="flex items-end justify-between gap-4">
         <div>
-          <div className="text-[10px] font-extrabold uppercase tracking-[0.22em] text-black/30">
-            {copy.step2}
-          </div>
-
           <h2
             className="mt-1 text-[24px] font-extrabold leading-tight tracking-[-0.035em] text-black sm:text-[30px] 2xl:text-[34px]"
             style={{
@@ -4359,10 +4537,10 @@ function CheckoutDetailsSide({
         }
 
         className={[
-          "mt-5 min-h-[52px] w-full px-6 text-sm font-extrabold transition duration-200 2xl:mt-6 2xl:min-h-[56px] 2xl:text-[15px]",
+          "mt-5 min-h-[56px] w-full px-6 text-[16px] font-extrabold tracking-[0.01em] transition duration-200 2xl:mt-6 2xl:min-h-[60px] 2xl:text-[17px]",
 
           canPay
-            ? "bg-black text-white shadow-[0_14px_34px_rgba(0,0,0,0.14)] hover:-translate-y-0.5 hover:bg-black/85 hover:shadow-[0_20px_46px_rgba(0,0,0,0.20)] active:translate-y-0 active:scale-[0.98]"
+            ? "nexa-details-pay-ready text-white"
             : "cursor-not-allowed bg-black/10 text-black/35",
         ].join(" ")}
       >
@@ -4393,6 +4571,7 @@ function PaymentSide({
   payNowCents,
   deposit,
   clientSecret,
+  localPreview,
   customerName,
   customerEmail,
   customerPhone,
@@ -4411,6 +4590,7 @@ function PaymentSide({
 
   clientSecret:
     string | null;
+  localPreview: boolean;
 
   customerName:
     string;
@@ -4522,7 +4702,45 @@ function PaymentSide({
         id="stripe-embedded"
         className="mt-6 2xl:mt-7"
       >
-        {clientSecret ? (
+        {localPreview ? (
+          <div className="overflow-hidden rounded-2xl border border-black/10 bg-white shadow-[0_12px_45px_rgba(0,0,0,0.05)]">
+            <div className="flex items-center justify-between gap-3 border-b border-black/10 bg-[#fafafa] px-5 py-4">
+              <div className="flex items-center gap-2 text-[13px] font-extrabold text-black">
+                <span aria-hidden="true" className="text-[#f97316]">●</span>
+                Secure card payment
+              </div>
+              <span className="rounded-full bg-[#fff1e7] px-2.5 py-1 text-[10px] font-extrabold uppercase tracking-[0.08em] text-[#c75a11]">Design preview</span>
+            </div>
+            <div className="space-y-5 px-5 py-6">
+              <div className="rounded-lg border border-[#f5d4bc] bg-[#fff8f2] px-3 py-3 text-xs font-medium leading-5 text-[#8b4a1c]">
+                Localhost design preview only. These are illustrative fields, not the live Stripe Payment Element. Do not enter real card details.
+              </div>
+              <div>
+                <div className="mb-2 text-[12px] font-bold text-black/80">Payment method</div>
+                <div className="flex items-center justify-between rounded-xl border-2 border-[#f97316] bg-[#fffaf6] px-4 py-3">
+                  <span className="flex items-center gap-2 text-sm font-bold text-black"><span aria-hidden="true">▣</span> Card</span>
+                  <span className="text-[11px] font-extrabold tracking-[0.08em] text-black/55">VISA · MC</span>
+                </div>
+              </div>
+              <div aria-hidden="true" className="space-y-4 select-none">
+                <div>
+                  <div className="mb-1.5 text-xs font-bold text-black/70">Card number</div>
+                  <div className="flex h-12 items-center justify-between rounded-lg border border-black/15 bg-[#fcfcfc] px-3 text-sm text-black/35"><span>1234 1234 1234 1234</span><span>▣</span></div>
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div><div className="mb-1.5 text-xs font-bold text-black/70">Expiration</div><div className="flex h-12 items-center rounded-lg border border-black/15 bg-[#fcfcfc] px-3 text-sm text-black/35">MM / YY</div></div>
+                  <div><div className="mb-1.5 text-xs font-bold text-black/70">Security code</div><div className="flex h-12 items-center justify-between rounded-lg border border-black/15 bg-[#fcfcfc] px-3 text-sm text-black/35"><span>CVC</span><span>ⓘ</span></div></div>
+                </div>
+                <div><div className="mb-1.5 text-xs font-bold text-black/70">Name on card</div><div className="flex h-12 items-center rounded-lg border border-black/15 bg-[#fcfcfc] px-3 text-sm text-black/35">Full name</div></div>
+                <div><div className="mb-1.5 text-xs font-bold text-black/70">Country or region</div><div className="flex h-12 items-center justify-between rounded-lg border border-black/15 bg-[#fcfcfc] px-3 text-sm text-black/65"><span>Spain</span><span>⌄</span></div></div>
+              </div>
+              <div aria-disabled="true" className="flex min-h-14 items-center justify-center rounded-xl bg-gradient-to-r from-[#f36b12] to-[#ff9b40] px-4 text-center text-base font-extrabold text-white shadow-[0_8px_22px_rgba(243,107,18,0.22)]">
+                Pay €{eurFromCents(payNowCents)}
+              </div>
+              <p className="text-center text-[11px] leading-5 text-black/40">Illustrative payment layout · No payment can be submitted here</p>
+            </div>
+          </div>
+        ) : clientSecret ? (
           <CheckoutShell
             clientSecret={
               clientSecret
@@ -4696,12 +4914,7 @@ function CheckLine({
           )
         }
 
-        className="mt-1 h-4 w-4"
-
-        style={{
-          accentColor:
-            "#111111",
-        }}
+        className="nexa-details-checkbox mt-1 h-[18px] w-[18px] shrink-0 cursor-pointer appearance-none border border-black/30 bg-white transition-all duration-200 checked:border-[#e87d18] checked:shadow-[0_2px_6px_rgba(212,107,15,0.17)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[#f57916]"
       />
 
       <span

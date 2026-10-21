@@ -400,6 +400,44 @@ function MobileBookingContent() {
     };
   }, []);
 
+  // Mobile-only: reveal the real checkout button once Office Pickup opens.
+  // Observe the booking panel because its service selection happens internally.
+  useEffect(() => {
+    if (selectedVehicle.type !== "scooter") return;
+    if (!window.matchMedia("(max-width: 767px)").matches) return;
+
+    let completed = false;
+    let pending: number | undefined;
+    const revealCheckout = () => {
+      if (completed) return;
+      const panel = document.querySelector<HTMLElement>(
+        ".mobile-booking-v3-page .nexa-booking-panel-v3[data-service-method='office']"
+      );
+      const button = panel?.querySelector<HTMLElement>("[data-nexa-checkout-action='true']");
+      if (!button || button.getClientRects().length === 0) return;
+      if (pending !== undefined) window.clearTimeout(pending);
+      pending = window.setTimeout(() => {
+        if (completed || !button.isConnected) return;
+        const bottom = button.getBoundingClientRect().bottom;
+        const viewport = window.visualViewport;
+        const visibleBottom = (viewport?.offsetTop ?? 0) + (viewport?.height ?? window.innerHeight) - 24;
+        if (bottom > visibleBottom) {
+          button.scrollIntoView({ behavior: "smooth", block: "end", inline: "nearest" });
+        }
+        completed = true;
+        observer.disconnect();
+      }, 320);
+    };
+
+    const observer = new MutationObserver(revealCheckout);
+    observer.observe(document.body, { subtree: true, childList: true, attributes: true, attributeFilter: ["data-service-method", "data-mobile-ready", "class"] });
+    revealCheckout();
+    return () => {
+      observer.disconnect();
+      if (pending !== undefined) window.clearTimeout(pending);
+    };
+  }, [selectedVehicle.id, selectedVehicle.type]);
+
   function goBackToVehicles() {
     router.push(`/${locale}/home`);
   }

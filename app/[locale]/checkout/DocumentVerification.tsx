@@ -284,6 +284,9 @@ type Props = {
 
   onCancel?: () => void;
 
+  /** Local development UI preview only; never verifies documents. */
+  onPreviewDetails?: () => void;
+
 };
 
 
@@ -1491,9 +1494,8 @@ export default function DocumentVerification({
 
 
   onComplete,
-
   onCancel,
-
+  onPreviewDetails,
 }: Props) {
 
   const copy =
@@ -5220,24 +5222,17 @@ export default function DocumentVerification({
                         type="button"
 
                         disabled={
-
-                          mobileDisabled ||
-
-                          !driverSession ||
-
-                          expired
-
+                          !(process.env.NODE_ENV === "development" && onPreviewDetails) &&
+                          (mobileDisabled || !driverSession || expired)
                         }
 
-                        onClick={() =>
-
-                          void openScannerForDriver(
-
-                            driverIndex
-
-                          )
-
-                        }
+                        onClick={() => {
+                          if (process.env.NODE_ENV === "development" && onPreviewDetails) {
+                            onPreviewDetails();
+                            return;
+                          }
+                          void openScannerForDriver(driverIndex);
+                        }}
 
                         className={[
 

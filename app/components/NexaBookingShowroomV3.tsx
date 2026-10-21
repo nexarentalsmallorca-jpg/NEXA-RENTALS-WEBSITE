@@ -661,6 +661,28 @@ const SHOWROOM_COPY: Record<ShowroomLocale, ShowroomCopy> = {
   },
 };
 
+// Mobile hero microcopy follows the same next-intl locale as the rest of the showroom.
+const MOBILE_HERO_MICROCOPY: Record<ShowroomLocale, {
+  engine: string;
+  passengers: string;
+  distance: string;
+  reassurance: string;
+}> = {
+  en: { engine: "125 CC", passengers: "2 PAX", distance: "UNLIMITED KM", reassurance: "All essentials included. No hidden fees." },
+  es: { engine: "125 CC", passengers: "2 PLAZAS", distance: "KM ILIMITADOS", reassurance: "Todo lo esencial incluido. Sin cargos ocultos." },
+  de: { engine: "125 CCM", passengers: "2 PERSONEN", distance: "UNBEGRENZTE KM", reassurance: "Alles Wichtige inklusive. Keine versteckten Kosten." },
+  fr: { engine: "125 CC", passengers: "2 PLACES", distance: "KM ILLIMITÉS", reassurance: "Tout l’essentiel inclus. Aucun frais caché." },
+  it: { engine: "125 CC", passengers: "2 POSTI", distance: "KM ILLIMITATI", reassurance: "Tutto l’essenziale incluso. Nessun costo nascosto." },
+  nl: { engine: "125 CC", passengers: "2 PERSONEN", distance: "ONBEPERKT KM", reassurance: "Alles wat je nodig hebt inbegrepen. Geen verborgen kosten." },
+  pl: { engine: "125 CM³", passengers: "2 OSOBY", distance: "BEZ LIMITU KM", reassurance: "Wszystko, co niezbędne, w cenie. Bez ukrytych opłat." },
+  sv: { engine: "125 CC", passengers: "2 PERSONER", distance: "FRIA MIL", reassurance: "Allt du behöver ingår. Inga dolda avgifter." },
+  da: { engine: "125 CC", passengers: "2 PERSONER", distance: "FRI KM", reassurance: "Alt det nødvendige er inkluderet. Ingen skjulte gebyrer." },
+  no: { engine: "125 CC", passengers: "2 PERSONER", distance: "FRI KM", reassurance: "Alt du trenger er inkludert. Ingen skjulte gebyrer." },
+  pt: { engine: "125 CC", passengers: "2 PESSOAS", distance: "KM ILIMITADOS", reassurance: "Tudo o que precisa incluído. Sem taxas ocultas." },
+  sr: { engine: "125 CC", passengers: "2 OSOBE", distance: "NEOGRANIČENI KM", reassurance: "Sve što vam treba je uključeno. Bez skrivenih troškova." },
+  uk: { engine: "125 КУБ. СМ", passengers: "2 ОСОБИ", distance: "БЕЗЛІМІТНИЙ ПРОБІГ", reassurance: "Усе необхідне включено. Без прихованих платежів." },
+};
+
 function normalizeShowroomLocale(locale: string): ShowroomLocale {
   const rawLocale = locale.toLowerCase().split("-")[0];
   const aliases: Record<string, ShowroomLocale> = {
@@ -1776,22 +1798,8 @@ const MOBILE_SHOWROOM_CONTROLS = {
   },
   indicators: { bottomPx: 163, moveRightPx: 0, moveDownPx: -15, activeWidthPx: 28, dotSizePx: 8, gapPx: 10,
     arrowSizePx: 26, arrowIconSizePx: 17, arrowGapPx: 17, arrowColor: "#44474D" },
-  // Five included-extras images: all values use the 384 x 694 reference canvas.
-  // Increase imageSizePx to enlarge ALL five; gapPx sets the space BETWEEN images.
-  // Positive moveRightPx moves the whole row right; positive moveDownPx moves it down.
-  // Increase bottomPx to move the row UP; decrease it to move the row DOWN.
-  extras: {
-    imageSizePx: 52,
-    gapPx: 15,
-    bottomPx: 117,
-    moveRightPx: 0,
-    moveDownPx: 0,
-    checkSizePx: 16,
-    checkTopPx: -3,
-    checkRightPx: -4,
-    checkIconSizePx: 10,
-  },
-  button: { widthPx: 255, heightPx: 48, bottomPx: 55, moveRightPx: 0, moveDownPx: 0, fontSizePx: 14, fontWeight: 700, letterSpacingEm: 0.065, borderRadiusPx: 28, shineEnabled: true, shineDurationSeconds: 2, shineDelaySeconds: 0 },
+  // Increase bottomPx to move the CTA UP; decrease it to move DOWN. Positive moveDownPx moves it DOWN.
+  button: { widthPx: 255, heightPx: 48, bottomPx: 75, moveRightPx: 0, moveDownPx: 0, fontSizePx: 14, fontWeight: 700, letterSpacingEm: 0.065, borderRadiusPx: 28, shineEnabled: true, shineDurationSeconds: 2, shineDelaySeconds: 0 },
 } as const;
 
 // Mobile-only translated CTA. Model names, prices and measurements remain unchanged.
@@ -1836,6 +1844,7 @@ export default function NexaBookingShowroomV3() {
   const activeLocale = useLocale();
   const showroomLocale = normalizeShowroomLocale(activeLocale);
   const copy = SHOWROOM_COPY[showroomLocale];
+  const mobileHeroMicrocopy = MOBILE_HERO_MICROCOPY[showroomLocale];
   const [activeIndex, setActiveIndex] = useState(0);
   const [mobileHeroIndex, setMobileHeroIndex] = useState(0);
   const mobileTextOffsets = MOBILE_TEXT_PER_VEHICLE[MOBILE_DIRECT_HERO_SLIDES[mobileHeroIndex]?.vehicleId ?? "piaggio-liberty"] ?? MOBILE_TEXT_PER_VEHICLE["piaggio-liberty"];
@@ -1844,6 +1853,8 @@ export default function NexaBookingShowroomV3() {
   const mobileSwipeStartX = useRef<number | null>(null);
   const mobileSwipeStartY = useRef<number | null>(null);
   const mobileShowroomViewportRef = useRef<HTMLDivElement | null>(null);
+  // The first paint uses a safe fit scale; ResizeObserver then refines it for the
+  // actual visual viewport without altering the reference-stage proportions.
   const [mobileShowroomScale, setMobileShowroomScale] = useState(1);
 
   useEffect(() => {
@@ -2140,7 +2151,7 @@ useEffect(() => {
 }, []);
 
  return (
-  <div id="nexa-showroom-v3" className="bg-black">
+  <div id="nexa-showroom-v3" className="bg-black" style={{ minHeight: "100svh" }}>
     {/* Mobile navbar restored: outside the clipped hero so it stays visible on scroll. */}
     <div className="nexa-showroom-mobile-fixed-nav lg:hidden">
       <NavbarV3 onBookClick={handleBookNowClick} />
@@ -2371,60 +2382,6 @@ useEffect(() => {
             </div>
           </div>
 
-          {/* MOBILE ONLY: extras in the clear space BETWEEN the carousel dots and CTA. */}
-          <div
-            className="pointer-events-none absolute z-20 flex items-center justify-center"
-            aria-label="Included rental extras: top case, phone holder, lock, helmets and protection"
-            style={{
-              bottom: MOBILE_SHOWROOM_CONTROLS.extras.bottomPx - MOBILE_SHOWROOM_CONTROLS.extras.moveDownPx,
-              left: `calc(50% + ${MOBILE_SHOWROOM_CONTROLS.extras.moveRightPx}px)`,
-              transform: "translateX(-50%)",
-              gap: MOBILE_SHOWROOM_CONTROLS.extras.gapPx,
-              whiteSpace: "nowrap",
-            }}
-          >
-            {[
-              { src: "/images/extra1.png", alt: "Top case included" },
-              { src: "/images/extra2.png", alt: "Phone holder included" },
-              { src: "/images/extra3.png", alt: "Scooter lock included" },
-              { src: "/images/extra4.png", alt: "Helmets included" },
-              { src: "/images/extra5.png", alt: "Protection included" },
-            ].map((extra) => (
-              <div
-                key={extra.src}
-                className="relative flex shrink-0 items-center justify-center"
-                style={{ width: MOBILE_SHOWROOM_CONTROLS.extras.imageSizePx, height: MOBILE_SHOWROOM_CONTROLS.extras.imageSizePx }}
-                title={extra.alt}
-              >
-                <Image
-                  src={extra.src}
-                  alt={extra.alt}
-                  width={MOBILE_SHOWROOM_CONTROLS.extras.imageSizePx}
-                  height={MOBILE_SHOWROOM_CONTROLS.extras.imageSizePx}
-                  unoptimized
-                  className="h-full w-full object-contain"
-                />
-                <span
-                  aria-hidden="true"
-                  className="absolute flex items-center justify-center rounded-full text-white"
-                  style={{
-                    top: MOBILE_SHOWROOM_CONTROLS.extras.checkTopPx,
-                    right: MOBILE_SHOWROOM_CONTROLS.extras.checkRightPx,
-                    width: MOBILE_SHOWROOM_CONTROLS.extras.checkSizePx,
-                    height: MOBILE_SHOWROOM_CONTROLS.extras.checkSizePx,
-                    background: "linear-gradient(135deg, #FFB24A, #F47719)",
-                    boxShadow: "0 1px 5px rgba(0,0,0,0.22)",
-                    border: "1.5px solid white",
-                  }}
-                >
-                  <svg width={MOBILE_SHOWROOM_CONTROLS.extras.checkIconSizePx} height={MOBILE_SHOWROOM_CONTROLS.extras.checkIconSizePx} viewBox="0 0 12 12" fill="none" aria-hidden="true">
-                    <path d="M2.3 6.1 4.8 8.5 9.8 3.4" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-                  </svg>
-                </span>
-              </div>
-            ))}
-          </div>
-
           {/* Slider arrows and indicators. Navigation becomes active when more scooter slides exist. */}
           <div className="absolute z-20 flex items-center justify-center"
             aria-label={`${activeMobileHeroSlide.name}: ${mobileHeroIndex + 1} / ${mobileHeroSlideCount}`}
@@ -2468,6 +2425,32 @@ useEffect(() => {
                 <path d="m9 18 6-6-6-6" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
               </svg>
             </button>
+          </div>
+
+          {/* Mobile-only compact scooter specifications and inclusive-price reassurance. */}
+          <div className="pointer-events-none absolute z-20 flex flex-col items-center"
+            style={{ bottom: 128, left: "50%", width: 370, transform: "translateX(-50%)", fontFamily: montserrat.style.fontFamily }}>
+            <div className="flex items-center justify-center" style={{ gap: 9, color: "#222222" }}>
+              <span className="flex items-center" style={{ gap: 4, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap" }}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 17a8 8 0 1 1 16 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="m12 16 4-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="17" r="1.5" fill="currentColor"/></svg>
+                {mobileHeroMicrocopy.engine}
+              </span>
+              <span aria-hidden="true" style={{ width: 1, height: 18, background: "#B8B8B8" }} />
+              <span className="flex items-center" style={{ gap: 4, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap" }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3.5 19v-2a5.5 5.5 0 0 1 11 0v2H3.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M16 4.5a3 3 0 0 1 0 5.8M17 13a5 5 0 0 1 3.5 4.8V19h-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                {mobileHeroMicrocopy.passengers}
+              </span>
+              <span aria-hidden="true" style={{ width: 1, height: 18, background: "#B8B8B8" }} />
+              <span className="flex items-center" style={{ gap: 4, fontSize: 10, fontWeight: 700, whiteSpace: "nowrap" }}>
+                <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="6" cy="18" r="2" stroke="currentColor" strokeWidth="1.8"/><circle cx="18" cy="6" r="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 18h5a4 4 0 0 0 0-8h-2a4 4 0 0 1 0-8h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="2 3"/></svg>
+                {mobileHeroMicrocopy.distance}
+              </span>
+            </div>
+            <div style={{ width: 285, height: 1, background: "#E2E2E2", marginTop: 7 }} />
+            <div className="flex items-center justify-center" style={{ gap: 6, marginTop: 6, fontSize: 10, fontWeight: 600, color: "#333333", whiteSpace: "nowrap" }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="#E87520" strokeWidth="2"/><path d="m8 12 2.5 2.5L16 9" stroke="#E87520" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+              {mobileHeroMicrocopy.reassurance}
+            </div>
           </div>
 
           <button type="button" onClick={handleBookNowClick}
@@ -2730,6 +2713,20 @@ useEffect(() => {
               transform: translateZ(0) !important;
               -webkit-transform: translateZ(0) !important;
               --nexa-mobile-nav-icon: #ffffff;
+            }
+
+            /* Compact mobile header, while preserving its existing controls. */
+            .nexa-showroom-mobile-fixed-nav .nexa-mobile-nav,
+            .nexa-showroom-mobile-fixed-nav header.nexa-mobile-nav,
+            .nexa-showroom-mobile-fixed-nav nav.nexa-mobile-nav {
+              height: clamp(70px, 9.5svh, 78px) !important;
+              min-height: 70px !important;
+              max-height: 78px !important;
+              box-sizing: border-box !important;
+            }
+
+            .nexa-showroom-mobile-fixed-nav :is(header, nav) {
+              --nexa-showroom-header-height: clamp(70px, 9.5svh, 78px);
             }
 
             .nexa-showroom-mobile-fixed-nav :global(.nexa-mobile-nav) {

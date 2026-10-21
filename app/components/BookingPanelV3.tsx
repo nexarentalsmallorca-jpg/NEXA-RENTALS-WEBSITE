@@ -5031,8 +5031,47 @@ export default function BookingPanelV3({
   }, []);
 
   const [serviceMethod, setServiceMethod] = useState<ServiceMethod | null>(null);
+  const mobileOfficeCheckoutButtonRef = useRef<HTMLButtonElement | null>(null);
+  const mobileOfficeAutoScrollDoneRef = useRef(false);
   const [plan, setPlan] = useState<RentalPlan>(null);
   const [pickupDate, setPickupDate] = useState<Date | undefined>();
+
+  // On mobile, once the office booking details are rendered, scroll only
+  // enough to show the checkout button near the bottom of the viewport.
+  useEffect(() => {
+    if (!mobileBooking || serviceMethod !== "office") {
+      mobileOfficeAutoScrollDoneRef.current = false;
+      return;
+    }
+    // The booking panel renders progressively. Do not mark scrolling done
+    // before the rental plan and its date controls have appeared.
+    if (!plan || !pickupDate || mobileOfficeAutoScrollDoneRef.current) return;
+
+    let cancelled = false;
+    const timer = window.setTimeout(() => {
+      if (cancelled || mobileOfficeAutoScrollDoneRef.current) return;
+      const button = mobileOfficeCheckoutButtonRef.current;
+      if (!button || window.innerWidth > 767) return;
+
+      const viewportHeight = window.visualViewport?.height ?? window.innerHeight;
+      const viewportTop = window.visualViewport?.offsetTop ?? 0;
+      const safeBottom = 30;
+      const buttonBottom = button.getBoundingClientRect().bottom;
+      const delta = buttonBottom - (viewportTop + viewportHeight - safeBottom);
+
+      // Keep the heading and booking options visible; move by the minimum
+      // distance required, rather than centering the checkout button.
+      if (delta > 2) {
+        window.scrollBy({ top: delta, behavior: "smooth" });
+      }
+      mobileOfficeAutoScrollDoneRef.current = true;
+    }, 450);
+
+    return () => {
+      cancelled = true;
+      window.clearTimeout(timer);
+    };
+  }, [mobileBooking, serviceMethod, plan, pickupDate]);
   const [dropoffDate, setDropoffDate] = useState<Date | undefined>();
   const [pickupTime, setPickupTime] = useState("10:00");
   const [halfReturnTime, setHalfReturnTime] = useState("20:00");
@@ -6071,7 +6110,7 @@ export default function BookingPanelV3({
     notice === tt.noTimesToday;
 
   return (
-    <div data-mobile-ready={mobileBooking ? "true" : "false"} className="nexa-booking-panel-v3 relative z-20 w-full rounded-[20px] border border-black/10 bg-white p-4 text-black shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+    <div data-mobile-ready={mobileBooking ? "true" : "false"} data-service-method={serviceMethod || ""} className="nexa-booking-panel-v3 relative z-20 w-full rounded-[20px] border border-black/10 bg-white p-4 text-black shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
       <style jsx global>{`
         .nexa-booking-panel-v3 {
           max-width: 410px;
@@ -7402,12 +7441,14 @@ export default function BookingPanelV3({
       </div>
 
       <button
+        ref={mobileOfficeCheckoutButtonRef}
+        data-nexa-checkout-action="true"
         type="button"
         onClick={onProceed}
         disabled={!canCheckout}
         className={[
           "group relative mt-3 w-full overflow-hidden rounded-[9px] border border-transparent bg-black px-5 py-3.5 text-[13px] font-black uppercase tracking-[0.16em] text-white transition hover:bg-[#222] active:scale-[0.98] disabled:cursor-not-allowed disabled:border-transparent disabled:bg-black/20 disabled:text-black/34",
-          mobileBooking && !pickupDate ? "mobile-details-hidden" : "",
+          mobileBooking && !pickupDate && serviceMethod !== "office" ? "mobile-details-hidden" : "",
           canCheckout ? "checkout-button-pulse" : "",
         ].join(" ")}
       >
