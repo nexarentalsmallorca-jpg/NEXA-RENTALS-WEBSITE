@@ -1,9 +1,9 @@
+
 // app/[locale]/layout.tsx
 
 import "../globals.css";
 
 import type { Metadata } from "next";
-import Script from "next/script";
 import { Inter, Playfair_Display, Poppins } from "next/font/google";
 import { NextIntlClientProvider } from "next-intl";
 import { getMessages, setRequestLocale } from "next-intl/server";
@@ -12,6 +12,7 @@ import FooterMoneyBlogLinks from "../components/FooterMoneyBlogLinks";
 import NexaFooter from "../components/NexaFooter";
 import WhatsAppSupport from "../components/WhatsAppSupport";
 import NeroBookingCopilot from "../components/NeroBookingCopilot";
+import CookieConsent from "../components/CookieConsent";
 
 import {
   defaultLocale,
@@ -69,7 +70,10 @@ type Props = {
   params: Promise<{ locale: string }>;
 };
 
-export default async function LocaleLayout({ children, params }: Props) {
+export default async function LocaleLayout({
+  children,
+  params,
+}: Props) {
   const { locale: requestedLocale } = await params;
 
   const locale: Locale = isValidLocale(requestedLocale)
@@ -86,24 +90,14 @@ export default async function LocaleLayout({ children, params }: Props) {
       className={`${inter.variable} ${playfair.variable} ${poppins.variable}`}
       suppressHydrationWarning
     >
-      <head>
-        <Script
-          src="https://www.googletagmanager.com/gtag/js?id=AW-18058340467"
-          strategy="afterInteractive"
-        />
-
-        <Script id="google-ads-tag" strategy="afterInteractive">
-          {`
-            window.dataLayer = window.dataLayer || [];
-            function gtag(){dataLayer.push(arguments);}
-            gtag('js', new Date());
-            gtag('config', 'AW-18058340467');
-          `}
-        </Script>
-      </head>
-
-      <body className="overflow-x-clip" suppressHydrationWarning>
-        <NextIntlClientProvider locale={locale} messages={messages}>
+      <body
+        className="overflow-x-clip"
+        suppressHydrationWarning
+      >
+        <NextIntlClientProvider
+          locale={locale}
+          messages={messages}
+        >
           {children}
 
           <WhatsAppSupport
@@ -119,18 +113,16 @@ export default async function LocaleLayout({ children, params }: Props) {
           <NeroBookingCopilot />
 
           <FooterMoneyBlogLinks locale={locale} />
+
           <NexaFooter />
+
+          <CookieConsent locale={locale} />
         </NextIntlClientProvider>
 
         <style
           dangerouslySetInnerHTML={{
             __html: `
               @media (max-width: 1023px) {
-                /*
-                  MOBILE ONLY:
-                  Move Nero AI icon to the right side.
-                  This targets the fixed AI wrapper by its z-index.
-                */
                 div[style*="2147483647"] {
                   left: auto !important;
                   right: 18px !important;

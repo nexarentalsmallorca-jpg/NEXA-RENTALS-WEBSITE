@@ -4731,13 +4731,13 @@ function PlanButton({
       ].join(" ")}
     >
       {popular ? (
-        <span className="absolute left-1/2 top-[-10px] -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#ec4899,#d946ef,#7c3aed,#38bdf8)] px-3 py-1 text-center text-[7.5px] font-black uppercase leading-none tracking-[0.14em] text-white shadow-none">
+        <span className="nexa-plan-badge-shine absolute left-1/2 top-[-10px] -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#ec4899,#d946ef,#7c3aed,#38bdf8)] px-3 py-1 text-center text-[7.5px] font-black uppercase leading-none tracking-[0.14em] text-white shadow-none">
           {popularLabel}
         </span>
       ) : null}
 
       {bestValueLabel ? (
-        <span className="absolute left-1/2 top-[-10px] -translate-x-1/2 whitespace-nowrap rounded-full bg-[linear-gradient(110deg,#064e3b,#0f9b78,#22c55e)] px-3 py-1 text-[7.5px] font-black uppercase leading-none tracking-[0.12em] text-white shadow-none">
+        <span className="nexa-plan-badge-shine absolute left-1/2 top-[-10px] -translate-x-1/2 whitespace-nowrap rounded-full bg-[linear-gradient(110deg,#064e3b,#0f9b78,#22c55e)] px-3 py-1 text-[7.5px] font-black uppercase leading-none tracking-[0.12em] text-white shadow-none">
           {bestValueLabel}
         </span>
       ) : null}
@@ -7319,7 +7319,49 @@ export default function BookingPanelV3({
             animation: nexaMobileCheckoutSweep 2.2s ease-in-out infinite !important;
           }
         }
+/* NEXA — Continuous reflection on both rental badges */
+.nexa-booking-panel-v3 .mobile-booking-plans .nexa-plan-badge-shine {
+  display: block !important;
+  position: absolute !important;
+  overflow: hidden !important;
+  isolation: isolate;
+  white-space: nowrap;
+}
 
+.nexa-booking-panel-v3 .mobile-booking-plans .nexa-plan-badge-shine::after {
+  content: "";
+  position: absolute;
+  top: -45%;
+  bottom: -45%;
+  left: -80%;
+  width: 55%;
+  background: linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.08),
+    rgba(255,255,255,.65),
+    rgba(255,255,255,.08),
+    transparent
+  );
+  transform: skewX(-25deg);
+  animation: nexaBadgeReflection 3s ease-in-out infinite;
+  pointer-events: none;
+}
+
+@keyframes nexaBadgeReflection {
+  0%, 12% {
+    left: -80%;
+  }
+  55%, 100% {
+    left: 130%;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .nexa-booking-panel-v3 .mobile-booking-plans .nexa-plan-badge-shine::after {
+    animation: none !important;
+  }
+}
         /* Refined desktop/mobile booking presentation: no purple borders or badge glow. */
         .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-popular {
           border: 1.5px solid #f58220 !important;
@@ -7553,7 +7595,7 @@ export default function BookingPanelV3({
           oldPrice={activePricing.fullDayOldPrice}
           price={activePricing.fullDayPricing[1]}
           subtitle={mobileBooking ? undefined : tt.multiDayDiscount}
-          bestValueLabel={desktopModal ? DESKTOP_BOOKING_LABELS[locale].bestValue : undefined}
+          bestValueLabel={DESKTOP_BOOKING_LABELS[locale].bestValue}
           needsChoice={needsPlanChoice}
           onClick={() => handlePlanSelect("full")}
         />
