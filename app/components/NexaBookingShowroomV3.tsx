@@ -35,6 +35,74 @@ const montserrat = Montserrat({
   weight: ["400", "500", "600", "700", "800", "900"],
 });
 
+// ================================================================
+// DESKTOP ONLY - EASY POSITION AND SIZE CONTROLS
+// These settings NEVER change the mobile showroom.
+// Positive X = RIGHT; negative X = LEFT.
+// Positive Y = DOWN; negative Y = UP.
+// scale: 1 = original size, 1.2 = 20% bigger, 0.8 = 20% smaller.
+// ================================================================
+const DESKTOP_HERO_TUNING = {
+  // All left-hand details move and resize AS ONE GROUP:
+  // brand logo, model, From, price, all-inclusive, specs, and button.
+  details: {
+    moveRightPx: 120,
+    moveDownPx: 0,
+    scale: 1,
+  },
+
+  // Each scooter's image has independent controls on desktop.
+  // widthPercent is its invisible image-frame width in % of screen.
+  // heightPercent is the image-frame height in % of the hero.
+  scooters: {
+    "piaggio-liberty": {
+      leftPercent: 22,
+      bottomPercent: 0,
+      widthPercent: 55,
+      heightPercent: 90,
+      moveRightPx: 0,
+      moveDownPx: 0,
+      scale: 1,
+    },
+    "kymco-sky-town": {
+      leftPercent: 22,
+      bottomPercent: 0,
+      widthPercent: 55,
+      heightPercent: 90,
+      moveRightPx: 0,
+      moveDownPx: 0,
+      scale: 1,
+    },
+    "sym-symphony": {
+      leftPercent: 22,
+      bottomPercent: 0,
+      widthPercent: 55,
+      heightPercent: 90,
+      moveRightPx: 0,
+      moveDownPx: 0,
+      scale: 1,
+    },
+  },
+
+  // DESKTOP ONLY: free inclusions positioning. Edit these four values.
+  // Increase rightPercent to move the list LEFT (away from the right arrow).
+  // Positive moveLeftPx = LEFT; negative moveLeftPx = RIGHT.
+  // Positive moveDownPx = DOWN; negative moveDownPx = UP.
+  inclusions: {
+    rightPercent: 10,
+    moveLeftPx: 0,
+    moveDownPx: 0,
+    topPercent: 25,
+  },
+
+  // New desktop video remains separate from both image and text controls.
+  videoScale: 1,
+  videoMoveUpPercent: 0,
+  videoMoveRightPercent: 0,
+  videoBrightness: 1,
+  whiteWashOpacity: 0,
+} as const;
+
 type VehicleFeature = {
   image: string;
   label: string;
@@ -661,6 +729,23 @@ const SHOWROOM_COPY: Record<ShowroomLocale, ShowroomCopy> = {
   },
 };
 
+// New showroom labels use the same next-intl locale as the existing scooter copy.
+const SHOWROOM_EXTRAS_COPY: Record<ShowroomLocale, Record<"popularScooter" | "freeExtras" | "helmets" | "gloves" | "securityLock" | "phoneMount" | "topCase" | "insurance", string>> = {
+  en: { popularScooter: "Popular Scooter", freeExtras: "Free Extras", helmets: "2 Helmets", gloves: "2 Pairs of Gloves", securityLock: "Security Lock", phoneMount: "Phone Mount", topCase: "Top Case", insurance: "Basic Insurance" },
+  es: { popularScooter: "Scooter popular", freeExtras: "Extras gratis", helmets: "2 cascos", gloves: "2 pares de guantes", securityLock: "Candado de seguridad", phoneMount: "Soporte para móvil", topCase: "Baúl trasero", insurance: "Seguro básico" },
+  de: { popularScooter: "Beliebter Roller", freeExtras: "Kostenlose Extras", helmets: "2 Helme", gloves: "2 Paar Handschuhe", securityLock: "Sicherheitsschloss", phoneMount: "Handyhalterung", topCase: "Topcase", insurance: "Basisversicherung" },
+  fr: { popularScooter: "Scooter populaire", freeExtras: "Extras gratuits", helmets: "2 casques", gloves: "2 paires de gants", securityLock: "Antivol de sécurité", phoneMount: "Support téléphone", topCase: "Top-case", insurance: "Assurance de base" },
+  it: { popularScooter: "Scooter popolare", freeExtras: "Extra gratuiti", helmets: "2 caschi", gloves: "2 paia di guanti", securityLock: "Bloccadisco di sicurezza", phoneMount: "Supporto telefono", topCase: "Bauletto", insurance: "Assicurazione base" },
+  nl: { popularScooter: "Populaire scooter", freeExtras: "Gratis extra’s", helmets: "2 helmen", gloves: "2 paar handschoenen", securityLock: "Veiligheidsslot", phoneMount: "Telefoonhouder", topCase: "Topkoffer", insurance: "Basisverzekering" },
+  pl: { popularScooter: "Popularny skuter", freeExtras: "Darmowe dodatki", helmets: "2 kaski", gloves: "2 pary rękawic", securityLock: "Blokada zabezpieczająca", phoneMount: "Uchwyt na telefon", topCase: "Kufer", insurance: "Podstawowe ubezpieczenie" },
+  sv: { popularScooter: "Populär scooter", freeExtras: "Gratis tillbehör", helmets: "2 hjälmar", gloves: "2 par handskar", securityLock: "Säkerhetslås", phoneMount: "Mobilhållare", topCase: "Toppbox", insurance: "Grundförsäkring" },
+  da: { popularScooter: "Populær scooter", freeExtras: "Gratis ekstraudstyr", helmets: "2 hjelme", gloves: "2 par handsker", securityLock: "Sikkerhedslås", phoneMount: "Telefonholder", topCase: "Topboks", insurance: "Basisforsikring" },
+  no: { popularScooter: "Populær scooter", freeExtras: "Gratis ekstrautstyr", helmets: "2 hjelmer", gloves: "2 par hansker", securityLock: "Sikkerhetslås", phoneMount: "Mobilholder", topCase: "Toppboks", insurance: "Grunnforsikring" },
+  pt: { popularScooter: "Scooter popular", freeExtras: "Extras grátis", helmets: "2 capacetes", gloves: "2 pares de luvas", securityLock: "Cadeado de segurança", phoneMount: "Suporte para telemóvel", topCase: "Top case", insurance: "Seguro básico" },
+  sr: { popularScooter: "Popularan skuter", freeExtras: "Besplatni dodaci", helmets: "2 kacige", gloves: "2 para rukavica", securityLock: "Sigurnosna brava", phoneMount: "Držač telefona", topCase: "Kofer", insurance: "Osnovno osiguranje" },
+  uk: { popularScooter: "Популярний скутер", freeExtras: "Безкоштовні додатки", helmets: "2 шоломи", gloves: "2 пари рукавичок", securityLock: "Захисний замок", phoneMount: "Тримач телефона", topCase: "Кофр", insurance: "Базове страхування" },
+};
+
 // Mobile hero microcopy follows the same next-intl locale as the rest of the showroom.
 const MOBILE_HERO_MICROCOPY: Record<ShowroomLocale, {
   engine: string;
@@ -837,6 +922,19 @@ const VEHICLE_SLIDES: VehicleSlide[] = [
     features: CECOTEC_EBIKE_FEATURES,
   },
 ];
+
+// Desktop uses the exact approved mobile scooter assets and ordering.
+// Keep the legacy VEHICLE_SLIDES data intact for unrelated code paths.
+const DESKTOP_SCOOTER_SLIDES: VehicleSlide[] = VEHICLE_SLIDES
+  .filter((vehicle) => ["piaggio-liberty", "kymco-sky-town", "sym-symphony"].includes(vehicle.id))
+  .map((vehicle) => ({
+    ...vehicle,
+    image: ({
+      "piaggio-liberty": "/images/nexapiaggio.png",
+      "kymco-sky-town": "/images/realkymco.png",
+      "sym-symphony": "/images/symreal.png",
+    } as Record<string, string>)[vehicle.id] ?? vehicle.image,
+  }));
 
 const MOBILE_DIRECT_HERO_SLIDES: MobileDirectHeroSlide[] = [
   {
@@ -1802,6 +1900,25 @@ const MOBILE_SHOWROOM_CONTROLS = {
   button: { widthPx: 255, heightPx: 48, bottomPx: 75, moveRightPx: 0, moveDownPx: 0, fontSizePx: 14, fontWeight: 700, letterSpacingEm: 0.065, borderRadiusPx: 28, shineEnabled: true, shineDurationSeconds: 2, shineDelaySeconds: 0 },
 } as const;
 
+// MOBILE ONLY: POPULAR SCOOTER badge for the Piaggio Liberty (384 x 694 stage).
+// Choose which EDGE to measure from, then adjust its distance in pixels.
+// horizontalAnchor: "left" uses leftPx; "right" uses rightPx.
+// verticalAnchor: "top" uses topPx; "bottom" uses bottomPx.
+// moveRightPx: positive = right; negative = left.
+// moveDownPx: positive = down; negative = up.
+// These settings affect ONLY the mobile badge, not the scooter or other text.
+const MOBILE_MOST_POPULAR_BADGE = {
+  horizontalAnchor: "left" as "left" | "right",
+  verticalAnchor: "top" as "top" | "bottom",
+  topPx: 210,
+  bottomPx: 0,
+  leftPx: 120,
+  rightPx: 0,
+  moveRightPx: 0,
+  moveDownPx: 0,
+  scale: 0.70,
+} as const;
+
 // Mobile-only translated CTA. Model names, prices and measurements remain unchanged.
 const MOBILE_SELECT_SCOOTER_LABEL: Record<ShowroomLocale, string> = {
   en: "Select This Scooter",
@@ -1845,7 +1962,37 @@ export default function NexaBookingShowroomV3() {
   const showroomLocale = normalizeShowroomLocale(activeLocale);
   const copy = SHOWROOM_COPY[showroomLocale];
   const mobileHeroMicrocopy = MOBILE_HERO_MICROCOPY[showroomLocale];
+  const extrasCopy = SHOWROOM_EXTRAS_COPY[showroomLocale];
   const [activeIndex, setActiveIndex] = useState(0);
+  // Desktop-only booking popup. Mobile continues to use its existing booking route.
+  const [desktopBookingOpen, setDesktopBookingOpen] = useState(false);
+
+  useEffect(() => {
+    if (!desktopBookingOpen) return;
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+
+    const closeOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDesktopBookingOpen(false);
+    };
+
+    window.addEventListener("keydown", closeOnEscape);
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", closeOnEscape);
+    };
+  }, [desktopBookingOpen]);
+  // Desktop-only carousel state. Pre-mounted images animate in; outgoing images hide immediately.
+  const [desktopMotion, setDesktopMotion] = useState<{
+    from: number; to: number; direction: "left" | "right"; token: number;
+  } | null>(null);
+  const [desktopHasNavigated, setDesktopHasNavigated] = useState(false);
+  const desktopMotionTimer = useRef<number | null>(null);
+  const desktopMotionToken = useRef(0);
+  useEffect(() => () => {
+    if (desktopMotionTimer.current) window.clearTimeout(desktopMotionTimer.current);
+  }, []);
   const [mobileHeroIndex, setMobileHeroIndex] = useState(0);
   const mobileTextOffsets = MOBILE_TEXT_PER_VEHICLE[MOBILE_DIRECT_HERO_SLIDES[mobileHeroIndex]?.vehicleId ?? "piaggio-liberty"] ?? MOBILE_TEXT_PER_VEHICLE["piaggio-liberty"];
   const [bookingPanelAttention, setBookingPanelAttention] = useState(false);
@@ -1884,11 +2031,11 @@ export default function NexaBookingShowroomV3() {
   }, []);
 
 
-  const slideCount = VEHICLE_SLIDES.length;
+  const slideCount = DESKTOP_SCOOTER_SLIDES.length;
   const mobileHeroSlideCount = MOBILE_DIRECT_HERO_SLIDES.length;
 
   const activeVehicle = useMemo(() => {
-    return VEHICLE_SLIDES[activeIndex] || VEHICLE_SLIDES[0];
+    return DESKTOP_SCOOTER_SLIDES[activeIndex] || DESKTOP_SCOOTER_SLIDES[0];
   }, [activeIndex]);
 
   const activeMobileHeroSlide = useMemo(() => {
@@ -1933,7 +2080,7 @@ const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
     const mobileSlide =
       MOBILE_DIRECT_HERO_SLIDES[mobileIndex] || MOBILE_DIRECT_HERO_SLIDES[0];
 
-    const matchedVehicleIndex = VEHICLE_SLIDES.findIndex(
+    const matchedVehicleIndex = DESKTOP_SCOOTER_SLIDES.findIndex(
       (vehicle) => vehicle.id === mobileSlide.vehicleId
     );
 
@@ -1942,13 +2089,30 @@ const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
     }
   };
 
-  const goToPrevious = () => {
-    setActiveIndex((current) => (current === 0 ? slideCount - 1 : current - 1));
+  const changeDesktopScooter = (nextIndex: number, direction: "left" | "right") => {
+    if (nextIndex === activeIndex) return;
+    if (desktopMotionTimer.current) window.clearTimeout(desktopMotionTimer.current);
+    const token = ++desktopMotionToken.current;
+    setDesktopHasNavigated(true);
+    setDesktopMotion({ from: activeIndex, to: nextIndex, direction, token });
+    setActiveIndex(nextIndex);
+    const timerId = window.setTimeout(() => {
+  setDesktopMotion((current) =>
+    current?.token === token ? null : current
+  );
+  desktopMotionTimer.current = null;
+}, 760);
+
+desktopMotionTimer.current = timerId;
   };
 
-  const goToNext = () => {
-    setActiveIndex((current) => (current === slideCount - 1 ? 0 : current + 1));
-  };
+  const goToPrevious = () => changeDesktopScooter(
+    activeIndex === 0 ? slideCount - 1 : activeIndex - 1, "left"
+  );
+
+  const goToNext = () => changeDesktopScooter(
+    activeIndex === slideCount - 1 ? 0 : activeIndex + 1, "right"
+  );
 
   const goToPreviousMobileHero = () => {
     setMobileHeroIndex((current) => {
@@ -2008,16 +2172,9 @@ const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
     return;
   }
 
-  const bookingElement = getBookingTargetElement();
-
-  if (bookingElement) {
-    bookingElement.scrollIntoView({
-      behavior: "smooth",
-      block: "start",
-    });
-  }
-
-  triggerBookingPanelAttention();
+  // Desktop: open the actual BookingPanelV3 as a centered modal.
+  // The mobile branch above is intentionally unchanged.
+  setDesktopBookingOpen(true);
 };
 
   useEffect(() => {
@@ -2026,15 +2183,19 @@ const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
   };
 
   const handleGlobalBookClick = () => {
-    const bookingElement = getBookingTargetElement();
+    if (isDesktopShowroomViewport()) {
+      setDesktopBookingOpen(true);
+      return;
+    }
 
+    // Preserve existing mobile event handling.
+    const bookingElement = getBookingTargetElement();
     if (bookingElement) {
       bookingElement.scrollIntoView({
-        behavior: isDesktopShowroomViewport() ? "auto" : "smooth",
+        behavior: "smooth",
         block: "start",
       });
     }
-
     forceDesktopShowroomTop();
     triggerBookingPanelAttention();
   };
@@ -2059,8 +2220,12 @@ const syncMobileVehicleToDesktopVehicle = (mobileIndex: number) => {
     window.__nexaTriggerBookingPanelAttention = false;
 
     window.setTimeout(() => {
-      forceDesktopShowroomTop();
-      triggerBookingPanelAttention();
+      if (isDesktopShowroomViewport()) {
+        setDesktopBookingOpen(true);
+      } else {
+        forceDesktopShowroomTop();
+        triggerBookingPanelAttention();
+      }
     }, 450);
   }
 
@@ -2165,26 +2330,15 @@ useEffect(() => {
           <NavbarV3 onBookClick={handleBookNowClick} />
         </div>
 
-        <div className="absolute inset-0 z-0 hidden lg:block">
-          {VEHICLE_SLIDES.map((vehicle, index) => {
-            const isActive = index === activeIndex;
-
-            return (
-              <Image
-                key={vehicle.id}
-                src={vehicle.image}
-                alt={vehicle.alt}
-                fill
-                priority
-                sizes="100vw"
-                draggable={false}
-                className={[
-                  "select-none object-cover object-center",
-                  isActive ? "block" : "hidden",
-                ].join(" ")}
-              />
-            );
-          })}
+        {/* Desktop-only looping background video; mobile video remains unchanged. */}
+        <div className="absolute inset-0 z-0 hidden overflow-hidden bg-black lg:block">
+          <video autoPlay muted loop playsInline preload="auto"
+            aria-label="NEXA Rentals desktop hero background"
+            className="absolute inset-0 h-full w-full object-cover"
+            style={{ filter: `brightness(${DESKTOP_HERO_TUNING.videoBrightness})`, transform: `translate(${DESKTOP_HERO_TUNING.videoMoveRightPercent}%, -${DESKTOP_HERO_TUNING.videoMoveUpPercent}%) scale(${DESKTOP_HERO_TUNING.videoScale})`, transformOrigin: "center center" }}>
+            <source src="/videos/bigvideo2.mp4" type="video/mp4" />
+          </video>
+          <div className="pointer-events-none absolute inset-0 bg-white" style={{ opacity: DESKTOP_HERO_TUNING.whiteWashOpacity }} />
         </div>
 
         {/* Mobile hero video background; mobile showroom overlay follows. */}
@@ -2255,6 +2409,22 @@ useEffect(() => {
               </span>
             ) : activeMobileHeroSlide.name}
           </h2>
+          {/* MOBILE ONLY: Piaggio Liberty POPULAR SCOOTER label. */}
+          <div
+            className={`${montserrat.className} nexa-popular-badge pointer-events-none absolute z-30 inline-flex items-center gap-[5px] whitespace-nowrap rounded-full border border-[#8B5CF6]/30 bg-gradient-to-r from-[#6D28D9] via-[#8B5CF6] to-[#A855F7] px-[9px] py-[5px] text-[8px] font-extrabold uppercase tracking-[0.065em] text-white shadow-[0_4px_13px_rgba(109,40,217,0.23)]`}
+            style={{
+              ...(MOBILE_MOST_POPULAR_BADGE.verticalAnchor === "top"
+                ? { top: MOBILE_MOST_POPULAR_BADGE.topPx + MOBILE_MOST_POPULAR_BADGE.moveDownPx }
+                : { bottom: MOBILE_MOST_POPULAR_BADGE.bottomPx - MOBILE_MOST_POPULAR_BADGE.moveDownPx }),
+              ...(MOBILE_MOST_POPULAR_BADGE.horizontalAnchor === "left"
+                ? { left: MOBILE_MOST_POPULAR_BADGE.leftPx + MOBILE_MOST_POPULAR_BADGE.moveRightPx }
+                : { right: MOBILE_MOST_POPULAR_BADGE.rightPx - MOBILE_MOST_POPULAR_BADGE.moveRightPx }),
+              transform: `translateX(${MOBILE_MOST_POPULAR_BADGE.horizontalAnchor === "left" ? "-50%" : "50%"}) scale(${MOBILE_MOST_POPULAR_BADGE.scale})`,
+              transformOrigin: "center center",
+            }}
+          >
+            <span aria-hidden="true">★</span> {extrasCopy.popularScooter}
+          </div>
 
             </>
           ) : (
@@ -2482,112 +2652,174 @@ useEffect(() => {
           </div>
         </div>
 
-        <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block bg-[linear-gradient(180deg,rgba(0,0,0,0.16)_0%,rgba(0,0,0,0.00)_22%,rgba(0,0,0,0.02)_70%,rgba(0,0,0,0.24)_100%)]" />
-        <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block bg-[linear-gradient(90deg,rgba(0,0,0,0.20)_0%,rgba(0,0,0,0.00)_26%,rgba(0,0,0,0.00)_58%,rgba(0,0,0,0.50)_100%)]" />
-
-        <div
-          className="pointer-events-none absolute inset-0 z-20 hidden lg:block"
-          aria-hidden="true"
-        >
-          <div className="light-smoke smoke-one absolute bottom-[-18%] left-[-12%] h-[48%] w-[62%] rounded-full bg-white/[0.055] blur-[90px]" />
-          <div className="light-smoke smoke-two absolute bottom-[-20%] right-[-16%] h-[52%] w-[68%] rounded-full bg-white/[0.045] blur-[105px]" />
-          <div className="light-smoke smoke-three absolute bottom-[-22%] left-1/2 h-[42%] w-[72%] -translate-x-1/2 rounded-full bg-white/[0.035] blur-[95px]" />
+        {/* Desktop-only composition. Each section has its own positioning classes. */}
+        <div className="pointer-events-none absolute inset-0 z-10 hidden lg:block">
+          <div className="absolute inset-0 bg-transparent" />
         </div>
-
-        <div className="pointer-events-none absolute inset-x-0 bottom-0 z-30 hidden lg:block h-[34%] bg-[linear-gradient(180deg,rgba(0,0,0,0)_0%,rgba(0,0,0,0.18)_58%,rgba(0,0,0,0.46)_100%)]" />
-
-        <div
-          key={activeVehicle.id}
-          className={[
-            poppins.className,
-            "vehicle-info-card absolute left-[176px] top-[190px] z-40 hidden w-[390px] text-black lg:block",
-          ].join(" ")}
-          style={{
-            fontFamily: poppins.style.fontFamily,
-          }}
-        >
-          <div
-            className="text-[17px] font-black uppercase tracking-[0.28em] text-black/42 drop-shadow-[0_3px_12px_rgba(255,255,255,0.55)]"
-            style={{
-              fontFamily: poppins.style.fontFamily,
-            }}
-          >
-            <TypedLine
-              text={copy.scooter.toUpperCase()}
-              className="font-black uppercase"
-              delayMs={0}
-            />
-          </div>
-
-          <h2
-            className="mt-2 max-w-[390px] text-[35px] font-black uppercase leading-[0.96] tracking-[-0.045em] text-black drop-shadow-[0_8px_24px_rgba(255,255,255,0.48)]"
-            style={{
-              fontFamily: poppins.style.fontFamily,
-              fontWeight: 900,
-            }}
-          >
-            <TypedLine
-              text={activeVehicle.displayName.toUpperCase()}
-              className="font-black uppercase"
-              delayMs={45}
-            />
-          </h2>
-
-          <div className="mt-7 space-y-3.5">
-            {activeVehicle.features.map((feature, featureIndex) => (
-              <div
-                key={`${activeVehicle.id}-${feature.label}`}
-                className="vehicle-feature-row flex items-center gap-4"
-                style={{ animationDelay: `${90 + featureIndex * 38}ms` }}
-              >
-                <span className="vehicle-feature-icon relative flex h-9 w-9 shrink-0 items-center justify-center">
-                  <Image
-                    src={feature.image}
-                    alt=""
-                    width={36}
-                    height={36}
-                    className="h-9 w-9 object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.22)]"
-                  />
-                </span>
-
-                <span
-                  className="text-[13.5px] font-black uppercase leading-5 tracking-[0.035em] text-black/84 drop-shadow-[0_3px_12px_rgba(255,255,255,0.58)]"
-                  style={{
-                    fontFamily: poppins.style.fontFamily,
-                    fontWeight: 900,
-                  }}
-                >
-                  <TypedLine
-                    text={translateVehicleLabel(feature.label, copy)}
-                    className="font-black uppercase"
-                  />
-                </span>
+        {/* DESKTOP ONLY: images stay mounted and preloaded. Previous image hides instantly;
+            the next image slides in from the clicked direction with no opacity animation. */}
+        {DESKTOP_SCOOTER_SLIDES.map((vehicle, slideIndex) => {
+          const tune = DESKTOP_HERO_TUNING.scooters[vehicle.id as keyof typeof DESKTOP_HERO_TUNING.scooters];
+          const isCurrent = slideIndex === activeIndex;
+          const motionClass = isCurrent
+            ? desktopMotion
+              ? `nexa-desktop-enter-${desktopMotion.direction}`
+              : desktopHasNavigated ? "" : "nexa-desktop-first-scooter"
+            : "";
+          return (
+            <div key={`desktop-art-${vehicle.id}`}
+              className={`pointer-events-none absolute z-20 hidden lg:block ${motionClass}`}
+              aria-hidden={!isCurrent}
+              style={{
+                visibility: isCurrent ? "visible" : "hidden",
+                left: `${tune.leftPercent}%`,
+                bottom: `${tune.bottomPercent}%`,
+                width: `${tune.widthPercent}%`,
+                height: `${tune.heightPercent}%`,
+              }}>
+              <div className="relative h-full w-full"
+                style={{
+                  transform: `translate(${tune.moveRightPx}px, ${tune.moveDownPx}px) scale(${tune.scale})`,
+                  transformOrigin: "center bottom",
+                }}>
+                <Image src={vehicle.image} alt={vehicle.alt} fill priority
+                  sizes="(min-width: 1536px) 46vw, 52vw"
+                  className="object-contain drop-shadow-[0_24px_24px_rgba(0,0,0,0.16)]" />
               </div>
+            </div>
+          );
+        })}
+
+        {/* DESKTOP ONLY: brand, offer and button travel together with the slide. */}
+        {DESKTOP_SCOOTER_SLIDES.map((vehicle, slideIndex) => {
+          const isCurrent = slideIndex === activeIndex;
+          const motionClass = isCurrent
+            ? desktopMotion
+              ? `nexa-desktop-enter-${desktopMotion.direction}`
+              : desktopHasNavigated ? "" : "nexa-desktop-first-details"
+            : "";
+          return (
+            <div key={`desktop-details-${vehicle.id}`}
+              className={`${montserrat.className} nexa-desktop-detail-position absolute left-[5%] top-[24%] z-30 hidden w-[30%] max-w-[410px] text-[#1b1b1b] lg:block xl:left-[7%] ${motionClass}`}
+              aria-hidden={!isCurrent}
+              style={{ visibility: isCurrent ? "visible" : "hidden", pointerEvents: isCurrent ? "auto" : "none" }}>
+              <div style={{
+                transform: `translate(${DESKTOP_HERO_TUNING.details.moveRightPx}px, ${DESKTOP_HERO_TUNING.details.moveDownPx}px) scale(${DESKTOP_HERO_TUNING.details.scale})`,
+                transformOrigin: "top left",
+              }}>
+                <div className="flex items-center gap-3">
+                  <Image src={MOBILE_BRAND_LOGOS[vehicle.id]!}
+                    alt={`${MOBILE_BRAND_NAMES[vehicle.id]} logo`}
+                    width={150} height={65} className="h-12 w-auto max-w-[140px] object-contain" />
+                  <h2 className="text-[clamp(19px,2vw,30px)] font-extrabold leading-tight tracking-tight">
+                    {vehicle.id === "piaggio-liberty" ? "Liberty 125" : vehicle.id === "kymco-sky-town" ? "SkyTown 125" : "Symphony 125"}
+                    <span className="ml-1 text-[0.55em]">CC</span>
+                  </h2>
+                </div>
+                {vehicle.id === "piaggio-liberty" && (
+                  <div className={`${montserrat.className} nexa-most-popular nexa-popular-badge relative mt-2 inline-flex items-center gap-1.5 rounded-full border border-[#8B5CF6]/30 bg-gradient-to-r from-[#6D28D9] via-[#8B5CF6] to-[#A855F7] px-3 py-1 text-[10px] font-extrabold uppercase tracking-[0.11em] text-white shadow-[0_4px_13px_rgba(109,40,217,0.23)]`}>
+                    <span aria-hidden="true">★</span> {extrasCopy.popularScooter}
+                  </div>
+                )}
+                <div className="mt-5 flex items-start gap-2">
+                  <span className="pt-3 text-[clamp(15px,1.6vw,23px)] text-orange-500">{copy.from}</span>
+                  <span className="bg-gradient-to-r from-orange-400 to-orange-600 bg-clip-text text-[clamp(58px,6.2vw,100px)] font-black leading-none tracking-tighter text-transparent">
+                    {MOBILE_SCOOTER_PRICES[vehicle.id]}
+                  </span>
+                </div>
+                <p className="ml-20 mt-1 text-[clamp(15px,1.6vw,23px)] font-light tracking-wide text-[#383838]">{copy.allInclusive.toLowerCase()}</p>
+                <div className="mt-7 flex flex-wrap items-center gap-x-3 gap-y-2 text-[clamp(10px,0.9vw,13px)] font-bold uppercase text-[#222222]" style={{ fontFamily: montserrat.style.fontFamily }}>
+                   <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                     <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M4 17a8 8 0 1 1 16 0" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><path d="m12 16 4-5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/><circle cx="12" cy="17" r="1.5" fill="currentColor"/></svg>
+                     {mobileHeroMicrocopy.engine}
+                   </span>
+                   <span aria-hidden="true" className="h-[18px] w-px bg-[#B8B8B8]" />
+                   <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="9" cy="7" r="3" stroke="currentColor" strokeWidth="1.8"/><path d="M3.5 19v-2a5.5 5.5 0 0 1 11 0v2H3.5Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M16 4.5a3 3 0 0 1 0 5.8M17 13a5 5 0 0 1 3.5 4.8V19h-3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                     {mobileHeroMicrocopy.passengers}
+                   </span>
+                   <span aria-hidden="true" className="h-[18px] w-px bg-[#B8B8B8]" />
+                   <span className="inline-flex items-center gap-1 whitespace-nowrap">
+                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true"><circle cx="6" cy="18" r="2" stroke="currentColor" strokeWidth="1.8"/><circle cx="18" cy="6" r="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 18h5a4 4 0 0 0 0-8h-2a4 4 0 0 1 0-8h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeDasharray="2 3"/></svg>
+                     {mobileHeroMicrocopy.distance}
+                   </span>
+                 </div>
+                 <div className="mt-3 h-px w-[min(100%,350px)] bg-[#E2E2E2]" />
+                 <p className="mt-3 inline-flex items-start gap-1.5 text-[clamp(12px,1vw,15px)] text-[#383838]">
+                   <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true" className="mt-[1px] shrink-0"><circle cx="12" cy="12" r="9" stroke="#E87520" strokeWidth="2"/><path d="m8 12 2.5 2.5L16 9" stroke="#E87520" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                   {mobileHeroMicrocopy.reassurance}
+                 </p>
+                <button type="button" onClick={handleBookNowClick}
+                  className="nexa-desktop-select-cta relative isolate mt-5 overflow-hidden rounded-full bg-gradient-to-r from-orange-300 via-orange-400 to-orange-600 px-7 py-4 text-sm font-extrabold uppercase tracking-wider text-white shadow-xl transition hover:brightness-105">
+                  {MOBILE_SELECT_SCOOTER_LABEL[showroomLocale]}
+                </button>
+              </div>
+            </div>
+          );
+        })}
+
+        {/* DESKTOP ONLY: included-item photos are the exact assets used in checkout. */}
+        <aside key={`desktop-inclusions-${activeIndex}`}
+          className={`${montserrat.className} nexa-desktop-inclusions absolute z-30 hidden rounded-[20px] border border-white/65 bg-white/65 px-3 py-3 shadow-[0_12px_40px_rgba(30,30,30,0.07)] backdrop-blur-md lg:block ${desktopMotion ? `nexa-desktop-enter-${desktopMotion.direction}` : desktopHasNavigated ? "" : "nexa-desktop-first-inclusions"}`}
+          style={{
+            right: `calc(${DESKTOP_HERO_TUNING.inclusions.rightPercent}% + ${DESKTOP_HERO_TUNING.inclusions.moveLeftPx}px)`,
+            top: `calc(${DESKTOP_HERO_TUNING.inclusions.topPercent}% + ${DESKTOP_HERO_TUNING.inclusions.moveDownPx}px)`,
+            fontFamily: montserrat.style.fontFamily,
+          }}
+          aria-label="Free included rental equipment">
+          <div className="mb-3 flex items-center gap-2">
+            <span aria-hidden="true" className="flex h-[21px] w-[21px] shrink-0 items-center justify-center rounded-full bg-gradient-to-br from-[#FFB15B] via-[#FF8B26] to-[#ED6517] shadow-[0_2px_7px_rgba(244,119,25,0.24)]">
+              <svg viewBox="0 0 20 20" fill="none" className="h-[13px] w-[13px]"><path d="m4 10 4 4 8-8" stroke="#ffffff" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" /></svg>
+            </span>
+            <h3 className={`${montserrat.className} text-[clamp(13px,1.10vw,17px)] font-extrabold uppercase tracking-[0.06em] text-[#000000]`} style={{ fontFamily: montserrat.style.fontFamily }}>{extrasCopy.freeExtras}</h3>
+          </div>
+          {[
+            { image: "/images/ex4.png", label: extrasCopy.helmets },
+            { image: "/images/extra6.png", label: extrasCopy.gloves },
+            { image: "/images/ex3.png", label: extrasCopy.securityLock },
+            { image: "/images/ex2.jpg", label: extrasCopy.phoneMount },
+            { image: "/images/ex1.jpg", label: extrasCopy.topCase },
+            { image: "/images/ex5.png", label: extrasCopy.insurance },
+          ].map((item) => (
+            <div key={item.label} className="nexa-desktop-inclusion-row flex items-center gap-2.5">
+              <div className="flex h-10 w-10 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-black/[0.06] bg-white/90 shadow-sm">
+                <Image src={item.image} alt="" width={80} height={80} className="h-full w-full object-contain p-1" />
+              </div>
+              <span className="flex-1 text-[clamp(11px,0.98vw,14px)] font-semibold leading-tight text-[#000000]">{item.label}</span>
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true" className="h-5 w-5 shrink-0 text-[#F47719]">
+                <circle cx="10" cy="10" r="8" stroke="currentColor" strokeWidth="1.6" />
+                <path d="m6.3 10.1 2.4 2.4 5-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </div>
+          ))}
+        </aside>
+
+        {/* DESKTOP ONLY: one element per indicator, just like the mobile dots.
+            The selected dot itself expands into an orange pill; there is no overlay. */}
+        <div className="nexa-desktop-indicators absolute bottom-[28px] left-[54%] z-40 hidden -translate-x-1/2 items-center lg:flex"
+          role="group" aria-label="Choose a scooter slide">
+          <div className="flex h-8 items-center justify-center gap-[13px]">
+            {DESKTOP_SCOOTER_SLIDES.map((slide, index) => (
+              <button key={slide.id} type="button"
+                onClick={() => changeDesktopScooter(index, index > activeIndex ? "right" : "left")}
+                aria-label={`Show ${slide.displayName}`} aria-pressed={index === activeIndex}
+                className="nexa-desktop-dot flex h-8 items-center justify-center rounded-full"
+                style={{ width: index === activeIndex ? 58 : 22 }}>
+                <span aria-hidden="true" className="nexa-desktop-dot-mark block rounded-full"
+                  style={{
+                    width: index === activeIndex ? 58 : 9,
+                    height: index === activeIndex ? 7 : 9,
+                    background: index === activeIndex
+                      ? "linear-gradient(100deg,#FFB15B,#FF8B26,#ED6517)"
+                      : "#55585B",
+                    boxShadow: index === activeIndex ? "0 0 11px rgba(255,139,41,0.35)" : "none",
+                  }} />
+              </button>
             ))}
           </div>
         </div>
 
-        <div
-          className={[
-            "booking-panel-shell absolute right-6 top-[102px] z-40 hidden w-[410px] max-w-[410px] lg:block",
-            bookingPanelAttention ? "booking-panel-attention" : "",
-          ].join(" ")}
-        >
-          <div className="rounded-[28px] border border-white/12 bg-black/24 p-2 shadow-[0_28px_90px_rgba(0,0,0,0.38)] backdrop-blur-2xl">
-            {isActiveVehicleEbike ? (
-              <EbikeWhatsAppPanel
-                key={`desktop-ebike-${activeVehicle.id}`}
-                vehicleName={activeVehicle.displayName}
-                copy={copy}
-              />
-            ) : (
-              <BookingPanelV3
-                key={`desktop-${activeVehicle.id}`}
-                vehicleName={activeVehicle.displayName}
-              />
-            )}
-          </div>
-        </div>
+        {/* Desktop booking panel removed intentionally. Mobile booking panel below stays unchanged. */}
 
         <div
           id="mobile-booking-panel"
@@ -2616,7 +2848,7 @@ useEffect(() => {
           type="button"
           onClick={goToPrevious}
           aria-label={copy.previousVehicle}
-          className="showroom-arrow showroom-arrow-left group absolute left-5 top-1/2 z-40 flex h-24 w-16 -translate-y-1/2 items-center justify-center text-white/75 transition-all duration-300 hover:text-white active:scale-95 sm:left-8 lg:left-12"
+          className="showroom-arrow showroom-arrow-left group absolute left-5 top-1/2 z-40 flex h-24 w-16 -translate-y-1/2 items-center justify-center text-[#222]/75 transition-all duration-300 hover:text-white active:scale-95 sm:left-8 lg:left-12"
         >
           <svg
             viewBox="0 0 34 64"
@@ -2638,34 +2870,12 @@ useEffect(() => {
           type="button"
           onClick={goToNext}
           aria-label={copy.nextVehicle}
-          className="showroom-arrow showroom-arrow-right group absolute right-[390px] top-1/2 z-40 hidden h-24 w-16 -translate-y-1/2 items-center justify-center text-white/75 transition-all duration-300 hover:text-white active:scale-95 lg:flex"
+          className="showroom-arrow showroom-arrow-right group absolute right-[390px] top-1/2 z-40 hidden h-24 w-16 -translate-y-1/2 items-center justify-center text-[#222]/75 transition-all duration-300 hover:text-white active:scale-95 lg:flex"
         >
           <svg
             viewBox="0 0 34 64"
             aria-hidden="true"
             className="h-16 w-9 drop-shadow-[0_10px_30px_rgba(0,0,0,0.65)] transition-transform duration-300 group-hover:translate-x-1"
-            fill="none"
-          >
-            <path
-              d="M9 7L26 32L9 57"
-              stroke="currentColor"
-              strokeWidth="3.4"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            />
-          </svg>
-        </button>
-
-        <button
-          type="button"
-          onClick={goToNext}
-          aria-label={copy.nextVehicle}
-          className="showroom-arrow showroom-arrow-right group hidden"
-        >
-          <svg
-            viewBox="0 0 34 64"
-            aria-hidden="true"
-            className="h-14 w-8 drop-shadow-[0_10px_30px_rgba(0,0,0,0.65)] transition-transform duration-300 group-hover:translate-x-1"
             fill="none"
           >
             <path
@@ -2750,6 +2960,22 @@ useEffect(() => {
           }
 
           @media (min-width: 1024px) {
+            .nexa-showroom-desktop-nav {
+              position: fixed !important;
+              top: 0 !important;
+              left: 0 !important;
+              right: 0 !important;
+              z-index: 1000 !important;
+              background: #0b0b0c !important;
+              box-shadow: 0 6px 22px rgba(0,0,0,.18) !important;
+            }
+            .nexa-showroom-desktop-nav :is(header, nav) {
+              background: #0b0b0c !important;
+              background-image: none !important;
+              backdrop-filter: none !important;
+              -webkit-backdrop-filter: none !important;
+            }
+            .nexa-showroom-desktop-nav :is(a, button) { color: #fff; }
             .nexa-showroom-mobile-fixed-nav {
               display: none !important;
             }
@@ -3308,8 +3534,207 @@ useEffect(() => {
             }
           }
 
+
+          /* New desktop-only enhancements. Mobile sizing and effects stay unchanged. */
+          @media (min-width: 1024px) {
+            .nexa-desktop-dot, .nexa-desktop-dot-mark { transition: width 460ms cubic-bezier(.22,1,.36,1), height 460ms cubic-bezier(.22,1,.36,1), background 320ms ease, box-shadow 320ms ease; }
+            .nexa-desktop-inclusions { width: clamp(155px, 14.5vw, 240px); }
+            .nexa-desktop-inclusion-row { min-height: clamp(42px, 4.5vw, 58px); border-bottom: 1px solid rgba(0,0,0,.07); }
+            .nexa-desktop-inclusion-row:last-child { border-bottom: none; }
+            .nexa-desktop-enter-right { animation: nexaDesktopEnterRight 750ms cubic-bezier(.22,1,.36,1) both; will-change: transform; backface-visibility: hidden; }
+            .nexa-desktop-enter-left { animation: nexaDesktopEnterLeft 750ms cubic-bezier(.22,1,.36,1) both; will-change: transform; backface-visibility: hidden; }
+            .nexa-desktop-first-scooter { animation: nexaDesktopEnterRight 950ms cubic-bezier(.22,1,.36,1) both; }
+            .nexa-desktop-first-details { animation: nexaDesktopEnterLeft 850ms cubic-bezier(.22,1,.36,1) both; }
+            .nexa-desktop-first-inclusions { animation: nexaDesktopEnterRight 950ms cubic-bezier(.22,1,.36,1) both; }
+            @keyframes nexaDesktopEnterRight { from { transform: translate3d(30vw,0,0); } to { transform: translate3d(0,0,0); } }
+            @keyframes nexaDesktopEnterLeft { from { transform: translate3d(-30vw,0,0); } to { transform: translate3d(0,0,0); } }
+            .showroom-arrow-left, .showroom-arrow-right { overflow: hidden; isolation: isolate; transition: background .25s ease, color .25s ease, border-color .25s ease, box-shadow .25s ease, scale .25s ease !important; }
+            .showroom-arrow-left:hover, .showroom-arrow-right:hover {
+              color: #fff !important; border-color: #ff8b26 !important;
+              background: linear-gradient(110deg,#FFAC48 0%,#FF8B26 48%,#ED6517 100%) !important;
+              box-shadow: 0 12px 36px rgba(240,103,20,.38) !important;
+              scale: 1.13;
+            }
+            .showroom-arrow-left:active, .showroom-arrow-right:active { scale: .92 !important; box-shadow: inset 0 3px 12px rgba(95,39,0,.25) !important; }
+            .showroom-arrow-left::after, .showroom-arrow-right::after {
+              content: ""; position: absolute; inset: -45% auto -45% -65%; width: 38%;
+              background: linear-gradient(90deg,transparent,rgba(255,255,255,.75),transparent);
+              transform: skewX(-20deg); pointer-events: none; opacity: 0;
+            }
+            .showroom-arrow-left:hover::after, .showroom-arrow-right:hover::after { animation: nexaArrowShine 1.4s ease-in-out infinite; }
+            @keyframes nexaArrowShine { 0% { left: -65%; opacity: 0; } 12% { opacity: .75; } 65%,100% { left: 140%; opacity: 0; } }
+          }
+          @media (min-width: 1024px) and (max-width: 1370px) {
+            .nexa-desktop-inclusions { width: clamp(150px,16vw,208px); }
+            .nexa-desktop-inclusion-row > div { width: 34px; height: 34px; }
+            .nexa-desktop-detail-position { top: 24%; }
+          }
+          @media (min-width: 1024px) and (max-height: 750px) {
+            .nexa-desktop-inclusions { max-height: 66vh; }
+            .nexa-desktop-inclusion-row { min-height: 40px; }
+            .nexa-desktop-inclusion-row > div { width: 32px; height: 32px; }
+            .nexa-desktop-detail-position { top: 23%; }
+          }
+          @media (min-width: 1024px) and (max-width: 1150px) {
+            .nexa-desktop-inclusions { width: 150px; }
+            .nexa-desktop-inclusion-row { gap: 6px; }
+            .nexa-desktop-inclusion-row svg { width: 15px; height: 15px; }
+            .nexa-desktop-inclusions h3 { font-size: 11px; }
+            .nexa-desktop-detail-position { left: 5%; }
+          }
+          @media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+            .nexa-desktop-dot, .nexa-desktop-dot-mark { transition: none !important; }
+            .nexa-desktop-enter-right, .nexa-desktop-exit-right, .nexa-desktop-enter-left, .nexa-desktop-exit-left,
+            .nexa-desktop-first-scooter, .nexa-desktop-first-details, .nexa-desktop-first-inclusions { animation: none !important; }
+            .showroom-arrow-left:hover::after,.showroom-arrow-right:hover::after { animation: none !important; }
+          }
+
+          /* DESKTOP ONLY: premium arrow controls and animated selection CTA. */
+          @media (min-width: 1024px) {
+            .showroom-arrow-left,
+            .showroom-arrow-right {
+              width: 62px !important;
+              height: 62px !important;
+              border-radius: 9999px !important;
+              border: 1px solid rgba(0, 0, 0, 0.12) !important;
+              background: rgba(255, 255, 255, 0.86) !important;
+              color: #292929 !important;
+              box-shadow: 0 8px 28px rgba(0, 0, 0, 0.13) !important;
+              backdrop-filter: blur(10px);
+              -webkit-backdrop-filter: blur(10px);
+            }
+
+            .showroom-arrow-left { left: 38px !important; }
+            .showroom-arrow-right { right: 38px !important; }
+
+            .showroom-arrow-left:hover,
+            .showroom-arrow-right:hover {
+              color: #ffffff !important;
+              border-color: #ff8b26 !important;
+              background: linear-gradient(110deg,#FFAC48 0%,#FF8B26 48%,#ED6517 100%) !important;
+              box-shadow: 0 12px 36px rgba(240,103,20,.38) !important;
+            }
+
+            .showroom-arrow-left svg,
+            .showroom-arrow-right svg {
+              width: 21px !important;
+              height: 35px !important;
+              filter: none !important;
+            }
+
+            .nexa-desktop-select-cta {
+              animation: nexaDesktopSelectHeartbeat 1.9s ease-in-out infinite;
+              will-change: transform, box-shadow;
+            }
+
+            .nexa-desktop-select-cta:hover {
+              animation: none !important;
+              transform: scale(1.09);
+              box-shadow: 0 17px 42px rgba(240,103,20,0.37);
+            }
+            .nexa-desktop-select-cta:active {
+              animation: none !important;
+              transform: scale(0.97);
+            }
+
+            .nexa-desktop-select-cta::after {
+              content: "";
+              position: absolute;
+              top: -65%;
+              bottom: -65%;
+              left: -55%;
+              width: 33%;
+              transform: rotate(18deg);
+              background: linear-gradient(90deg, transparent, rgba(255,255,255,0.85), transparent);
+              pointer-events: none;
+              animation: nexaDesktopSelectShine 2.2s ease-in-out infinite;
+            }
+
+            @keyframes nexaDesktopSelectHeartbeat {
+              0%, 34%, 100% { transform: scale(1); box-shadow: 0 12px 30px rgba(240,103,20,0.22); }
+              16% { transform: scale(1.045); box-shadow: 0 16px 42px rgba(240,103,20,0.38); }
+              46% { transform: scale(1.02); box-shadow: 0 14px 36px rgba(240,103,20,0.3); }
+              62% { transform: scale(1); box-shadow: 0 12px 30px rgba(240,103,20,0.22); }
+            }
+
+            @keyframes nexaDesktopSelectShine {
+              0% { left: -55%; opacity: 0; }
+              8% { opacity: 0.9; }
+              55% { left: 125%; opacity: 0.9; }
+              72%, 100% { left: 125%; opacity: 0; }
+            }
+          }
+
+          @media (min-width: 1024px) and (prefers-reduced-motion: reduce) {
+            .nexa-desktop-select-cta,
+            .nexa-desktop-select-cta::after { animation: none !important; }
+          }
+
+
+          /* Both POPULAR SCOOTER badges: subtle, repeating left-to-right reflection. */
+          .nexa-popular-badge {
+            overflow: hidden;
+            isolation: isolate;
+          }
+          .nexa-popular-badge::after {
+            content: "";
+            position: absolute;
+            top: -45%;
+            bottom: -45%;
+            left: -58%;
+            width: 34%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.5), transparent);
+            transform: skewX(-22deg);
+            pointer-events: none;
+            animation: nexaPopularBadgeShine 2.6s ease-in-out infinite;
+          }
+          @keyframes nexaPopularBadgeShine {
+            0% { left: -58%; opacity: 0; }
+            10% { opacity: 0.8; }
+            58% { left: 128%; opacity: 0.8; }
+            75%, 100% { left: 128%; opacity: 0; }
+          }
+          @media (prefers-reduced-motion: reduce) {
+            .nexa-popular-badge::after { animation: none !important; }
+          }
         `}</style>
       </section>
+
+      {/* DESKTOP ONLY: a single, clean white booking surface. Mobile remains untouched. */}
+      {desktopBookingOpen && (
+        <div
+          className="fixed inset-0 z-[2147483100] hidden items-center justify-center bg-black/40 p-4 backdrop-blur-[5px] lg:flex lg:p-7"
+          role="presentation"
+          onMouseDown={(event) => {
+            if (event.target === event.currentTarget) setDesktopBookingOpen(false);
+          }}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-label={`${copy.chooseYourRide} - ${activeVehicle.displayName}`}
+            className={`${montserrat.className} relative flex max-h-[min(91dvh,950px)] w-full max-w-[min(760px,91vw)] flex-col overflow-hidden rounded-[26px] bg-white text-black shadow-[0_32px_100px_rgba(0,0,0,.28)]`}
+          >
+            <button
+              type="button"
+              onClick={() => setDesktopBookingOpen(false)}
+              aria-label="Close booking"
+              className="absolute right-4 top-4 z-50 flex h-10 w-10 items-center justify-center rounded-full border border-black/10 bg-[#f7f7f7] text-black transition hover:scale-105 hover:bg-[#eeeeee] active:scale-95"
+            >
+              <svg viewBox="0 0 24 24" width="19" height="19" fill="none" aria-hidden="true">
+                <path d="M5 5l14 14M19 5 5 19" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+              </svg>
+            </button>
+            <div className="nexa-desktop-booking-scroll min-h-0 flex-1 overflow-y-auto overscroll-contain bg-white px-[clamp(24px,4vw,56px)] py-[clamp(36px,5vw,58px)] pr-[clamp(24px,5vw,65px)]">
+              <BookingPanelV3
+                key={`desktop-booking-${activeVehicle.id}`}
+                vehicleName={activeVehicle.displayName}
+                desktopModal
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       <GoogleReviewsV3 />
       <LocationV3 locale={showroomLocale} />

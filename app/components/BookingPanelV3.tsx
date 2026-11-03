@@ -52,6 +52,8 @@ type HotelSelection = {
   photos: string[];
   rating?: number;
   ratingCount?: number;
+  latitude?: number;
+  longitude?: number;
 };
 
 type AirbnbAddressDetails = {
@@ -83,6 +85,7 @@ type GooglePlaceResult = {
   displayName?: string;
   formattedAddress?: string;
   addressComponents?: GoogleAddressComponent[];
+  location?: { lat: number | (() => number); lng: number | (() => number) };
   googleMapsURI?: string;
   photos?: GooglePhoto[];
   rating?: number;
@@ -124,6 +127,8 @@ type BookingPanelV3Props = {
   vehicleName?: string;
   checkoutBasePath?: string;
   onPricingChange?: (pricing: SeasonalPricing) => void;
+  /** Desktop showroom popup only. Never changes the mobile booking route. */
+  desktopModal?: boolean;
 };
 
 type AvailabilityResult = {
@@ -2395,6 +2400,33 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
   });
 });
 
+const DELIVERY_DATE_LABELS: Record<Locale, { delivery: string; collection: string }> = {
+  en: { delivery: "Delivery date", collection: "Collection date" },
+  es: { delivery: "Fecha de entrega", collection: "Fecha de recogida" },
+  de: { delivery: "Lieferdatum", collection: "Abholdatum" },
+  fr: { delivery: "Date de livraison", collection: "Date de récupération" },
+  it: { delivery: "Data di consegna", collection: "Data di ritiro" },
+  nl: { delivery: "Bezorgdatum", collection: "Ophaaldatum" },
+  pl: { delivery: "Data dostawy", collection: "Data odbioru" },
+  sv: { delivery: "Leveransdatum", collection: "Hämtningsdatum" },
+  da: { delivery: "Leveringsdato", collection: "Afhentningsdato" },
+  no: { delivery: "Leveringsdato", collection: "Hentedato" },
+  pt: { delivery: "Data de entrega", collection: "Data de recolha" },
+  cs: { delivery: "Datum doručení", collection: "Datum vyzvednutí" },
+  sr: { delivery: "Datum dostave", collection: "Datum preuzimanja" },
+  uk: { delivery: "Дата доставки", collection: "Дата забору" },
+};
+
+const BOOKING_LANGUAGES: { code: Locale; flag: string; name: string }[] = [
+  {code:"en",flag:"🇬🇧",name:"English"},{code:"es",flag:"🇪🇸",name:"Español"},
+  {code:"de",flag:"🇩🇪",name:"Deutsch"},{code:"fr",flag:"🇫🇷",name:"Français"},
+  {code:"it",flag:"🇮🇹",name:"Italiano"},{code:"nl",flag:"🇳🇱",name:"Nederlands"},
+  {code:"pl",flag:"🇵🇱",name:"Polski"},{code:"sv",flag:"🇸🇪",name:"Svenska"},
+  {code:"da",flag:"🇩🇰",name:"Dansk"},{code:"no",flag:"🇳🇴",name:"Norsk"},
+  {code:"pt",flag:"🇵🇹",name:"Português"},{code:"cs",flag:"🇨🇿",name:"Čeština"},
+  {code:"sr",flag:"🇷🇸",name:"Srpski"},{code:"uk",flag:"🇺🇦",name:"Українська"},
+];
+
 const DEFAULT_PICKUP_LOCATION = "NEXA Rentals, Magaluf";
 const KYMCO_SKY_TOWN_PRICE_INCREASE = 10;
 const AIRPORT_DELIVERY_FEE = 29;
@@ -2464,7 +2496,7 @@ const HOTEL_AREA_LOCALITIES: Record<string, string[]> = {
   torrenova: ["Torrenova", "Magaluf"],
   "cala-vinyes": ["Cala Vinyes", "Cala Vinyas"],
   "son-caliu": ["Son Caliu"],
-  "el-toro": ["El Toro"],
+  "el-toro": ["El Toro", "Port Adriano"],
   "portals-nous": ["Portals Nous"],
   "costa-den-blanes": ["Costa d'en Blanes", "Costa den Blanes"],
   illetes: ["Illetes", "Ses Illetes"],
@@ -2521,7 +2553,7 @@ function loadGooglePlacesLibrary() {
 
     const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY;
 
-    if (!apiKey) {
+    if (!apiKey && !getGoogleMapsImporter()) {
       throw new Error("GOOGLE_PLACES_KEY_MISSING");
     }
 
@@ -2537,7 +2569,7 @@ function loadGooglePlacesLibrary() {
     if (!script && !getGoogleMapsImporter()) {
       script = document.createElement("script");
       script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(
-        apiKey
+        apiKey!
       )}&loading=async&v=weekly&libraries=places`;
       script.async = true;
       script.defer = true;
@@ -2963,14 +2995,16 @@ function isPlaceInsideDeliveryArea(
   components: GoogleAddressComponent[] | undefined,
   area: DeliveryArea
 ) {
-  const normalizedAddress = normalizePlaceText(formattedAddress);
-  const normalizedArea = normalizePlaceText(area.name);
-  const selectedPostcode = DELIVERY_AREA_POSTCODES[area.id];
-  const placePostcode = getAddressComponent(components, "postal_code");
-
-  return (
-    normalizedAddress.includes(normalizedArea) ||
-    (!!selectedPostcode && placePostcode === selectedPostcode)
+  const normalizedAddress = normalizePlaceText([
+    formattedAddress,
+    getAddressComponent(components, "locality"),
+    getAddressComponent(components, "sublocality"),
+  ].join(" "));
+  // Several neighbouring towns share a postcode. A matching postcode alone
+  // does not establish that a location belongs to the chosen town.
+  const localities = getHotelAreaLocalities(area);
+  return localities.some((name) =>
+    (` ${normalizedAddress} `).includes(` ${normalizePlaceText(name)} `)
   );
 }
 
@@ -2978,34 +3012,80 @@ function getHotelAreaLocalities(area: DeliveryArea) {
   return HOTEL_AREA_LOCALITIES[area.id] || [area.name];
 }
 
+// Match the chosen town using the specific locality, not the generic
+// "Palma" that Google appends to many Mallorca mailing addresses.
+// Google often lists Calvia hotels without their neighbourhood in the postal
+// address. Search results therefore use the Google Maps coordinates first,
+// rather than requiring the address to contain the exact area name.
+type HotelCoordinates = { latitude: number; longitude: number };
+
+function getPlaceCoordinates(place: GooglePlaceResult): HotelCoordinates | null {
+  const location = place.location;
+  if (!location) return null;
+  const latitude = typeof location.lat === "function" ? location.lat() : location.lat;
+  const longitude = typeof location.lng === "function" ? location.lng() : location.lng;
+  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) return null;
+  return { latitude, longitude };
+}
+
+function hotelDistanceKm(a: HotelCoordinates, b: HotelCoordinates) {
+  const toRadians = (degrees: number) => (degrees * Math.PI) / 180;
+  const dLat = toRadians(b.latitude - a.latitude);
+  const dLng = toRadians(b.longitude - a.longitude);
+  const x = Math.sin(dLat / 2) ** 2 +
+    Math.cos(toRadians(a.latitude)) * Math.cos(toRadians(b.latitude)) *
+    Math.sin(dLng / 2) ** 2;
+  return 6371 * 2 * Math.atan2(Math.sqrt(x), Math.sqrt(1 - x));
+}
+
+// These are *nearby-area tolerances*, not strict municipal boundaries.
+// Keep Palma separate so a hotel in Palma cannot be booked as El Toro.
+const HOTEL_NEARBY_RADIUS_KM: Record<string, number> = {
+  magaluf: 2.6, palmanova: 2.7, torrenova: 2.3,
+  "cala-vinyes": 2.8, "son-caliu": 2.4, "el-toro": 3.5,
+  "portals-nous": 2.5, "costa-den-blanes": 2.8,
+  illetes: 2.4, "sol-de-mallorca": 3.3, "portals-vells": 3.0,
+  "costa-de-la-calma": 2.8, peguera: 3.1, "cala-major": 2.7,
+  "santa-ponsa": 3.4, bendinat: 2.6, palma: 6.0,
+};
+
 function isHotelInsideSelectedArea(
   place: GooglePlaceResult,
-  area: DeliveryArea
+  area: DeliveryArea,
+  areaCenter: HotelCoordinates | null
 ) {
-  const addressParts = [place.formattedAddress || ""];
+  const normalizedAddress = ` ${normalizePlaceText(place.formattedAddress || "")} `;
+  const allowed = getHotelAreaLocalities(area).map(normalizePlaceText);
+  // If Google provides coordinates for both locations, distance is a much
+  // better guide than a shared postcode or generic municipality name.
+  const coords = getPlaceCoordinates(place);
+  if (areaCenter && coords) {
+    return hotelDistanceKm(areaCenter, coords) <=
+      (HOTEL_NEARBY_RADIUS_KM[area.id] ?? 2.8);
+  }
+  // Without the town centre Google may return generic "Calvia" postal
+  // addresses. Do not discard these from the results list before customers
+  // can identify their hotel. Final selection still requires verification.
+  return allowed.some((name) => normalizedAddress.includes(` ${name} `)) ||
+    (!areaCenter && !!coords && !/\b(cala d or|valldemossa|alcudia|manacor|inca|soller|pollenca|arta)\b/.test(normalizedAddress));
+}
 
-  (place.addressComponents || []).forEach((component) => {
-    if (
-      component.types?.some((type) =>
-        [
-          "locality",
-          "postal_town",
-          "sublocality",
-          "sublocality_level_1",
-          "neighborhood",
-        ].includes(type)
-      )
-    ) {
-      addressParts.push(component.longText || "", component.shortText || "");
-    }
-  });
-
-  const normalizedAddress = ` ${normalizePlaceText(addressParts.join(" "))} `;
-
-  return getHotelAreaLocalities(area).some((locality) => {
-    const normalizedLocality = normalizePlaceText(locality);
-    return normalizedAddress.includes(` ${normalizedLocality} `);
-  });
+function isHotelSelectionAllowed(
+  hotel: HotelSelection,
+  area: DeliveryArea,
+  areaCenter: HotelCoordinates | null
+) {
+  if (areaCenter && hotel.latitude !== undefined && hotel.longitude !== undefined) {
+    return hotelDistanceKm(areaCenter, {
+      latitude: hotel.latitude,
+      longitude: hotel.longitude,
+    }) <= (HOTEL_NEARBY_RADIUS_KM[area.id] ?? 2.8);
+  }
+  const address = ` ${normalizePlaceText(hotel.address)} `;
+  return getHotelAreaLocalities(area).some((name) =>
+    address.includes(` ${normalizePlaceText(name)} `)
+  ) || (!areaCenter && hotel.latitude !== undefined && hotel.longitude !== undefined &&
+    !/\b(cala d or|valldemossa|alcudia|manacor|inca|soller|pollenca|arta)\b/.test(address));
 }
 
 function googlePlaceToHotel(place: GooglePlaceResult): HotelSelection | null {
@@ -3014,6 +3094,7 @@ function googlePlaceToHotel(place: GooglePlaceResult): HotelSelection | null {
 
   if (!name || !address) return null;
 
+  const coordinates = getPlaceCoordinates(place);
   return {
     placeId: place.id || "",
     name,
@@ -3025,6 +3106,7 @@ function googlePlaceToHotel(place: GooglePlaceResult): HotelSelection | null {
       .filter(Boolean),
     rating: place.rating,
     ratingCount: place.userRatingCount,
+    ...(coordinates ? coordinates : {}),
   };
 }
 
@@ -3170,13 +3252,21 @@ function ServiceMethodButton({
 }) {
   if (officeMapsLink) {
     return (
-      <div className={[
-        "service-method-button group relative w-full overflow-hidden rounded-[8px] border border-transparent text-black transition-[color,box-shadow] duration-300",
+      <div
+        role="button"
+        tabIndex={0}
+        onClick={onClick}
+        onKeyDown={(event) => {
+          if (event.target === event.currentTarget && (event.key === "Enter" || event.key === " ")) {
+            event.preventDefault();
+            onClick();
+          }
+        }}
+        className={[
+        "service-method-button group relative w-full cursor-pointer overflow-hidden rounded-[8px] border border-transparent text-black transition-[color,box-shadow] duration-300",
         selected ? "service-method-selected" : "",
       ].join(" ")}>
-        <button
-          type="button"
-          onClick={onClick}
+        <div
           className="relative flex w-full items-center gap-3 px-4 pb-0 text-left sm:gap-4 sm:px-5"
           style={{ paddingTop: OFFICE_PICKUP_SPACING.topPadding }}
         >
@@ -3186,7 +3276,7 @@ function ServiceMethodButton({
             <span className="block text-[13px] font-black uppercase leading-snug tracking-normal sm:text-[15px]">{title} (Magaluf)</span>
           </span>
           <span className="service-method-arrow relative flex h-10 w-10 shrink-0 items-center justify-center rounded-[6px] border border-current/[0.14] text-[20px] font-medium transition-transform duration-300 group-hover:translate-x-1" aria-hidden="true">→</span>
-        </button>
+        </div>
         <div className="flex flex-col items-start pl-[92px] pr-4 sm:pl-[100px]"
           style={{ paddingTop: OFFICE_PICKUP_SPACING.titleToAddress, paddingBottom: OFFICE_PICKUP_SPACING.bottomPadding }}>
           <span className="block text-[12px] font-medium leading-5 text-black/60 group-hover:text-white/70">Carrer Galleon 13, Magaluf</span>
@@ -3306,8 +3396,7 @@ function DeliveryAreaPicker({
         aria-expanded={open}
       >
         <span
-          className="pointer-events-none absolute inset-[1px] z-0 rounded-[6px] bg-black"
-          style={{ backgroundColor: "#000000" }}
+          className="pointer-events-none absolute inset-[1px] z-0 rounded-[6px] bg-transparent"
           aria-hidden="true"
         />
 
@@ -3355,7 +3444,7 @@ function DeliveryAreaPicker({
           className="flex w-[min(680px,calc(100vw-24px))] flex-col overflow-hidden rounded-[18px] border border-black/10 bg-white text-black shadow-[0_32px_110px_rgba(0,0,0,0.38)]"
           style={{ maxHeight: "min(680px, calc(100svh - 24px))" }}
         >
-          <div className="flex shrink-0 items-start justify-between gap-4 border-b border-black/10 px-5 py-4">
+          <div className="flex shrink-0 items-start justify-between gap-3 border-b border-black/[0.07] px-5 py-4 max-md:px-4 max-md:py-4">
             <div>
               <div className="text-[9px] font-black uppercase tracking-[0.18em] text-black/42">
                 {tt.hotelAirbnbDelivery}
@@ -3443,6 +3532,7 @@ function DeliveryTimeModal({
   tt,
   onClose,
   onConfirm,
+  desktopModal = false,
 }: {
   open: boolean;
   pickupDate: Date;
@@ -3460,6 +3550,7 @@ function DeliveryTimeModal({
   tt: BookingPanelCopy;
   onClose: () => void;
   onConfirm: (value: string) => void;
+  desktopModal?: boolean;
 }) {
   const dialogRef = useRef<HTMLDialogElement | null>(null);
   const [slots, setSlots] = useState<DeliverySlotAvailability[]>([]);
@@ -3554,7 +3645,20 @@ function DeliveryTimeModal({
     tt.deliveryTimesError,
   ]);
 
-  const selectedSlot = slots.find(
+  // Desktop choices reflect the newly requested delivery windows.
+  // Never invent availability: only times returned by the live API are selectable.
+  const desktopDeliveryTimes = new Set([
+    "08:30", "09:00", "13:30", "14:00", "14:30", "15:00",
+    "19:30", "20:00", "20:30", "21:00",
+  ]);
+  const nowForDelivery = new Date();
+  const pickupIsToday = toISODate(pickupDate) === toISODate(nowForDelivery);
+  const earliestDeliveryMinutes = nowForDelivery.getHours() * 60 + nowForDelivery.getMinutes() + 60;
+  const visibleSlots = slots.filter((slot) =>
+    desktopDeliveryTimes.has(slot.time) &&
+    (!pickupIsToday || timeToMinutes(slot.time) >= earliestDeliveryMinutes)
+  );
+  const selectedSlot = visibleSlots.find(
     (slot) => slot.time === selectedTime && slot.available
   );
 
@@ -3579,10 +3683,10 @@ function DeliveryTimeModal({
             <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-black/45">
               {tt.liveDeliveryAvailability}
             </div>
-            <h2 className="mt-1 text-[24px] font-semibold tracking-[-0.025em]">
+            <h2 className="mt-1 text-[24px] font-semibold tracking-[-0.035em] max-md:text-[21px]">
               {tt.selectDeliveryTime}
             </h2>
-            <p className="mt-1 text-[11px] font-normal leading-5 text-black/55">
+            <p className="mt-1 text-[11px] font-normal leading-5 text-black/55 max-md:max-w-[275px]">
               {collectionRequired
                 ? replaceTokens(tt.deliveryCollectionSameTime, {
                     pickupDate: fmtDate(pickupDate, locale, ""),
@@ -3631,9 +3735,13 @@ function DeliveryTimeModal({
                 {tt.tryAgain}
               </button>
             </div>
+          ) : desktopModal && visibleSlots.length === 0 ? (
+            <div className="flex min-h-[180px] items-center justify-center px-4 text-center text-[12px] font-semibold text-black/60">
+              No delivery slots in the requested windows are available from the booking server for these dates.
+            </div>
           ) : (
             <div className="grid grid-cols-3 gap-2 sm:grid-cols-4 md:grid-cols-5">
-              {slots.map((slot) => {
+              {visibleSlots.map((slot) => {
                 const selected = selectedTime === slot.time && slot.available;
                 return (
                   <button
@@ -3686,7 +3794,7 @@ function DeliveryTimeModal({
             onClick={() => {
               if (selectedSlot) onConfirm(selectedSlot.time);
             }}
-            className="rounded-[8px] bg-black px-6 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#222] active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-black/32"
+            className="rounded-[10px] bg-gradient-to-r from-[#FFAC48] via-[#FF8B26] to-[#F46714] px-6 py-3 text-[11px] font-semibold uppercase tracking-[0.09em] text-white shadow-[0_8px_22px_rgba(239,109,22,0.19)] transition hover:brightness-105 active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-none disabled:bg-black/15 disabled:text-black/32 disabled:shadow-none"
           >
             {tt.confirmTime}
           </button>
@@ -3721,6 +3829,9 @@ function HotelSelectionModal({
   const [selectedHotel, setSelectedHotel] = useState<HotelSelection | null>(null);
   const [room, setRoom] = useState("");
   const [loading, setLoading] = useState(false);
+  const [hotelSearchError, setHotelSearchError] = useState(false);
+  const [hotelSearchFailure, setHotelSearchFailure] = useState("");
+  const [areaCenter, setAreaCenter] = useState<HotelCoordinates | null>(null);
   const [searchRetry, setSearchRetry] = useState(0);
   const [photoViewer, setPhotoViewer] = useState<{
     src: string;
@@ -3746,10 +3857,14 @@ function HotelSelectionModal({
 
   useEffect(() => {
     if (!open) return;
-    setSelectedHotel(initialSelection);
+    setSelectedHotel(
+      initialSelection && isHotelSelectionAllowed(initialSelection, area, areaCenter)
+        ? initialSelection : null
+    );
     setRoom(initialRoom);
     setQuery(initialSelection?.name || "");
     setSearchRetry(0);
+    setAreaCenter(null);
     setPhotoViewer(null);
     setPhotoZoom(1);
   }, [open, area.id, initialSelection, initialRoom]);
@@ -3758,65 +3873,128 @@ function HotelSelectionModal({
     if (!open) return;
 
     let cancelled = false;
-    let retryTimeout: number | null = null;
-    let shouldKeepLoading = false;
-    const timeout = window.setTimeout(async () => {
+    const timer = window.setTimeout(async () => {
       setLoading(true);
-
+      setHotelSearchError(false);
+      setHotelSearchFailure("");
       try {
-        const library = await loadGooglePlacesLibrary();
-        const textQuery = query.trim()
-          ? `${query.trim()} hotel in ${area.name}, Mallorca, Spain`
-          : `hotels in ${area.name}, Mallorca, Spain`;
-        const response = await library.Place.searchByText({
-          textQuery,
-          fields: [
-            "id",
-            "displayName",
-            "formattedAddress",
-            "addressComponents",
-            "googleMapsURI",
-            "photos",
-            "rating",
-            "userRatingCount",
-          ],
-          includedType: "hotel",
-          useStrictTypeFiltering: false,
-          maxResultCount: 15,
-          language: locale,
-          region: "ES",
-        });
+        const withTimeout = <T,>(promise: Promise<T>) =>
+          Promise.race([
+            promise,
+            new Promise<never>((_, reject) =>
+              window.setTimeout(() => reject(new Error("HOTEL_SEARCH_TIMEOUT")), 15000)
+            ),
+          ]);
+        const library = await withTimeout(loadGooglePlacesLibrary());
+        const fields = [
+          "id", "displayName", "formattedAddress", "addressComponents",
+          "location", "googleMapsURI", "photos", "rating", "userRatingCount",
+        ];
+        const findPlaces = (textQuery: string, requestedFields = fields) =>
+          withTimeout(library.Place.searchByText({
+            textQuery,
+            fields: requestedFields,
+            maxResultCount: 20,
+            language: locale,
+            region: "ES",
+          }));
 
+        // Resolve the centre of the selected town through Google itself. This
+        // allows hotels near a border or with a generic Calvia address, without
+        // accepting distant properties in Palma or elsewhere on Mallorca.
+        let center: HotelCoordinates | null = null;
+        try {
+          const centerName = area.id === "el-toro"
+            ? "El Toro, Calvia, Mallorca, Spain"
+            : `${area.name}, Mallorca, Spain`;
+          const place = (await findPlaces(centerName, ["location", "displayName", "formattedAddress"]))
+            .places[0];
+          center = place ? getPlaceCoordinates(place) : null;
+        } catch (error) {
+          console.warn("NEXA hotel area lookup unavailable:", error);
+        }
         if (cancelled) return;
+        setAreaCenter(center);
 
-        const hotels = response.places
-          .filter((place) => isHotelInsideSelectedArea(place, area))
-          .map(googlePlaceToHotel)
-          .filter((hotel): hotel is HotelSelection => !!hotel);
-        setResults(hotels);
-      } catch {
-        if (cancelled) return;
-        setResults([]);
-        shouldKeepLoading = true;
-        retryTimeout = window.setTimeout(() => {
-          if (!cancelled) setSearchRetry((current) => current + 1);
-        }, 900);
+        const userQuery = query.trim();
+        const searches = userQuery
+          ? [
+              `${userQuery} Mallorca Spain`,
+              `${userQuery} ${area.name} Calvia Mallorca`,
+            ]
+          : area.id === "el-toro"
+            ? [
+                "hotels near El Toro Calvia Mallorca",
+                "hotels near Port Adriano Mallorca",
+              ]
+            : [
+                `hotels near ${area.name} Mallorca Spain`,
+                `hotel accommodation ${area.name} Mallorca`,
+              ];
+
+        // Use Google listings as returned, without the previously over-strict
+        // 'hotel' type restriction (which excluded many resorts and spas).
+        const all = new Map<string, HotelSelection>();
+        let succeeded = false;
+        let lastSearchError: unknown = null;
+        for (const search of searches) {
+          try {
+            // Some keys reject optional expensive photo/review fields. Retry
+            // with basic details instead of losing the entire hotel list.
+            let response;
+            try {
+              response = await findPlaces(search);
+            } catch {
+              response = await findPlaces(search, [
+                "id", "displayName", "formattedAddress", "location", "googleMapsURI",
+              ]);
+            }
+            succeeded = true;
+            if (cancelled) return;
+            for (const place of response.places || []) {
+              if (!isHotelInsideSelectedArea(place, area, center)) continue;
+              const hotel = googlePlaceToHotel(place);
+              if (hotel && isHotelSelectionAllowed(hotel, area, center)) {
+                all.set(hotel.placeId || hotel.name, hotel);
+              }
+            }
+            if (userQuery && all.size > 0) break;
+          } catch (error) {
+            lastSearchError = error;
+            console.warn("NEXA individual hotel lookup failed:", search, error);
+          }
+        }
+        if (!succeeded && lastSearchError) throw lastSearchError;
+        if (!cancelled) setResults([...all.values()]);
+      } catch (error) {
+        if (!cancelled) {
+          console.warn("NEXA hotel search unavailable:", error);
+          setResults([]);
+          setHotelSearchError(true);
+          const code = error instanceof Error ? error.message : String(error);
+          // A Google key restricted to localhost will not work from a phone
+          // opened at http://192.168.x.x:3000. Show a useful diagnostic.
+          setHotelSearchFailure(
+            /RefererNotAllowed|REQUEST_DENIED|ApiNotActivated|BillingNotEnabled|GOOGLE_PLACES_KEY_MISSING|GOOGLE_PLACES_READY_TIMEOUT|HOTEL_SEARCH_TIMEOUT|403|permission/i.test(code)
+              ? `${tt.addressSearchUnavailable} Google Maps access failed on this device. Check the API key's website restrictions and Places API permissions.`
+              : `${tt.addressSearchUnavailable} Please retry. (${code.slice(0, 100)})`
+          );
+        }
       } finally {
-        if (!cancelled && !shouldKeepLoading) setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }, query.trim() ? 320 : 0);
 
     return () => {
       cancelled = true;
-      window.clearTimeout(timeout);
-      if (retryTimeout !== null) window.clearTimeout(retryTimeout);
+      window.clearTimeout(timer);
     };
   }, [open, area.id, area.name, locale, query, searchRetry]);
 
   return (
     <dialog
       ref={dialogRef}
-      className="nexa-accommodation-dialog fixed inset-0 m-0 h-[100dvh] w-screen max-h-none max-w-none overflow-hidden border-0 bg-transparent p-3 text-black"
+      className="nexa-accommodation-dialog fixed inset-0 m-0 h-[100dvh] w-screen max-h-none max-w-none overflow-hidden border-0 bg-transparent p-3 text-black max-md:p-0"
       onCancel={(event) => {
         event.preventDefault();
         onClose();
@@ -3826,9 +4004,9 @@ function HotelSelectionModal({
       }}
     >
       <div
-        className="nexa-hotel-modal-content flex w-[min(920px,calc(100vw-24px))] flex-col overflow-hidden rounded-[14px] border border-black/10 bg-white shadow-[0_34px_120px_rgba(0,0,0,0.42)]"
+        className="nexa-hotel-modal-content flex w-[min(920px,calc(100vw-24px))] flex-col overflow-hidden rounded-[14px] border border-black/10 bg-white shadow-[0_34px_120px_rgba(0,0,0,0.42)] max-md:w-full max-md:rounded-[22px] max-md:border-x-0 max-md:px-0 max-md:shadow-none"
         style={{
-          maxHeight: "min(760px, calc(100svh - 24px))",
+          maxHeight: "min(760px, calc(100dvh - 24px))",
           fontFamily:
             'Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
         }}
@@ -3838,7 +4016,7 @@ function HotelSelectionModal({
             <div className="text-[9px] font-semibold uppercase tracking-[0.16em] text-black/45">
               {replaceTokens(tt.hotelDeliveryArea, { area: area.name })}
             </div>
-            <h2 className="mt-1 text-[24px] font-semibold tracking-[-0.025em]">
+            <h2 className="mt-1 text-[clamp(19px,5vw,24px)] font-medium leading-tight tracking-[-0.035em]" style={{ fontFamily: 'Inter, ui-sans-serif, system-ui, -apple-system, sans-serif' }}>
               {tt.selectHotelTitle}
             </h2>
             <p className="mt-1 text-[11px] font-normal leading-5 text-black/55">
@@ -3854,7 +4032,7 @@ function HotelSelectionModal({
           </button>
         </div>
 
-        <div className="shrink-0 border-b border-black/10 p-4">
+        <div className="shrink-0 border-b border-black/[0.07] p-4 max-md:px-4 max-md:py-3">
           <label className="block text-[9px] font-semibold uppercase tracking-[0.14em] text-black/50">
             {tt.searchHotelName}
           </label>
@@ -3875,15 +4053,15 @@ function HotelSelectionModal({
                 setQuery(event.target.value);
                 setSelectedHotel(null);
               }}
-              autoFocus
+              autoFocus={false}
               placeholder={replaceTokens(tt.hotelPlaceholder, { area: area.name })}
-              className="h-14 w-full rounded-[9px] border border-black/12 bg-black/[0.025] pl-12 pr-4 text-[14px] font-medium outline-none transition focus:border-black focus:bg-white focus:shadow-[0_10px_30px_rgba(0,0,0,0.09)]"
+              className="h-14 w-full rounded-[12px] border border-black/10 bg-[#FAFAFA] pl-12 pr-4 text-[16px] font-normal text-black outline-none transition focus:border-[#FF8B26] focus:bg-white focus:ring-2 focus:ring-orange-100"
             />
           </div>
         </div>
 
-        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto lg:grid-cols-[0.9fr_1.1fr]">
-          <div className="border-b border-black/10 p-3 lg:border-b-0 lg:border-r">
+        <div className="grid min-h-0 flex-1 grid-cols-1 overflow-y-auto overscroll-contain lg:grid-cols-[0.9fr_1.1fr] max-md:content-start">
+          <div className="border-b border-black/[0.07] p-3 lg:border-b-0 lg:border-r max-md:px-4 max-md:py-3">
             <div className="mb-2 flex items-center justify-between px-1">
               <span className="text-[9px] font-semibold uppercase tracking-[0.14em] text-black/45">
                 {query.trim() ? tt.bestMatches : tt.hotelsNearby}
@@ -3904,6 +4082,15 @@ function HotelSelectionModal({
                   </span>
                 </div>
               ) : null}
+              {!loading && hotelSearchError ? (
+                <div className="rounded-[9px] border border-orange-200 bg-orange-50 p-4 text-[11px] font-medium leading-5 text-black/70">
+                  <p>{hotelSearchFailure || tt.addressSearchUnavailable}</p>
+                  <button type="button" onClick={() => setSearchRetry((value) => value + 1)}
+                    className="mt-3 rounded-lg bg-orange-500 px-4 py-2 font-semibold text-white transition hover:bg-orange-600 active:scale-[0.97]">
+                    {tt.tryAgain}
+                  </button>
+                </div>
+              ) : null}
               {results.map((hotel) => {
                 const selected = selectedHotel?.placeId === hotel.placeId;
                 return (
@@ -3912,17 +4099,17 @@ function HotelSelectionModal({
                     type="button"
                     onClick={() => setSelectedHotel(hotel)}
                     className={[
-                      "w-full rounded-[8px] border px-3 py-3 text-left transition active:scale-[0.985]",
+                      "w-full rounded-[12px] border px-3.5 py-3.5 text-left transition active:scale-[0.985]",
                       selected
-                        ? "border-black bg-black text-white shadow-[0_12px_28px_rgba(0,0,0,0.18)]"
-                        : "border-black/8 bg-black/[0.025] text-black hover:border-black/20 hover:bg-black/[0.055]",
+                        ? "border-[#F47719] bg-[#FFF5EB] text-black ring-1 ring-[#F47719]"
+                        : "border-black/[0.07] bg-white text-black hover:border-orange-300 hover:bg-orange-50/40",
                     ].join(" ")}
                   >
                     <span className="block text-[12px] font-semibold leading-5">{hotel.name}</span>
                     <span
                       className={[
                         "mt-1 block text-[10px] font-normal leading-4",
-                        selected ? "text-white/65" : "text-black/48",
+                        selected ? "text-black/65" : "text-black/48",
                       ].join(" ")}
                     >
                       {hotel.address}
@@ -3930,7 +4117,7 @@ function HotelSelectionModal({
                   </button>
                 );
               })}
-              {!loading && results.length === 0 ? (
+              {!loading && !hotelSearchError && results.length === 0 ? (
                 <div className="rounded-[9px] border border-black/8 bg-black/[0.025] p-4 text-[11px] font-normal leading-5 text-black/50">
                   {replaceTokens(tt.noHotelsFound, { area: area.name })}
                 </div>
@@ -4030,22 +4217,24 @@ function HotelSelectionModal({
                 ) : null}
               </>
             ) : (
-              <div className="flex min-h-[260px] items-center justify-center text-center text-[12px] font-normal leading-5 text-black/45">
+              <div className="flex min-h-[120px] items-center justify-center text-center text-[12px] font-normal leading-5 text-black/45 lg:min-h-[260px]">
                 {tt.selectHotelResultHelp}
               </div>
             )}
           </div>
         </div>
 
-        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-black/10 bg-white px-4 py-3">
+        <div className="flex shrink-0 items-center justify-between gap-3 border-t border-black/[0.08] bg-white px-4 py-3 max-md:pb-[max(12px,env(safe-area-inset-bottom))]">
           <div className="text-[9px] font-normal text-black/45">
             {tt.googleMapsInfo}
           </div>
           <button
             type="button"
-            disabled={!selectedHotel}
+            disabled={!selectedHotel || !isHotelSelectionAllowed(selectedHotel, area, areaCenter)}
             onClick={() => {
-              if (selectedHotel) onConfirm(selectedHotel, room.trim());
+              if (selectedHotel && isHotelSelectionAllowed(selectedHotel, area, areaCenter)) {
+                onConfirm(selectedHotel, room.trim());
+              }
             }}
             className="rounded-[8px] bg-black px-6 py-3 text-[10px] font-semibold uppercase tracking-[0.12em] text-white transition hover:bg-[#222] active:scale-[0.97] disabled:cursor-not-allowed disabled:bg-black/15 disabled:text-black/32"
           >
@@ -4511,6 +4700,7 @@ function PlanButton({
   needsChoice,
   popular,
   popularLabel,
+  bestValueLabel,
   onClick,
 }: {
   selected: boolean;
@@ -4521,6 +4711,7 @@ function PlanButton({
   needsChoice: boolean;
   popular?: boolean;
   popularLabel?: string;
+  bestValueLabel?: string;
   onClick: () => void;
 }) {
   return (
@@ -4540,8 +4731,14 @@ function PlanButton({
       ].join(" ")}
     >
       {popular ? (
-        <span className="absolute left-1/2 top-[-10px] -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#ec4899,#d946ef,#7c3aed,#38bdf8)] px-3 py-1 text-center text-[7.5px] font-black uppercase leading-none tracking-[0.14em] text-white shadow-[0_10px_26px_rgba(168,85,247,0.34)]">
+        <span className="absolute left-1/2 top-[-10px] -translate-x-1/2 rounded-full bg-[linear-gradient(135deg,#ec4899,#d946ef,#7c3aed,#38bdf8)] px-3 py-1 text-center text-[7.5px] font-black uppercase leading-none tracking-[0.14em] text-white shadow-none">
           {popularLabel}
+        </span>
+      ) : null}
+
+      {bestValueLabel ? (
+        <span className="absolute left-1/2 top-[-10px] -translate-x-1/2 whitespace-nowrap rounded-full bg-[linear-gradient(110deg,#064e3b,#0f9b78,#22c55e)] px-3 py-1 text-[7.5px] font-black uppercase leading-none tracking-[0.12em] text-white shadow-none">
+          {bestValueLabel}
         </span>
       ) : null}
 
@@ -4942,6 +5139,24 @@ function CalendarModal({
 }
 
 
+// DESKTOP POPUP ONLY: labels for the streamlined second step.
+const DESKTOP_BOOKING_LABELS: Record<Locale, { selectedVehicle: string; bestValue: string }> = {
+  en: { selectedVehicle: "Selected vehicle", bestValue: "Best Value" },
+  es: { selectedVehicle: "Vehículo seleccionado", bestValue: "Mejor precio" },
+  de: { selectedVehicle: "Gewählter Roller", bestValue: "Bestes Angebot" },
+  fr: { selectedVehicle: "Véhicule sélectionné", bestValue: "Meilleur rapport qualité-prix" },
+  it: { selectedVehicle: "Veicolo selezionato", bestValue: "Miglior prezzo" },
+  nl: { selectedVehicle: "Geselecteerd voertuig", bestValue: "Beste waarde" },
+  pl: { selectedVehicle: "Wybrany pojazd", bestValue: "Najlepsza oferta" },
+  sv: { selectedVehicle: "Valt fordon", bestValue: "Bäst värde" },
+  da: { selectedVehicle: "Valgt køretøj", bestValue: "Bedste værdi" },
+  no: { selectedVehicle: "Valgt kjøretøy", bestValue: "Beste verdi" },
+  pt: { selectedVehicle: "Veículo selecionado", bestValue: "Melhor oferta" },
+  cs: { selectedVehicle: "Vybrané vozidlo", bestValue: "Nejlepší nabídka" },
+  sr: { selectedVehicle: "Izabrano vozilo", bestValue: "Najbolja ponuda" },
+  uk: { selectedVehicle: "Обраний транспорт", bestValue: "Найкраща пропозиція" },
+};
+
 // The same visual booking-stage indicator is kept local to each replacement file.
 const NEXA_PROGRESS_LABELS: Record<string, string[]> = {
   "en": ["Select dates", "Scan documents", "Details & payment"],
@@ -5009,9 +5224,11 @@ export default function BookingPanelV3({
   vehicleName = "Piaggio Liberty 125",
   checkoutBasePath,
   onPricingChange,
+  desktopModal = false,
 }: BookingPanelV3Props) {
   const rawLocale = useLocale();
-  const locale = normalizeLocale(rawLocale);
+  const [bookingLocale, setBookingLocale] = useState<Locale | null>(null);
+  const locale = bookingLocale ?? normalizeLocale(rawLocale);
   const tt = I18N[locale] || EN_COPY;
   const router = useRouter();
 
@@ -5072,6 +5289,26 @@ export default function BookingPanelV3({
       window.clearTimeout(timer);
     };
   }, [mobileBooking, serviceMethod, plan, pickupDate]);
+  // DESKTOP POPUP ONLY: bring the checkout action into the modal viewport after office auto-selection.
+  // This scrolls the popup content, never the background page, and runs once per selection.
+  const desktopCheckoutAutoScrollDoneRef = useRef(false);
+  useEffect(() => {
+    if (!desktopModal || mobileBooking || serviceMethod !== "office") {
+      desktopCheckoutAutoScrollDoneRef.current = false;
+      return;
+    }
+    if (!plan || !pickupDate || desktopCheckoutAutoScrollDoneRef.current) return;
+    const timer = window.setTimeout(() => {
+      const button = mobileOfficeCheckoutButtonRef.current;
+      const scroller = button?.closest<HTMLElement>(".nexa-desktop-booking-scroll");
+      if (!button || !scroller || desktopCheckoutAutoScrollDoneRef.current) return;
+      const limit = scroller.getBoundingClientRect().bottom - 20;
+      const delta = button.getBoundingClientRect().bottom - limit;
+      if (delta > 2) scroller.scrollBy({ top: delta, behavior: "smooth" });
+      desktopCheckoutAutoScrollDoneRef.current = true;
+    }, 550);
+    return () => window.clearTimeout(timer);
+  }, [desktopModal, mobileBooking, serviceMethod, plan, pickupDate]);
   const [dropoffDate, setDropoffDate] = useState<Date | undefined>();
   const [pickupTime, setPickupTime] = useState("10:00");
   const [halfReturnTime, setHalfReturnTime] = useState("20:00");
@@ -5110,8 +5347,10 @@ export default function BookingPanelV3({
 
   const officeScheduleDate = pickupDate || minBookableDate;
   const officeTimeOptionsBase = useMemo(
-    () => buildOfficeTimeOptions(officeScheduleDate),
-    [officeScheduleDate]
+    () => desktopModal && !mobileBooking
+      ? buildTimeOptions(9, 30, 20, 0, 30)
+      : buildOfficeTimeOptions(officeScheduleDate),
+    [officeScheduleDate, desktopModal, mobileBooking]
   );
   const sameDayPickupOptionsBase = useMemo(
     () => officeTimeOptionsBase.filter((option) => option !== "20:00"),
@@ -5147,9 +5386,6 @@ export default function BookingPanelV3({
   const isDeliveryService =
     serviceMethod === "hotel_delivery" || serviceMethod === "airport_delivery";
 
-  const winterOfficeScheduleActive =
-    serviceMethod === "office" && isWinterDeliveryDate(officeScheduleDate);
-
   const selectedServiceLabel =
     serviceMethod === "office"
       ? tt.officePickup
@@ -5165,6 +5401,11 @@ export default function BookingPanelV3({
         ? 30
         : selectedDeliveryArea?.slotMinutes || 10;
 
+    // The same approved delivery windows apply to desktop and mobile.
+    // Live availability from the API still decides which slots can be selected.
+    if (serviceMethod === "hotel_delivery") {
+      return ["08:30", "09:00", "13:30", "14:00", "14:30", "15:00", "19:30", "20:00", "20:30", "21:00"];
+    }
     return buildTimeOptions(11, 30, 17, 30, stepMinutes);
   }, [serviceMethod, selectedDeliveryArea]);
 
@@ -5693,7 +5934,7 @@ export default function BookingPanelV3({
     clearPlanAttentionTimers();
     setPlanAttention(false);
     setServiceMethod(nextMethod);
-    setMobileDeliveryPlanReady(false);
+    setMobileDeliveryPlanReady(nextMethod === "hotel_delivery");
     setPickupDate(undefined);
     setDropoffDate(undefined);
     setPickupTime(nextMethod === "office" ? "09:30" : "11:30");
@@ -5717,9 +5958,12 @@ export default function BookingPanelV3({
     setActiveDateField("pickup");
 
     if (nextMethod === "office") {
-      if (mobileBooking) {
+      if (mobileBooking || desktopModal) {
         const defaultDate = getMobileOfficeDefaultDate();
-        const slots = filterTimesForDate(buildOfficeTimeOptions(defaultDate), defaultDate);
+        const slots = filterTimesForDate(
+          desktopModal && !mobileBooking ? buildTimeOptions(9, 30, 20, 0, 30) : buildOfficeTimeOptions(defaultDate),
+          defaultDate
+        );
         const defaultPickupTime = slots[0] || "09:30";
         const resolvedDate = slots.length ? defaultDate : addDays(defaultDate, 1);
         setPlan("half");
@@ -5741,7 +5985,7 @@ export default function BookingPanelV3({
     setNotice("");
     // Desktop keeps its existing automatic calendar flow.
     // Mobile reveals the plan first, and opens the calendar on confirmation.
-    setCalendarOpen(!mobileBooking);
+    setCalendarOpen(!mobileBooking && !desktopModal);
   }
 
   function handleChangeServiceMethod() {
@@ -5797,12 +6041,15 @@ export default function BookingPanelV3({
       setCalendarOpen(true);
       return;
     }
-    if (mobileBooking && serviceMethod === "office") {
+    if ((mobileBooking || desktopModal) && serviceMethod === "office") {
       clearPlanAttentionTimers();
       setPlanAttention(false);
       setPlan(nextPlan);
       const selectedDate = pickupDate || getMobileOfficeDefaultDate();
-      const slots = filterTimesForDate(buildOfficeTimeOptions(selectedDate), selectedDate);
+      const slots = filterTimesForDate(
+        desktopModal && !mobileBooking ? buildTimeOptions(9, 30, 20, 0, 30) : buildOfficeTimeOptions(selectedDate),
+        selectedDate
+      );
       const resolvedDate = slots.length ? selectedDate : addDays(selectedDate, 1);
       setPickupDate(resolvedDate);
       setPickupTime(slots[0] || "09:30");
@@ -5814,7 +6061,7 @@ export default function BookingPanelV3({
       setActiveTimeField(null);
       setActiveDateField("pickup");
       setViewMonth(startOfMonth(resolvedDate));
-      setCalendarOpen(true);
+      setCalendarOpen(!desktopModal);
       return;
     }
     clearPlanAttentionTimers();
@@ -6110,8 +6357,22 @@ export default function BookingPanelV3({
     notice === tt.noTimesToday;
 
   return (
-    <div data-mobile-ready={mobileBooking ? "true" : "false"} data-service-method={serviceMethod || ""} className="nexa-booking-panel-v3 relative z-20 w-full rounded-[20px] border border-black/10 bg-white p-4 text-black shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
+    <div data-mobile-ready={mobileBooking ? "true" : "false"} data-service-method={serviceMethod || ""} data-desktop-modal={desktopModal ? "true" : "false"} className="nexa-booking-panel-v3 relative z-20 w-full rounded-[20px] border border-black/10 bg-white p-4 text-black shadow-[0_24px_70px_rgba(0,0,0,0.24)]">
       <style jsx global>{`
+        /* Light, premium typography for date picker and delivery flow across devices. */
+        .nexa-calendar-dialog .font-black,
+        .nexa-calendar-dialog .font-extrabold,
+        .nexa-accommodation-dialog .font-black,
+        .nexa-accommodation-dialog .font-extrabold,
+        .nexa-area-dialog .font-black,
+        .nexa-booking-panel-v3[data-service-method="hotel_delivery"] .font-black,
+        .nexa-booking-panel-v3[data-service-method="hotel_delivery"] .font-extrabold {
+          font-weight: 650 !important;
+        }
+        .nexa-calendar-dialog .nexa-calendar-card button,
+        .nexa-calendar-dialog .nexa-calendar-card select {
+          font-weight: 600 !important;
+        }
         .nexa-booking-panel-v3 {
           max-width: 410px;
         }
@@ -6130,6 +6391,15 @@ export default function BookingPanelV3({
           .nexa-booking-panel-v3 .mobile-booking-plans > * { min-width: 0; border-radius: 16px; }
           .nexa-booking-panel-v3 .nexa-calendar-dialog { border-radius: 22px; }
 
+        }
+        @media (max-width: 767px) {
+          .nexa-accommodation-dialog[open] {
+            padding: max(8px, env(safe-area-inset-top)) 0 max(8px, env(safe-area-inset-bottom)) !important;
+          }
+          .nexa-accommodation-dialog .nexa-hotel-modal-content {
+            max-height: calc(100dvh - max(16px, env(safe-area-inset-top)) - max(16px, env(safe-area-inset-bottom))) !important;
+          }
+          .nexa-accommodation-dialog input { font-size: 16px !important; }
         }
         .nexa-calendar-dialog[open],
         .nexa-area-dialog[open],
@@ -6849,6 +7119,286 @@ export default function BookingPanelV3({
             animation: none !important;
           }
         }
+
+        /* DESKTOP CALENDAR ONLY: match the mobile orange range and keep the months independently scrollable. */
+        @media (min-width: 1024px) {
+          .nexa-calendar-dialog[open] .nexa-calendar-card {
+            height: min(730px, calc(100dvh - 44px)) !important;
+            max-height: calc(100dvh - 44px) !important;
+            min-height: 0 !important;
+            display: flex !important;
+            flex-direction: column !important;
+            overflow: hidden !important;
+          }
+          .nexa-calendar-dialog[open] .calendar-months-scroll {
+            height: 0 !important;
+            flex: 1 1 0% !important;
+            min-height: 0 !important;
+            max-height: none !important;
+            overflow-y: scroll !important;
+            overscroll-behavior-y: contain !important;
+            scrollbar-width: auto !important;
+            scrollbar-color: #f58220 #fff0e2 !important;
+          }
+          .nexa-calendar-dialog[open] .calendar-months-scroll::-webkit-scrollbar { width: 10px !important; }
+          .nexa-calendar-dialog[open] .calendar-months-scroll::-webkit-scrollbar-track { background: #fff0e2 !important; border-radius: 10px; }
+          .nexa-calendar-dialog[open] .calendar-months-scroll::-webkit-scrollbar-thumb { background: #f58220 !important; border-radius: 10px; }
+          .nexa-calendar-dialog[open] .nexa-calendar-endpoint {
+            background: linear-gradient(135deg, #f47719, #ff9b41) !important;
+            color: #fff !important;
+            box-shadow: 0 7px 20px rgba(245,130,32,.27) !important;
+          }
+          .nexa-calendar-dialog[open] .nexa-calendar-between {
+            background: #ffead7 !important;
+            color: #a74a09 !important;
+          }
+          .nexa-calendar-dialog[open] .nexa-calendar-confirm:not(:disabled) {
+            background: linear-gradient(110deg,#ef6818,#ff9b3c) !important;
+            color: #fff !important;
+            box-shadow: 0 9px 23px rgba(245,130,32,.22) !important;
+          }
+          /* The office card itself is clickable, even below its heading. */
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-button[role="button"] {
+            cursor: pointer !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-button[role="button"]:active {
+            transform: translateY(2px) scale(.985) !important;
+            box-shadow: 0 3px 12px rgba(248,128,42,.14) !important;
+          }
+        }
+
+        /* DESKTOP SHOWROOM MODAL ONLY. Mobile booking is not affected. */
+        @media (min-width: 1024px) {
+          .nexa-booking-panel-v3[data-desktop-modal="true"] {
+            max-width: none !important;
+            width: 100% !important;
+            border: 0 !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            background: #fff !important;
+            box-shadow: none !important;
+            font-family: inherit !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"][data-service-method]:not([data-service-method=""]) .mobile-booking-vehicle {
+            margin-top: 2px !important;
+            margin-bottom: 20px !important;
+            padding: 17px 20px !important;
+            background: #fafafa !important;
+            border: 1px solid #ededed !important;
+            border-radius: 16px !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"][data-service-method]:not([data-service-method=""]) .mobile-booking-plans {
+            gap: 16px !important;
+            margin-top: 26px !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-booking-plans .plan-choice-button {
+            min-height: 128px !important;
+            padding: 18px !important;
+            font-family: inherit !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices {
+            margin: 0 !important;
+            padding: 0 !important;
+            font-family: inherit !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices > div:first-child {
+            font-size: clamp(15px, 1.45vw, 19px) !important;
+            font-weight: 800 !important;
+            letter-spacing: -.015em !important;
+            text-transform: none !important;
+            color: #161616 !important;
+            margin: 0 0 22px !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"][data-service-method=""] > :not(.mobile-service-choices):not(style) {
+            display: none !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices > .grid {
+            gap: 16px !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-button {
+            border-radius: 18px !important;
+            border: 1px solid #e9e9e9 !important;
+            background: #fff !important;
+            min-height: 112px !important;
+            box-shadow: 0 5px 19px rgba(0,0,0,.045) !important;
+            color: #171717 !important;
+            transition: transform .2s ease, border-color .2s ease, box-shadow .2s ease !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-button:hover {
+            transform: translateY(-2px) !important;
+            border-color: #fb9a4c !important;
+            box-shadow: 0 12px 28px rgba(248,128,42,.11) !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-button:active {
+            transform: translateY(1px) scale(.99) !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-button :is(span,button) {
+            font-family: inherit !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-icon {
+            background: #fff6ef !important;
+            border-color: #ffdfc7 !important;
+            color: #e77825 !important;
+            border-radius: 12px !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-arrow {
+            border-radius: 10px !important;
+            background: #fafafa !important;
+            border-color: #e8e8e8 !important;
+            color: #171717 !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-button .group-hover\:text-white\/70 {
+            color: #666 !important;
+          }
+          /* Desktop choice cards stay sharp and steady even before hover. */
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices,
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices *,
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .service-method-button {
+            filter: none !important;
+            -webkit-filter: none !important;
+            backdrop-filter: none !important;
+            -webkit-backdrop-filter: none !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-button {
+            animation: none !important;
+            will-change: auto !important;
+            opacity: 1 !important;
+            transform: none !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-button:hover {
+            animation: none !important;
+            transform: translateY(-2px) !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-service-choices .service-method-shine {
+            display: none !important;
+            animation: none !important;
+          }
+          /* The desktop plan and checkout CTA match the approved mobile orange styling. */
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-booking-plans .plan-choice-button.plan-selected {
+            background: linear-gradient(135deg,#fffaf5,#fff1e4) !important;
+            border: 2px solid #f58220 !important;
+            color: #141414 !important;
+            box-shadow: 0 5px 18px rgba(245,130,32,.13) !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-booking-plans .plan-choice-button.plan-selected > div,
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-booking-plans .plan-choice-button.plan-selected > div span {
+            color: #171717 !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .mobile-booking-plans .plan-choice-button.plan-popular > span:first-child {
+            background: linear-gradient(110deg,#f47719,#ff9c42) !important;
+            color: #fff !important;
+            white-space: nowrap !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .checkout-button-pulse:not(:disabled) {
+            background: linear-gradient(110deg,#ed6415,#ff9b3c) !important;
+            border-color: #f58220 !important;
+            color: #fff !important;
+            box-shadow: 0 12px 28px rgba(245,130,32,.29) !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .checkout-button-pulse:not(:disabled) .checkout-button-shine {
+            opacity: 1 !important;
+            animation: nexaMobileCheckoutSweep 3.1s ease-in-out infinite !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .checkout-button-pulse:not(:disabled) {
+            transform-origin: center;
+            transition: transform 190ms cubic-bezier(.2,.8,.2,1), filter 190ms ease, box-shadow 190ms ease !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .checkout-button-pulse:not(:disabled):hover {
+            transform: translateY(-2px) scale(1.025) !important;
+            filter: brightness(1.07) !important;
+            box-shadow: 0 18px 38px rgba(245,130,32,.36) !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .checkout-button-pulse:not(:disabled):active {
+            transform: translateY(1px) scale(.975) !important;
+            filter: brightness(.98) !important;
+            box-shadow: 0 5px 12px rgba(245,130,32,.20) !important;
+            transition-duration: 75ms !important;
+          }
+          .nexa-booking-panel-v3[data-desktop-modal="true"] .checkout-button-pulse:not(:disabled):hover .checkout-button-shine {
+            opacity: 1 !important;
+            animation: nexaMobileCheckoutSweep 2.2s ease-in-out infinite !important;
+          }
+        }
+
+        /* Refined desktop/mobile booking presentation: no purple borders or badge glow. */
+        .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-popular {
+          border: 1.5px solid #f58220 !important;
+          background: #fff !important;
+          box-shadow: none !important;
+        }
+        .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-popular.plan-selected {
+          border: 2px solid #f58220 !important;
+          background: linear-gradient(135deg,#fffaf5,#fff1e4) !important;
+          box-shadow: none !important;
+        }
+        .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-popular > span:first-child,
+        .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button.plan-secondary > span:first-child {
+          box-shadow: none !important;
+          filter: none !important;
+        }
+        /* Reduce visual weight while retaining clear, readable labels and prices. */
+        .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button > div:first-of-type {
+          font-weight: 700 !important;
+        }
+        .nexa-booking-panel-v3 .mobile-booking-plans .plan-choice-button > div:nth-of-type(2) span:last-child {
+          font-weight: 750 !important;
+        }
+        .nexa-booking-panel-v3 .mobile-booking-vehicle :is(.font-black),
+        .nexa-booking-panel-v3 .mobile-booking-plans ~ :is(div,section) .font-black {
+          font-weight: 700 !important;
+        }
+        /* Hotel and destination controls share the premium warm orange palette. */
+        .nexa-booking-panel-v3 .delivery-area-trigger {
+          color: #fff !important;
+          background: linear-gradient(110deg,#f47719,#ffad4c) !important;
+          border: 1px solid #f58220 !important;
+          box-shadow: 0 5px 14px rgba(245,130,32,.12) !important;
+          animation: none !important;
+        }
+        .nexa-booking-panel-v3 .delivery-area-trigger > span:first-child {
+          display: none !important;
+        }
+        .nexa-booking-panel-v3 .delivery-area-trigger:hover,
+        .nexa-booking-panel-v3 .destination-choice-button:hover {
+          transform: translateY(-2px) scale(1.012) !important;
+          box-shadow: 0 9px 20px rgba(245,130,32,.2) !important;
+          animation: none !important;
+        }
+        .nexa-booking-panel-v3 .delivery-area-trigger:active,
+        .nexa-booking-panel-v3 .destination-choice-button:active {
+          transform: translateY(1px) scale(.975) !important;
+          box-shadow: 0 2px 9px rgba(245,130,32,.1) !important;
+        }
+        .nexa-booking-panel-v3 .destination-choice-button {
+          color: #b9510c !important;
+          background: linear-gradient(120deg,#fff8f0,#ffebd8) !important;
+          border: 1px solid #f9b379 !important;
+          box-shadow: none !important;
+          animation: none !important;
+        }
+        .nexa-booking-panel-v3 .destination-choice-button.destination-choice-selected {
+          color: #fff !important;
+          background: linear-gradient(110deg,#f47719,#ffad4c) !important;
+          border-color: #f58220 !important;
+          animation: none !important;
+        }
+        .nexa-booking-panel-v3 .destination-choice-button.destination-choice-attention {
+          animation: none !important;
+        }
+        .nexa-booking-panel-v3 .delivery-area-trigger:hover .delivery-area-shine,
+        .nexa-booking-panel-v3 .destination-choice-button:hover .destination-choice-shine {
+          opacity: 1 !important;
+          animation: serviceMethodShine .72s ease-out both !important;
+        }
+        /* Delivery area selection dialog: selected and hover options, not black. */
+        .nexa-area-dialog button[role="option"][aria-selected="true"] {
+          color: #fff !important;
+          background: linear-gradient(110deg,#f47719,#ffad4c) !important;
+        }
+        .nexa-area-dialog button[role="option"]:hover {
+          color: #fff !important;
+          background: linear-gradient(110deg,#f47719,#ffad4c) !important;
+        }
       `}</style>
 
       <div className="relative z-10 w-full" data-nexa-booking-step="1">
@@ -6856,7 +7406,7 @@ export default function BookingPanelV3({
       </div>
       <div className="rounded-[12px] border border-black/10 bg-black/[0.03] px-3 py-3 mobile-booking-vehicle">
         <div className="text-[9px] font-black uppercase tracking-[0.16em] text-black/46">
-          {tt.vehicle}
+          {desktopModal && serviceMethod ? DESKTOP_BOOKING_LABELS[locale].selectedVehicle : tt.vehicle}
         </div>
         <div className="mt-0.5 truncate text-[15px] font-black text-black">
           {vehicleName}
@@ -6866,10 +7416,19 @@ export default function BookingPanelV3({
           <div className="mt-2 flex items-center justify-between gap-3 border-t border-black/10 pt-2">
             <div className="flex min-w-0 items-center gap-2">
               <span
-                className="flex h-5 w-5 shrink-0 items-center justify-center rounded-[4px] bg-[linear-gradient(135deg,#7c3aed,#f97316,#22c55e,#2563eb)] text-[10px] font-black text-white"
+                className="flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] border border-[#ffdcc1] bg-[#fff4ea] text-[#ed721a]"
                 aria-hidden="true"
               >
-                ✓
+                {serviceMethod === "office" ? (
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 10h18M5 10v10h14V10M4 4h16l1 6H3l1-6Z" />
+                    <path d="M9 20v-5h6v5" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M3 6h11v11H3zM14 10h3.5L21 14v3h-7z" /><circle cx="7.5" cy="17" r="2"/><circle cx="17.5" cy="17" r="2"/>
+                  </svg>
+                )}
               </span>
               <span className="truncate text-[10px] font-black uppercase tracking-[0.07em] text-black/68">
                 {replaceTokens(tt.selected, {
@@ -6889,7 +7448,7 @@ export default function BookingPanelV3({
         ) : null}
       </div>
 
-      {(!serviceMethod || !mobileBooking) ? (
+      {(!serviceMethod || (!mobileBooking && !desktopModal)) ? (
       <div className="mt-3 mobile-service-choices">
         <div className="mb-2 text-[9px] font-black uppercase tracking-[0.16em] text-black/46">
           {tt.serviceQuestion}
@@ -6994,26 +7553,11 @@ export default function BookingPanelV3({
           oldPrice={activePricing.fullDayOldPrice}
           price={activePricing.fullDayPricing[1]}
           subtitle={mobileBooking ? undefined : tt.multiDayDiscount}
+          bestValueLabel={desktopModal ? DESKTOP_BOOKING_LABELS[locale].bestValue : undefined}
           needsChoice={needsPlanChoice}
           onClick={() => handlePlanSelect("full")}
         />
       </div>
-      ) : mobileBooking && serviceMethod === "hotel_delivery" ? (
-        <div className="mt-3 mobile-booking-plans">
-          <button
-            type="button"
-            onClick={() => {
-              setMobileDeliveryPlanReady(true);
-              setActiveDateField("pickup");
-              setViewMonth(startOfMonth(getNextDeliveryDate(minBookableDate)));
-              setCalendarOpen(true);
-            }}
-            className="w-full rounded-2xl border-2 border-[#ff6b23] bg-[#fff6f0] px-4 py-4 text-left shadow-sm active:scale-[0.99]"
-          >
-            <span className="block text-[14px] font-black text-[#171717]">{tt.fullDay} / {tt.multiDayDiscount}</span>
-            <span className="mt-1 block text-[12px] font-bold text-black/60">{tt.selectDates} · €{activePricing.fullDayPricing[1]}</span>
-          </button>
-        </div>
       ) : null}
 
       <div className={mobileBooking && !plan ? "mobile-details-hidden" : ""}>
@@ -7041,7 +7585,7 @@ export default function BookingPanelV3({
 
       <div className={`mt-3 grid grid-cols-2 gap-2 ${mobileBooking && (!plan || (serviceMethod === "hotel_delivery" && !mobileDeliveryPlanReady)) ? "max-md:hidden" : ""}`}>
         <FieldButton
-          label={tt.pickupDate}
+          label={serviceMethod === "hotel_delivery" ? DELIVERY_DATE_LABELS[locale].delivery : tt.pickupDate}
           value={fmtDate(pickupDate, locale, tt.selectDate)}
           disabled={false}
           onClick={() =>
@@ -7050,7 +7594,7 @@ export default function BookingPanelV3({
         />
 
         <FieldButton
-          label={tt.dropoffDate}
+          label={serviceMethod === "hotel_delivery" ? DELIVERY_DATE_LABELS[locale].collection : tt.dropoffDate}
           value={
             plan === "half"
               ? fmtDate(pickupDate, locale, tt.selectDate)
@@ -7124,11 +7668,7 @@ export default function BookingPanelV3({
 
 
 
-      {winterOfficeScheduleActive && plan ? (
-        <div className="mt-2 rounded-[13px] border border-sky-200 bg-sky-50 px-3 py-2 text-[10px] font-bold leading-4 text-sky-900">
-          {tt.winterOfficeNotice}
-        </div>
-      ) : null}
+      {/* Winter office-hours notice intentionally removed on desktop and mobile. */}
 
       {isDeliveryService && pickupDate && dropoffDate ? (
         <div className={`mt-3 rounded-[12px] border border-black/10 bg-black/[0.03] p-3 ${mobileBooking && !pickupDate ? "mobile-details-hidden" : ""}`}>
@@ -7535,6 +8075,7 @@ export default function BookingPanelV3({
           rentalDropoffTime={returnTime}
           locale={locale}
           tt={tt}
+          desktopModal={desktopModal}
           onClose={() => setDeliveryTimeModalOpen(false)}
           onConfirm={(value) => {
             setPickupTime(value);

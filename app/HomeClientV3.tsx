@@ -21,8 +21,7 @@ const uiFont = Manrope({
 });
 
 const FRAME_COUNT = 684;
-const FRAME_EXTENSION = "webp";
-const FRAME_PATH = "/nexa-v3/frames";
+const DESKTOP_VIDEO = "/videos/desktophero.mp4";
 
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
@@ -328,14 +327,6 @@ function smoothStep(value: number) {
   return x * x * (3 - 2 * x);
 }
 
-function padFrame(frame: number) {
-  return String(frame).padStart(4, "0");
-}
-
-function frameSrc(frame: number) {
-  return `${FRAME_PATH}/frame_${padFrame(frame)}.${FRAME_EXTENSION}`;
-}
-
 function sceneOpacity(frame: number, scene: Scene) {
   const fadeFrames = 28;
   const fadeIn = smoothStep((frame - scene.startFrame) / fadeFrames);
@@ -407,20 +398,9 @@ function getLineStyle(scene: Scene, opacity: number): CSSProperties {
 
 export default function HomeClientV3() {
   const sectionRef = useRef<HTMLElement | null>(null);
-  const canvasRef = useRef<HTMLCanvasElement | null>(null);
-
-  const imagesRef = useRef<(HTMLImageElement | null)[]>([]);
-  const loadedFramesRef = useRef<Set<number>>(new Set());
-  const failedFramesRef = useRef<Set<number>>(new Set());
-
-  const animationFrameRef = useRef<number | null>(null);
-  const imageLoadFrameRef = useRef<number | null>(null);
-  const preloadTimerRef = useRef<number | null>(null);
-
-  const lastDrawnFrameRef = useRef(0);
-  const wantedFrameRef = useRef(1);
-  const lastCanvasWidthRef = useRef(0);
-  const lastCanvasHeightRef = useRef(0);
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const videoRafRef = useRef<number | null>(null);
+  const videoDurationRef = useRef(0);
 
   const showBookingShowroomRef = useRef(false);
   const openingShowroomRef = useRef(false);
@@ -440,7 +420,6 @@ export default function HomeClientV3() {
   const [hasResolvedMobileMode, setHasResolvedMobileMode] = useState(false);
   const [isMobileDirectShowroom, setIsMobileDirectShowroom] = useState(false);
   const [currentFrame, setCurrentFrame] = useState(1);
-  const [loadingProgress, setLoadingProgress] = useState(0);
   const [firstFrameReady, setFirstFrameReady] = useState(false);
   const [scrollHintVisible, setScrollHintVisible] = useState(true);
   const [showBookingShowroom, setShowBookingShowroom] = useState(false);
@@ -507,293 +486,27 @@ export default function HomeClientV3() {
     );
   }
 
-  function drawImageCover(
-    context: CanvasRenderingContext2D,
-    image: HTMLImageElement,
-    canvasWidth: number,
-    canvasHeight: number,
-  ) {
-    const imageAspect = image.naturalWidth / image.naturalHeight;
-    const canvasAspect = canvasWidth / canvasHeight;
-
-    let drawWidth: number;
-    let drawHeight: number;
-    let x: number;
-    let y: number;
-
-    if (imageAspect > canvasAspect) {
-      drawHeight = canvasHeight;
-      drawWidth = canvasHeight * imageAspect;
-      x = (canvasWidth - drawWidth) / 2;
-      y = 0;
-    } else {
-      drawWidth = canvasWidth;
-      drawHeight = canvasWidth / imageAspect;
-      x = 0;
-      y = (canvasHeight - drawHeight) / 2;
-    }
-
-    context.drawImage(image, x, y, drawWidth, drawHeight);
-  }
-
-  function drawImageContain(
-    context: CanvasRenderingContext2D,
-    image: HTMLImageElement,
-    canvasWidth: number,
-    canvasHeight: number,
-    frame: number,
-  ) {
-    const imageAspect = image.naturalWidth / image.naturalHeight;
-    const canvasAspect = canvasWidth / canvasHeight;
-
-    let drawWidth: number;
-    let drawHeight: number;
-    let x: number;
-    let y: number;
-
-    if (imageAspect > canvasAspect) {
-      drawWidth = canvasWidth;
-      drawHeight = canvasWidth / imageAspect;
-      x = 0;
-      y = (canvasHeight - drawHeight) / 2;
-    } else {
-      drawHeight = canvasHeight;
-      drawWidth = canvasHeight * imageAspect;
-      x = (canvasWidth - drawWidth) / 2;
-      y = 0;
-    }
-
-    const introProgress = clamp(frame / 115, 0, 1);
-    const introEase = smoothStep(introProgress);
-
-    const introScale = 0.88 + introEase * 0.12;
-    const introMoveX = canvasWidth * (0.07 * (1 - introEase));
-    const introMoveY = canvasHeight * (0.065 * (1 - introEase));
-
-    const finalWidth = drawWidth * introScale;
-    const finalHeight = drawHeight * introScale;
-    const finalX = x + (drawWidth - finalWidth) / 2 + introMoveX;
-    const finalY = y + (drawHeight - finalHeight) / 2 + introMoveY;
-
-    context.drawImage(image, finalX, finalY, finalWidth, finalHeight);
-  }
-
-  function drawFrame(frame: number, forceDraw = false) {
-    const canvas = canvasRef.current;
-    const image = imagesRef.current[frame];
-
-    if (!canvas || !image || !image.complete || image.naturalWidth <= 0) return;
-
-    const context = canvas.getContext("2d");
-    if (!context) return;
-
-    const dpr = Math.min(window.devicePixelRatio || 1, 2);
-    const width = window.innerWidth;
-    const height = window.innerHeight;
-
-    const targetWidth = Math.max(1, Math.floor(width * dpr));
-    const targetHeight = Math.max(1, Math.floor(height * dpr));
-
-    const canvasSizeChanged =
-      canvas.width !== targetWidth ||
-      canvas.height !== targetHeight ||
-      lastCanvasWidthRef.current !== targetWidth ||
-      lastCanvasHeightRef.current !== targetHeight;
-
-    if (!forceDraw && !canvasSizeChanged && frame === lastDrawnFrameRef.current) {
-      return;
-    }
-
-    if (canvasSizeChanged) {
-      canvas.width = targetWidth;
-      canvas.height = targetHeight;
-      canvas.style.width = `${width}px`;
-      canvas.style.height = `${height}px`;
-      lastCanvasWidthRef.current = targetWidth;
-      lastCanvasHeightRef.current = targetHeight;
-    }
-
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.imageSmoothingEnabled = true;
-    context.imageSmoothingQuality = "high";
-
-    context.save();
-    context.filter = "blur(28px) brightness(1.08)";
-    context.globalAlpha = 0.26;
-    drawImageCover(context, image, canvas.width, canvas.height);
-    context.restore();
-
-    context.save();
-
-    const gradient = context.createRadialGradient(
-      canvas.width * 0.5,
-      canvas.height * 0.46,
-      canvas.width * 0.05,
-      canvas.width * 0.5,
-      canvas.height * 0.46,
-      canvas.width * 0.76,
-    );
-
-    gradient.addColorStop(0, "rgba(0,0,0,0)");
-    gradient.addColorStop(0.58, "rgba(0,0,0,0.12)");
-    gradient.addColorStop(1, "rgba(0,0,0,0.02)");
-
-    context.fillStyle = gradient;
-    context.fillRect(0, 0, canvas.width, canvas.height);
-    context.restore();
-
-    context.save();
-    context.filter = "brightness(1.12) contrast(1.04)";
-    drawImageContain(context, image, canvas.width, canvas.height, frame);
-    context.restore();
-
-    lastDrawnFrameRef.current = frame;
-    setCurrentFrame(frame);
-  }
-
-  function requestRedrawFromImageLoad(frame: number) {
-    const wantedFrame = wantedFrameRef.current;
-
-    if (frame !== 1 && Math.abs(frame - wantedFrame) > 120) return;
-    if (imageLoadFrameRef.current !== null) return;
-
-    imageLoadFrameRef.current = window.requestAnimationFrame(() => {
-      imageLoadFrameRef.current = null;
-
-      const progress = getScrollProgress();
-      const targetFrame = getFrameFromProgress(progress);
-      const readyFrame = getBestReadyFrame(targetFrame);
-
-      if (readyFrame !== null) {
-        drawFrame(readyFrame, true);
-      }
-    });
-  }
-
-  function ensureFrameLoaded(frame: number) {
-    const safeFrame = clamp(Math.round(frame), 1, FRAME_COUNT);
-
-    if (imagesRef.current[safeFrame]) return;
-    if (failedFramesRef.current.has(safeFrame)) return;
-
-    const image = new window.Image();
-
-    image.decoding = "async";
-    image.loading = "eager";
-
-    image.onload = () => {
-      loadedFramesRef.current.add(safeFrame);
-
-      if (safeFrame === 1) {
-        setFirstFrameReady(true);
-        drawFrame(1, true);
-      }
-
-      setLoadingProgress(
-        Math.min(
-          100,
-          Math.round((loadedFramesRef.current.size / FRAME_COUNT) * 100),
-        ),
-      );
-
-      requestRedrawFromImageLoad(safeFrame);
-    };
-
-    image.onerror = () => {
-      failedFramesRef.current.add(safeFrame);
-      imagesRef.current[safeFrame] = null;
-
-      if (process.env.NODE_ENV !== "production") {
-        console.warn(`NEXA V3 frame failed to load: ${frameSrc(safeFrame)}`);
-      }
-    };
-
-    imagesRef.current[safeFrame] = image;
-    image.src = frameSrc(safeFrame);
-  }
-
-  function preloadAround(frame: number) {
-    const safeFrame = clamp(Math.round(frame), 1, FRAME_COUNT);
-
-    ensureFrameLoaded(safeFrame);
-
-    for (let offset = 1; offset <= 90; offset++) {
-      const before = safeFrame - offset;
-      const after = safeFrame + offset;
-
-      if (before >= 1) ensureFrameLoaded(before);
-      if (after <= FRAME_COUNT) ensureFrameLoaded(after);
-    }
-  }
-
-  function getBestReadyFrame(targetFrame: number) {
-    const targetImage = imagesRef.current[targetFrame];
-
-    if (targetImage?.complete && targetImage.naturalWidth > 0) {
-      return targetFrame;
-    }
-
-    for (let offset = 1; offset <= 160; offset++) {
-      const before = targetFrame - offset;
-      const after = targetFrame + offset;
-
-      if (before >= 1) {
-        const beforeImage = imagesRef.current[before];
-
-        if (beforeImage?.complete && beforeImage.naturalWidth > 0) {
-          return before;
-        }
-      }
-
-      if (after <= FRAME_COUNT) {
-        const afterImage = imagesRef.current[after];
-
-        if (afterImage?.complete && afterImage.naturalWidth > 0) {
-          return after;
-        }
-      }
-    }
-
-    const firstImage = imagesRef.current[1];
-
-    if (firstImage?.complete && firstImage.naturalWidth > 0) {
-      return 1;
-    }
-
-    return null;
-  }
-
-  function drawCurrentScrollFrame(forceDraw = false) {
+  function syncVideoToScroll() {
+    const video = videoRef.current;
     const progress = getScrollProgress();
-    const targetFrame = getFrameFromProgress(progress);
-
-    wantedFrameRef.current = targetFrame;
-
-    preloadAround(targetFrame);
-
-    const frameToDraw = getBestReadyFrame(targetFrame);
-
-    if (frameToDraw !== null) {
-      drawFrame(frameToDraw, forceDraw);
+    const frame = getFrameFromProgress(progress);
+    setCurrentFrame((previous) => (previous === frame ? previous : frame));
+    if (!video || !videoDurationRef.current || video.readyState < 1) return;
+    const targetTime = Math.min(
+      Math.max(0, videoDurationRef.current - 0.04),
+      progress * videoDurationRef.current,
+    );
+    if (Math.abs(video.currentTime - targetTime) > 0.035) {
+      video.currentTime = targetTime;
     }
   }
 
-  function startFrameLoop() {
-    if (animationFrameRef.current !== null) return;
-
-    const loop = () => {
-      drawCurrentScrollFrame(false);
-      animationFrameRef.current = window.requestAnimationFrame(loop);
-    };
-
-    animationFrameRef.current = window.requestAnimationFrame(loop);
-  }
-
-  function stopFrameLoop() {
-    if (animationFrameRef.current !== null) {
-      window.cancelAnimationFrame(animationFrameRef.current);
-      animationFrameRef.current = null;
-    }
+  function requestVideoSync() {
+    if (videoRafRef.current !== null) return;
+    videoRafRef.current = window.requestAnimationFrame(() => {
+      videoRafRef.current = null;
+      syncVideoToScroll();
+    });
   }
 
   function openBookingShowroom() {
@@ -873,120 +586,20 @@ export default function HomeClientV3() {
   }, []);
 
   useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!hasResolvedMobileMode) return;
-    if (isMobileDirectShowroom) return;
-    if (showBookingShowroom) return;
-
-    ensureFrameLoaded(1);
-
-    for (let i = 2; i <= Math.min(FRAME_COUNT, 96); i++) {
-      ensureFrameLoaded(i);
-    }
-
-    let cancelled = false;
-    let nextFrame = 97;
-
-    const preloadChunk = () => {
-      if (cancelled) return;
-
-      const endFrame = Math.min(FRAME_COUNT, nextFrame + 22);
-
-      for (; nextFrame <= endFrame; nextFrame++) {
-        ensureFrameLoaded(nextFrame);
-      }
-
-      if (nextFrame <= FRAME_COUNT) {
-        preloadTimerRef.current = window.setTimeout(preloadChunk, 180);
-      }
-    };
-
-    preloadTimerRef.current = window.setTimeout(preloadChunk, 500);
-
-    const emergencyDraw = window.setTimeout(() => {
-      drawCurrentScrollFrame(true);
-    }, 850);
-
+    if (!hasResolvedMobileMode || isMobileDirectShowroom || showBookingShowroom) return;
+    const onScroll = () => requestVideoSync();
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    requestVideoSync();
     return () => {
-      cancelled = true;
-      window.clearTimeout(emergencyDraw);
-
-      if (preloadTimerRef.current !== null) {
-        window.clearTimeout(preloadTimerRef.current);
-        preloadTimerRef.current = null;
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      if (videoRafRef.current !== null) {
+        window.cancelAnimationFrame(videoRafRef.current);
+        videoRafRef.current = null;
       }
     };
   }, [hasResolvedMobileMode, isMobileDirectShowroom, showBookingShowroom]);
-
-  useEffect(() => {
-    if (typeof window === "undefined") return;
-    if (!hasResolvedMobileMode) return;
-    if (isMobileDirectShowroom) return;
-    if (showBookingShowroom) return;
-
-    let resizeTimer: number | null = null;
-
-    const forceDraw = () => {
-      drawCurrentScrollFrame(true);
-    };
-
-    const handleScrollOrWheel = () => {
-      drawCurrentScrollFrame(false);
-    };
-
-    const handleResize = () => {
-      lastCanvasWidthRef.current = 0;
-      lastCanvasHeightRef.current = 0;
-
-      if (resizeTimer !== null) {
-        window.clearTimeout(resizeTimer);
-      }
-
-      resizeTimer = window.setTimeout(() => {
-        drawCurrentScrollFrame(true);
-      }, 80);
-    };
-
-    window.addEventListener("scroll", handleScrollOrWheel, { passive: true });
-    window.addEventListener("wheel", handleScrollOrWheel, { passive: true });
-    window.addEventListener("touchmove", handleScrollOrWheel, { passive: true });
-    window.addEventListener("resize", handleResize);
-
-    const firstDrawFrame = window.requestAnimationFrame(() => {
-      forceDraw();
-      startFrameLoop();
-    });
-
-    const secondDrawTimer = window.setTimeout(() => {
-      forceDraw();
-    }, 650);
-
-    return () => {
-      window.cancelAnimationFrame(firstDrawFrame);
-      window.clearTimeout(secondDrawTimer);
-
-      if (resizeTimer !== null) {
-        window.clearTimeout(resizeTimer);
-      }
-
-      window.removeEventListener("scroll", handleScrollOrWheel);
-      window.removeEventListener("wheel", handleScrollOrWheel);
-      window.removeEventListener("touchmove", handleScrollOrWheel);
-      window.removeEventListener("resize", handleResize);
-
-      stopFrameLoop();
-
-      if (imageLoadFrameRef.current !== null) {
-        window.cancelAnimationFrame(imageLoadFrameRef.current);
-        imageLoadFrameRef.current = null;
-      }
-    };
-  }, [
-    hasResolvedMobileMode,
-    isMobileDirectShowroom,
-    showBookingShowroom,
-    firstFrameReady,
-  ]);
 
   useEffect(() => {
     if (showBookingShowroom) return;
@@ -1150,11 +763,12 @@ export default function HomeClientV3() {
           background: #000000;
         }
 
-        .nexa-v3-canvas {
+        .nexa-v3-video {
           display: block;
-          transform: translateZ(0);
-          backface-visibility: hidden;
-          will-change: transform;
+          width: 100%;
+          height: 100%;
+          object-fit: contain;
+          background: #000;
         }
 
         .nexa-v3-text-shell {
@@ -1242,9 +856,31 @@ export default function HomeClientV3() {
         style={{ height: "1250vh" }}
       >
         <div className="sticky top-0 h-screen overflow-hidden bg-black">
-          <canvas
-            ref={canvasRef}
-            className="nexa-v3-canvas relative z-10 h-screen w-screen"
+          <video
+            ref={videoRef}
+            className="nexa-v3-video absolute inset-0 z-10"
+            src={DESKTOP_VIDEO}
+            muted
+            playsInline
+            preload="auto"
+            autoPlay={false}
+            controls={false}
+            disablePictureInPicture
+            onLoadedMetadata={(event) => {
+              const video = event.currentTarget;
+              video.muted = true;
+              video.pause();
+              videoDurationRef.current = Number.isFinite(video.duration) ? video.duration : 0;
+              requestVideoSync();
+            }}
+            onLoadedData={() => {
+              setFirstFrameReady(true);
+              requestVideoSync();
+            }}
+            onError={() => {
+              console.error("NEXA desktop video failed to load:", DESKTOP_VIDEO);
+              setFirstFrameReady(true);
+            }}
           />
 
           <div className="pointer-events-none absolute inset-0 z-20 bg-[radial-gradient(circle_at_52%_42%,transparent_0%,rgba(0,0,0,0.04)_48%,rgba(0,0,0,0.46)_100%)]" />
@@ -1263,17 +899,8 @@ export default function HomeClientV3() {
                 Loading NEXA 3.0
               </div>
 
-              <div className="mt-4 h-px w-56 bg-white/10">
-                <div
-                  className="h-px bg-white"
-                  style={{ width: `${loadingProgress}%` }}
-                />
-              </div>
-
-              <div
-                className={`${uiFont.className} mt-4 text-[10px] font-semibold uppercase tracking-[0.24em] text-white/28`}
-              >
-                {loadingProgress}%
+              <div className="mt-4 h-px w-56 overflow-hidden bg-white/10">
+                <div className="h-px w-1/2 animate-pulse bg-white" />
               </div>
             </div>
           )}
