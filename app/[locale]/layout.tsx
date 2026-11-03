@@ -12,7 +12,7 @@ import FooterMoneyBlogLinks from "../components/FooterMoneyBlogLinks";
 import NexaFooter from "../components/NexaFooter";
 import WhatsAppSupport from "../components/WhatsAppSupport";
 import NeroBookingCopilot from "../components/NeroBookingCopilot";
-import CookieConsent from "../components/CookieConsent";
+
 
 import {
   defaultLocale,
@@ -116,7 +116,7 @@ export default async function LocaleLayout({
 
           <NexaFooter />
 
-          <CookieConsent locale={locale} />
+          
         </NextIntlClientProvider>
 
         <style
