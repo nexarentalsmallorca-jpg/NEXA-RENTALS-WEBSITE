@@ -2242,59 +2242,62 @@ desktopMotionTimer.current = timerId;
     }
   };
 }, []);
+
 useEffect(() => {
   if (typeof window === "undefined") return;
 
   let lastMobileScrollAt = 0;
+  let pendingFocusTimeout: number | null = null;
 
-  const isMobileShowroom = () => {
-    return window.matchMedia("(max-width: 1023px)").matches;
-  };
+  const mobileMedia = window.matchMedia("(max-width: 1023px)");
 
-  const blurFocusedInputOnMobileScroll = () => {
-    if (!isMobileShowroom()) return;
+  const isTypingElement = (element: EventTarget | null): element is HTMLElement => {
+    if (!(element instanceof HTMLElement)) return false;
 
-    const activeElement = document.activeElement as HTMLElement | null;
+    const tag = element.tagName.toLowerCase();
 
-    if (!activeElement) return;
-
-    const tagName = activeElement.tagName.toLowerCase();
-
-    const isTypingElement =
-      tagName === "input" ||
-      tagName === "textarea" ||
-      activeElement.isContentEditable;
-
-    if (!isTypingElement) return;
-
-    activeElement.blur();
+    return (
+      tag === "input" ||
+      tag === "textarea" ||
+      element.isContentEditable
+    );
   };
 
   const handleMobileScroll = () => {
-    if (!isMobileShowroom()) return;
+    if (!mobileMedia.matches) return;
 
-    lastMobileScrollAt = Date.now();
+    lastMobileScrollAt = performance.now();
 
-    blurFocusedInputOnMobileScroll();
+    const activeElement = document.activeElement;
 
-    window.requestAnimationFrame(() => {
-      blurFocusedInputOnMobileScroll();
-    });
-
-    window.setTimeout(() => {
-      blurFocusedInputOnMobileScroll();
-    }, 120);
+    if (isTypingElement(activeElement)) {
+      activeElement.blur();
+    }
   };
 
-  const handleMobileFocusIn = () => {
-    if (!isMobileShowroom()) return;
+  const handleMobileFocusIn = (event: FocusEvent) => {
+    if (!mobileMedia.matches) return;
 
-    const justScrolled = Date.now() - lastMobileScrollAt < 1100;
+    if (performance.now() - lastMobileScrollAt >= 1100) return;
 
-    if (!justScrolled) return;
+    const element = event.target;
 
-    window.setTimeout(() => {
-      blurFocusedInputOnMobileScroll();
+    if (!isTypingElement(element)) return;
+
+    if (pendingFocusTimeout !== null) {
+      window.clearTimeout(pendingFocusTimeout);
+    }
+
+    pendingFocusTimeout = window.setTimeout(() => {
+      pendingFocusTimeout = null;
+
+      if (
+        mobileMedia.matches &&
+        performance.now() - lastMobileScrollAt < 1100 &&
+        document.activeElement === element
+      ) {
+        element.blur();
+      }
     }, 0);
   };
 
@@ -2312,6 +2315,10 @@ useEffect(() => {
     window.removeEventListener("scroll", handleMobileScroll);
     window.removeEventListener("touchmove", handleMobileScroll);
     document.removeEventListener("focusin", handleMobileFocusIn);
+
+    if (pendingFocusTimeout !== null) {
+      window.clearTimeout(pendingFocusTimeout);
+    }
   };
 }, []);
 
@@ -2333,6 +2340,7 @@ useEffect(() => {
         {/* Desktop-only looping background video; mobile video remains unchanged. */}
         <div className="absolute inset-0 z-0 hidden overflow-hidden bg-black lg:block">
           <video autoPlay muted loop playsInline preload="auto"
+          poster="/images/desktop-video-poster.webp"
             aria-label="NEXA Rentals desktop hero background"
             className="absolute inset-0 h-full w-full object-cover"
             style={{ filter: `brightness(${DESKTOP_HERO_TUNING.videoBrightness})`, transform: `translate(${DESKTOP_HERO_TUNING.videoMoveRightPercent}%, -${DESKTOP_HERO_TUNING.videoMoveUpPercent}%) scale(${DESKTOP_HERO_TUNING.videoScale})`, transformOrigin: "center center" }}>
@@ -2349,6 +2357,7 @@ useEffect(() => {
             loop
             playsInline
             preload="auto"
+            poster="/images/mobile-video-poster.webp"
             aria-label="NEXA Rentals hero video"
             className="absolute inset-0 h-full w-full object-cover"
           >
@@ -2682,7 +2691,7 @@ useEffect(() => {
                   transform: `translate(${tune.moveRightPx}px, ${tune.moveDownPx}px) scale(${tune.scale})`,
                   transformOrigin: "center bottom",
                 }}>
-                <Image src={vehicle.image} alt={vehicle.alt} fill priority
+                <Image src={vehicle.image} alt={vehicle.alt} fill priority={slideIndex === 0}
                   sizes="(min-width: 1536px) 46vw, 52vw"
                   className="object-contain drop-shadow-[0_24px_24px_rgba(0,0,0,0.16)]" />
               </div>

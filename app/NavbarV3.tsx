@@ -740,9 +740,7 @@ export default function NavbarV3({
       : "bg-white text-black shadow-[0_22px_62px_rgba(0,0,0,0.42)] hover:shadow-[0_28px_80px_rgba(255,255,255,0.20)]";
 
   const mobileNavShellClass =
-    mobileScrolled
-      ? "bg-black shadow-[0_18px_46px_rgba(0,0,0,0.58)] backdrop-blur-none"
-      : "bg-transparent shadow-none backdrop-blur-0";
+    "bg-black shadow-[0_18px_46px_rgba(0,0,0,0.58)] backdrop-blur-none";
 
   const mobileLanguageButtonClass =
     mobileScrolled
@@ -755,9 +753,7 @@ export default function NavbarV3({
       : "border-white/10 bg-black/86 text-white shadow-[0_26px_90px_rgba(0,0,0,0.62)]";
 
   const mobilePanelClass =
-    isLightTone
-      ? "border border-[#202226]/10 bg-white/88 text-[#202226]/82 shadow-[0_26px_90px_rgba(0,0,0,0.30)]"
-      : "border border-white/10 bg-black/88 text-white/82 shadow-[0_26px_90px_rgba(0,0,0,0.72)]";
+    "border border-white/10 bg-black/94 text-white/82 shadow-[0_26px_90px_rgba(0,0,0,0.72)]";
 
   function closeMenus() {
     setLangOpen(
@@ -1606,8 +1602,8 @@ export default function NavbarV3({
 
         .nexa-navbar-shell[data-mobile-scrolled="false"]
           .nexa-mobile-nav {
-          background: transparent !important;
-          box-shadow: none !important;
+          background: #000000 !important;
+          box-shadow: 0 18px 46px rgba(0, 0, 0, 0.58) !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
         }

@@ -77,8 +77,18 @@ export default async function Page({ params }: PageProps) {
   setRequestLocale(locale);
 
   return (
-    <Suspense fallback={null}>
-      <NexaBookingShowroomV3 key={locale} />
-    </Suspense>
+    <Suspense
+  fallback={
+    <div
+      aria-hidden="true"
+      style={{
+        minHeight: "100svh",
+        backgroundColor: "#000000",
+      }}
+    />
+  }
+>
+  <NexaBookingShowroomV3 key={locale} />
+</Suspense>
   );
 }

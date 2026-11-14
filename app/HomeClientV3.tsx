@@ -21,7 +21,7 @@ const uiFont = Manrope({
 });
 
 const FRAME_COUNT = 684;
-const DESKTOP_VIDEO = "/videos/desktophero.mp4";
+const DESKTOP_VIDEO = "/videos/bigvideo.mp4";
 
 type Locale = "en" | "es" | "de" | "fr" | "sv" | "it" | "pt";
 
