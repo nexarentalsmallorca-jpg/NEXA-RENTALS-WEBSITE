@@ -1,3 +1,4 @@
+
 import type { Locale } from "@/i18n/routing";
 import type {
   BlogCategory,
@@ -14,6 +15,7 @@ export type BlogLocaleContent = Omit<
 >;
 
 const READ_TIME: Record<Locale, string> = {
+  cs: "min čtení",
   en: "min read",
   es: "min de lectura",
   de: "Min. Lesezeit",
@@ -30,6 +32,7 @@ const READ_TIME: Record<Locale, string> = {
 };
 
 const BOOK_LINK_TEXT: Record<Locale, string> = {
+  cs: "rezervujte si skútr online",
   en: "book your scooter online",
   es: "reserva tu scooter online",
   de: "buche deinen Roller online",
@@ -46,6 +49,7 @@ const BOOK_LINK_TEXT: Record<Locale, string> = {
 };
 
 const CONTACT_LINK_TEXT: Record<Locale, string> = {
+  cs: "kontaktujte NEXA Rentals",
   en: "contact NEXA Rentals",
   es: "contacta con NEXA Rentals",
   de: "kontaktiere NEXA Rentals",
