@@ -47,6 +47,40 @@ type LocaleCopy = {
 };
 
 const COPY: Record<Locale, LocaleCopy> = {
+  cs: {
+    meta: (title) =>
+      `${title} s NEXA Rentals Mallorca: praktické ceny, rezervace online, podmínky řidičského oprávnění a rady pro návštěvníky Magalufu.`,
+    excerpt: (title) =>
+      `Praktický průvodce pro turisty: ${title.toLowerCase()} s NEXA Rentals Mallorca.`,
+    quickAnswer: (title) =>
+      `${title} závisí na termínu, řidičském oprávnění, trase a délce pronájmu. NEXA Rentals vám pomůže porovnat možnosti, ověřit dostupnost a rezervovat online před příjezdem.`,
+    ctaTitle: "Chcete si rezervovat skútr v Magalufu?",
+    ctaText:
+      "Prohlédněte si dostupné skútry a elektrokola na /cs nebo se zeptejte našeho týmu přes /cs/contact.",
+    faqs: (title) => [
+      {
+        question: `Je ${title.toLowerCase()} vhodné pro turisty?`,
+        answer:
+          "Ano. Tento průvodce je určen návštěvníkům ubytovaným v Magalufu, Palmanově a okolních letoviscích na Mallorce.",
+      },
+      {
+        question: "Mám si rezervaci vytvořit před příjezdem?",
+        answer:
+          "Ano. V hlavní sezóně doporučujeme rezervovat online, protože oblíbené skútry a elektrokola mohou být vyprodané.",
+      },
+      {
+        question: "Co si mám přinést k vyzvednutí?",
+        answer:
+          "Přineste originál řidičského průkazu, pokud je vyžadován, cestovní pas nebo občanský průkaz, potvrzení rezervace a platební prostředek na kauci či doplňkové služby.",
+      },
+      {
+        question: "Může mi NEXA Rentals poradit ještě před rezervací?",
+        answer:
+          "Ano. Napište nám přes WhatsApp nebo /cs/contact, pokud máte otázky k řidičskému oprávnění, trasám nebo dostupnosti.",
+      },
+    ],
+  },
+
   en: {
     meta: (title) =>
       `${title} with NEXA Rentals Mallorca: practical prices, booking advice, licence checks and tourist tips for Magaluf.`,
@@ -508,6 +542,7 @@ export function createLocalizedPostSpec(
 }
 
 const SECOND_PARAGRAPH: Record<Locale, string> = {
+  cs: "Před příjezdem si online ověřte dostupnost a k vyzvednutí přineste požadované originály dokladů.",
   en: "Check availability online before arrival and bring the original documents required at pickup.",
   es: "Comprueba la disponibilidad online antes de llegar y trae los documentos originales necesarios para la recogida.",
   de: "Prufe die Verfugbarkeit online vor deiner Ankunft und bringe die erforderlichen Originaldokumente zur Abholung mit.",
@@ -527,6 +562,9 @@ const FIRST_PARAGRAPH: Record<
   Locale,
   (title: string, focus: string) => string
 > = {
+  cs: (title, focus) =>
+    `${focus} Tento průvodce prakticky vysvětluje ${title.toLowerCase()} návštěvníkům ubytovaným v Magalufu, Palmanově a na jihozápadě Mallorky.`,
+
   en: (title, focus) =>
     `${focus} This guide explains ${title.toLowerCase()} in practical terms for visitors staying in Magaluf, Palmanova and southwest Mallorca.`,
 
