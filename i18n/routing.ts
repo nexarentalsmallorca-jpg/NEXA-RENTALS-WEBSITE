@@ -1,17 +1,5 @@
 export const locales = [
-  "en",
-  "es",
-  "de",
-  "fr",
-  "it",
-  "nl",
-  "pl",
-  "sv",
-  "da",
-  "no",
-  "pt",
-  "sr",
-  "uk",
+  "en", "es", "de", "fr", "it", "nl", "pl", "sv", "da", "no", "pt", "sr", "cs", "uk",
 ] as const;
 
 export const defaultLocale = "en";

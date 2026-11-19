@@ -1,4 +1,4 @@
-// i18n/request.ts
+
 import { getRequestConfig } from "next-intl/server";
 import { defaultLocale, isValidLocale } from "./routing";
 
@@ -23,6 +23,7 @@ const MESSAGES = {
   no: en,
   pt,
   sr: en,
+  cs: en,
   uk: en,
 };
 

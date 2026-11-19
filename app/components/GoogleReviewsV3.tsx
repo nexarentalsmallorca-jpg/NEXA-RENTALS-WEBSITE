@@ -27,6 +27,22 @@ const TRUST_BRAND_DESKTOP_GAP = "30px";
 const TRUST_BRAND_LAPTOP_GAP = "0px";
 const TRUST_BRAND_MOBILE_GAP = "0px";
 
+const TRUST_BRAND_TITLE: Record<Locale, string> = {
+  "en": "Trusted by local brands in Mallorca",
+  "es": "Marcas locales de Mallorca que confían en nosotros",
+  "de": "Das Vertrauen lokaler Marken auf Mallorca",
+  "fr": "La confiance des marques locales à Majorque",
+  "it": "Scelti dai marchi locali di Maiorca",
+  "nl": "Vertrouwd door lokale merken op Mallorca",
+  "pl": "Zaufanie lokalnych marek na Majorce",
+  "sv": "Betrodda av lokala varumärken på Mallorca",
+  "da": "Betroet af lokale brands på Mallorca",
+  "no": "Lokale merkevarer på Mallorca stoler på oss",
+  "pt": "A confiança das marcas locais em Maiorca",
+  "cs": "Důvěřují nám místní značky na Mallorce",
+  "uk": "Нам довіряють місцеві бренди на Майорці"
+};
+
 const FALLBACK_REVIEW_COUNT = 107;
 const FALLBACK_RATING = 5;
 
@@ -463,7 +479,7 @@ function ReviewStrip({
   );
 }
 
-function TrustBrandsStrip() {
+function TrustBrandsStrip({ locale }: { locale: Locale }) {
   const trustGapStyle = {
     "--trust-brand-gap-desktop":
       TRUST_BRAND_DESKTOP_GAP,
@@ -487,7 +503,7 @@ function TrustBrandsStrip() {
     >
       <div className="mx-auto flex min-h-[235px] max-w-[1320px] flex-col items-center justify-center px-5 py-12 text-center sm:px-8 lg:min-h-[245px]">
         <p className="review-v3-trust-title text-center text-[11px] font-extrabold uppercase tracking-[0.32em] text-black sm:text-[12px]">
-          Trusted by local brands in Mallorca
+          {TRUST_BRAND_TITLE[locale]}
         </p>
 
         <div className="review-v3-trust-logos-desktop mx-auto mt-10 flex w-full max-w-[1080px] flex-row flex-nowrap items-center justify-center">
@@ -705,8 +721,6 @@ export default function GoogleReviewsV3() {
         </div>
 
         <div className="relative">
-          <div className="review-v3-edge-shadow pointer-events-none absolute inset-y-0 left-0 z-20 w-[72px] bg-gradient-to-r from-[#0a0a0a] via-[#141414]/75 to-transparent sm:w-[clamp(110px,12vw,220px)]" />
-          <div className="review-v3-edge-shadow pointer-events-none absolute inset-y-0 right-0 z-20 w-[72px] bg-gradient-to-l from-[#0a0a0a] via-[#141414]/75 to-transparent sm:w-[clamp(110px,12vw,220px)]" />
 
           <ReviewStrip
             items={firstRow}
@@ -738,7 +752,7 @@ export default function GoogleReviewsV3() {
         </div>
       </div>
 
-      <TrustBrandsStrip />
+      <TrustBrandsStrip locale={locale} />
 
       <style jsx global>{`
         .review-v3-section,
@@ -1039,7 +1053,15 @@ export default function GoogleReviewsV3() {
           }
 
           .review-v3-trust-mobile-window {
+            /* Mobile only: extend the scrolling logos beyond the parent's
+               horizontal padding so they enter and exit at the screen edges. */
             margin-top: 22px !important;
+            width: 100vw !important;
+            max-width: none !important;
+            align-self: flex-start !important;
+            margin-left: calc((100% - 100vw) / 2) !important;
+            margin-right: 0 !important;
+            overflow: hidden !important;
           }
 
           .review-v3-trust-mobile-track {

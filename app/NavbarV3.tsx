@@ -5,7 +5,8 @@ import Link from "next/link";
 import { Poppins } from "next/font/google";
 import { useLocale } from "next-intl";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 
 const navFont = Poppins({
   subsets: ["latin"],
@@ -447,6 +448,88 @@ export default function NavbarV3({
   ] =
     useState(false);
 
+  // Desktop-only: slide the entire header offscreen after the first scroll.
+  // Mobile is unaffected because the transform is applied only at >=1024px.
+  const [desktopNavHidden, setDesktopNavHidden] = useState(false);
+  const [mobileDrawerMounted, setMobileDrawerMounted] = useState(false);
+  // Measure the rendered mobile header: the showroom may change its height.
+  const mobileHeaderRef = useRef<HTMLDivElement | null>(null);
+  const mobileLanguageButtonRef = useRef<HTMLButtonElement | null>(null);
+  const [mobileHeaderBottom, setMobileHeaderBottom] = useState(70);
+  const [mobileLanguagePosition, setMobileLanguagePosition] = useState({ top: 78, right: 16 });
+
+  useEffect(() => {
+    const updatePositions = () => {
+      const header = mobileHeaderRef.current;
+      if (header) setMobileHeaderBottom(Math.max(0, Math.round(header.getBoundingClientRect().bottom)));
+      const button = mobileLanguageButtonRef.current;
+      if (button) {
+        const bounds = button.getBoundingClientRect();
+        setMobileLanguagePosition({
+          top: Math.round(bounds.bottom + 8),
+          right: Math.max(12, Math.round(window.innerWidth - bounds.right)),
+        });
+      }
+    };
+    updatePositions();
+    const observer = new ResizeObserver(updatePositions);
+    if (mobileHeaderRef.current) observer.observe(mobileHeaderRef.current);
+    window.addEventListener("resize", updatePositions, { passive: true });
+    return () => {
+      observer.disconnect();
+      window.removeEventListener("resize", updatePositions);
+    };
+  }, []);
+
+
+  useEffect(() => {
+    setMobileDrawerMounted(true);
+    // A locale transition may remount NavbarV3. Restore only the drawer state
+    // requested by the user, without storing language-dropdown visibility.
+    try {
+      if (sessionStorage.getItem("nexa:preserve-mobile-menu") === "1") {
+        sessionStorage.removeItem("nexa:preserve-mobile-menu");
+        if (window.matchMedia("(max-width: 1023px)").matches) setMobileMenuOpen(true);
+      }
+    } catch { /* Storage may be unavailable in private browsing. */ }
+  }, []);
+
+  useEffect(() => {
+    if (!mobileMenuOpen || !window.matchMedia("(max-width: 1023px)").matches) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = previous; };
+  }, [mobileMenuOpen]);
+
+  useEffect(() => {
+    const desktop = window.matchMedia("(min-width: 1024px)");
+    let frame: number | null = null;
+
+    const update = () => {
+      frame = null;
+      if (!desktop.matches) {
+        setDesktopNavHidden(false);
+        return;
+      }
+      const y = Math.max(0, window.scrollY, document.documentElement.scrollTop, document.body.scrollTop);
+      setDesktopNavHidden((wasHidden) => y >= (wasHidden ? 45 : 95));
+    };
+    const schedule = () => {
+      if (frame === null) frame = window.requestAnimationFrame(update);
+    };
+
+    update();
+    window.addEventListener("scroll", schedule, { passive: true });
+    document.addEventListener("scroll", schedule, { capture: true, passive: true });
+    window.addEventListener("resize", schedule, { passive: true });
+    return () => {
+      window.removeEventListener("scroll", schedule);
+      document.removeEventListener("scroll", schedule, true);
+      window.removeEventListener("resize", schedule);
+      if (frame !== null) window.cancelAnimationFrame(frame);
+    };
+  }, []);
+
   const homeHref =
     `/${locale}/home`;
 
@@ -629,31 +712,23 @@ export default function NavbarV3({
       );
     }
 
+    let frame: number | null = null;
+    const scheduleToneUpdate = () => {
+      if (frame !== null) return;
+      frame = window.requestAnimationFrame(() => {
+        frame = null;
+        updateToneFromBookingSection();
+      });
+    };
+
     updateToneFromBookingSection();
-
-    window.addEventListener(
-      "scroll",
-      updateToneFromBookingSection,
-      {
-        passive: true,
-      }
-    );
-
-    window.addEventListener(
-      "resize",
-      updateToneFromBookingSection
-    );
+    window.addEventListener("scroll", scheduleToneUpdate, { passive: true });
+    window.addEventListener("resize", scheduleToneUpdate, { passive: true });
 
     return () => {
-      window.removeEventListener(
-        "scroll",
-        updateToneFromBookingSection
-      );
-
-      window.removeEventListener(
-        "resize",
-        updateToneFromBookingSection
-      );
+      window.removeEventListener("scroll", scheduleToneUpdate);
+      window.removeEventListener("resize", scheduleToneUpdate);
+      if (frame !== null) window.cancelAnimationFrame(frame);
     };
   }, [
     tone,
@@ -661,16 +736,10 @@ export default function NavbarV3({
   ]);
 
   useEffect(() => {
-    setLangOpen(
-      false
-    );
-
-    setMobileMenuOpen(
-      false
-    );
-  }, [
-    pathname,
-  ]);
+    // Close the language list after navigation. Keep the drawer open so its
+    // labels can update in place when the visitor changes languages.
+    setLangOpen(false);
+  }, [pathname]);
 
   useEffect(() => {
     function closeOnEscape(
@@ -740,7 +809,7 @@ export default function NavbarV3({
       : "bg-white text-black shadow-[0_22px_62px_rgba(0,0,0,0.42)] hover:shadow-[0_28px_80px_rgba(255,255,255,0.20)]";
 
   const mobileNavShellClass =
-    "bg-black shadow-[0_18px_46px_rgba(0,0,0,0.58)] backdrop-blur-none";
+    "bg-black shadow-none backdrop-blur-none";
 
   const mobileLanguageButtonClass =
     mobileScrolled
@@ -751,9 +820,6 @@ export default function NavbarV3({
     mobileScrolled
       ? "border-white/10 bg-black/94 text-white shadow-[0_26px_90px_rgba(0,0,0,0.72)]"
       : "border-white/10 bg-black/86 text-white shadow-[0_26px_90px_rgba(0,0,0,0.62)]";
-
-  const mobilePanelClass =
-    "border border-white/10 bg-black/94 text-white/82 shadow-[0_26px_90px_rgba(0,0,0,0.72)]";
 
   function closeMenus() {
     setLangOpen(
@@ -768,7 +834,10 @@ export default function NavbarV3({
   function handleLanguageChange(
     nextLocale: Locale
   ) {
-    closeMenus();
+    setLangOpen(false);
+    if (mobileMenuOpen && window.matchMedia("(max-width: 1023px)").matches) {
+      try { sessionStorage.setItem("nexa:preserve-mobile-menu", "1"); } catch { /* Ignore unavailable storage. */ }
+    }
 
     const pathParts =
       pathname
@@ -861,10 +930,9 @@ export default function NavbarV3({
     );
   }
 
-  const headerPositionClass =
-    fixed
-      ? "fixed"
-      : "fixed lg:absolute";
+  // Preserve the fixed prop for existing callers; desktop uses fixed positioning.
+  void fixed;
+  const headerPositionClass = "fixed";
 
   return (
     <header
@@ -873,6 +941,7 @@ export default function NavbarV3({
           ? "true"
           : "false"
       }
+      data-desktop-hidden={desktopNavHidden ? "true" : "false"}
       className={`${navFont.className} ${headerPositionClass} nexa-navbar-shell pointer-events-none left-0 right-0 top-0 z-[2147483000] bg-transparent lg:z-[90]`}
     >
       {showAngledLogoPanel ? (
@@ -1164,6 +1233,7 @@ export default function NavbarV3({
       </div>
 
       <div
+        ref={mobileHeaderRef}
         className={[
           "nexa-mobile-nav pointer-events-auto flex h-[76px] items-center justify-between px-5 transition-all duration-300 lg:hidden",
           mobileNavShellClass,
@@ -1188,10 +1258,7 @@ export default function NavbarV3({
             className={[
               "relative h-[48px] w-auto object-contain",
 
-              showAngledLogoPanel ||
-              isLightTone
-                ? "drop-shadow-[0_12px_28px_rgba(0,0,0,0.55)]"
-                : "drop-shadow-[0_18px_34px_rgba(0,0,0,0.72)]",
+              "drop-shadow-none",
             ].join(" ")}
           />
         </Link>
@@ -1199,6 +1266,7 @@ export default function NavbarV3({
         <div className="relative z-20 flex items-center gap-4">
           <div className="relative">
             <button
+              ref={mobileLanguageButtonRef}
               type="button"
               onClick={() => {
                 setLangOpen(
@@ -1208,9 +1276,7 @@ export default function NavbarV3({
                     !current
                 );
 
-                setMobileMenuOpen(
-                  false
-                );
+                // The drawer stays open under the header while languages are chosen.
               }}
               className={[
                 "inline-flex h-10 items-center justify-center gap-1.5 rounded-[14px] px-3 text-[11px] font-black uppercase tracking-[0.14em] backdrop-blur-xl transition active:scale-95",
@@ -1254,9 +1320,147 @@ export default function NavbarV3({
               </span>
             </button>
 
+          </div>
+
+          <button
+            type="button"
+            onClick={() => {
+              setMobileMenuOpen(
+                (
+                  current
+                ) =>
+                  !current
+              );
+
+              setLangOpen(
+                false
+              );
+            }}
+            className="nexa-hamburger-button"
+            aria-label={
+              mobileMenuOpen
+                ? copy.close
+                : copy.menu
+            }
+            aria-expanded={
+              mobileMenuOpen
+            }
+          >
+            <span className="nexa-hamburger-lines">
+              <span
+                className={[
+                  "nexa-hamburger-line",
+
+                  mobileMenuOpen
+                    ? "top-[10px] rotate-45"
+                    : "top-0 rotate-0",
+                ].join(" ")}
+              />
+
+              <span
+                className={[
+                  "nexa-hamburger-line top-[10px]",
+
+                  mobileMenuOpen
+                    ? "opacity-0"
+                    : "opacity-100",
+                ].join(" ")}
+              />
+
+              <span
+                className={[
+                  "nexa-hamburger-line",
+
+                  mobileMenuOpen
+                    ? "top-[10px] -rotate-45"
+                    : "top-[20px] rotate-0",
+                ].join(" ")}
+              />
+            </span>
+          </button>
+        </div>
+      </div>
+
+      {/* Premium white mobile drawer: below the existing black header. */}
+      {mobileDrawerMounted && createPortal(
+        <div className="lg:hidden" aria-hidden={!mobileMenuOpen}>
+          <button
+            type="button"
+            aria-label={copy.close}
+            tabIndex={mobileMenuOpen ? 0 : -1}
+            onClick={() => setMobileMenuOpen(false)}
+            style={{ top: mobileHeaderBottom }}
+            className={`fixed inset-x-0 bottom-0 z-[2147482980] bg-black/35 transition-opacity duration-300 ${
+              mobileMenuOpen ? "opacity-100" : "pointer-events-none opacity-0"
+            }`}
+          />
+          <aside
+            id="nexa-mobile-slide-menu"
+            role="dialog"
+            aria-modal={mobileMenuOpen ? true : undefined}
+            aria-label={copy.menu}
+            inert={!mobileMenuOpen}
+            style={{ top: mobileHeaderBottom }}
+            className={`fixed bottom-0 right-0 z-[2147482990] flex w-[min(82vw,360px)] max-w-full flex-col overflow-y-auto border-l border-black/[0.06] bg-white text-[#161616] shadow-none transition-transform duration-500 ease-[cubic-bezier(0.22,1,0.36,1)] ${
+              mobileMenuOpen ? "translate-x-0" : "translate-x-full"
+            }`}
+          >
+            <div className="flex shrink-0 items-center border-b border-black/[0.08] px-7 py-3">
+              <span className="text-[11px] font-extrabold uppercase tracking-[0.28em] text-[#8b8b8b]">{copy.menu}</span>
+            </div>
+            <nav className="flex flex-col px-5 pt-2" aria-label={copy.menu}>
+              {navItems.map((item) => (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={closeMenus}
+                  className="group flex min-h-[70px] items-center gap-4 border-b border-black/[0.08] px-2 text-[13px] font-bold uppercase tracking-[0.13em] text-[#191919] transition-colors duration-200 hover:text-[#ed6517]"
+                >
+                  <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[13px] bg-[#fff3e9] text-[#f47719] transition-colors group-hover:bg-[#ffead8]">
+                    {item.href === homeHref ? (
+                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true"><path d="m3.5 10 8.5-7 8.5 7v9a2 2 0 0 1-2 2h-13a2 2 0 0 1-2-2v-9Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/><path d="M9 21v-8h6v8" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+                    ) : item.href === blogHref ? (
+                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="M8 8h8M8 12h8M8 16h5" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"/></svg>
+                    ) : item.href === aboutHref ? (
+                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true"><circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="1.8"/><path d="M12 10.5v6M12 7.3h.01" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/></svg>
+                    ) : (
+                      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5" aria-hidden="true"><path d="M7 4h3l1.5 4-2 1.5a13 13 0 0 0 5 5l1.5-2L20 14v3a3 3 0 0 1-3 3C9.8 20 4 14.2 4 7a3 3 0 0 1 3-3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+                    )}
+                  </span>
+                  <span className="flex-1">{item.label}</span>
+                  <svg viewBox="0 0 24 24" fill="none" className="h-[17px] w-[17px] text-[#b8b8b8]" aria-hidden="true"><path d="m9 5 7 7-7 7" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"/></svg>
+                </Link>
+              ))}
+              <button
+                type="button"
+                onClick={handleBookClick}
+                className="mt-8 min-h-[54px] w-full rounded-full bg-[linear-gradient(110deg,#FFAC48_0%,#FF8B26_48%,#ED6517_100%)] px-5 py-4 text-[12px] font-extrabold uppercase tracking-[0.16em] text-white transition-transform active:scale-[0.98]"
+              >
+                {copy.book}
+              </button>
+              <div className="mt-7 border-t border-black/[0.08] pt-5 text-[12px] font-medium text-[#777777]">
+                <a href="tel:+34971482342" className="flex items-center gap-3 py-2 transition-colors hover:text-[#ed6517]">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-[17px] w-[17px] shrink-0 text-[#ed6517]" aria-hidden="true"><path d="M7 4h3l1.5 4-2 1.5a13 13 0 0 0 5 5l1.5-2L20 14v3a3 3 0 0 1-3 3C9.8 20 4 14.2 4 7a3 3 0 0 1 3-3Z" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+                  <span>+34 971 48 23 42</span>
+                </a>
+                <a href="mailto:info@nexarentals.es" className="flex items-center gap-3 break-all py-2 transition-colors hover:text-[#ed6517]">
+                  <svg viewBox="0 0 24 24" fill="none" className="h-[17px] w-[17px] shrink-0 text-[#ed6517]" aria-hidden="true"><rect x="3" y="5" width="18" height="14" rx="2" stroke="currentColor" strokeWidth="1.8"/><path d="m4 7 8 6 8-6" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round"/></svg>
+                  <span>info@nexarentals.es</span>
+                </a>
+              </div>
+            </nav>
+          </aside>
+        </div>,
+        document.body
+      )}
+
+      {/* The mobile language dropdown is portaled above the mobile drawer and its backdrop. */}
+      {mobileDrawerMounted && createPortal(
+        <div className="lg:hidden">
             <div
+              style={{ top: mobileLanguagePosition.top, right: mobileLanguagePosition.right }}
               className={[
-                "absolute right-0 top-[calc(100%+12px)] z-[110] w-[224px] overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-300",
+                "pointer-events-auto fixed z-[2147483647] w-[224px] overflow-hidden rounded-[24px] border backdrop-blur-2xl transition-all duration-300",
 
                 mobileLanguageDropdownClass,
 
@@ -1346,214 +1550,9 @@ export default function NavbarV3({
                 )}
               </div>
             </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => {
-              setMobileMenuOpen(
-                (
-                  current
-                ) =>
-                  !current
-              );
-
-              setLangOpen(
-                false
-              );
-            }}
-            className="nexa-hamburger-button"
-            aria-label={
-              mobileMenuOpen
-                ? copy.close
-                : copy.menu
-            }
-            aria-expanded={
-              mobileMenuOpen
-            }
-          >
-            <span className="nexa-hamburger-lines">
-              <span
-                className={[
-                  "nexa-hamburger-line",
-
-                  mobileMenuOpen
-                    ? "top-[10px] rotate-45"
-                    : "top-0 rotate-0",
-                ].join(" ")}
-              />
-
-              <span
-                className={[
-                  "nexa-hamburger-line top-[10px]",
-
-                  mobileMenuOpen
-                    ? "opacity-0"
-                    : "opacity-100",
-                ].join(" ")}
-              />
-
-              <span
-                className={[
-                  "nexa-hamburger-line",
-
-                  mobileMenuOpen
-                    ? "top-[10px] -rotate-45"
-                    : "top-[20px] rotate-0",
-                ].join(" ")}
-              />
-            </span>
-          </button>
-        </div>
-      </div>
-
-      <div
-        className={[
-          "pointer-events-auto fixed inset-x-4 top-[116px] z-[90] overflow-hidden rounded-[30px] backdrop-blur-2xl transition-all duration-300 lg:hidden",
-
-          mobilePanelClass,
-
-          mobileMenuOpen
-            ? "translate-y-0 scale-100 opacity-100"
-            : "pointer-events-none -translate-y-4 scale-[0.98] opacity-0",
-        ].join(" ")}
-      >
-        <nav className="flex flex-col p-3 text-sm font-semibold">
-          {navItems.map(
-            (item) => (
-              <Link
-                key={
-                  item.href
-                }
-                href={
-                  item.href
-                }
-                onClick={
-                  closeMenus
-                }
-                className={[
-                  "rounded-[22px] px-4 py-3 transition active:scale-[0.98]",
-
-                  isLightTone
-                    ? "hover:bg-[#202226]/[0.055] hover:text-black"
-                    : "hover:bg-white/[0.065] hover:text-white",
-                ].join(" ")}
-              >
-                {
-                  item.label
-                }
-              </Link>
-            )
-          )}
-
-          <div
-            className={[
-              "mt-2 border-t pt-3",
-
-              isLightTone
-                ? "border-[#202226]/10"
-                : "border-white/10",
-            ].join(" ")}
-          >
-            <div
-              className={[
-                "px-4 pb-2 text-[10px] font-extrabold uppercase tracking-[0.22em]",
-
-                isLightTone
-                  ? "text-[#202226]/38"
-                  : "text-white/38",
-              ].join(" ")}
-            >
-              {
-                copy.selectLanguage
-              }
-            </div>
-
-            <div className="grid max-h-[260px] grid-cols-2 gap-2 overflow-y-auto px-2 pb-2">
-              {LANGUAGES.map(
-                (
-                  language
-                ) => {
-                  const active =
-                    language.code ===
-                    locale;
-
-                  return (
-                    <button
-                      key={
-                        language.code
-                      }
-                      type="button"
-                      onClick={() =>
-                        handleLanguageChange(
-                          language.code
-                        )
-                      }
-                      className={[
-                        "flex cursor-pointer items-center justify-between gap-2 rounded-[18px] px-3 py-2.5 text-left text-xs opacity-100 transition hover:scale-[1.02] active:scale-[0.98]",
-
-                        isLightTone
-                          ? active
-                            ? "bg-[#202226]/8 text-[#202226]"
-                            : "text-[#202226]/66 hover:bg-[#202226]/[0.055] hover:text-[#202226]"
-                          : active
-                            ? "bg-white/[0.12] text-white"
-                            : "text-white/66 hover:bg-white/[0.065] hover:text-white",
-                      ].join(
-                        " "
-                      )}
-                    >
-                      <Image
-                        src={
-                          language.flagSrc
-                        }
-                        alt={
-                          language.label
-                        }
-                        width={
-                          18
-                        }
-                        height={
-                          18
-                        }
-                        className="rounded-full"
-                      />
-
-                      <span className="font-extrabold uppercase tracking-[0.14em]">
-                        {
-                          language.short
-                        }
-                      </span>
-                    </button>
-                  );
-                }
-              )}
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={
-              handleBookClick
-            }
-            className={[
-              !bookNowClicked
-                ? "book-now-pulse"
-                : "",
-
-              "mt-3 rounded-full px-4 py-3.5 text-center text-[11px] font-black uppercase tracking-[0.2em] transition hover:scale-[1.04] active:scale-[0.92]",
-
-              isLightTone
-                ? "bg-[#24262b] text-white shadow-[0_18px_50px_rgba(24,25,30,0.22)] hover:bg-[#2b2e34] hover:shadow-[0_22px_62px_rgba(24,25,30,0.30)]"
-                : "bg-white text-black shadow-[0_18px_50px_rgba(255,255,255,0.12)] hover:shadow-[0_22px_62px_rgba(255,255,255,0.18)]",
-            ].join(" ")}
-          >
-            {
-              copy.book
-            }
-          </button>
-        </nav>
-      </div>
+        </div>,
+        document.body
+      )}
 
       <style jsx global>{`
         html,
@@ -1561,6 +1560,23 @@ export default function NavbarV3({
           width: 100%;
           max-width: 100%;
           overflow-x: hidden;
+        }
+
+        /* Only the full desktop header moves. Mobile rules below stay unchanged. */
+        @media (min-width: 1024px) {
+          .nexa-navbar-shell {
+            position: fixed !important;
+            transition: transform 650ms cubic-bezier(0.22, 1, 0.36, 1) !important;
+            transform: translate3d(0, 0, 0) !important;
+            will-change: transform;
+          }
+          .nexa-navbar-shell[data-desktop-hidden="true"] {
+            transform: translate3d(0, -120px, 0) !important;
+            pointer-events: none !important;
+          }
+        }
+        @media (prefers-reduced-motion: reduce) and (min-width: 1024px) {
+          .nexa-navbar-shell { transition-duration: 0.01ms !important; }
         }
 
         @media (max-width: 1023px) {
@@ -1589,13 +1605,7 @@ export default function NavbarV3({
         .nexa-navbar-shell[data-mobile-scrolled="true"]
           .nexa-mobile-nav {
           background: #000000 !important;
-          box-shadow: 0 18px 46px
-            rgba(
-              0,
-              0,
-              0,
-              0.58
-            ) !important;
+          box-shadow: none !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
         }
@@ -1603,7 +1613,7 @@ export default function NavbarV3({
         .nexa-navbar-shell[data-mobile-scrolled="false"]
           .nexa-mobile-nav {
           background: #000000 !important;
-          box-shadow: 0 18px 46px rgba(0, 0, 0, 0.58) !important;
+          box-shadow: none !important;
           backdrop-filter: none !important;
           -webkit-backdrop-filter: none !important;
         }

@@ -2,11 +2,253 @@
 
 import { useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { Montserrat } from "next/font/google";
+import { useLocale } from "next-intl";
 
 const montserrat = Montserrat({
   subsets: ["latin"],
   weight: ["400", "500", "600", "700", "800", "900"],
 });
+
+type Locale = "en" | "es" | "de" | "fr" | "it" | "nl" | "pl" | "sv" | "da" | "no" | "pt" | "cs" | "uk";
+
+const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location" | "find" | "description" | "every" | "open" | "closed" | "open_now" | "opens_today" | "reopens_today" | "opens_tomorrow" | "checking" | "local_time" | "mallorca" | "maps", string>> = {
+  "en": {
+    "interactive": "Interactive Map",
+    "larger": "View larger map",
+    "location": "Location",
+    "find": "Find Us in Magaluf",
+    "description": "Visit our pickup point in Magaluf. Easy directions and fast handover before your ride.",
+    "every": "Every day",
+    "open": "OPEN",
+    "closed": "CLOSED",
+    "open_now": "Open now",
+    "opens_today": "Opens today at 09:00",
+    "reopens_today": "Reopens today at 15:00",
+    "opens_tomorrow": "Opens tomorrow at 09:00",
+    "checking": "Checking",
+    "local_time": "Local time in Mallorca:",
+    "mallorca": "Mallorca:",
+    "maps": "Open in your maps"
+  },
+  "es": {
+    "interactive": "Mapa interactivo",
+    "larger": "Ampliar mapa",
+    "location": "Ubicación",
+    "find": "Encuéntranos en Magaluf",
+    "description": "Visita nuestro punto de recogida en Magaluf. Cómo llegar fácilmente y recogida rápida antes de tu viaje.",
+    "every": "Todos los días",
+    "open": "ABIERTO",
+    "closed": "CERRADO",
+    "open_now": "Abierto ahora",
+    "opens_today": "Abre hoy a las 09:00",
+    "reopens_today": "Reabre hoy a las 15:00",
+    "opens_tomorrow": "Abre mañana a las 09:00",
+    "checking": "Comprobando",
+    "local_time": "Hora local en Mallorca:",
+    "mallorca": "Mallorca:",
+    "maps": "Abrir en mapas"
+  },
+  "de": {
+    "interactive": "Interaktive Karte",
+    "larger": "Karte vergrößern",
+    "location": "Standort",
+    "find": "Besuche uns in Magaluf",
+    "description": "Besuche unsere Abholstation in Magaluf. Einfache Anfahrt und schnelle Übergabe vor deiner Fahrt.",
+    "every": "Täglich",
+    "open": "GEÖFFNET",
+    "closed": "GESCHLOSSEN",
+    "open_now": "Jetzt geöffnet",
+    "opens_today": "Öffnet heute um 09:00",
+    "reopens_today": "Öffnet heute wieder um 15:00",
+    "opens_tomorrow": "Öffnet morgen um 09:00",
+    "checking": "Wird geprüft",
+    "local_time": "Ortszeit auf Mallorca:",
+    "mallorca": "Mallorca:",
+    "maps": "In Karten öffnen"
+  },
+  "fr": {
+    "interactive": "Carte interactive",
+    "larger": "Agrandir la carte",
+    "location": "Localisation",
+    "find": "Retrouvez-nous à Magaluf",
+    "description": "Rendez-vous à notre point de retrait à Magaluf. Accès facile et remise rapide avant votre balade.",
+    "every": "Tous les jours",
+    "open": "OUVERT",
+    "closed": "FERMÉ",
+    "open_now": "Ouvert maintenant",
+    "opens_today": "Ouvre aujourd’hui à 09:00",
+    "reopens_today": "Rouvre aujourd’hui à 15:00",
+    "opens_tomorrow": "Ouvre demain à 09:00",
+    "checking": "Vérification",
+    "local_time": "Heure locale à Majorque :",
+    "mallorca": "Majorque :",
+    "maps": "Ouvrir dans Plans"
+  },
+  "it": {
+    "interactive": "Mappa interattiva",
+    "larger": "Ingrandisci mappa",
+    "location": "Posizione",
+    "find": "Vieni a trovarci a Magaluf",
+    "description": "Visita il nostro punto di ritiro a Magaluf. Indicazioni semplici e consegna rapida prima della partenza.",
+    "every": "Ogni giorno",
+    "open": "APERTO",
+    "closed": "CHIUSO",
+    "open_now": "Aperto ora",
+    "opens_today": "Apre oggi alle 09:00",
+    "reopens_today": "Riapre oggi alle 15:00",
+    "opens_tomorrow": "Apre domani alle 09:00",
+    "checking": "Verifica in corso",
+    "local_time": "Ora locale a Maiorca:",
+    "mallorca": "Maiorca:",
+    "maps": "Apri nelle mappe"
+  },
+  "nl": {
+    "interactive": "Interactieve kaart",
+    "larger": "Grotere kaart bekijken",
+    "location": "Locatie",
+    "find": "Vind ons in Magaluf",
+    "description": "Bezoek ons afhaalpunt in Magaluf. Eenvoudige route en snelle overdracht voor vertrek.",
+    "every": "Elke dag",
+    "open": "OPEN",
+    "closed": "GESLOTEN",
+    "open_now": "Nu geopend",
+    "opens_today": "Opent vandaag om 09:00",
+    "reopens_today": "Heropent vandaag om 15:00",
+    "opens_tomorrow": "Opent morgen om 09:00",
+    "checking": "Controleren",
+    "local_time": "Lokale tijd op Mallorca:",
+    "mallorca": "Mallorca:",
+    "maps": "Openen in kaarten"
+  },
+  "pl": {
+    "interactive": "Mapa interaktywna",
+    "larger": "Powiększ mapę",
+    "location": "Lokalizacja",
+    "find": "Znajdź nas w Magaluf",
+    "description": "Odwiedź nasz punkt odbioru w Magaluf. Łatwy dojazd i szybki odbiór przed wycieczką.",
+    "every": "Codziennie",
+    "open": "OTWARTE",
+    "closed": "ZAMKNIĘTE",
+    "open_now": "Teraz otwarte",
+    "opens_today": "Otwarcie dziś o 09:00",
+    "reopens_today": "Ponowne otwarcie dziś o 15:00",
+    "opens_tomorrow": "Otwarcie jutro o 09:00",
+    "checking": "Sprawdzanie",
+    "local_time": "Czas lokalny na Majorce:",
+    "mallorca": "Majorka:",
+    "maps": "Otwórz w mapach"
+  },
+  "sv": {
+    "interactive": "Interaktiv karta",
+    "larger": "Visa större karta",
+    "location": "Plats",
+    "find": "Hitta oss i Magaluf",
+    "description": "Besök vår upphämtningsplats i Magaluf. Enkel vägbeskrivning och snabb överlämning före turen.",
+    "every": "Varje dag",
+    "open": "ÖPPET",
+    "closed": "STÄNGT",
+    "open_now": "Öppet nu",
+    "opens_today": "Öppnar idag kl. 09:00",
+    "reopens_today": "Öppnar igen idag kl. 15:00",
+    "opens_tomorrow": "Öppnar imorgon kl. 09:00",
+    "checking": "Kontrollerar",
+    "local_time": "Lokal tid på Mallorca:",
+    "mallorca": "Mallorca:",
+    "maps": "Öppna i kartor"
+  },
+  "da": {
+    "interactive": "Interaktivt kort",
+    "larger": "Vis større kort",
+    "location": "Placering",
+    "find": "Find os i Magaluf",
+    "description": "Besøg vores afhentningssted i Magaluf. Nem rutevejledning og hurtig udlevering før turen.",
+    "every": "Hver dag",
+    "open": "ÅBENT",
+    "closed": "LUKKET",
+    "open_now": "Åbent nu",
+    "opens_today": "Åbner i dag kl. 09:00",
+    "reopens_today": "Åbner igen i dag kl. 15:00",
+    "opens_tomorrow": "Åbner i morgen kl. 09:00",
+    "checking": "Tjekker",
+    "local_time": "Lokal tid på Mallorca:",
+    "mallorca": "Mallorca:",
+    "maps": "Åbn i kort"
+  },
+  "no": {
+    "interactive": "Interaktivt kart",
+    "larger": "Vis større kart",
+    "location": "Beliggenhet",
+    "find": "Finn oss i Magaluf",
+    "description": "Besøk hentestedet vårt i Magaluf. Enkel veibeskrivelse og rask utlevering før turen.",
+    "every": "Hver dag",
+    "open": "ÅPENT",
+    "closed": "STENGT",
+    "open_now": "Åpent nå",
+    "opens_today": "Åpner i dag kl. 09:00",
+    "reopens_today": "Åpner igjen i dag kl. 15:00",
+    "opens_tomorrow": "Åpner i morgen kl. 09:00",
+    "checking": "Sjekker",
+    "local_time": "Lokal tid på Mallorca:",
+    "mallorca": "Mallorca:",
+    "maps": "Åpne i kart"
+  },
+  "pt": {
+    "interactive": "Mapa interativo",
+    "larger": "Ver mapa maior",
+    "location": "Localização",
+    "find": "Encontre-nos em Magaluf",
+    "description": "Visite o nosso ponto de recolha em Magaluf. Indicações simples e entrega rápida antes do passeio.",
+    "every": "Todos os dias",
+    "open": "ABERTO",
+    "closed": "FECHADO",
+    "open_now": "Aberto agora",
+    "opens_today": "Abre hoje às 09:00",
+    "reopens_today": "Reabre hoje às 15:00",
+    "opens_tomorrow": "Abre amanhã às 09:00",
+    "checking": "A verificar",
+    "local_time": "Hora local em Maiorca:",
+    "mallorca": "Maiorca:",
+    "maps": "Abrir nos mapas"
+  },
+  "cs": {
+    "interactive": "Interaktivní mapa",
+    "larger": "Zobrazit větší mapu",
+    "location": "Poloha",
+    "find": "Najdete nás v Magalufu",
+    "description": "Navštivte naše výdejní místo v Magalufu. Snadná cesta a rychlé předání před jízdou.",
+    "every": "Každý den",
+    "open": "OTEVŘENO",
+    "closed": "ZAVŘENO",
+    "open_now": "Právě otevřeno",
+    "opens_today": "Dnes otevírá v 09:00",
+    "reopens_today": "Dnes znovu otevírá v 15:00",
+    "opens_tomorrow": "Zítra otevírá v 09:00",
+    "checking": "Ověřujeme",
+    "local_time": "Místní čas na Mallorce:",
+    "mallorca": "Mallorca:",
+    "maps": "Otevřít v mapách"
+  },
+  "uk": {
+    "interactive": "Інтерактивна карта",
+    "larger": "Збільшити карту",
+    "location": "Розташування",
+    "find": "Знайдіть нас у Магалуфі",
+    "description": "Відвідайте наш пункт видачі в Магалуфі. Зручний маршрут і швидка видача перед поїздкою.",
+    "every": "Щодня",
+    "open": "ВІДЧИНЕНО",
+    "closed": "ЗАЧИНЕНО",
+    "open_now": "Зараз відчинено",
+    "opens_today": "Відкривається сьогодні о 09:00",
+    "reopens_today": "Повторно відкривається сьогодні о 15:00",
+    "opens_tomorrow": "Відкривається завтра о 09:00",
+    "checking": "Перевіряємо",
+    "local_time": "Місцевий час на Майорці:",
+    "mallorca": "Майорка:",
+    "maps": "Відкрити на карті"
+  }
+};
+
+function getLocationLocale(value: string): Locale { const code = value.toLowerCase().split("-")[0]; return ["en", "es", "de", "fr", "it", "nl", "pl", "sv", "da", "no", "pt", "cs", "uk"] .includes(code) ? code as Locale : "en"; }
 
 type OpenStatus = {
   isOpen: boolean;
@@ -26,7 +268,7 @@ const GOOGLE_DIRECTIONS_URL =
 const GOOGLE_MAP_EMBED_URL =
   "https://www.google.com/maps?q=Nexa%20Rentals%20Scooter%20E-Bike%20Rental%20Magaluf%2C%20C.%20Gale%C3%B3n%2013%20Loc%2057%2007181%20Magaluf%2C%20Balearic%20Islands&z=17&output=embed";
 
-function getMadridTimeStatus(): OpenStatus {
+function getMadridTimeStatus(copy: typeof LOCATION_COPY["en"]): OpenStatus {
   const now = new Date();
 
   const parts = new Intl.DateTimeFormat("en-GB", {
@@ -47,21 +289,21 @@ function getMadridTimeStatus(): OpenStatus {
   const afternoonOpen = totalMinutes >= 15 * 60 && totalMinutes < 20 * 60;
   const isOpen = morningOpen || afternoonOpen;
 
-  let subLabel = "Open now";
+  let subLabel = copy.open_now;
 
   if (!isOpen) {
     if (totalMinutes < 9 * 60) {
-      subLabel = "Opens today at 09:00";
+      subLabel = copy.opens_today;
     } else if (totalMinutes >= 14 * 60 && totalMinutes < 15 * 60) {
-      subLabel = "Reopens today at 15:00";
+      subLabel = copy.reopens_today;
     } else {
-      subLabel = "Opens tomorrow at 09:00";
+      subLabel = copy.opens_tomorrow;
     }
   }
 
   return {
     isOpen,
-    label: isOpen ? "OPEN" : "CLOSED",
+    label: isOpen ? copy.open : copy.closed,
     subLabel,
     localTime: `${String(hour).padStart(2, "0")}:${String(minute).padStart(
       2,
@@ -121,12 +363,14 @@ function ClockIcon() {
 }
 
 export default function LocationV3() {
+  const locale = getLocationLocale(useLocale());
+  const copy = LOCATION_COPY[locale];
   const [status, setStatus] = useState<OpenStatus | null>(null);
   const sectionRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const updateStatus = () => {
-      setStatus(getMadridTimeStatus());
+      setStatus(getMadridTimeStatus(copy));
     };
 
     updateStatus();
@@ -134,7 +378,7 @@ export default function LocationV3() {
     const interval = window.setInterval(updateStatus, 30 * 1000);
 
     return () => window.clearInterval(interval);
-  }, []);
+  }, [copy]);
 
   const statusClasses = useMemo(() => {
     if (!status) return "border-white/15 bg-white/[0.04] text-white";
@@ -209,7 +453,7 @@ export default function LocationV3() {
               <div className="pointer-events-none absolute inset-0 rounded-[13px] shadow-[inset_0_0_18px_rgba(255,255,255,0.28),inset_0_0_10px_rgba(0,0,0,0.04)]" />
 
               <div className="pointer-events-none absolute left-3 top-3 rounded-full border border-black/10 bg-white/90 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.2em] text-black/75 shadow-[0_8px_22px_rgba(0,0,0,0.12)] backdrop-blur-md">
-                Interactive Map
+                {copy.interactive}
               </div>
 
               <a
@@ -218,7 +462,7 @@ export default function LocationV3() {
                 rel="noreferrer"
                 className="absolute bottom-3 left-3 rounded-full border border-black/10 bg-white/92 px-3 py-1.5 text-[8px] font-black uppercase tracking-[0.16em] text-black/78 shadow-[0_8px_22px_rgba(0,0,0,0.14)] backdrop-blur-md transition duration-300 hover:scale-[1.05] hover:bg-black hover:text-white"
               >
-                View larger map
+                {copy.larger}
               </a>
             </div>
           </div>
@@ -227,18 +471,17 @@ export default function LocationV3() {
         <div className="relative">
           <div className="mb-3">
             <div className="mb-2 text-[8px] font-black uppercase tracking-[0.48em] text-white/50">
-              Location
+              {copy.location}
             </div>
 
             <h2 className="max-w-[460px] text-[30px] font-black leading-[0.98] tracking-[-0.06em] text-white sm:text-[36px] lg:text-[40px]">
-              Find Us in Magaluf
+              {copy.find}
             </h2>
 
             <div className="mt-3 h-px w-12 bg-white/52" />
 
             <p className="mt-3 max-w-[430px] text-[12.5px] font-medium leading-[1.7] tracking-[-0.02em] text-white/68">
-              Visit our pickup point in Magaluf. Easy directions and fast
-              handover before your ride.
+              {copy.description}
             </p>
           </div>
 
@@ -268,7 +511,7 @@ export default function LocationV3() {
                 </div>
 
                 <div className="mt-1 text-[8px] font-black uppercase tracking-[0.18em] text-white/38">
-                  Every day
+                  {copy.every}
                 </div>
               </div>
             </div>
@@ -283,15 +526,15 @@ export default function LocationV3() {
                   }`}
                 />
 
-                {status?.label ?? "Checking"}
+                {status?.label ?? copy.checking}
               </div>
 
               <div className="mt-1.5 text-[11px] font-semibold text-white/72">
-                {status?.subLabel ?? "Checking local time"}
+                {status?.subLabel ?? copy.checking}
               </div>
 
               <div className="mt-0.5 text-[10px] text-white/34">
-                Local time in Mallorca: {status?.localTime ?? "--:--"}
+                {copy.local_time} {status?.localTime ?? "--:--"}
               </div>
             </div>
           </div>
@@ -308,7 +551,7 @@ export default function LocationV3() {
               </span>
 
               <span className="text-[14px] font-black tracking-[-0.035em] sm:text-[16px]">
-                Open in your maps
+                {copy.maps}
               </span>
             </span>
 
@@ -341,7 +584,7 @@ export default function LocationV3() {
                 <div className="pointer-events-none absolute inset-0 rounded-[13px] shadow-[inset_0_0_16px_rgba(255,255,255,0.25),inset_0_0_8px_rgba(0,0,0,0.08)]" />
 
                 <div className="pointer-events-none absolute left-[7px] top-[7px] rounded-full border border-black/10 bg-white/90 px-[7px] py-[4px] text-[5.8px] font-black uppercase tracking-[0.15em] text-black/75 shadow-[0_8px_20px_rgba(0,0,0,0.12)] backdrop-blur-md">
-                  Interactive Map
+                  {copy.interactive}
                 </div>
 
                 <a
@@ -350,7 +593,7 @@ export default function LocationV3() {
                   rel="noreferrer"
                   className="absolute bottom-[7px] left-[7px] rounded-full border border-black/10 bg-white/92 px-[7px] py-[4px] text-[5.8px] font-black uppercase tracking-[0.12em] text-black/78 shadow-[0_8px_20px_rgba(0,0,0,0.14)] backdrop-blur-md"
                 >
-                  View larger map
+                  {copy.larger}
                 </a>
               </div>
             </div>
@@ -358,11 +601,11 @@ export default function LocationV3() {
 
           <div className="nexa-location-mobile-info">
             <div className="text-[6px] font-black uppercase tracking-[0.35em] text-white/42">
-              Location
+              {copy.location}
             </div>
 
             <h2 className="mt-[5px] text-[21px] font-black leading-[0.94] tracking-[-0.07em] text-white">
-              Find Us in Magaluf
+              {copy.find}
             </h2>
 
             <div className="mt-[8px] h-px w-[32px] bg-white/45" />
@@ -382,7 +625,7 @@ export default function LocationV3() {
                 </div>
 
                 <div className="mt-[4px] text-[6px] font-black uppercase tracking-[0.16em] text-white/35">
-                  Every day
+                  {copy.every}
                 </div>
               </div>
             </div>
@@ -397,15 +640,15 @@ export default function LocationV3() {
                   }`}
                 />
 
-                {status?.label ?? "Checking"}
+                {status?.label ?? copy.checking}
               </div>
 
               <div className="mt-[5px] text-[8px] font-semibold leading-[1.25] text-white/70">
-                {status?.subLabel ?? "Checking local time"}
+                {status?.subLabel ?? copy.checking}
               </div>
 
               <div className="mt-[2px] text-[7px] leading-[1.25] text-white/34">
-                Mallorca: {status?.localTime ?? "--:--"}
+                {copy.mallorca} {status?.localTime ?? "--:--"}
               </div>
             </div>
           </div>
@@ -423,7 +666,7 @@ export default function LocationV3() {
             </span>
 
             <span className="text-[12px] font-black tracking-[-0.035em]">
-              Open in your maps
+              {copy.maps}
             </span>
           </span>
 
