@@ -11,7 +11,7 @@ const montserrat = Montserrat({
 
 type Locale = "en" | "es" | "de" | "fr" | "it" | "nl" | "pl" | "sv" | "da" | "no" | "pt" | "cs" | "uk";
 
-const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location" | "find" | "description" | "every" | "open" | "closed" | "open_now" | "opens_today" | "reopens_today" | "opens_tomorrow" | "checking" | "local_time" | "mallorca" | "maps", string>> = {
+const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location" | "find" | "description" | "every" | "open" | "closed" | "open_now" | "opens_today" | "opens_tomorrow" | "checking" | "local_time" | "mallorca" | "maps", string>> = {
   "en": {
     "interactive": "Interactive Map",
     "larger": "View larger map",
@@ -22,9 +22,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "OPEN",
     "closed": "CLOSED",
     "open_now": "Open now",
-    "opens_today": "Opens today at 09:00",
-    "reopens_today": "Reopens today at 15:00",
-    "opens_tomorrow": "Opens tomorrow at 09:00",
+    "opens_today": "Opens today at 09:30",
+    "opens_tomorrow": "Opens tomorrow at 09:30",
     "checking": "Checking",
     "local_time": "Local time in Mallorca:",
     "mallorca": "Mallorca:",
@@ -40,9 +39,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "ABIERTO",
     "closed": "CERRADO",
     "open_now": "Abierto ahora",
-    "opens_today": "Abre hoy a las 09:00",
-    "reopens_today": "Reabre hoy a las 15:00",
-    "opens_tomorrow": "Abre mañana a las 09:00",
+    "opens_today": "Abre hoy a las 09:30",
+    "opens_tomorrow": "Abre mañana a las 09:30",
     "checking": "Comprobando",
     "local_time": "Hora local en Mallorca:",
     "mallorca": "Mallorca:",
@@ -58,9 +56,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "GEÖFFNET",
     "closed": "GESCHLOSSEN",
     "open_now": "Jetzt geöffnet",
-    "opens_today": "Öffnet heute um 09:00",
-    "reopens_today": "Öffnet heute wieder um 15:00",
-    "opens_tomorrow": "Öffnet morgen um 09:00",
+    "opens_today": "Öffnet heute um 09:30",
+    "opens_tomorrow": "Öffnet morgen um 09:30",
     "checking": "Wird geprüft",
     "local_time": "Ortszeit auf Mallorca:",
     "mallorca": "Mallorca:",
@@ -76,9 +73,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "OUVERT",
     "closed": "FERMÉ",
     "open_now": "Ouvert maintenant",
-    "opens_today": "Ouvre aujourd’hui à 09:00",
-    "reopens_today": "Rouvre aujourd’hui à 15:00",
-    "opens_tomorrow": "Ouvre demain à 09:00",
+    "opens_today": "Ouvre aujourd’hui à 09:30",
+    "opens_tomorrow": "Ouvre demain à 09:30",
     "checking": "Vérification",
     "local_time": "Heure locale à Majorque :",
     "mallorca": "Majorque :",
@@ -94,9 +90,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "APERTO",
     "closed": "CHIUSO",
     "open_now": "Aperto ora",
-    "opens_today": "Apre oggi alle 09:00",
-    "reopens_today": "Riapre oggi alle 15:00",
-    "opens_tomorrow": "Apre domani alle 09:00",
+    "opens_today": "Apre oggi alle 09:30",
+    "opens_tomorrow": "Apre domani alle 09:30",
     "checking": "Verifica in corso",
     "local_time": "Ora locale a Maiorca:",
     "mallorca": "Maiorca:",
@@ -112,9 +107,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "OPEN",
     "closed": "GESLOTEN",
     "open_now": "Nu geopend",
-    "opens_today": "Opent vandaag om 09:00",
-    "reopens_today": "Heropent vandaag om 15:00",
-    "opens_tomorrow": "Opent morgen om 09:00",
+    "opens_today": "Opent vandaag om 09:30",
+    "opens_tomorrow": "Opent morgen om 09:30",
     "checking": "Controleren",
     "local_time": "Lokale tijd op Mallorca:",
     "mallorca": "Mallorca:",
@@ -130,9 +124,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "OTWARTE",
     "closed": "ZAMKNIĘTE",
     "open_now": "Teraz otwarte",
-    "opens_today": "Otwarcie dziś o 09:00",
-    "reopens_today": "Ponowne otwarcie dziś o 15:00",
-    "opens_tomorrow": "Otwarcie jutro o 09:00",
+    "opens_today": "Otwarcie dziś o 09:30",
+    "opens_tomorrow": "Otwarcie jutro o 09:30",
     "checking": "Sprawdzanie",
     "local_time": "Czas lokalny na Majorce:",
     "mallorca": "Majorka:",
@@ -148,9 +141,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "ÖPPET",
     "closed": "STÄNGT",
     "open_now": "Öppet nu",
-    "opens_today": "Öppnar idag kl. 09:00",
-    "reopens_today": "Öppnar igen idag kl. 15:00",
-    "opens_tomorrow": "Öppnar imorgon kl. 09:00",
+    "opens_today": "Öppnar idag kl. 09:30",
+    "opens_tomorrow": "Öppnar imorgon kl. 09:30",
     "checking": "Kontrollerar",
     "local_time": "Lokal tid på Mallorca:",
     "mallorca": "Mallorca:",
@@ -166,9 +158,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "ÅBENT",
     "closed": "LUKKET",
     "open_now": "Åbent nu",
-    "opens_today": "Åbner i dag kl. 09:00",
-    "reopens_today": "Åbner igen i dag kl. 15:00",
-    "opens_tomorrow": "Åbner i morgen kl. 09:00",
+    "opens_today": "Åbner i dag kl. 09:30",
+    "opens_tomorrow": "Åbner i morgen kl. 09:30",
     "checking": "Tjekker",
     "local_time": "Lokal tid på Mallorca:",
     "mallorca": "Mallorca:",
@@ -184,9 +175,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "ÅPENT",
     "closed": "STENGT",
     "open_now": "Åpent nå",
-    "opens_today": "Åpner i dag kl. 09:00",
-    "reopens_today": "Åpner igjen i dag kl. 15:00",
-    "opens_tomorrow": "Åpner i morgen kl. 09:00",
+    "opens_today": "Åpner i dag kl. 09:30",
+    "opens_tomorrow": "Åpner i morgen kl. 09:30",
     "checking": "Sjekker",
     "local_time": "Lokal tid på Mallorca:",
     "mallorca": "Mallorca:",
@@ -202,9 +192,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "ABERTO",
     "closed": "FECHADO",
     "open_now": "Aberto agora",
-    "opens_today": "Abre hoje às 09:00",
-    "reopens_today": "Reabre hoje às 15:00",
-    "opens_tomorrow": "Abre amanhã às 09:00",
+    "opens_today": "Abre hoje às 09:30",
+    "opens_tomorrow": "Abre amanhã às 09:30",
     "checking": "A verificar",
     "local_time": "Hora local em Maiorca:",
     "mallorca": "Maiorca:",
@@ -220,9 +209,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "OTEVŘENO",
     "closed": "ZAVŘENO",
     "open_now": "Právě otevřeno",
-    "opens_today": "Dnes otevírá v 09:00",
-    "reopens_today": "Dnes znovu otevírá v 15:00",
-    "opens_tomorrow": "Zítra otevírá v 09:00",
+    "opens_today": "Dnes otevírá v 09:30",
+    "opens_tomorrow": "Zítra otevírá v 09:30",
     "checking": "Ověřujeme",
     "local_time": "Místní čas na Mallorce:",
     "mallorca": "Mallorca:",
@@ -238,9 +226,8 @@ const LOCATION_COPY: Record<Locale, Record<"interactive" | "larger" | "location"
     "open": "ВІДЧИНЕНО",
     "closed": "ЗАЧИНЕНО",
     "open_now": "Зараз відчинено",
-    "opens_today": "Відкривається сьогодні о 09:00",
-    "reopens_today": "Повторно відкривається сьогодні о 15:00",
-    "opens_tomorrow": "Відкривається завтра о 09:00",
+    "opens_today": "Відкривається сьогодні о 09:30",
+    "opens_tomorrow": "Відкривається завтра о 09:30",
     "checking": "Перевіряємо",
     "local_time": "Місцевий час на Майорці:",
     "mallorca": "Майорка:",
@@ -285,20 +272,14 @@ function getMadridTimeStatus(copy: typeof LOCATION_COPY["en"]): OpenStatus {
 
   const totalMinutes = hour * 60 + minute;
 
-  const morningOpen = totalMinutes >= 9 * 60 && totalMinutes < 14 * 60;
-  const afternoonOpen = totalMinutes >= 15 * 60 && totalMinutes < 20 * 60;
-  const isOpen = morningOpen || afternoonOpen;
+  const isOpen = totalMinutes >= 9 * 60 + 30 && totalMinutes < 13 * 60 + 30;
 
   let subLabel = copy.open_now;
 
   if (!isOpen) {
-    if (totalMinutes < 9 * 60) {
-      subLabel = copy.opens_today;
-    } else if (totalMinutes >= 14 * 60 && totalMinutes < 15 * 60) {
-      subLabel = copy.reopens_today;
-    } else {
-      subLabel = copy.opens_tomorrow;
-    }
+    subLabel = totalMinutes < 9 * 60 + 30
+      ? copy.opens_today
+      : copy.opens_tomorrow;
   }
 
   return {
@@ -503,11 +484,7 @@ export default function LocationV3() {
 
               <div>
                 <div className="text-[14px] font-bold leading-tight tracking-[-0.04em] text-white sm:text-[15px]">
-                  09:00 – 14:00
-                </div>
-
-                <div className="mt-0.5 text-[14px] font-bold leading-tight tracking-[-0.04em] text-white sm:text-[15px]">
-                  15:00 – 20:00
+                  09:30 – 13:30
                 </div>
 
                 <div className="mt-1 text-[8px] font-black uppercase tracking-[0.18em] text-white/38">
@@ -617,11 +594,7 @@ export default function LocationV3() {
 
               <div>
                 <div className="text-[11px] font-bold leading-[1.08] tracking-[-0.04em] text-white">
-                  09:00 – 14:00
-                </div>
-
-                <div className="mt-[2px] text-[11px] font-bold leading-[1.08] tracking-[-0.04em] text-white">
-                  15:00 – 20:00
+                  09:30 – 13:30
                 </div>
 
                 <div className="mt-[4px] text-[6px] font-black uppercase tracking-[0.16em] text-white/35">

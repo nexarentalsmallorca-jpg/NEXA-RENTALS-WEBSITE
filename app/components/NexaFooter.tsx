@@ -27,7 +27,7 @@ export default function NexaFooter() {
             <div className="mt-6 space-y-2 text-sm leading-6 text-white/70">
               <p className="font-semibold text-white">{t("pickup")}</p>
               <p>{t("address")}</p>
-              <p>{t("hours")}</p>
+              <p>09:30 – 13:30</p>
 
               <p className="pt-2">
                 <a
@@ -203,7 +203,7 @@ function getIcon(name: SocialIconProps["icon"]) {
         <svg className={common} viewBox="0 0 24 24" {...base}>
           <path d="M12 21c4.97 0 9-4.03 9-9s-4.03-9-9-9-9 4.03-9 9c0 3.95 2.55 7.31 6.1 8.5" />
           <path d="M10.6 19.6l1.25-5.25" />
-          <path d="M11.85 14.35c.55.35 1.2.55 1.95.55 2.35 0 4.2-1.85 4.2-4.25 0-2.85-2.15-4.65-5.15-4.65-3.4 0-5.75 2.25-5.75 5.25 0 1.35.5 2.45 1.55 3.05" />
+          <path d="M11.85 14.35c.55.35 1.2.55 1.95.55 2.35 0 4.2-1.85 4.2-4.25 0-2.85-2.15-4.65-5.15-4.65 0-5.75 2.25-5.75 5.25 0 1.35.5 2.45 1.55 3.05" />
         </svg>
       );
 

@@ -391,7 +391,7 @@ const EXTRA_EN_COPY: ExtraBookingPanelCopy = {
   doorToken: "Door {value}",
   deliveryDatesNotice: "Delivery dates: 1 Nov–31 Mar. For other dates, select Office Pickup.",
   scrollMonths: "Scroll months",
-  winterOfficeNotice: "Winter office pickup and return: morning 09:30–11:00 · evening 18:00–20:00. From 11:30–17:30 our team operates hotel and Airbnb deliveries. Delivery is free each way in Magaluf, Palmanova and Torrenova.",
+  winterOfficeNotice: "Winter office pickup and return: 09:30–13:30. From 11:30–17:30 our team operates hotel and Airbnb deliveries. Delivery is free each way in Magaluf, Palmanova and Torrenova.",
   deliveryLocation: "Delivery location",
   airportLocationFee: "Palma de Mallorca Airport · €{fee}",
   howReturnScooter: "How will you return the scooter?",
@@ -1180,7 +1180,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Puerta {value}",
     deliveryDatesNotice: "Fechas de entrega: 1 nov–31 mar. Para otras fechas, selecciona Recogida en oficina.",
     scrollMonths: "Desplázate por los meses",
-    winterOfficeNotice: "Recogida y devolución en oficina en invierno: mañana 09:30–11:00 · tarde 18:00–20:00. De 11:30–17:30 nuestro equipo realiza entregas en hoteles y Airbnb. La entrega es gratis por trayecto en Magaluf, Palmanova y Torrenova.",
+    winterOfficeNotice: "Recogida y devolución en oficina en invierno: 09:30–13:30. De 11:30–17:30 nuestro equipo realiza entregas en hoteles y Airbnb. La entrega es gratis por trayecto en Magaluf, Palmanova y Torrenova.",
     deliveryLocation: "Lugar de entrega",
     airportLocationFee: "Aeropuerto de Palma de Mallorca · €{fee}",
     howReturnScooter: "¿Cómo devolverás el scooter?",
@@ -1279,7 +1279,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Tür {value}",
     deliveryDatesNotice: "Liefertermine: 1. Nov.–31. März. Für andere Termine bitte Abholung im Büro wählen.",
     scrollMonths: "Monate scrollen",
-    winterOfficeNotice: "Winterliche Abholung und Rückgabe im Büro: morgens 09:30–11:00 · abends 18:00–20:00. Von 11:30–17:30 führt unser Team Hotel- und Airbnb-Lieferungen durch. Lieferung pro Strecke ist in Magaluf, Palmanova und Torrenova kostenlos.",
+    winterOfficeNotice: "Winterliche Abholung und Rückgabe im Büro: 09:30–13:30. Von 11:30–17:30 führt unser Team Hotel- und Airbnb-Lieferungen durch. Lieferung pro Strecke ist in Magaluf, Palmanova und Torrenova kostenlos.",
     deliveryLocation: "Lieferort",
     airportLocationFee: "Flughafen Palma de Mallorca · €{fee}",
     howReturnScooter: "Wie möchtest du den Scooter zurückgeben?",
@@ -1378,7 +1378,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Porte {value}",
     deliveryDatesNotice: "Dates de livraison : 1 nov.–31 mars. Pour les autres dates, choisissez Retrait à l’agence.",
     scrollMonths: "Faire défiler les mois",
-    winterOfficeNotice: "Retrait et retour à l’agence en hiver : matin 09:30–11:00 · soir 18:00–20:00. De 11:30–17:30, notre équipe effectue les livraisons aux hôtels et Airbnb. La livraison est gratuite par trajet à Magaluf, Palmanova et Torrenova.",
+    winterOfficeNotice: "Retrait et retour à l’agence en hiver : 09:30–13:30. De 11:30–17:30, notre équipe effectue les livraisons aux hôtels et Airbnb. La livraison est gratuite par trajet à Magaluf, Palmanova et Torrenova.",
     deliveryLocation: "Lieu de livraison",
     airportLocationFee: "Aéroport de Palma de Majorque · €{fee}",
     howReturnScooter: "Comment rendrez-vous le scooter ?",
@@ -1477,7 +1477,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Porta {value}",
     deliveryDatesNotice: "Date di consegna: 1 nov–31 mar. Per le altre date seleziona Ritiro in ufficio.",
     scrollMonths: "Scorri i mesi",
-    winterOfficeNotice: "Ritiro e restituzione in ufficio in inverno: mattina 09:30–11:00 · sera 18:00–20:00. Dalle 11:30 alle 17:30 il nostro team effettua consegne a hotel e Airbnb. La consegna è gratuita a tratta a Magaluf, Palmanova e Torrenova.",
+    winterOfficeNotice: "Ritiro e restituzione in ufficio in inverno: 09:30–13:30. Dalle 11:30 alle 17:30 il nostro team effettua consegne a hotel e Airbnb. La consegna è gratuita a tratta a Magaluf, Palmanova e Torrenova.",
     deliveryLocation: "Luogo di consegna",
     airportLocationFee: "Aeroporto di Palma di Maiorca · €{fee}",
     howReturnScooter: "Come restituirai lo scooter?",
@@ -1576,7 +1576,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Deur {value}",
     deliveryDatesNotice: "Bezorgdatums: 1 nov–31 mrt. Kies voor andere datums Ophalen op kantoor.",
     scrollMonths: "Door maanden scrollen",
-    winterOfficeNotice: "Wintertijden voor ophalen en terugbrengen op kantoor: ochtend 09:30–11:00 · avond 18:00–20:00. Van 11:30–17:30 verzorgt ons team hotel- en Airbnb-bezorgingen. Bezorging is per rit gratis in Magaluf, Palmanova en Torrenova.",
+    winterOfficeNotice: "Wintertijden voor ophalen en terugbrengen op kantoor: 09:30–13:30. Van 11:30–17:30 verzorgt ons team hotel- en Airbnb-bezorgingen. Bezorging is per rit gratis in Magaluf, Palmanova en Torrenova.",
     deliveryLocation: "Bezorglocatie",
     airportLocationFee: "Luchthaven Palma de Mallorca · €{fee}",
     howReturnScooter: "Hoe breng je de scooter terug?",
@@ -1675,7 +1675,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Drzwi {value}",
     deliveryDatesNotice: "Daty dostawy: 1 lis–31 mar. Dla innych dat wybierz Odbiór w biurze.",
     scrollMonths: "Przewijaj miesiące",
-    winterOfficeNotice: "Zimowy odbiór i zwrot w biurze: rano 09:30–11:00 · wieczorem 18:00–20:00. W godzinach 11:30–17:30 nasz zespół realizuje dostawy do hoteli i Airbnb. Dostawa w jedną stronę jest bezpłatna w Magaluf, Palmanova i Torrenova.",
+    winterOfficeNotice: "Zimowy odbiór i zwrot w biurze: 09:30–13:30. W godzinach 11:30–17:30 nasz zespół realizuje dostawy do hoteli i Airbnb. Dostawa w jedną stronę jest bezpłatna w Magaluf, Palmanova i Torrenova.",
     deliveryLocation: "Miejsce dostawy",
     airportLocationFee: "Lotnisko Palma de Mallorca · €{fee}",
     howReturnScooter: "Jak zwrócisz skuter?",
@@ -1774,7 +1774,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Dörr {value}",
     deliveryDatesNotice: "Leveransdatum: 1 nov–31 mar. För andra datum väljer du Hämtning på kontoret.",
     scrollMonths: "Bläddra mellan månader",
-    winterOfficeNotice: "Vintertider för hämtning och retur på kontoret: morgon 09:30–11:00 · kväll 18:00–20:00. Mellan 11:30–17:30 gör vårt team leveranser till hotell och Airbnb. Leverans per väg är gratis i Magaluf, Palmanova och Torrenova.",
+    winterOfficeNotice: "Vintertider för hämtning och retur på kontoret: 09:30–13:30. Mellan 11:30–17:30 gör vårt team leveranser till hotell och Airbnb. Leverans per väg är gratis i Magaluf, Palmanova och Torrenova.",
     deliveryLocation: "Leveransplats",
     airportLocationFee: "Palma de Mallorca flygplats · €{fee}",
     howReturnScooter: "Hur vill du lämna tillbaka scootern?",
@@ -1873,7 +1873,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Dør {value}",
     deliveryDatesNotice: "Leveringsdatoer: 1. nov.–31. mar. Vælg Afhentning på kontoret for andre datoer.",
     scrollMonths: "Rul gennem måneder",
-    winterOfficeNotice: "Vintertider for afhentning og aflevering på kontoret: morgen 09:30–11:00 · aften 18:00–20:00. Fra 11:30–17:30 leverer vores team til hoteller og Airbnb. Levering pr. vej er gratis i Magaluf, Palmanova og Torrenova.",
+    winterOfficeNotice: "Vintertider for afhentning og aflevering på kontoret: 09:30–13:30. Fra 11:30–17:30 leverer vores team til hoteller og Airbnb. Levering pr. vej er gratis i Magaluf, Palmanova og Torrenova.",
     deliveryLocation: "Leveringssted",
     airportLocationFee: "Palma de Mallorca Lufthavn · €{fee}",
     howReturnScooter: "Hvordan vil du returnere scooteren?",
@@ -1972,7 +1972,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Dør {value}",
     deliveryDatesNotice: "Leveringsdatoer: 1. nov.–31. mar. Velg Henting på kontoret for andre datoer.",
     scrollMonths: "Bla gjennom måneder",
-    winterOfficeNotice: "Vintertider for henting og retur på kontoret: morgen 09:30–11:00 · kveld 18:00–20:00. Fra 11:30–17:30 leverer teamet vårt til hoteller og Airbnb. Levering per vei er gratis i Magaluf, Palmanova og Torrenova.",
+    winterOfficeNotice: "Vintertider for henting og retur på kontoret: 09:30–13:30. Fra 11:30–17:30 leverer teamet vårt til hoteller og Airbnb. Levering per vei er gratis i Magaluf, Palmanova og Torrenova.",
     deliveryLocation: "Leveringssted",
     airportLocationFee: "Palma de Mallorca lufthavn · €{fee}",
     howReturnScooter: "Hvordan vil du returnere scooteren?",
@@ -2071,7 +2071,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Porta {value}",
     deliveryDatesNotice: "Datas de entrega: 1 nov–31 mar. Para outras datas, selecione Levantamento no escritório.",
     scrollMonths: "Percorrer meses",
-    winterOfficeNotice: "Levantamento e devolução no escritório no inverno: manhã 09:30–11:00 · noite 18:00–20:00. Das 11:30–17:30 a nossa equipa realiza entregas em hotéis e Airbnb. A entrega é grátis por trajeto em Magaluf, Palmanova e Torrenova.",
+    winterOfficeNotice: "Levantamento e devolução no escritório no inverno: 09:30–13:30. Das 11:30–17:30 a nossa equipa realiza entregas em hotéis e Airbnb. A entrega é grátis por trajeto em Magaluf, Palmanova e Torrenova.",
     deliveryLocation: "Local de entrega",
     airportLocationFee: "Aeroporto de Palma de Maiorca · €{fee}",
     howReturnScooter: "Como vai devolver a scooter?",
@@ -2170,7 +2170,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Dveře {value}",
     deliveryDatesNotice: "Termíny doručení: 1. lis.–31. bře. Pro jiné termíny zvolte Vyzvednutí v kanceláři.",
     scrollMonths: "Procházet měsíce",
-    winterOfficeNotice: "Zimní vyzvednutí a vrácení v kanceláři: ráno 09:30–11:00 · večer 18:00–20:00. Od 11:30–17:30 náš tým zajišťuje doručení do hotelů a Airbnb. Doručení za jednu cestu je zdarma v Magaluf, Palmanova a Torrenova.",
+    winterOfficeNotice: "Zimní vyzvednutí a vrácení v kanceláři: 09:30–13:30. Od 11:30–17:30 náš tým zajišťuje doručení do hotelů a Airbnb. Doručení za jednu cestu je zdarma v Magaluf, Palmanova a Torrenova.",
     deliveryLocation: "Místo doručení",
     airportLocationFee: "Letiště Palma de Mallorca · €{fee}",
     howReturnScooter: "Jak skútr vrátíte?",
@@ -2269,7 +2269,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Vrata {value}",
     deliveryDatesNotice: "Datumi dostave: 1. nov–31. mar. Za druge datume izaberite Preuzimanje u kancelariji.",
     scrollMonths: "Listaj mesece",
-    winterOfficeNotice: "Zimsko preuzimanje i vraćanje u kancelariji: jutro 09:30–11:00 · veče 18:00–20:00. Od 11:30–17:30 naš tim obavlja dostave u hotele i Airbnb. Dostava po smeru je besplatna u Magalufu, Palmanovi i Torrenovi.",
+    winterOfficeNotice: "Zimsko preuzimanje i vraćanje u kancelariji: 09:30–13:30. Od 11:30–17:30 naš tim obavlja dostave u hotele i Airbnb. Dostava po smeru je besplatna u Magalufu, Palmanovi i Torrenovi.",
     deliveryLocation: "Mesto dostave",
     airportLocationFee: "Aerodrom Palma de Mallorca · €{fee}",
     howReturnScooter: "Kako ćete vratiti skuter?",
@@ -2368,7 +2368,7 @@ const EXTRA_I18N: Record<Locale, ExtraBookingPanelCopy> = {
     doorToken: "Двері {value}",
     deliveryDatesNotice: "Дати доставки: 1 лист.–31 бер. Для інших дат оберіть Отримання в офісі.",
     scrollMonths: "Прокручувати місяці",
-    winterOfficeNotice: "Зимове отримання та повернення в офісі: ранок 09:30–11:00 · вечір 18:00–20:00. З 11:30–17:30 наша команда виконує доставки до готелів і Airbnb. Доставка в один бік безкоштовна в Magaluf, Palmanova та Torrenova.",
+    winterOfficeNotice: "Зимове отримання та повернення в офісі: 09:30–13:30. З 11:30–17:30 наша команда виконує доставки до готелів і Airbnb. Доставка в один бік безкоштовна в Magaluf, Palmanova та Torrenova.",
     deliveryLocation: "Місце доставки",
     airportLocationFee: "Аеропорт Пальма-де-Майорка · €{fee}",
     howReturnScooter: "Як ви повернете скутер?",
@@ -2651,9 +2651,9 @@ function getMobileOfficeDefaultDate(): Date {
   const now = new Date();
   const today = startOfDay(now);
   // A safe, editable starting slot. Winter office slots begin at 09:30.
-  // In the evening we start tomorrow instead of assuming same-day availability.
+  // Choose tomorrow when there is no time left for a same-day pickup and return.
   const minutesNow = now.getHours() * 60 + now.getMinutes();
-  return minutesNow >= 18 * 60 ? addDays(today, 1) : today;
+  return minutesNow + 60 > 13 * 60 ? addDays(today, 1) : today;
 }
 
 function normalizeLocale(value: string | undefined): Locale {
@@ -2905,15 +2905,8 @@ function buildTimeOptions(
   return result;
 }
 
-function buildOfficeTimeOptions(date: Date) {
-  if (isWinterDeliveryDate(date)) {
-    return [
-      ...buildTimeOptions(9, 30, 11, 0, 30),
-      ...buildTimeOptions(18, 0, 20, 0, 30),
-    ];
-  }
-
-  return buildTimeOptions(9, 30, 20, 0, 30);
+function buildOfficeTimeOptions(_date: Date) {
+  return buildTimeOptions(9, 30, 13, 30, 30);
 }
 
 function timeToMinutes(value: string) {
@@ -5311,7 +5304,7 @@ export default function BookingPanelV3({
   }, [desktopModal, mobileBooking, serviceMethod, plan, pickupDate]);
   const [dropoffDate, setDropoffDate] = useState<Date | undefined>();
   const [pickupTime, setPickupTime] = useState("10:00");
-  const [halfReturnTime, setHalfReturnTime] = useState("20:00");
+  const [halfReturnTime, setHalfReturnTime] = useState("13:30");
   const [quantity, setQuantity] = useState(1);
   const [notice, setNotice] = useState("");
   const [availability, setAvailability] = useState<AvailabilityResult | null>(
@@ -5338,7 +5331,7 @@ export default function BookingPanelV3({
   const [deliveryTimeModalOpen, setDeliveryTimeModalOpen] = useState(false);
   const [airportReturnMethod, setAirportReturnMethod] =
     useState<AirportReturnMethod>("office");
-  const [officeReturnTime, setOfficeReturnTime] = useState("18:00");
+  const [officeReturnTime, setOfficeReturnTime] = useState("13:30");
   const [deliveryTimeConfirmed, setDeliveryTimeConfirmed] = useState(false);
   const [planAttention, setPlanAttention] = useState(false);
   const planAttentionActiveTimeoutRef = useRef<number | null>(null);
@@ -5348,12 +5341,12 @@ export default function BookingPanelV3({
   const officeScheduleDate = pickupDate || minBookableDate;
   const officeTimeOptionsBase = useMemo(
     () => desktopModal && !mobileBooking
-      ? buildTimeOptions(9, 30, 20, 0, 30)
+      ? buildTimeOptions(9, 30, 13, 30, 30)
       : buildOfficeTimeOptions(officeScheduleDate),
     [officeScheduleDate, desktopModal, mobileBooking]
   );
   const sameDayPickupOptionsBase = useMemo(
-    () => officeTimeOptionsBase.filter((option) => option !== "20:00"),
+    () => officeTimeOptionsBase.filter((option) => option !== "13:30"),
     [officeTimeOptionsBase]
   );
   const fullPickupOptionsBase = officeTimeOptionsBase;
@@ -5704,7 +5697,7 @@ export default function BookingPanelV3({
     if (plan !== "half") return;
 
     if (returnHalfOptions.length === 0) {
-      setHalfReturnTime("20:00");
+      setHalfReturnTime("13:30");
       return;
     }
 
@@ -5938,7 +5931,7 @@ export default function BookingPanelV3({
     setPickupDate(undefined);
     setDropoffDate(undefined);
     setPickupTime(nextMethod === "office" ? "09:30" : "11:30");
-    setHalfReturnTime("20:00");
+    setHalfReturnTime("13:30");
     setDeliveryAreaId("");
     setDestinationKind(null);
     setHotelName("");
@@ -5948,7 +5941,7 @@ export default function BookingPanelV3({
     setAirbnbDetails(null);
     setAccommodationModal(null);
     setAirportReturnMethod("office");
-    setOfficeReturnTime("18:00");
+    setOfficeReturnTime("13:30");
     setDeliveryTimeConfirmed(false);
     setDeliveryTimeModalOpen(false);
     setAvailability(null);
@@ -5961,7 +5954,7 @@ export default function BookingPanelV3({
       if (mobileBooking || desktopModal) {
         const defaultDate = getMobileOfficeDefaultDate();
         const slots = filterTimesForDate(
-          desktopModal && !mobileBooking ? buildTimeOptions(9, 30, 20, 0, 30) : buildOfficeTimeOptions(defaultDate),
+          desktopModal && !mobileBooking ? buildTimeOptions(9, 30, 13, 30, 30) : buildOfficeTimeOptions(defaultDate),
           defaultDate
         );
         const defaultPickupTime = slots[0] || "09:30";
@@ -5997,7 +5990,7 @@ export default function BookingPanelV3({
     setPickupDate(undefined);
     setDropoffDate(undefined);
     setPickupTime("10:00");
-    setHalfReturnTime("20:00");
+    setHalfReturnTime("13:30");
     setDeliveryTimeModalOpen(false);
     setDeliveryAreaId("");
     setDestinationKind(null);
@@ -6008,7 +6001,7 @@ export default function BookingPanelV3({
     setAirbnbDetails(null);
     setAccommodationModal(null);
     setAirportReturnMethod("office");
-    setOfficeReturnTime("18:00");
+    setOfficeReturnTime("13:30");
     setDeliveryTimeConfirmed(false);
     setAvailability(null);
     setNotice("");
@@ -6047,14 +6040,14 @@ export default function BookingPanelV3({
       setPlan(nextPlan);
       const selectedDate = pickupDate || getMobileOfficeDefaultDate();
       const slots = filterTimesForDate(
-        desktopModal && !mobileBooking ? buildTimeOptions(9, 30, 20, 0, 30) : buildOfficeTimeOptions(selectedDate),
+        desktopModal && !mobileBooking ? buildTimeOptions(9, 30, 13, 30, 30) : buildOfficeTimeOptions(selectedDate),
         selectedDate
       );
       const resolvedDate = slots.length ? selectedDate : addDays(selectedDate, 1);
       setPickupDate(resolvedDate);
       setPickupTime(slots[0] || "09:30");
       setDropoffDate(undefined);
-      setHalfReturnTime("20:00");
+      setHalfReturnTime("13:30");
       setAvailability(null);
       setNotice("");
       setIsCheckingAvailability(false);
@@ -6070,7 +6063,7 @@ export default function BookingPanelV3({
     setPickupDate(undefined);
     setDropoffDate(undefined);
     setPickupTime("10:00");
-    setHalfReturnTime("20:00");
+    setHalfReturnTime("13:30");
     setAvailability(null);
     setNotice("");
     setIsCheckingAvailability(false);
